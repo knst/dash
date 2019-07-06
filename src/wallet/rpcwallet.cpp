@@ -2509,13 +2509,14 @@ static UniValue getwalletinfo(const JSONRPCRequest& request)
                                         {RPCResult::Type::NUM, "hdinternalkeyindex", "current internal childkey index"},
                                 }},
                             }},
+                            {RPCResult::Type::BOOL, "private_keys_enabled", "false if privatekeys are disabled for this wallet (enforced watch-only wallet)"},
                             {RPCResult::Type::BOOL, "avoid_reuse", "whether this wallet tracks clean/dirty coins in terms of reuse"},
                             {RPCResult::Type::OBJ, "scanning", "current scanning details, or false if no scan is in progress",
                                 {
                                      {RPCResult::Type::NUM, "duration", "elapsed seconds since scan start"},
                                      {RPCResult::Type::NUM, "progress", "scanning progress percentage [0.0, 1.0]"},
                                 }},
-                            {RPCResult::Type::BOOL, "private_keys_enabled", "false if privatekeys are disabled for this wallet (enforced watch-only wallet)"},
+                            {RPCResult::Type::BOOL, "descriptors", "whether this wallet uses descriptors for scriptPubKey management"},
                         },
                 },
                 RPCExamples{
@@ -2576,6 +2577,7 @@ static UniValue getwalletinfo(const JSONRPCRequest& request)
         }
         obj.pushKV("hdaccounts", accounts);
     }
+    obj.pushKV("private_keys_enabled", !pwallet->IsWalletFlagSet(WALLET_FLAG_DISABLE_PRIVATE_KEYS));
     obj.pushKV("avoid_reuse", pwallet->IsWalletFlagSet(WALLET_FLAG_AVOID_REUSE));
     if (pwallet->IsScanning()) {
         UniValue scanning(UniValue::VOBJ);
@@ -2585,7 +2587,7 @@ static UniValue getwalletinfo(const JSONRPCRequest& request)
     } else {
         obj.pushKV("scanning", false);
     }
-    obj.pushKV("private_keys_enabled", !pwallet->IsWalletFlagSet(WALLET_FLAG_DISABLE_PRIVATE_KEYS));
+    obj.pushKV("descriptors", pwallet->IsWalletFlagSet(WALLET_FLAG_DESCRIPTORS));
     return obj;
 }
 
