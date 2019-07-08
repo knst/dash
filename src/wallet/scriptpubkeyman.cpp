@@ -1823,7 +1823,8 @@ void DescriptorScriptPubKeyMan::MarkUnusedAddresses(WalletBatch &batch, const CS
 
 bool DescriptorScriptPubKeyMan::IsHDEnabled() const
 {
-    return false;
+    LOCK(cs_desc_man);
+    return m_wallet_descriptor.descriptor->IsRange();
 }
 
 bool DescriptorScriptPubKeyMan::CanGetAddresses(bool internal) const
