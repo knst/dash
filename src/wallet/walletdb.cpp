@@ -233,6 +233,31 @@ bool WalletBatch::WriteActiveScriptPubKeyMan(const uint256& id, bool internal)
     return WriteIC(key, id);
 }
 
+bool WalletBatch::WriteDescriptorKey(const uint256& desc_id, const CPubKey& pubkey, const CPrivKey& privkey)
+{
+    // hash pubkey/privkey to accelerate wallet load
+    std::vector<unsigned char> key;
+    key.reserve(pubkey.size() + privkey.size());
+    key.insert(key.end(), pubkey.begin(), pubkey.end());
+    key.insert(key.end(), privkey.begin(), privkey.end());
+
+    return WriteIC(std::make_pair(DBKeys::WALLETDESCRIPTORKEY, std::make_pair(desc_id, pubkey)), std::make_pair(privkey, Hash(key)), false);
+}
+
+bool WalletBatch::WriteCryptedDescriptorKey(const uint256& desc_id, const CPubKey& pubkey, const std::vector<unsigned char>& secret)
+{
+    if (!WriteIC(std::make_pair(DBKeys::WALLETDESCRIPTORCKEY, std::make_pair(desc_id, pubkey)), secret, false)) {
+        return false;
+    }
+    EraseIC(std::make_pair(DBKeys::WALLETDESCRIPTORKEY, std::make_pair(desc_id, pubkey)));
+    return true;
+}
+
+bool WalletBatch::WriteDescriptor(const uint256& desc_id, const WalletDescriptor& descriptor)
+{
+    return WriteIC(make_pair(DBKeys::WALLETDESCRIPTOR, desc_id), descriptor);
+}
+
 class CWalletScanState {
 public:
     unsigned int nKeys{0};
@@ -605,7 +630,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
             to_hash.insert(to_hash.end(), pubkey.begin(), pubkey.end());
             to_hash.insert(to_hash.end(), pkey.begin(), pkey.end());
 
-            if (Hash(to_hash.begin(), to_hash.end()) != hash)
+            if (Hash(to_hash) != hash)
             {
                 strErr = "Error reading wallet database: CPubKey/CPrivKey corrupt";
                 return false;
