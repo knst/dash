@@ -2492,7 +2492,7 @@ static UniValue getwalletinfo(const JSONRPCRequest& request)
                             {RPCResult::Type::NUM, "immature_balance", "DEPRECATED. Identical to getbalances().mine.immature"},
                             {RPCResult::Type::NUM, "txcount", "the total number of transactions in the wallet"},
                             {RPCResult::Type::NUM_TIME, "timefirstkey", "the " + UNIX_EPOCH_TIME + " of the oldest known key in the wallet"},
-                            {RPCResult::Type::NUM_TIME, "keypoololdest", "the " + UNIX_EPOCH_TIME + " of the oldest pre-generated key in the key pool"},
+                            {RPCResult::Type::NUM_TIME, "keypoololdest", "the " + UNIX_EPOCH_TIME + " of the oldest pre-generated key in the key pool. Legacy wallets only"},
                             {RPCResult::Type::NUM, "keypoolsize", "how many new keys are pre-generated (only counts external keys)"},
                             {RPCResult::Type::NUM, "keypoolsize_hd_internal", "how many new keys are pre-generated for internal use (used for change outputs, only appears if the wallet is using this feature, otherwise external keys are used)"},
                             {RPCResult::Type::NUM, "keys_left", "how many new keys are left since last automatic backup"},
@@ -2541,6 +2541,8 @@ static UniValue getwalletinfo(const JSONRPCRequest& request)
     UniValue obj(UniValue::VOBJ);
 
     const auto bal = pwallet->GetBalance();
+    // TODO knst why pwallet? we use here spk_man - maybe a bug
+    int64_t kp_oldest = pwallet->GetOldestKeyPoolTime();
     obj.pushKV("walletname", pwallet->GetName());
     obj.pushKV("walletversion", pwallet->GetVersion());
     obj.pushKV("balance", ValueFromAmount(bal.m_mine_trusted));
@@ -2550,6 +2552,9 @@ static UniValue getwalletinfo(const JSONRPCRequest& request)
     obj.pushKV("txcount",       (int)pwallet->mapWallet.size());
     if (spk_man) {
         obj.pushKV("timefirstkey", spk_man->GetTimeFirstKey());
+        if (kp_oldest > 0) {
+            obj.pushKV("keypoololdest", kp_oldest);
+        }
         obj.pushKV("keypoololdest", spk_man->GetOldestKeyPoolTime());
         obj.pushKV("keypoolsize",   (int64_t)spk_man->KeypoolCountExternalKeys());
         obj.pushKV("keypoolsize_hd_internal",   (int64_t)(spk_man->KeypoolCountInternalKeys()));
