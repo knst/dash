@@ -180,6 +180,7 @@ BASE_SCRIPTS = [
     'rpc_net.py',
     'wallet_keypool.py',
     'wallet_keypool_hd.py',
+    'wallet_descriptor.py',
     'p2p_mempool.py',
     'p2p_filter.py',
     'p2p_blocksonly.py',
