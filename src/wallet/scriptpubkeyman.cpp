@@ -1765,3 +1765,5 @@ bool LegacyScriptPubKeyMan::GetHDChain(CHDChain& hdChainRet) const
     hdChainRet = hdChain;
     return !hdChain.IsNull();
 }
+
+void LegacyScriptPubKeyMan::SetType(OutputType type, bool internal) {}
