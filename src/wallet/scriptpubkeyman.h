@@ -213,7 +213,7 @@ public:
 
     virtual uint256 GetID() const { return uint256(); }
 
-    virtual void SetType(OutputType type, bool internal) {}
+    virtual void SetType(bool internal) {}
 
     /** Prepends the wallet name in logging output to ease debugging in multi-wallet use cases */
     template<typename... Params>
@@ -358,7 +358,7 @@ public:
 
     uint256 GetID() const override;
 
-    void SetType(OutputType type, bool internal) override;
+    void SetType(bool internal) override;
 
     // Map from Key ID to key metadata.
     std::map<CKeyID, CKeyMetadata> mapKeyMetadata GUARDED_BY(cs_KeyStore);
@@ -512,10 +512,16 @@ private:
     using ScriptPubKeyMap = std::map<CScript, int32_t>; // Map of scripts to descriptor range index
 
     ScriptPubKeyMap m_map_script_pub_keys GUARDED_BY(cs_desc_man);
+
+    bool m_internal;
 public:
     DescriptorScriptPubKeyMan(WalletStorage& storage, WalletDescriptor& descriptor)
         :   ScriptPubKeyMan(storage),
             m_wallet_descriptor(descriptor)
+        {}
+    DescriptorScriptPubKeyMan(WalletStorage& storage, bool internal)
+        :   ScriptPubKeyMan(storage),
+            m_internal(internal)
         {}
 
     mutable RecursiveMutex cs_desc_man;
@@ -557,7 +563,7 @@ public:
 
     uint256 GetID() const override;
 
-    void SetType(OutputType type, bool internal) override;
+    void SetType(bool internal) override;
 };
 
 #endif // BITCOIN_WALLET_SCRIPTPUBKEYMAN_H
