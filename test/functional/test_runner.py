@@ -87,6 +87,7 @@ BASE_SCRIPTS = [
     'feature_dip3_deterministicmns.py', # NOTE: needs dash_hash to pass
     'feature_llmq_data_recovery.py',
     'wallet_hd.py',
+    'wallet_hd.py --descriptors',
     'wallet_backup.py',
     # vv Tests less than 5m vv
     'mining_getblocktemplate_longpoll.py', # FIXME: "socket.error: [Errno 54] Connection reset by peer" on my Mac, same as https://github.com/bitcoin/bitcoin/issues/6651
@@ -99,7 +100,9 @@ BASE_SCRIPTS = [
     # vv Tests less than 2m vv
     'p2p_instantsend.py',
     'wallet_basic.py',
+    'wallet_basic.py --descriptors',
     'wallet_labels.py',
+    'wallet_labels.py --descriptors',
     'p2p_timeouts.py',
     'feature_bip68_sequence.py',
     'mempool_updatefromblock.py',
@@ -136,6 +139,7 @@ BASE_SCRIPTS = [
     # vv Tests less than 30s vv
     'rpc_quorum.py',
     'wallet_keypool_topup.py',
+    'wallet_keypool_topup.py --descriptors',
     'feature_fee_estimation.py',
     'interface_zmq_dash.py',
     'interface_zmq.py',
@@ -149,6 +153,7 @@ BASE_SCRIPTS = [
     'interface_rest.py',
     'mempool_spend_coinbase.py',
     'wallet_avoidreuse.py',
+    'wallet_avoidreuse.py --descriptors',
     'mempool_reorg.py',
     'mempool_persist.py',
     'wallet_multiwallet.py',
@@ -160,6 +165,7 @@ BASE_SCRIPTS = [
     'interface_http.py',
     'interface_rpc.py',
     'rpc_psbt.py',
+    #'rpc_psbt.py --descriptors', # TODO: enable rpc_psbt.py --descriptors that fails currently
     'rpc_users.py',
     'rpc_whitelist.py',
     'feature_proxy.py',
@@ -180,6 +186,7 @@ BASE_SCRIPTS = [
     'rpc_net.py',
     'wallet_keypool.py',
     'wallet_keypool_hd.py',
+    'wallet_keypool_hd.py --descriptors',
     'wallet_descriptor.py',
     'p2p_mempool.py',
     'p2p_filter.py',
@@ -203,6 +210,7 @@ BASE_SCRIPTS = [
     'mempool_packages.py',
     'mempool_package_onemore.py',
     'rpc_createmultisig.py',
+    'rpc_createmultisig.py --descriptors',
     'feature_versionbits_warning.py',
     'rpc_preciousblock.py',
     'wallet_importprunedfunds.py',
@@ -231,6 +239,7 @@ BASE_SCRIPTS = [
     'feature_sporks.py',
     'rpc_getblockstats.py',
     'wallet_encryption.py',
+    'wallet_encryption.py --descriptors',
     'wallet_upgradetohd.py',
     'feature_dersig.py',
     'feature_cltv.py',

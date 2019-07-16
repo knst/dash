@@ -212,6 +212,8 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
         parser.add_argument("--randomseed", type=int,
                             help="set a random seed for deterministically reproducing a previous test run")
         parser.add_argument('--timeout-factor', dest="timeout_factor", type=float, default=1.0, help='adjust test timeouts by a factor. Setting it to 0 disables all timeouts')
+        parser.add_argument("--descriptors", default=False, action="store_true",
+                            help="Run test using a descriptor wallet")
 
         self.add_options(parser)
         self.options = parser.parse_args()
@@ -416,7 +418,7 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
 
     def setup_nodes(self):
         """Override this method to customize test node setup"""
-        extra_args = None
+        extra_args = [[]] * self.num_nodes
         if hasattr(self, "extra_args"):
             extra_args = self.extra_args
         self.add_nodes(self.num_nodes, extra_args)
@@ -447,7 +449,7 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
         if wallet_name is not False:
             n = self.nodes[i]
             if wallet_name is not None:
-                n.createwallet(wallet_name=wallet_name, load_on_startup=True)
+                n.createwallet(wallet_name=wallet_name, descriptors=self.options.descriptors, load_on_startup=True)
             n.importprivkey(privkey=n.get_deterministic_priv_key().key, label='coinbase')
 
     def run_test(self):
@@ -518,6 +520,7 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
                 use_cli=self.options.usecli,
                 start_perf=self.options.perf,
                 use_valgrind=self.options.valgrind,
+                descriptors=self.options.descriptors,
             ))
 
     def add_dynamically_node(self, extra_args=None, *, rpchost=None, binary=None):
@@ -859,6 +862,7 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
                     mocktime=self.mocktime,
                     coverage_dir=None,
                     cwd=self.options.tmpdir,
+                    descriptors=self.options.descriptors,
                 ))
             self.start_node(CACHE_NODE_ID)
             cache_node = self.nodes[CACHE_NODE_ID]
