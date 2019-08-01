@@ -215,6 +215,7 @@ BASE_SCRIPTS = [
     'wallet_import_rescan.py',
     'wallet_import_with_label.py',
     'wallet_upgradewallet.py',
+    'wallet_importdescriptors.py',
     'wallet_mnemonicbits.py',
     'rpc_bind.py --ipv4',
     'rpc_bind.py --ipv6',
