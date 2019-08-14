@@ -814,7 +814,7 @@ DBErrors WalletBatch::LoadWallet(CWallet* pwallet)
            wss.nWatchKeys, wss.nHDPubKeys, wss.nKeyMeta, wss.m_unknown_records);
 
     // nTimeFirstKey is only reliable if all keys have metadata
-    if ((wss.nKeys + wss.nCKeys + wss.nWatchKeys + wss.nHDPubKeys) != wss.nKeyMeta) {
+    if (pwallet->IsLegacy() && (wss.nKeys + wss.nCKeys + wss.nWatchKeys + wss.nHDPubKeys) != wss.nKeyMeta) {
         auto spk_man = pwallet->GetOrCreateLegacyScriptPubKeyMan();
         if (spk_man) {
             LOCK(spk_man->cs_KeyStore);

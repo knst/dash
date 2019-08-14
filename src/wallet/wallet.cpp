@@ -5516,3 +5516,10 @@ void CWallet::SetActiveScriptPubKeyMan(uint256 id, bool internal, bool memonly)
     NotifyCanGetAddressesChanged();
 
 }
+
+bool CWallet::IsLegacy() const
+{
+    if (m_internal_spk_managers == nullptr) return false;
+    auto spk_man = dynamic_cast<LegacyScriptPubKeyMan*>(m_internal_spk_managers);
+    return spk_man != nullptr;
+}
