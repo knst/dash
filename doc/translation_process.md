@@ -72,9 +72,9 @@ Please see [http://docs.transifex.com/developer/client/setup#windows](http://doc
 The Transifex Dash project config file is included as part of the repo. It can be found at `.tx/config`, however you shouldn’t need to change anything.
 
 ### Synchronising translations
-To assist in updating translations, we have created a script to help.
+To assist in updating translations, a helper script is available in the [maintainer-tools repo](https://github.com/dashpay/dash-maintainer-tools).
 
-1. `python contrib/devtools/update-translations.py`
+1. `python ../dash-maintainer-tools/update-translations.py`
 2. Update `src/qt/dash_locale.qrc` manually or via
    `ls src/qt/locale/*ts|xargs -n1 basename|sed 's/\(dash_\(.*\)\).ts/<file alias="\2">locale\/\1.qm<\/file>/'`
 3. Update `src/Makefile.qt_locale.include` manually or via
