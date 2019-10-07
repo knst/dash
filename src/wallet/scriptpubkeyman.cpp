@@ -617,6 +617,24 @@ bool LegacyScriptPubKeyMan::CanGetAddresses(bool internal) const
     return keypool_has_keys;
 }
 
+bool LegacyScriptPubKeyMan::Upgrade(int prev_version, std::string& error)
+{
+    AssertLockHeld(cs_wallet);
+    error = "";
+    bool prev_encrypted = IsCrypted();
+    // TODO: unify encrypted and plain chains usages here
+    if (prev_encrypted) {
+        if (!GenerateNewHDChainEncrypted(secureMnemonic, secureMnemonicPassphrase, secureWalletPassphrase)) {
+            error = Untranslated("Failed to generate encrypted HD wallet");
+            return false;
+        }
+        Lock();
+    } else {
+        spk_man->GenerateNewHDChain(secureMnemonic, secureMnemonicPassphrase);
+    }
+    return true;
+}
+
 bool LegacyScriptPubKeyMan::HavePrivateKeys() const
 {
     LOCK(cs_KeyStore);

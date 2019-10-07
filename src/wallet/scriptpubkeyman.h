@@ -186,6 +186,9 @@ public:
     /* Returns true if the wallet can give out new addresses. This means it has keys in the keypool or can generate new keys */
     virtual bool CanGetAddresses(bool internal = false) const { return false; }
 
+    /** Upgrades the wallet to the specified version */
+    virtual bool Upgrade(int prev_version, std::string& error) { return false; }
+
     virtual bool HavePrivateKeys() const { return false; }
 
     //! The action to do when the DB needs rewrite
@@ -336,6 +339,8 @@ public:
 
     /* Returns true if HD is enabled */
     bool IsHDEnabled() const override;
+
+    bool Upgrade(int prev_version, std::string& error) override;
 
     bool HavePrivateKeys() const override;
 
