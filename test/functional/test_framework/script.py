@@ -2,7 +2,7 @@
 # Copyright (c) 2015-2020 The Bitcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-"""Functionality to build scripts, as well as SignatureHash().
+"""Functionality to build scripts, as well as signature hash functions.
 
 This file is modified from python-bitcoinlib.
 """
@@ -616,7 +616,7 @@ def FindAndDelete(script, sig):
     return CScript(r)
 
 
-def SignatureHash(script, txTo, inIdx, hashtype):
+def LegacySignatureHash(script, txTo, inIdx, hashtype):
     """Consensus-correct SignatureHash
 
     Returns (hash, err) to precisely match the consensus-critical behavior of
@@ -666,11 +666,11 @@ def SignatureHash(script, txTo, inIdx, hashtype):
 
     return (hash, None)
 
-def sign_input(tx, input_index, input_scriptpubkey, privkey, sighash_type=SIGHASH_ALL):
+def sign_input_legacy(tx, input_index, input_scriptpubkey, privkey, sighash_type=SIGHASH_ALL):
     """Add legacy ECDSA signature for a given transaction input. Note that the signature
        is prepended to the scriptSig field, i.e. additional data pushes necessary for more
        complex spends than P2PK (e.g. pubkey for P2PKH) can be already set before."""
-    (sighash, err) = SignatureHash(input_scriptpubkey, tx, input_index, sighash_type)
+    (sighash, err) = LegacySignatureHash(input_scriptpubkey, tx, input_index, sighash_type)
     assert err is None
     der_sig = privkey.sign_ecdsa(sighash)
     tx.vin[input_index].scriptSig = bytes(CScript([der_sig + bytes([sighash_type])])) + tx.vin[input_index].scriptSig
