@@ -14,4 +14,5 @@ export DEP_OPTS="NO_UPNP=1 DEBUG=1"
 export RUN_UNIT_TESTS_SEQUENTIAL="true"
 export RUN_UNIT_TESTS="false"
 export GOAL="install"
+export TEST_PREVIOUS_RELEASES=true
 export BITCOIN_CONFIG="--enable-glibc-back-compat --enable-zmq --enable-reduce-exports LDFLAGS=-static-libstdc++"
