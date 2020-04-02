@@ -79,7 +79,7 @@ class BackwardsCompatibilityTest(BitcoinTestFramework):
 
         # w1: regular wallet, created on master: update this test when default
         #     wallets can no longer be opened by older versions.
-        node_master.createwallet(wallet_name="w1")
+        node_master.rpc.createwallet(wallet_name="w1")
         wallet = node_master.get_wallet_rpc("w1")
         info = wallet.getwalletinfo()
         assert info['private_keys_enabled']
@@ -92,17 +92,17 @@ class BackwardsCompatibilityTest(BitcoinTestFramework):
         self.sync_blocks()
 
         # w1_v19: regular wallet, created with v0.19
-        node_v19.createwallet(wallet_name="w1_v19")
+        node_v19.rpc.createwallet(wallet_name="w1_v19")
         wallet = node_v19.get_wallet_rpc("w1_v19")
         info = wallet.getwalletinfo()
         assert info['private_keys_enabled']
         assert info['keypoolsize'] > 0
         # Use addmultisigaddress (see #18075)
-        address_18075 = wallet.addmultisigaddress(1, ["0296b538e853519c726a2c91e61ec11600ae1390813a627c66fb8be7947be63c52", "037211a824f55b505228e4c3d5194c1fcfaa15a456abdf37f9b9d97a4040afc073"], "")["address"]
+        address_18075 = wallet.rpc.addmultisigaddress(1, ["0296b538e853519c726a2c91e61ec11600ae1390813a627c66fb8be7947be63c52", "037211a824f55b505228e4c3d5194c1fcfaa15a456abdf37f9b9d97a4040afc073"], "")["address"]
         assert wallet.getaddressinfo(address_18075)["solvable"]
 
         # w1_v18: regular wallet, created with v0.18
-        node_v18.createwallet(wallet_name="w1_v18")
+        node_v18.rpc.createwallet(wallet_name="w1_v18")
         wallet = node_v18.get_wallet_rpc("w1_v18")
         info = wallet.getwalletinfo()
         assert info['private_keys_enabled']
@@ -111,21 +111,21 @@ class BackwardsCompatibilityTest(BitcoinTestFramework):
         # w2: wallet with private keys disabled, created on master: update this
         #     test when default wallets private keys disabled can no longer be
         #     opened by older versions.
-        node_master.createwallet(wallet_name="w2", disable_private_keys=True)
+        node_master.rpc.createwallet(wallet_name="w2", disable_private_keys=True)
         wallet = node_master.get_wallet_rpc("w2")
         info = wallet.getwalletinfo()
         assert info['private_keys_enabled'] == False
         assert info['keypoolsize'] == 0
 
         # w2_v19: wallet with private keys disabled, created with v0.19
-        node_v19.createwallet(wallet_name="w2_v19", disable_private_keys=True)
+        node_v19.rpc.createwallet(wallet_name="w2_v19", disable_private_keys=True)
         wallet = node_v19.get_wallet_rpc("w2_v19")
         info = wallet.getwalletinfo()
         assert info['private_keys_enabled'] == False
         assert info['keypoolsize'] == 0
 
         # w2_v18: wallet with private keys disabled, created with v0.18
-        node_v18.createwallet(wallet_name="w2_v18", disable_private_keys=True)
+        node_v18.rpc.createwallet(wallet_name="w2_v18", disable_private_keys=True)
         wallet = node_v18.get_wallet_rpc("w2_v18")
         info = wallet.getwalletinfo()
         assert info['private_keys_enabled'] == False
@@ -133,21 +133,21 @@ class BackwardsCompatibilityTest(BitcoinTestFramework):
 
         # w3: blank wallet, created on master: update this
         #     test when default blank wallets can no longer be opened by older versions.
-        node_master.createwallet(wallet_name="w3", blank=True)
+        node_master.rpc.createwallet(wallet_name="w3", blank=True)
         wallet = node_master.get_wallet_rpc("w3")
         info = wallet.getwalletinfo()
         assert info['private_keys_enabled']
         assert info['keypoolsize'] == 0
 
         # w3_v19: blank wallet, created with v0.19
-        node_v19.createwallet(wallet_name="w3_v19", blank=True)
+        node_v19.rpc.createwallet(wallet_name="w3_v19", blank=True)
         wallet = node_v19.get_wallet_rpc("w3_v19")
         info = wallet.getwalletinfo()
         assert info['private_keys_enabled']
         assert info['keypoolsize'] == 0
 
         # w3_v18: blank wallet, created with v0.18
-        node_v18.createwallet(wallet_name="w3_v18", blank=True)
+        node_v18.rpc.createwallet(wallet_name="w3_v18", blank=True)
         wallet = node_v18.get_wallet_rpc("w3_v18")
         info = wallet.getwalletinfo()
         assert info['private_keys_enabled']
@@ -292,7 +292,7 @@ class BackwardsCompatibilityTest(BitcoinTestFramework):
 
         self.log.info("Test wallet upgrade path...")
         # u1: regular wallet, created with v0.17
-        node_v17.createwallet(wallet_name="u1_v17")
+        node_v17.rpc.createwallet(wallet_name="u1_v17")
         wallet = node_v17.get_wallet_rpc("u1_v17")
         address = wallet.getnewaddress()
         info = wallet.getaddressinfo(address)
