@@ -193,6 +193,14 @@ x86_64-pc-linux-gnu-nowallet:
     HOST: x86_64-pc-linux-gnu
     DEP_OPTS: "NO_WALLET=1"
 
+x86_64-pc-linux-gnu-multiprocess:
+  extends:
+    - .build-depends-template
+    - .skip-in-fast-mode-template
+  variables:
+    HOST: x86_64-pc-linux-gnu
+    DEP_OPTS: "MULTIPROCESS=1"
+
 x86_64-apple-darwin:
   extends:
     - .build-depends-template
@@ -288,6 +296,15 @@ linux64_nowallet-build:
   variables:
     BUILD_TARGET: linux64_nowallet
 
+linux64_multiprocess-build:
+  extends:
+    - .build-template
+    - .skip-in-fast-mode-template
+  needs:
+    - x86_64-pc-linux-gnu-multiprocess
+  variables:
+    BUILD_TARGET: linux64_multiprocess
+
 #linux64_valgrind-build:
 #  extends:
 #    - .build-template
@@ -350,6 +367,15 @@ linux64_ubsan-test:
     - linux64_ubsan-build
   variables:
     BUILD_TARGET: linux64_ubsan
+
+linux64_multiprocess-test:
+  extends:
+    - .test-template
+    - .skip-in-fast-mode-template
+  needs:
+    - linux64_multiprocess-build
+  variables:
+    BUILD_TARGET: linux64_multiprocess
 
 #linux64_valgrind-test:
 #  extends:
