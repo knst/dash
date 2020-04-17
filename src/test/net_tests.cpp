@@ -19,12 +19,12 @@
 #include <util/system.h>
 #include <version.h>
 
+#include <boost/test/unit_test.hpp>
+
 #include <cstdint>
 #include <ios>
 #include <memory>
 #include <string>
-
-#include <boost/test/unit_test.hpp>
 
 using namespace std::literals;
 

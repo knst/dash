@@ -11,10 +11,10 @@
 #include <test/util/setup_common.h>
 #include <util/string.h>
 
+#include <boost/test/unit_test.hpp>
+
 #include <optional>
 #include <string>
-
-#include <boost/test/unit_test.hpp>
 
 class CAddrManTest : public CAddrMan
 {

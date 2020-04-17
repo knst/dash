@@ -10,6 +10,8 @@
 #include <random.h>
 #include <util/system.h>
 
+#include <boost/thread/thread.hpp>
+
 #include <vector>
 
 static const size_t BATCHES = 101;
