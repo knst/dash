@@ -908,15 +908,19 @@ UniValue dumpwallet(const JSONRPCRequest& request)
         },
     }.Check(request);
 
-    std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(request);
+    std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
     if (!wallet) return NullUniValue;
-    const CWallet* const pwallet = wallet.get();
 
-    LegacyScriptPubKeyMan& spk_man = EnsureLegacyScriptPubKeyMan(*wallet);
+    CWallet& wallet = *pwallet;
+    LegacyScriptPubKeyMan& spk_man = EnsureLegacyScriptPubKeyMan(wallet);
+
+    // Make sure the results are valid at least up to the most recent block
+    // the user could have gotten from another RPC command prior to now
+    wallet.BlockUntilSyncedToCurrentChain();
 
     LOCK2(pwallet->cs_wallet, spk_man.cs_KeyStore);
 
-    EnsureWalletIsUnlocked(pwallet);
+    EnsureWalletIsUnlocked(&wallet);
 
     fs::path filepath = request.params[0].get_str();
     filepath = fs::absolute(filepath);
@@ -952,9 +956,9 @@ UniValue dumpwallet(const JSONRPCRequest& request)
     // produce output
     file << strprintf("# Wallet dump created by Dash Core %s\n", CLIENT_BUILD);
     file << strprintf("# * Created on %s\n", FormatISO8601DateTime(GetTime()));
-    file << strprintf("# * Best block at time of backup was %i (%s),\n", pwallet->GetLastBlockHeight(), pwallet->GetLastBlockHash().ToString());
+    file << strprintf("# * Best block at time of backup was %i (%s),\n", wallet.GetLastBlockHeight(), wallet.GetLastBlockHash().ToString());
     int64_t block_time = 0;
-    CHECK_NONFATAL(pwallet->chain().findBlock(pwallet->GetLastBlockHash(), FoundBlock().time(block_time)));
+    CHECK_NONFATAL(wallet.chain().findBlock(wallet.GetLastBlockHash(), FoundBlock().time(block_time)));
     file << strprintf("#   mined on %s\n", FormatISO8601DateTime(block_time));
     file << "\n";
 
@@ -1012,7 +1016,7 @@ UniValue dumpwallet(const JSONRPCRequest& request)
         CKey key;
         if (spk_man.GetKey(keyid, key)) {
             file << strprintf("%s %s ", EncodeSecret(key), strTime);
-            const auto* address_book_entry = pwallet->FindAddressBookEntry(pkhash);
+            const auto* address_book_entry = wallet.FindAddressBookEntry(pkhash);
             if (address_book_entry) {
                 file << strprintf("label=%s", EncodeDumpString(address_book_entry->GetLabel()));
             } else if (mapKeyPool.count(keyid)) {
