@@ -212,6 +212,8 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
                             help="set a random seed for deterministically reproducing a previous test run")
         parser.add_argument('--timeout-factor', dest="timeout_factor", type=float, default=1.0, help='adjust test timeouts by a factor. Setting it to 0 disables all timeouts')
 
+        parser.add_argument("--descriptors", default=False, action="store_true",
+                            help="Run test using a descriptor wallet")
         self.add_options(parser)
         self.options = parser.parse_args()
 
@@ -415,11 +417,23 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
 
     def setup_nodes(self):
         """Override this method to customize test node setup"""
-        extra_args = None
+        extra_args = [[]] * self.num_nodes
+        wallets = [[]] * self.num_nodes
         if hasattr(self, "extra_args"):
             extra_args = self.extra_args
+            wallets = [[x for x in eargs if x.startswith('-wallet=')] for eargs in extra_args]
+        extra_args = [x + ['-nowallet'] for x in extra_args]
         self.add_nodes(self.num_nodes, extra_args)
         self.start_nodes()
+        for i, n in enumerate(self.nodes):
+            n.extra_args.pop()
+            if '-wallet=0' in n.extra_args or '-nowallet' in n.extra_args or '-disablewallet' in n.extra_args or not self.is_wallet_compiled():
+                continue
+            if '-wallet=' not in wallets[i] and not any([x.startswith('-wallet=') for x in wallets[i]]):
+                wallets[i].append('-wallet=')
+            for w in wallets[i]:
+                wallet_name = w.split('=', 1)[1]
+                n.createwallet(wallet_name=wallet_name, descriptors=self.options.descriptors)
         if self.requires_wallet:
             self.import_deterministic_coinbase_privkeys()
         if not self.setup_clean_chain:
@@ -491,6 +505,7 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
                 use_cli=self.options.usecli,
                 start_perf=self.options.perf,
                 use_valgrind=self.options.valgrind,
+                descriptors=self.options.descriptors,
             ))
 
     def add_dynamically_node(self, extra_args=None, *, rpchost=None, binary=None):
@@ -831,6 +846,7 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
                     mocktime=self.mocktime,
                     coverage_dir=None,
                     cwd=self.options.tmpdir,
+                    descriptors=self.options.descriptors,
                 ))
             self.start_node(CACHE_NODE_ID)
             cache_node = self.nodes[CACHE_NODE_ID]
