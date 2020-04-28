@@ -41,11 +41,11 @@ BITCOIN_CONFIG_ALL="--enable-suppress-external-warnings --disable-dependency-tra
 
 ( test -n "$CONFIG_SHELL" && eval '"$CONFIG_SHELL" -c "./autogen.sh"' ) || ./autogen.sh
 
-rm -rf build-ci
-mkdir build-ci
-cd build-ci
+rm -rf "${BASE_BUILD_DIR}"
+mkdir -p "${BASE_BUILD_DIR}"
+cd "${BASE_BUILD_DIR}"
 
-bash -c "../configure $BITCOIN_CONFIG_ALL $BITCOIN_CONFIG" || ( cat config.log && false)
+bash -c "${BASE_ROOT_DIR}/configure $BITCOIN_CONFIG_ALL $BITCOIN_CONFIG" || ( cat config.log && false)
 make distdir VERSION=$BUILD_TARGET
 
 cd dashcore-$BUILD_TARGET

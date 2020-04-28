@@ -25,7 +25,7 @@ if [ -n "$PREVIOUS_RELEASES_TO_DOWNLOAD" ]; then
   ./test/get_previous_releases.py -b -t "$PREVIOUS_RELEASES_DIR" ${PREVIOUS_RELEASES_TO_DOWNLOAD}
 fi
 
-cd build-ci/dashcore-$BUILD_TARGET
+cd "${BASE_BUILD_DIR}/dashcore-$BUILD_TARGET"
 
 if [ "$SOCKETEVENTS" = "" ]; then
   # Let's switch socketevents mode to some random mode
