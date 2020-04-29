@@ -4563,7 +4563,7 @@ std::shared_ptr<CWallet> CWallet::Create(interfaces::Chain& chain, interfaces::C
 
     if (fFirstRun)
     {
-        walletInstance->SetMaxVersion(FEATURE_LATEST);
+        walletInstance->SetMinVersion(FEATURE_LATEST);
 
         walletInstance->AddWalletFlags(wallet_creation_flags);
 
@@ -4898,7 +4898,7 @@ bool CWallet::UpgradeWallet(int version, bilingual_str& error)
         return false;
     }
 
-    SetMaxVersion(nMaxVersion);
+    SetMinVersion(GetClosestWalletFeature(version));
 
     return true;
 }
