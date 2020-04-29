@@ -28,3 +28,8 @@ fs::path GetWalletDir()
 
     return path;
 }
+
+bool IsFeatureSupported(int wallet_version, int feature_version)
+{
+    return wallet_version >= feature_version;
+}

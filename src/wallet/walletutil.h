@@ -23,6 +23,7 @@ enum WalletFeature
     FEATURE_LATEST = FEATURE_HD
 };
 
+bool IsFeatureSupported(int wallet_version, int feature_version);
 
 enum WalletFlags : uint64_t {
     // wallet flags in the upper section (> 1 << 31) will lead to not opening the wallet if flag is unknown
