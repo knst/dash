@@ -5659,12 +5659,21 @@ void CWallet::SetupDescriptorScriptPubKeyMans()
             spk_manager->SetupDescriptorGeneration(master_key);
             uint256 id = spk_manager->GetID();
             m_spk_managers[id] = std::move(spk_manager);
-            SetActiveScriptPubKeyMan(id, internal);
+            AddActiveScriptPubKeyMan(id, internal);
         }
     }
 }
 
-void CWallet::SetActiveScriptPubKeyMan(uint256 id, bool internal, bool memonly)
+void CWallet::AddActiveScriptPubKeyMan(uint256 id, bool internal)
+{
+    WalletBatch batch(GetDatabase());
+    if (!batch.WriteActiveScriptPubKeyMan(id, internal)) {
+        throw std::runtime_error(std::string(__func__) + ": writing active ScriptPubKeyMan id failed");
+    }
+    LoadActiveScriptPubKeyMan(id, internal);
+}
+
+void CWallet::LoadActiveScriptPubKeyMan(uint256 id, bool internal)
 {
     WalletLogPrintf("Setting spkMan to active: id = %s, type = %d, internal = %d\n", id.ToString(), static_cast<int>(OutputType::LEGACY), static_cast<int>(internal));
     auto& spk_mans = internal ? m_internal_spk_managers : m_external_spk_managers;
@@ -5672,12 +5681,6 @@ void CWallet::SetActiveScriptPubKeyMan(uint256 id, bool internal, bool memonly)
     spk_man->SetInternal(internal);
     spk_mans = spk_man;
 
-    if (!memonly) {
-        WalletBatch batch(GetDatabase());
-        if (!batch.WriteActiveScriptPubKeyMan(id, internal)) {
-            throw std::runtime_error(std::string(__func__) + ": writing active ScriptPubKeyMan id failed");
-        }
-    }
     NotifyCanGetAddressesChanged();
 
 }
