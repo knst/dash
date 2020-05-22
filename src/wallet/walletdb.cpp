@@ -516,7 +516,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
             CHDChain chain;
             ssValue >> chain;
             assert ((strType == DBKeys::CRYPTED_HDCHAIN) == chain.IsCrypted());
-            if (!pwallet->GetOrCreateLegacyScriptPubKeyMan()->SetHDChainSingle(chain, true))
+            if (!pwallet->GetOrCreateLegacyScriptPubKeyMan()->LoadHDChain(chain))
             {
                 strErr = "Error reading wallet database: SetHDChain failed";
                 return false;

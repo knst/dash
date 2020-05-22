@@ -4610,8 +4610,8 @@ std::shared_ptr<CWallet> CWallet::Create(interfaces::Chain& chain, interfaces::C
                     }
                     LOCK(walletInstance->cs_wallet);
                     if (auto spk_man = walletInstance->GetLegacyScriptPubKeyMan()) {
-                        if (!spk_man->SetHDChainSingle(newHdChain, false)) {
-                            error = strprintf(_("%s failed"), "SetHDChainSingle");
+                        if (!spk_man->AddHDChainSingle(newHdChain)) {
+                            error = strprintf(_("%s failed"), "AddHDChainSingle");
                             return nullptr;
                         }
                     }
