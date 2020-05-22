@@ -1766,7 +1766,7 @@ bool LegacyScriptPubKeyMan::GetHDChain(CHDChain& hdChainRet) const
     return !hdChain.IsNull();
 }
 
-void LegacyScriptPubKeyMan::SetType(bool internal) {}
+void LegacyScriptPubKeyMan::SetInternal(bool internal) {}
 
 bool DescriptorScriptPubKeyMan::GetNewDestination(CTxDestination& dest, std::string& error)
 {
@@ -2323,7 +2323,7 @@ uint256 DescriptorScriptPubKeyMan::GetID() const
     return id;
 }
 
-void DescriptorScriptPubKeyMan::SetType(bool internal)
+void DescriptorScriptPubKeyMan::SetInternal(bool internal)
 {
     this->m_internal = internal;
 }
