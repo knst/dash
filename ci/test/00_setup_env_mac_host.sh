@@ -14,6 +14,7 @@ export RUN_UNIT_TESTS=true
 export RUN_INTEGRATION_TESTS=false
 export GOAL="install"
 export BITCOIN_CONFIG="--enable-gui --enable-reduce-exports --disable-miner --enable-werror"
+export RUN_SECURITY_TESTS="true"
 # Run without depends
 export NO_DEPENDS=1
 export OSX_SDK=""

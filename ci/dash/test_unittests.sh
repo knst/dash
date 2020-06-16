@@ -30,4 +30,6 @@ if [ "$DIRECT_WINE_EXEC_TESTS" = "true" ]; then
   wine ./src/test/test_dash.exe
 else
   make $MAKEJOBS check VERBOSE=1
+  # run security tests ?? 
+  make test-security-check
 fi
