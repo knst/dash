@@ -38,7 +38,8 @@ std::string GetTxnOutputType(TxoutType t)
     case TxoutType::SCRIPTHASH: return "scripthash";
     case TxoutType::MULTISIG: return "multisig";
     case TxoutType::NULL_DATA: return "nulldata";
-    } // no default case, so the compiler can warn about missing cases
+    case TxoutType::TAPROOT: return "taproot";
+    }
     assert(false);
 }
 
@@ -181,6 +182,11 @@ bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet)
     }
     case TxoutType::SCRIPTHASH: {
         addressRet = ScriptHash(uint160(vSolutions[0]));
+        return true;
+    }
+    case TxoutType::TAPROOT: {
+        // TODO: implement here new address destination, see bitcoin/bitcoin#22051
+        addressRet = CNoDestination{};
         return true;
     }
     case TxoutType::MULTISIG:
