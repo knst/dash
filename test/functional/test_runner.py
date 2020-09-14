@@ -147,6 +147,7 @@ BASE_SCRIPTS = [
     'feature_notifications.py',
     'rpc_signer.py',
     'wallet_signer.py --descriptors',
+    'feature_taproot.py',
     # vv Tests less than 60s vv
     'p2p_platform_ban.py', # NOTE: needs dash_hash to pass
     'p2p_sendheaders.py', # NOTE: needs dash_hash to pass
