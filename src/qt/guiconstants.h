@@ -39,6 +39,7 @@ static const int TOOLTIP_WRAP_THRESHOLD = 80;
 #define QAPP_ORG_DOMAIN "dash.org"
 #define QAPP_APP_NAME_DEFAULT "Dash-Qt"
 #define QAPP_APP_NAME_TESTNET "Dash-Qt-testnet"
+#define QAPP_APP_NAME_SIGNET "Dash-Qt-signet"
 #define QAPP_APP_NAME_DEVNET "Dash-Qt-%s"
 #define QAPP_APP_NAME_REGTEST "Dash-Qt-regtest"
 

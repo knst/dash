@@ -284,6 +284,7 @@ const std::list<SectionInfo> ArgsManager::GetUnrecognizedSections() const
     // Section names to be recognized in the config file.
     static const std::set<std::string> available_sections{
         CBaseChainParams::REGTEST,
+        CBaseChainParams::SIGNET,
         CBaseChainParams::TESTNET,
         CBaseChainParams::MAIN,
         CBaseChainParams::DEVNET
@@ -998,20 +999,25 @@ std::string ArgsManager::GetChainName() const
     };
 
     const bool fRegTest = get_net("-regtest");
+    const bool fSigNet  = get_net("-signet");
     const bool fTestNet = get_net("-testnet");
     const bool fDevNet = get_net("-devnet", false);
     const bool is_chain_arg_set = IsArgSet("-chain");
 
-    int nameParamsCount = (fRegTest ? 1 : 0) + (fDevNet ? 1 : 0) + (fTestNet ? 1 : 0) + (is_chain_arg_set ? 1 : 0);
+    int nameParamsCount = (fRegTest ? 1 : 0) + (fDevNet ? 1 : 0) + (fSigNet ? 1 : 0) + (fTestNet ? 1 : 0) + (is_chain_arg_set ? 1 : 0);
     if (nameParamsCount > 1)
-        throw std::runtime_error("Only one of -regtest, -testnet, -devnet or -chain can be used.");
+        throw std::runtime_error("Only one of -regtest, -signet, -testnet, -devnet or -chain can be used.");
 
     if (fDevNet)
         return CBaseChainParams::DEVNET;
     if (fRegTest)
         return CBaseChainParams::REGTEST;
+    if (fSigNet) {
+        return CBaseChainParams::SIGNET;
+    }
     if (fTestNet)
         return CBaseChainParams::TESTNET;
+
     return GetArg("-chain", CBaseChainParams::MAIN);
 }
 

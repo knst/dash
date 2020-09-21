@@ -195,6 +195,11 @@ struct Params {
         } // no default case, so the compiler can warn about missing cases
         return std::numeric_limits<int>::max();
     }
+    /**
+     * If true, transaction is signed by signet challenge. See BIP325.
+     */
+    bool signet_blocks{false};
+    std::vector<uint8_t> signet_challenge;
 };
 
 } // namespace Consensus

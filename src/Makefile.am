@@ -301,6 +301,7 @@ BITCOIN_CORE_H = \
   script/signingprovider.h \
   script/standard.h \
   shutdown.h \
+  signet.h \
   source_location.h \
   spork.h \
   stacktraces.h \
@@ -506,6 +507,7 @@ libbitcoin_server_a_SOURCES = \
   rpc/server.cpp \
   script/sigcache.cpp \
   shutdown.cpp \
+  signet.cpp \
   spork.cpp \
   statsd_client.cpp \
   timedata.cpp \

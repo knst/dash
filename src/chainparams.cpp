@@ -9,6 +9,7 @@
 #include <chainparamsseeds.h>
 #include <consensus/merkle.h>
 #include <deploymentinfo.h>
+#include <hash.h> // for signet block challenge hash
 #include <llmq/params.h>
 #include <util/ranges.h>
 #include <util/system.h>
@@ -159,6 +160,8 @@ class CMainParams : public CChainParams {
 public:
     CMainParams() {
         strNetworkID = CBaseChainParams::MAIN;
+        consensus.signet_blocks = false;
+        consensus.signet_challenge.clear();
         consensus.nSubsidyHalvingInterval = 210240; // Note: actual number of blocks per calendar year with DGW v3 is ~200700 (for example 449750 - 249050)
         consensus.BIP16Height = 0;
         consensus.nMasternodePaymentsStartBlock = 100000; // not true, but it's ok as long as it's less then nMasternodePaymentsIncreaseBlock
@@ -359,6 +362,8 @@ class CTestNetParams : public CChainParams {
 public:
     CTestNetParams() {
         strNetworkID = CBaseChainParams::TESTNET;
+        consensus.signet_blocks = false;
+        consensus.signet_challenge.clear();
         consensus.nSubsidyHalvingInterval = 210240;
         consensus.BIP16Height = 0;
         consensus.nMasternodePaymentsStartBlock = 4010; // not true, but it's ok as long as it's less then nMasternodePaymentsIncreaseBlock
@@ -527,12 +532,185 @@ public:
 };
 
 /**
+ * Signet
+ */
+class SigNetParams : public CChainParams {
+public:
+    explicit SigNetParams(const ArgsManager& args) {
+        std::vector<uint8_t> bin;
+        vSeeds.clear();
+
+        if (!args.IsArgSet("-signetchallenge")) {
+            LogPrintf("Using default signet network\n");
+            bin = ParseHex("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+            vSeeds.emplace_back("0.0.0.0");
+            vSeeds.emplace_back("::0");
+            vSeeds.emplace_back("xxxxxxxxxxxxxxxx.onion:38333");
+        } else {
+            const auto signet_challenge = args.GetArgs("-signetchallenge");
+            if (signet_challenge.size() != 1) {
+                throw std::runtime_error(strprintf("%s: -signetchallenge cannot be multiple values.", __func__));
+            }
+            bin = ParseHex(signet_challenge[0]);
+
+            LogPrintf("Signet with challenge %s\n", signet_challenge[0]);
+        }
+
+        if (args.IsArgSet("-signetseednode")) {
+            vSeeds = args.GetArgs("-signetseednode");
+        }
+
+        strNetworkID = CBaseChainParams::SIGNET;
+        consensus.signet_blocks = true;
+        consensus.signet_challenge.assign(bin.begin(), bin.end());
+        consensus.nSubsidyHalvingInterval = 210240;
+        consensus.nSubsidyHalvingInterval = 210240;
+        consensus.BIP16Height = 0;
+        consensus.nMasternodePaymentsStartBlock = 4010; // not true, but it's ok as long as it's less then nMasternodePaymentsIncreaseBlock
+        consensus.nMasternodePaymentsIncreaseBlock = 4030;
+        consensus.nMasternodePaymentsIncreasePeriod = 10;
+        consensus.nInstantSendConfirmationsRequired = 2;
+        consensus.nInstantSendKeepLock = 6;
+        consensus.nBudgetPaymentsStartBlock = 4100;
+        consensus.nBudgetPaymentsCycleBlocks = 50;
+        consensus.nBudgetPaymentsWindowBlocks = 10;
+        consensus.nSuperblockStartBlock = 4200; // NOTE: Should satisfy nSuperblockStartBlock > nBudgetPeymentsStartBlock
+        consensus.nSuperblockStartHash = uint256(); // do not check this on devnet
+        consensus.nSuperblockCycle = 24; // Superblocks can be issued hourly on devnet
+        consensus.nSuperblockMaturityWindow = 8;
+        consensus.nGovernanceMinQuorum = 1;
+        consensus.nGovernanceFilterElements = 500;
+        consensus.nMasternodeMinimumConfirmations = 1;
+        consensus.BIP34Height = 1; // BIP34 activated immediately on devnet
+        consensus.BIP65Height = 1; // BIP65 activated immediately on devnet
+        consensus.BIP66Height = 1; // BIP66 activated immediately on devnet
+        consensus.BIP147Height = 1; // BIP147 activated immediately on devnet
+        consensus.CSVHeight = 1; // BIP68 activated immediately on devnet
+        consensus.DIP0001Height = 2; // DIP0001 activated immediately on devnet
+        consensus.DIP0003Height = 2; // DIP0003 activated immediately on devnet
+        consensus.DIP0003EnforcementHeight = 2; // DIP0003 activated immediately on devnet
+        consensus.DIP0003EnforcementHash = uint256();
+        consensus.DIP0008Height = 2; // DIP0008 activated immediately on devnet
+        consensus.BRRHeight = 300;
+        consensus.DIP0020Height = 300;
+        consensus.DIP0024Height = 300;
+        consensus.DIP0024QuorumsHeight = 300;
+        consensus.V19Height = 300;
+        consensus.MinBIP9WarningHeight = 300 + 2016; // v19 activation height + miner confirmation window
+        consensus.powLimit = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"); // ~uint256(0) >> 1
+        consensus.nPowTargetTimespan = 24 * 60 * 60; // Dash: 1 day
+        consensus.nPowTargetSpacing = 2.5 * 60; // Dash: 2.5 minutes
+        consensus.fPowAllowMinDifficultyBlocks = false;
+        consensus.fPowNoRetargeting = false;
+        consensus.nPowKGWHeight = 4001; // nPowKGWHeight >= nPowDGWHeight means "no KGW"
+        consensus.nPowDGWHeight = 4001;
+        consensus.nRuleChangeActivationThreshold = 1512; // 75% for testchains
+        consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespan / nPowTargetSpacing
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999; // December 31, 2008
+
+        consensus.vDeployments[Consensus::DEPLOYMENT_V20].bit = 9;
+        consensus.vDeployments[Consensus::DEPLOYMENT_V20].nStartTime = 1661990400; // Sep 1st, 2022
+        consensus.vDeployments[Consensus::DEPLOYMENT_V20].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_V20].nWindowSize = 120;
+        consensus.vDeployments[Consensus::DEPLOYMENT_V20].nThresholdStart = 80; // 80% of 100
+        consensus.vDeployments[Consensus::DEPLOYMENT_V20].nThresholdMin = 60;   // 60% of 100
+        consensus.vDeployments[Consensus::DEPLOYMENT_V20].nFalloffCoeff = 5;     // this corresponds to 10 periods
+
+        consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].bit = 10;
+        consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].nStartTime = 1661990400; // Sep 1st, 2022
+        consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].nWindowSize = 120;
+        consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].nThresholdStart = 80; // 80% of 100
+        consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].nThresholdMin = 60;   // 60% of 100
+        consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].nFalloffCoeff = 5;     // this corresponds to 10 periods
+        consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].useEHF = true;
+
+        /////////////////////////
+        // message start is defined as the first 4 bytes of the sha256d of the block script
+        CHashWriter h(SER_DISK, 0);
+        h << consensus.signet_challenge;
+        uint256 hash = h.GetHash();
+        memcpy(pchMessageStart, hash.begin(), 4);
+        LogPrintf("Signet derived magic (message start): %s\n", HexStr({pchMessageStart, pchMessageStart + 4}));
+
+        nDefaultPort = 19699;
+        genesis = CreateGenesisBlock(1417713337, 1096447, 0x207fffff, 1, 50 * COIN);
+        consensus.hashGenesisBlock = genesis.GetHash();
+        assert(consensus.hashGenesisBlock == uint256S("0x000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e"));
+        assert(genesis.hashMerkleRoot == uint256S("0xe0028eb9648db56b1ac77cf090b99048a8007e2bb64b68f092c03c7f56a662c7"));
+
+        vFixedSeeds.clear();
+
+        // Testnet Dash addresses start with 'y'
+        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,140);
+        // Testnet Dash script addresses start with '8' or '9'
+        base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,19);
+        // Testnet private keys start with '9' or 'c' (Bitcoin defaults)
+        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,239);
+        // Testnet Dash BIP32 pubkeys start with 'tpub' (Bitcoin defaults)
+        base58Prefixes[EXT_PUBLIC_KEY] = {0x04, 0x35, 0x87, 0xCF};
+        // Testnet Dash BIP32 prvkeys start with 'tprv' (Bitcoin defaults)
+        base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x35, 0x83, 0x94};
+
+        // Testnet Dash BIP44 coin type is '1' (All coin's testnet default)
+        nExtCoinType = 1;
+
+        // long living quorum params
+        AddLLMQ(Consensus::LLMQType::LLMQ_50_60);
+        AddLLMQ(Consensus::LLMQType::LLMQ_60_75);
+        AddLLMQ(Consensus::LLMQType::LLMQ_400_60);
+        AddLLMQ(Consensus::LLMQType::LLMQ_400_85);
+        AddLLMQ(Consensus::LLMQType::LLMQ_100_67);
+        AddLLMQ(Consensus::LLMQType::LLMQ_25_67);
+        consensus.llmqTypeChainLocks = Consensus::LLMQType::LLMQ_50_60;
+        consensus.llmqTypeDIP0024InstantSend = Consensus::LLMQType::LLMQ_60_75;
+        consensus.llmqTypePlatform = Consensus::LLMQType::LLMQ_25_67;
+        consensus.llmqTypeMnhf = Consensus::LLMQType::LLMQ_50_60;
+
+        fDefaultConsistencyChecks = false;
+        fRequireStandard = false;
+        fRequireRoutableExternalIP = true;
+        m_is_test_chain = true;
+        fAllowMultipleAddressesFromGroup = false;
+        fAllowMultiplePorts = true;
+        nLLMQConnectionRetryTimeout = 60;
+        m_is_mockable_chain = false;
+
+        nPoolMinParticipants = 2;
+        nPoolMaxParticipants = 20;
+        nFulfilledRequestExpireTime = 5*60; // fulfilled requests expire in 5 minutes
+
+        vSporkAddresses = {"yjPtiKh2uwk3bDutTEA2q9mCtXyiZRWn55"};
+        nMinSporkKeys = 1;
+
+        checkpointData = (CCheckpointData) {
+            {
+                { 0, uint256S("0x000008ca1832a4baf228eb1553c03d3a2c8e02399550dd6ea8d65cec3ef23d2e")},
+                { 1, devnetGenesis.GetHash() },
+            }
+        };
+        m_assumeutxo_data = MapAssumeutxo{
+            // TODO to be specified in a future patch.
+        };
+        chainTxData = ChainTxData{
+            0,
+            0,
+            0
+        };
+    }
+};
+
+/**
  * Devnet: The Development network intended for developers use.
  */
 class CDevNetParams : public CChainParams {
 public:
     explicit CDevNetParams(const ArgsManager& args) {
         strNetworkID = CBaseChainParams::DEVNET;
+        consensus.signet_blocks = false;
+        consensus.signet_challenge.clear();
         consensus.nSubsidyHalvingInterval = 210240;
         consensus.BIP16Height = 0;
         consensus.nMasternodePaymentsStartBlock = 4010; // not true, but it's ok as long as it's less then nMasternodePaymentsIncreaseBlock
@@ -771,6 +949,8 @@ class CRegTestParams : public CChainParams {
 public:
     explicit CRegTestParams(const ArgsManager& args) {
         strNetworkID =  CBaseChainParams::REGTEST;
+        consensus.signet_blocks = false;
+        consensus.signet_challenge.clear();
         consensus.nSubsidyHalvingInterval = 150;
         consensus.BIP16Height = 0; // always enforce P2SH BIP16 on regtest
         consensus.nMasternodePaymentsStartBlock = 240;
@@ -1336,6 +1516,8 @@ std::unique_ptr<const CChainParams> CreateChainParams(const ArgsManager& args, c
         return std::unique_ptr<CChainParams>(new CMainParams());
     } else if (chain == CBaseChainParams::TESTNET) {
         return std::unique_ptr<CChainParams>(new CTestNetParams());
+    } else if (chain == CBaseChainParams::SIGNET) {
+        return std::unique_ptr<CChainParams>(new SigNetParams(gArgs));
     } else if (chain == CBaseChainParams::DEVNET) {
         return std::unique_ptr<CChainParams>(new CDevNetParams(args));
     } else if (chain == CBaseChainParams::REGTEST) {

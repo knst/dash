@@ -1,4 +1,4 @@
-# Copyright (c) 2013-2016 The Bitcoin Core developers
+# Copyright (c) 2014-2016 The Bitcoin Core developers
 # Copyright (c) 2014-2018 The Dash Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -319,6 +319,7 @@ test_fuzz_fuzz_SOURCES = \
   test/fuzz/secp256k1_ecdsa_signature_parse_der_lax.cpp \
   test/fuzz/signature_checker.cpp \
   test/fuzz/socks5.cpp \
+  test/fuzz/signet.cpp \
   test/fuzz/span.cpp \
   test/fuzz/spanparsing.cpp \
   test/fuzz/string.cpp \

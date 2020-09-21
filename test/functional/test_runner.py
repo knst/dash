@@ -261,6 +261,7 @@ BASE_SCRIPTS = [
     'rpc_bind.py --ipv6',
     'rpc_bind.py --nonloopback',
     'mining_basic.py',
+    'feature_signet.py',
     'rpc_named_arguments.py',
     'wallet_listsinceblock.py',
     'wallet_listsinceblock.py --descriptors',
