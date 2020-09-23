@@ -104,7 +104,7 @@ void CDSNotificationInterface::UpdatedBlockTip(const CBlockIndex *pindexNew, con
     }
 }
 
-void CDSNotificationInterface::TransactionAddedToMempool(const CTransactionRef& ptx, int64_t nAcceptTime)
+void CDSNotificationInterface::TransactionAddedToMempool(const CTransactionRef& ptx, int64_t nAcceptTime, uint64_t mempool_sequence)
 {
     assert(m_cj_ctx && m_llmq_ctx);
 
@@ -113,7 +113,7 @@ void CDSNotificationInterface::TransactionAddedToMempool(const CTransactionRef& 
     m_cj_ctx->dstxman->TransactionAddedToMempool(ptx);
 }
 
-void CDSNotificationInterface::TransactionRemovedFromMempool(const CTransactionRef& ptx, MemPoolRemovalReason reason)
+void CDSNotificationInterface::TransactionRemovedFromMempool(const CTransactionRef& ptx, MemPoolRemovalReason reason, uint64_t mempool_sequence)
 {
     assert(m_llmq_ctx);
 

@@ -46,6 +46,7 @@ static const char *MSG_RAWGVOTE      = "rawgovernancevote";
 static const char *MSG_RAWGOBJ       = "rawgovernanceobject";
 static const char *MSG_RAWISCON      = "rawinstantsenddoublespend";
 static const char *MSG_RAWRECSIG     = "rawrecoveredsig";
+static const char *MSG_SEQUENCE      = "sequence";
 
 // Internal function to send multipart message
 static int zmq_send_multipart(void *sock, const void* data, size_t size, ...)
@@ -408,3 +409,49 @@ bool CZMQPublishRawRecoveredSigNotifier::NotifyRecoveredSig(const std::shared_pt
     return SendZmqMessage(MSG_RAWRECSIG, &(*ss.begin()), ss.size());
 }
 
+// TODO: Dedup this code to take label char, log string
+bool CZMQPublishSequenceNotifier::NotifyBlockConnect(const CBlockIndex *pindex)
+{
+    uint256 hash = pindex->GetBlockHash();
+    LogPrint(BCLog::ZMQ, "zmq: Publish sequence block connect %s\n", hash.GetHex());
+    char data[sizeof(uint256)+1];
+    for (unsigned int i = 0; i < sizeof(uint256); i++)
+        data[sizeof(uint256) - 1 - i] = hash.begin()[i];
+    data[sizeof(data) - 1] = 'C'; // Block (C)onnect
+    return SendZmqMessage(MSG_SEQUENCE, data, sizeof(data));
+}
+
+bool CZMQPublishSequenceNotifier::NotifyBlockDisconnect(const CBlockIndex *pindex)
+{
+    uint256 hash = pindex->GetBlockHash();
+    LogPrint(BCLog::ZMQ, "zmq: Publish sequence block disconnect %s\n", hash.GetHex());
+    char data[sizeof(uint256)+1];
+    for (unsigned int i = 0; i < sizeof(uint256); i++)
+        data[sizeof(uint256) - 1 - i] = hash.begin()[i];
+    data[sizeof(data) - 1] = 'D'; // Block (D)isconnect
+    return SendZmqMessage(MSG_SEQUENCE, data, sizeof(data));
+}
+
+bool CZMQPublishSequenceNotifier::NotifyTransactionAcceptance(const CTransaction &transaction, uint64_t mempool_sequence)
+{
+    uint256 hash = transaction.GetHash();
+    LogPrint(BCLog::ZMQ, "zmq: Publish hashtx mempool acceptance %s\n", hash.GetHex());
+    unsigned char data[sizeof(uint256)+sizeof(mempool_sequence)+1];
+    for (unsigned int i = 0; i < sizeof(uint256); i++)
+        data[sizeof(uint256) - 1 - i] = hash.begin()[i];
+    data[sizeof(uint256)] = 'A'; // Mempool (A)cceptance
+    WriteLE64(data+sizeof(uint256)+1, mempool_sequence);
+    return SendZmqMessage(MSG_SEQUENCE, data, sizeof(data));
+}
+
+bool CZMQPublishSequenceNotifier::NotifyTransactionRemoval(const CTransaction &transaction, uint64_t mempool_sequence)
+{
+    uint256 hash = transaction.GetHash();
+    LogPrint(BCLog::ZMQ, "zmq: Publish hashtx mempool removal %s\n", hash.GetHex());
+    unsigned char data[sizeof(uint256)+sizeof(mempool_sequence)+1];
+    for (unsigned int i = 0; i < sizeof(uint256); i++)
+        data[sizeof(uint256) - 1 - i] = hash.begin()[i];
+    data[sizeof(uint256)] = 'R'; // Mempool (R)emoval
+    WriteLE64(data+sizeof(uint256)+1, mempool_sequence);
+    return SendZmqMessage(MSG_SEQUENCE, data, sizeof(data));
+}
