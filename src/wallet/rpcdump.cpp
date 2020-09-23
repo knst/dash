@@ -1783,8 +1783,8 @@ static UniValue ProcessDescriptorImport(CWallet * const pwallet, const UniValue&
     return result;
 }
 
-UniValue importdescriptors(const JSONRPCRequest& main_request) {
-            RPCHelpMan{"importdescriptors",
+RPCHelpMan importdescriptors() {
+            return RPCHelpMan{"importdescriptors",
                 "\nImport descriptors. This will trigger a rescan of the blockchain based on the earliest timestamp of all descriptors being imported. Requires a new wallet backup.\n"
             "\nNote: This call can take over an hour to complete if using an early timestamp; during that time, other rpc calls\n"
             "may report that the imported keys, addresses or scripts exist but related transactions are still missing.\n",
@@ -1833,8 +1833,8 @@ UniValue importdescriptors(const JSONRPCRequest& main_request) {
                                           "{ \"desc\": \"<my desccriptor 2>\", \"label\": \"example 2\", \"timestamp\": 1455191480 }]'") +
                     HelpExampleCli("importdescriptors", "'[{ \"desc\": \"<my descriptor>\", \"timestamp\":1455191478, \"active\": true, \"range\": [0,100], \"label\": \"<my wallet>\" }]'")
                 },
-            }.Check(main_request);
-
+        [&](const RPCHelpMan& self, const JSONRPCRequest& main_request) -> UniValue
+{
     // Acquire the wallet
     std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(main_request);
     if (!wallet) return NullUniValue;
@@ -1933,4 +1933,6 @@ UniValue importdescriptors(const JSONRPCRequest& main_request) {
     }
 
     return response;
+},
+    };
 }
