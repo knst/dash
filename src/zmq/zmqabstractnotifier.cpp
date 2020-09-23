@@ -52,3 +52,23 @@ bool CZMQAbstractNotifier::NotifyRecoveredSig(const std::shared_ptr<const llmq::
 {
     return true;
 }
+
+bool CZMQAbstractNotifier::NotifyBlockConnect(const CBlockIndex * /*CBlockIndex*/)
+{
+    return true;
+}
+
+bool CZMQAbstractNotifier::NotifyBlockDisconnect(const CBlockIndex * /*CBlockIndex*/)
+{
+    return true;
+}
+
+bool CZMQAbstractNotifier::NotifyTransactionAcceptance(const CTransaction &/*transaction*/, uint64_t mempool_sequence)
+{
+    return true;
+}
+
+bool CZMQAbstractNotifier::NotifyTransactionRemoval(const CTransaction &/*transaction*/, uint64_t mempool_sequence)
+{
+    return true;
+}

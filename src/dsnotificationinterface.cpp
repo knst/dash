@@ -84,14 +84,14 @@ void CDSNotificationInterface::UpdatedBlockTip(const CBlockIndex *pindexNew, con
     if (!fDisableGovernance) govman.UpdatedBlockTip(pindexNew, connman);
 }
 
-void CDSNotificationInterface::TransactionAddedToMempool(const CTransactionRef& ptx, int64_t nAcceptTime)
+void CDSNotificationInterface::TransactionAddedToMempool(const CTransactionRef& ptx, int64_t nAcceptTime, uint64_t mempool_sequence)
 {
     llmq_ctx->isman->TransactionAddedToMempool(ptx);
     llmq_ctx->clhandler->TransactionAddedToMempool(ptx, nAcceptTime);
     ::dstxManager->TransactionAddedToMempool(ptx);
 }
 
-void CDSNotificationInterface::TransactionRemovedFromMempool(const CTransactionRef& ptx, MemPoolRemovalReason reason)
+void CDSNotificationInterface::TransactionRemovedFromMempool(const CTransactionRef& ptx, MemPoolRemovalReason reason, uint64_t mempool_sequence)
 {
     llmq_ctx->isman->TransactionRemovedFromMempool(ptx);
 }
