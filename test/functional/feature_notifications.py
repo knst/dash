@@ -84,16 +84,18 @@ class NotificationsTest(DashTestFramework):
             }]
             # Make the wallets and import the descriptors
             # Ensures that node 0 and node 1 share the same wallet for the conflicting transaction tests below.
+
+            # TODO: remove this flag when DashTestFramework will be compatible with setup_clean_chain = True
+            # and set_dash_test_params; otherwise wallets created during initialization and sethdseed can't be called anymore
+            workaround_fixed_setup_clean_chain = False
             for i, name in enumerate(self.wallet_names):
-                # TODO: uncomment createwallet when DashTestFramework will be compatible with setup_clean_chain = True
-                # and set_dash_test_params; otherwise wallets created during initialization and sethdseed can't be called anymore
-                #self.nodes[i].createwallet(wallet_name=name, descriptors=self.options.descriptors, blank=True, load_on_startup=True)
+                if workaround_fixed_setup_clean_chain:
+                    self.nodes[i].createwallet(wallet_name=name, descriptors=self.options.descriptors, blank=True, load_on_startup=True)
                 if self.options.descriptors:
                     self.nodes[i].importdescriptors(desc_imports)
                 else:
-                    # TODO: uncomment when Date when DashTestFramework will be compatible with setup_clean_chain = True and set_dash_test_params
-                    # self.nodes[i].sethdseed(True, seed)
-                    pass
+                    if workaround_fixed_setup_clean_chain:
+                        self.nodes[i].sethdseed(True, seed)
 
         self.log.info("test -blocknotify")
         block_count = 10
