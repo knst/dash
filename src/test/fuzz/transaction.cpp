@@ -91,7 +91,8 @@ FUZZ_TARGET(transaction, .init = initialize_transaction)
 
     CCoinsView coins_view;
     const CCoinsViewCache coins_view_cache(&coins_view);
-    (void)AreInputsStandard(tx, coins_view_cache);
+    (void)AreInputsStandard(tx, coins_view_cache, false);
+    (void)AreInputsStandard(tx, coins_view_cache, true);
 
     UniValue u(UniValue::VOBJ);
     TxToUniv(tx, /*block_hash=*/uint256::ZERO, /*entry=*/u);
