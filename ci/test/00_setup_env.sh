@@ -43,7 +43,7 @@ export RUN_SECURITY_TESTS=${RUN_SECURITY_TESTS:-false}
 # By how much to scale the test_runner timeouts (option --timeout-factor).
 # This is needed because some ci machines have slow CPU or disk, so sanitizers
 # might be slow or a reindex might be waiting on disk IO.
-export TEST_RUNNER_TIMEOUT_FACTOR=${TEST_RUNNER_TIMEOUT_FACTOR:-4}
+export TEST_RUNNER_TIMEOUT_FACTOR=${TEST_RUNNER_TIMEOUT_FACTOR:-40}
 export RUN_FUZZ_TESTS=${RUN_FUZZ_TESTS:-false}
 
 export CONTAINER_NAME=${CONTAINER_NAME:-ci_unnamed}
