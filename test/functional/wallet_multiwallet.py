@@ -10,6 +10,7 @@ from threading import Thread
 from decimal import Decimal
 import os
 import shutil
+import stat
 import time
 
 from test_framework.authproxy import JSONRPCException
@@ -77,6 +78,11 @@ class MultiWalletTest(BitcoinTestFramework):
         os.mkdir(wallet_dir('w7'))
         os.symlink('w7', wallet_dir('w7_symlink'))
 
+        os.symlink('..', wallet_dir('recursive_dir_symlink'))
+
+        os.mkdir(wallet_dir('self_walletdat_symlink'))
+        os.symlink('wallet.dat', wallet_dir('self_walletdat_symlink/wallet.dat'))
+
         # rename wallet.dat to make sure plain wallet file paths (as opposed to
         # directory paths) can be loaded
         os.rename(wallet_dir(self.default_wallet_name, self.wallet_data_filename), wallet_dir("w8"))
@@ -105,7 +111,16 @@ class MultiWalletTest(BitcoinTestFramework):
             self.nodes[0].createwallet(wallet_name)
         for wallet_name in wallet_names[-2:]:
             self.nodes[0].loadwallet(wallet_name)
-        assert_equal(sorted(map(lambda w: w['name'], self.nodes[0].listwalletdir()['wallets'])), [self.default_wallet_name, os.path.join('sub', 'w5'), 'w', 'w1', 'w2', 'w3', 'w7', 'w7_symlink', 'w8'])
+
+        os.mkdir(wallet_dir('no_access'))
+        os.chmod(wallet_dir('no_access'), 0)
+        try:
+            with self.nodes[0].assert_debug_log(expected_msgs=['Too many levels of symbolic links', 'Error scanning']):
+                walletlist = self.nodes[0].listwalletdir()['wallets']
+        finally:
+            # Need to ensure access is restored for cleanup
+            os.chmod(wallet_dir('no_access'), stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+        assert_equal(sorted(map(lambda w: w['name'], walletlist)), [self.default_wallet_name, os.path.join('sub', 'w5'), 'w', 'w1', 'w2', 'w3', 'w7', 'w7_symlink', 'w8'])
 
         assert_equal(set(node.listwallets()), set(wallet_names))
 
