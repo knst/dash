@@ -357,7 +357,6 @@ BASE_SCRIPTS = [
     'feature_settings.py',
     'rpc_getdescriptorinfo.py',
     'rpc_addresses_deprecation.py',
-    'rpc_getpeerinfo_deprecation.py',
     'rpc_help.py',
     'feature_dirsymlinks.py',
     'feature_help.py',
