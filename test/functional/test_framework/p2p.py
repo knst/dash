@@ -185,6 +185,18 @@ class P2PConnection(asyncio.Protocol):
     def is_connected(self):
         return self._transport is not None
 
+    def get_p2p_subversion_name(self, net, uacomment):
+        if net == "devnet":
+            devnet_name = "devnet1"  # see initialize_datadir()
+            if self.uacomment is None:
+                return P2P_SUBVERSION % ("(devnet.devnet-%s)" % devnet_name)
+            else:
+                return P2P_SUBVERSION % ("(devnet.devnet-%s,%s)" % (devnet_name, self.uacomment))
+        elif self.uacomment is not None:
+            return P2P_SUBVERSION % ("(%s)" % self.uacomment)
+        else:
+            return P2P_SUBVERSION % ""
+
     def peer_connect_helper(self, dstaddr, dstport, net, timeout_factor, uacomment):
         assert not self.is_connected
         self.timeout_factor = timeout_factor
@@ -195,17 +207,8 @@ class P2PConnection(asyncio.Protocol):
         self.recvbuf = b""
         self.magic_bytes = MAGIC_BYTES[net]
         self.uacomment = uacomment
+        self.strSubVer = self.get_p2p_subversion_name(net, uacomment)
 
-        if net == "devnet":
-            devnet_name = "devnet1"  # see initialize_datadir()
-            if self.uacomment is None:
-                self.strSubVer = P2P_SUBVERSION % ("(devnet.devnet-%s)" % devnet_name)
-            else:
-                self.strSubVer = P2P_SUBVERSION % ("(devnet.devnet-%s,%s)" % (devnet_name, self.uacomment))
-        elif self.uacomment is not None:
-            self.strSubVer = P2P_SUBVERSION % ("(%s)" % self.uacomment)
-        else:
-            self.strSubVer = P2P_SUBVERSION % ""
 
     def peer_connect(self, dstaddr, dstport, *, net, timeout_factor, uacomment=None):
         self.peer_connect_helper(dstaddr, dstport, net, timeout_factor, uacomment)
@@ -382,7 +385,7 @@ class P2PInterface(P2PConnection):
         # Send a version msg
         vt = msg_version()
         vt.nVersion = P2P_VERSION
-        vt.strSubVer = P2P_SUBVERSION
+        vt.strSubVer = P2P_SUBVERSION % ''
         vt.relay = P2P_VERSION_RELAY
         vt.nServices = services
         vt.addrTo.ip = self.dstaddr
