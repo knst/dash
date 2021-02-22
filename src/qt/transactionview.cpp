@@ -126,25 +126,38 @@ TransactionView::TransactionView(QWidget* parent) :
     vlayout->setContentsMargins(0,0,0,0);
     vlayout->setSpacing(0);
 
-    QTableView *view = new QTableView(this);
+    transactionView = new QTableView(this);
+    transactionView->setObjectName("transactionView");
     vlayout->addLayout(hlayout);
     vlayout->addWidget(createDateRangeWidget());
-    vlayout->addWidget(view);
+    vlayout->addWidget(transactionView);
     vlayout->setSpacing(0);
 #ifndef Q_OS_MAC
-    int width = view->verticalScrollBar()->sizeHint().width();
+    int width = transactionView->verticalScrollBar()->sizeHint().width();
     // Cover scroll bar width with spacing
     hlayout->addSpacing(width);
     // Always show scroll bar
-    view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    transactionView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 #endif
-    view->setTabKeyNavigation(false);
-    view->setContextMenuPolicy(Qt::CustomContextMenu);
+    transactionView->setTabKeyNavigation(false);
+    transactionView->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    view->installEventFilter(this);
+    if (!transactionView->horizontalHeader()->restoreState(settings.value("TransactionViewHeaderState").toByteArray())) {
+        transactionView->setColumnWidth(TransactionTableModel::Status, STATUS_COLUMN_WIDTH);
+        transactionView->setColumnWidth(TransactionTableModel::Watchonly, WATCHONLY_COLUMN_WIDTH);
+        transactionView->setColumnWidth(TransactionTableModel::Date, DATE_COLUMN_WIDTH);
+        transactionView->setColumnWidth(TransactionTableModel::Type, TYPE_COLUMN_WIDTH);
+        transactionView->setColumnWidth(TransactionTableModel::Amount, AMOUNT_MINIMUM_COLUMN_WIDTH);
+        transactionView->horizontalHeader()->setMinimumSectionSize(MINIMUM_COLUMN_WIDTH);
 
-    transactionView = view;
-    transactionView->setObjectName("transactionView");
+        transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::Status, QHeaderView::Fixed);
+        transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::Watchonly, QHeaderView::Fixed);
+        transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::Date, QHeaderView::Interactive);
+        transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::Type, QHeaderView::Interactive);
+        transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::ToAddress, QHeaderView::Stretch);
+        transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::Amount, QHeaderView::Fixed);
+    }
+    transactionView->horizontalHeader()->setSortIndicator(TransactionTableModel::Date, Qt::DescendingOrder);
 
     // Actions
     abandonAction = new QAction(tr("Abandon transaction"), this);
@@ -185,9 +198,9 @@ TransactionView::TransactionView(QWidget* parent) :
     connect(search_widget, &QLineEdit::textChanged, prefix_typing_delay, static_cast<void (QTimer::*)()>(&QTimer::start));
     connect(prefix_typing_delay, &QTimer::timeout, this, &TransactionView::changedSearch);
 
-    connect(view, &QTableView::doubleClicked, this, &TransactionView::doubleClicked);
-    connect(view, &QTableView::clicked, this, &TransactionView::computeSum);
-    connect(view, &QTableView::customContextMenuRequested, this, &TransactionView::contextualMenu);
+    connect(transactionView, &QTableView::doubleClicked, this, &TransactionView::doubleClicked);
+    connect(transactionView, &QTableView::clicked, this, &TransactionView::computeSum);
+    connect(transactionView, &QTableView::customContextMenuRequested, this, &TransactionView::contextualMenu);
 
     connect(abandonAction, &QAction::triggered, this, &TransactionView::abandonTx);
     connect(resendAction, &QAction::triggered, this, &TransactionView::resendTx);
@@ -204,6 +217,12 @@ TransactionView::TransactionView(QWidget* parent) :
     connect(this, &TransactionView::doubleClicked, this, &TransactionView::showDetails);
 }
 
+TransactionView::~TransactionView()
+{
+    QSettings settings;
+    settings.setValue("TransactionViewHeaderState", transactionView->horizontalHeader()->saveState());
+}
+
 void TransactionView::setModel(WalletModel *_model)
 {
     QSettings settings;
@@ -215,33 +234,11 @@ void TransactionView::setModel(WalletModel *_model)
         transactionProxyModel->setDynamicSortFilter(true);
         transactionProxyModel->setSortCaseSensitivity(Qt::CaseInsensitive);
         transactionProxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
-
         transactionProxyModel->setSortRole(Qt::EditRole);
-
         transactionView->setModel(transactionProxyModel);
-        transactionView->setAlternatingRowColors(true);
-        transactionView->setSelectionBehavior(QAbstractItemView::SelectRows);
-        transactionView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-        transactionView->horizontalHeader()->setSortIndicator(TransactionTableModel::Date, Qt::DescendingOrder);
-        transactionView->setSortingEnabled(true);
-        transactionView->verticalHeader()->hide();
-
-        transactionView->setColumnWidth(TransactionTableModel::Status, STATUS_COLUMN_WIDTH);
-        transactionView->setColumnWidth(TransactionTableModel::Watchonly, WATCHONLY_COLUMN_WIDTH);
-        transactionView->setColumnWidth(TransactionTableModel::Date, DATE_COLUMN_WIDTH);
-        transactionView->setColumnWidth(TransactionTableModel::Type, TYPE_COLUMN_WIDTH);
-        transactionView->setColumnWidth(TransactionTableModel::Amount, AMOUNT_MINIMUM_COLUMN_WIDTH);
 
         // Note: it's a good idea to connect this signal AFTER the model is set
         connect(transactionView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &TransactionView::computeSum);
-
-        transactionView->horizontalHeader()->setMinimumSectionSize(MINIMUM_COLUMN_WIDTH);
-        transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::Status, QHeaderView::Fixed);
-        transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::Watchonly, QHeaderView::Fixed);
-        transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::Date, QHeaderView::Interactive);
-        transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::Type, QHeaderView::Interactive);
-        transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::ToAddress, QHeaderView::Stretch);
-        transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::Amount, QHeaderView::Fixed);
 
         if (_model->getOptionsModel())
         {
