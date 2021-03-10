@@ -74,7 +74,6 @@ ReceiveCoinsDialog::ReceiveCoinsDialog(QWidget* parent) :
         tableView->horizontalHeader()->setSectionResizeMode(RecentRequestsTableModel::Message, QHeaderView::Stretch);
         tableView->horizontalHeader()->setSectionResizeMode(RecentRequestsTableModel::Amount, QHeaderView::Fixed);
     }
-    tableView->horizontalHeader()->setSortIndicator(RecentRequestsTableModel::Date, Qt::DescendingOrder);
 }
 
 void ReceiveCoinsDialog::setModel(WalletModel *_model)
@@ -89,6 +88,8 @@ void ReceiveCoinsDialog::setModel(WalletModel *_model)
 
         QTableView* tableView = ui->recentRequestsView;
         tableView->setModel(_model->getRecentRequestsTableModel());
+        tableView->sortByColumn(RecentRequestsTableModel::Date, Qt::DescendingOrder);
+
         connect(tableView->selectionModel(),
             &QItemSelectionModel::selectionChanged, this,
             &ReceiveCoinsDialog::recentRequestsView_selectionChanged);

@@ -157,7 +157,6 @@ TransactionView::TransactionView(QWidget* parent) :
         transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::ToAddress, QHeaderView::Stretch);
         transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::Amount, QHeaderView::Fixed);
     }
-    transactionView->horizontalHeader()->setSortIndicator(TransactionTableModel::Date, Qt::DescendingOrder);
 
     // Actions
     abandonAction = new QAction(tr("Abandon transaction"), this);
@@ -236,6 +235,7 @@ void TransactionView::setModel(WalletModel *_model)
         transactionProxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
         transactionProxyModel->setSortRole(Qt::EditRole);
         transactionView->setModel(transactionProxyModel);
+        transactionView->sortByColumn(TransactionTableModel::Date, Qt::DescendingOrder);
 
         // Note: it's a good idea to connect this signal AFTER the model is set
         connect(transactionView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &TransactionView::computeSum);
