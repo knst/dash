@@ -19,6 +19,14 @@ if [ -n "$CONFIG_SHELL" ]; then
   export CONFIG_SHELL="$CONFIG_SHELL"
 fi
 
+if [ -n "$ANDROID_TOOLS_URL" ]; then
+  make distclean || true
+  ./autogen.sh
+  ./configure $BITCOIN_CONFIG --prefix=$DEPENDS_DIR/aarch64-linux-android || ( (DOCKER_EXEC cat config.log) && false)
+  "cd src/qt && make $MAKEJOBS && ANDROID_HOME=${ANDROID_HOME} ANDROID_NDK_HOME=${ANDROID_NDK_HOME} make apk"
+  exit 0
+fi
+
 BITCOIN_CONFIG_ALL="--enable-external-signer --disable-dependency-tracking --prefix=$DEPENDS_DIR/$HOST --bindir=$BASE_OUTDIR/bin --libdir=$BASE_OUTDIR/lib"
 if [ -z "$NO_WERROR" ]; then
   BITCOIN_CONFIG_ALL="${BITCOIN_CONFIG_ALL} --enable-werror"

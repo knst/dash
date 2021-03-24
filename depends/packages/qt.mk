@@ -24,6 +24,7 @@ $(package)_patches += memory_resource.patch
 $(package)_patches += utc_from_string_no_optimize.patch
 $(package)_patches += windows_lto.patch
 $(package)_patches += darwin_no_libm.patch
+$(package)_patches += fix_android_pch.patch
 $(package)_patches += CVE-2025-4211-qtbase-5.15.patch
 $(package)_patches += CVE-2025-5455-qtbase-5.15.patch
 $(package)_patches += CVE-2025-30348-qtbase-5.15.patch
@@ -247,6 +248,7 @@ define $(package)_preprocess_cmds
   patch -p1 -i $($(package)_patch_dir)/dont_hardcode_pwd.patch && \
   patch -p1 -i $($(package)_patch_dir)/fix_qt_pkgconfig.patch && \
   patch -p1 -i $($(package)_patch_dir)/fix_android_jni_static.patch && \
+  patch -p1 -i $($(package)_patch_dir)/fix_android_pch.patch && \
   patch -p1 -i $($(package)_patch_dir)/no-xlib.patch && \
   patch -p1 -i $($(package)_patch_dir)/qtbase-moc-ignore-gcc-macro.patch && \
   patch -p1 -i $($(package)_patch_dir)/memory_resource.patch && \
