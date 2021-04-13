@@ -134,6 +134,7 @@ BASE_SCRIPTS = [
     'feature_dip4_coinbasemerkleroots.py --legacy-wallet', # NOTE: needs dash_hash to pass
     'feature_asset_locks.py --legacy-wallet', # NOTE: needs dash_hash to pass
     'feature_mnehf.py --legacy-wallet', # NOTE: needs dash_hash to pass
+    'rpc_signer.py',
     'wallet_signer.py --descriptors',
     # vv Tests less than 60s vv
     'p2p_sendheaders.py', # NOTE: needs dash_hash to pass
