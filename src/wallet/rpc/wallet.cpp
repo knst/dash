@@ -1102,6 +1102,9 @@ RPCHelpMan keypoolrefill();
 RPCHelpMan newkeypool();
 RPCHelpMan getaddressesbylabel();
 RPCHelpMan listlabels();
+#ifdef ENABLE_EXTERNAL_SIGNER
+RPCHelpMan walletdisplayaddress();
+#endif // ENABLE_EXTERNAL_SIGNER
 
 // backup
 RPCHelpMan dumpprivkey();
