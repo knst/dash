@@ -8,7 +8,7 @@ export LC_ALL=C.UTF-8
 
 export HOST=x86_64-apple-darwin19
 export BREW_PACKAGES="automake berkeley-db4 libtool boost miniupnpc pkg-config protobuf qt qrencode python3 ccache zeromq"
-export PIP_PACKAGES="zmq"
+export PIP_PACKAGES="zmq lief"
 export RUN_CI_ON_HOST=true
 export RUN_UNIT_TESTS=true
 export RUN_INTEGRATION_TESTS=false
@@ -17,3 +17,5 @@ export BITCOIN_CONFIG="--enable-gui --enable-reduce-exports --disable-miner --en
 # Run without depends
 export NO_DEPENDS=1
 export OSX_SDK=""
+export CCACHE_SIZE=300M
+export RUN_SECURITY_TESTS="true"
