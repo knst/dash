@@ -29,6 +29,7 @@ from test_framework.util import (
 
 NULLDUMMY_ERROR = "non-mandatory-script-verify-flag (Dummy CHECKMULTISIG argument must be zero)"
 
+
 def trueDummy(tx):
     scriptSig = CScript(tx.vin[0].scriptSig)
     newscript = []
@@ -41,18 +42,17 @@ def trueDummy(tx):
     tx.vin[0].scriptSig = CScript(newscript)
     tx.rehash()
 
-class NULLDUMMYTest(BitcoinTestFramework):
 
+class NULLDUMMYTest(BitcoinTestFramework):
     def set_test_params(self):
-        # Need two nodes so GBT (getblocktemplate) doesn't complain that it's not connected.
-        self.num_nodes = 2
+        self.num_nodes = 1
         self.setup_clean_chain = True
         self.extra_args = [[
             '-whitelist=127.0.0.1',
             '-dip3params=105:105',
             f'-testactivationheight=bip147@{COINBASE_MATURITY + 5}',
             '-par=1',  # Use only one script thread to get the exact reject reason for testing
-        ]] * 2
+        ]]
 
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
