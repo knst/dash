@@ -143,6 +143,8 @@ public:
 
     UnlockContext requestUnlock(bool fForMixingOnly = false);
 
+    bool displayAddress(std::string sAddress);
+
     static bool isWalletEnabled();
 
     int getNumISLocks() const;
