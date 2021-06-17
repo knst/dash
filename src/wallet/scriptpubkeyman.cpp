@@ -12,7 +12,6 @@
 #include <util/strencodings.h>
 #include <util/system.h>
 #include <util/translation.h>
-#include <external_signer.h>
 #include <wallet/scriptpubkeyman.h>
 
 bool LegacyScriptPubKeyMan::GetNewDestination(CTxDestination& dest, std::string& error)
