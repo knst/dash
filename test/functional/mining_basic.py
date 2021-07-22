@@ -21,6 +21,7 @@ from test_framework.messages import (
     CBlock,
     CBlockHeader,
     BLOCK_HEADER_SIZE,
+    ser_uint256,
 )
 from test_framework.p2p import P2PDataStore
 from test_framework.test_framework import BitcoinTestFramework
@@ -47,6 +48,9 @@ class MiningTest(BitcoinTestFramework):
         self.num_nodes = 2
         self.setup_clean_chain = True
         self.supports_cli = False
+
+    def skip_test_if_missing_module(self):
+        self.skip_if_no_wallet()
 
     def mine_chain(self):
         self.log.info('Create some old blocks')
@@ -89,7 +93,7 @@ class MiningTest(BitcoinTestFramework):
         assert_equal(mining_info['networkhashps'], Decimal('0.01282051282051282'))
         assert_equal(mining_info['pooledtx'], 0)
 
-        # Mine a block to leave initial block download
+        # Mine a block to leave initial block download and clear the mempool
         self.generatetoaddress(node, 1, node.get_deterministic_priv_key().address)
         tmpl = node.getblocktemplate(NORMAL_GBT_REQUEST_PARAMS)
         self.log.info("getblocktemplate: Test capability advertised")
