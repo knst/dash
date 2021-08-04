@@ -3278,6 +3278,7 @@ std::shared_ptr<CWallet> CWallet::Create(WalletContext& context, const std::stri
             error = strprintf(_("Error loading %s: You can't enable HD on an already existing non-HD wallet"), walletInstance->GetName());
             return nullptr;
         }
+        walletInstance->m_default_address_type = parsed.value();
     }
 
     // Warn user every time a non-encrypted HD wallet is started
