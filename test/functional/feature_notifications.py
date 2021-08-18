@@ -23,7 +23,7 @@ FILE_CHARS_DISALLOWED = '/\\?%*:|"<>' if os.name == 'nt' else '/'
 UNCONFIRMED_HASH_STRING = 'unconfirmed'
 
 def notify_outputname(walletname, txid):
-    return txid if os.name == 'nt' else '{}_{}'.format(walletname, txid)
+    return txid if os.name == 'nt' else f'{walletname}_{txid}'
 
 
 class NotificationsTest(DashTestFramework):
@@ -46,13 +46,13 @@ class NotificationsTest(DashTestFramework):
         # -alertnotify and -blocknotify on node0, walletnotify on node1
         # -chainlocknotify on node0, -instantsendnotify on node1
         self.extra_args = [[
-            "-alertnotify=echo > {}".format(os.path.join(self.alertnotify_dir, '%s')),
-            "-blocknotify=echo > {}".format(os.path.join(self.blocknotify_dir, '%s')),
-            "-chainlocknotify=echo > {}".format(os.path.join(self.chainlocknotify_dir, '%s')),
+            f"-alertnotify=echo > {os.path.join(self.alertnotify_dir, '%s')}",
+            f"-blocknotify=echo > {os.path.join(self.blocknotify_dir, '%s')}",
+            f"-chainlocknotify=echo > {os.path.join(self.chainlocknotify_dir, '%s')}",
         ], [
             "-rescan",
-            "-walletnotify=echo %h_%b > {}".format(os.path.join(self.walletnotify_dir, notify_outputname('%w', '%s'))),
-            "-instantsendnotify=echo > {}".format(os.path.join(self.instantsendnotify_dir, notify_outputname('%w', '%s'))),
+            f"-walletnotify=echo %h_%b > {os.path.join(self.walletnotify_dir, notify_outputname('%w', '%s'))}",
+            f"-instantsendnotify=echo > {os.path.join(self.instantsendnotify_dir, notify_outputname('%w', '%s'))}",
         ],
         [], [], [], []]
 
@@ -71,12 +71,12 @@ class NotificationsTest(DashTestFramework):
             seed = "cTdGmKFWpbvpKQ7ejrdzqYT2hhjyb3GPHnLAK7wdi5Em67YLwSm9"
             xpriv = "tprv8ZgxMBicQKsPfHCsTwkiM1KT56RXbGGTqvc2hgqzycpwbHqqpcajQeMRZoBD35kW4RtyCemu6j34Ku5DEspmgjKdt2qe4SvRch5Kk8B8A2v"
             desc_imports = [{
-                "desc": descsum_create("pkh(" + xpriv + "/0/*)"),
+                "desc": descsum_create(f"pkh({xpriv}/0/*)"),
                 "timestamp": 0,
                 "active": True,
                 "keypool": True,
             },{
-                "desc": descsum_create("pkh(" + xpriv + "/1/*)"),
+                "desc": descsum_create(f"pkh({xpriv}/1/*)"),
                 "timestamp": 0,
                 "active": True,
                 "keypool": True,
