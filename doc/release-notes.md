@@ -52,7 +52,6 @@ See this [blog post](https://www.docker.com/blog/generate-sboms-with-buildkit/) 
 
 See detailed [set of changes][set-of-changes].
 
-# Credits
 
 Thanks to everyone who directly contributed to this release:
 

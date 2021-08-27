@@ -795,11 +795,12 @@ public:
         consensus.nGovernanceFilterElements = 100;
         consensus.nMasternodeMinimumConfirmations = 1;
         consensus.BIP34Height = 501; // BIP34 activated on regtest (Used in functional tests)
+        //consensus.BIP34Height = 1; // Always active unless overridden
         consensus.BIP34Hash = uint256();
-        consensus.BIP65Height = 111; // BIP65 activated on regtest (Block at height 110 and earlier not enforced for testing purposes)
-        consensus.BIP66Height = 102; // BIP66 activated on regtest (Block at height 101 and earlier not enforced for testing purposes)
-        consensus.BIP147Height = 432; // BIP147 activated on regtest (Used in functional tests)
-        consensus.CSVHeight = 432; // CSV activated on regtest (Used in rpc activation tests)
+        consensus.BIP65Height = 1;  // Always active unless overridden
+        consensus.BIP66Height = 1;  // Always active unless overridden
+        consensus.BIP147Height = 1;  // Always active unless overridden
+        consensus.CSVHeight = 1;    // Always active unless overridden
         consensus.DIP0001Height = 2000;
         consensus.DIP0003Height = 432;
         consensus.DIP0003EnforcementHeight = 501;
@@ -1046,6 +1047,14 @@ static void MaybeUpdateHeights(const ArgsManager& args, Consensus::Params& conse
         }
         if (name == "bip147") {
             consensus.BIP147Height = int{height};
+        } else if (name == "bip34") {
+            consensus.BIP34Height = int{height};
+        } else if (name == "dersig") {
+            consensus.BIP66Height = int{height};
+        } else if (name == "cltv") {
+            consensus.BIP65Height = int{height};
+        } else if (name == "csv") {
+            consensus.CSVHeight = int{height};
         } else {
             throw std::runtime_error(strprintf("Invalid name (%s) for -testactivationheight=name@height.", arg));
         }
