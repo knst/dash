@@ -359,10 +359,10 @@ dnl
 dnl LDFLAG_WERROR Should only be used when testing -Wl,*
 case $host in
  *darwin*)
-    AX_CHECK_LINK_FLAG([-Wl,-fatal_warnings],[LDFLAG_WERROR="-Wl,-fatal_warnings"],[LDFLAG_WERROR=""])
+    AX_CHECK_LINK_FLAG([-Wl,-fatal_warnings], [LDFLAG_WERROR="-Wl,-fatal_warnings"], [LDFLAG_WERROR=""])
     ;;
   *)
-    AX_CHECK_LINK_FLAG([-Wl,--fatal-warnings],[LDFLAG_WERROR="-Wl,--fatal-warnings"],[LDFLAG_WERROR=""])
+    AX_CHECK_LINK_FLAG([-Wl,--fatal-warnings], [LDFLAG_WERROR="-Wl,--fatal-warnings"], [LDFLAG_WERROR=""])
     ;;
 esac
 
@@ -443,8 +443,8 @@ if test x$use_sanitizers != x; then
   dnl the sanitize flags are supported by the compiler but the actual sanitizer
   dnl libs are missing.
   AX_CHECK_LINK_FLAG(
-    [[-fsanitize=$use_sanitizers]],
-    [[SANITIZER_LDFLAGS=-fsanitize=$use_sanitizers]],
+    [-fsanitize=$use_sanitizers],
+    [SANITIZER_LDFLAGS="-fsanitize=$use_sanitizers"],
     [AC_MSG_ERROR([linker did not accept requested flags, you are missing required libraries])],
     [],
     [AC_LANG_PROGRAM([[
@@ -721,7 +721,7 @@ case $host in
 
      dnl -static is interpreted by libtool, where it has a different meaning.
      dnl In libtool-speak, it's -all-static.
-     AX_CHECK_LINK_FLAG([[-static]],[LIBTOOL_APP_LDFLAGS="$LIBTOOL_APP_LDFLAGS -all-static"])
+     AX_CHECK_LINK_FLAG([-static], [LIBTOOL_APP_LDFLAGS="$LIBTOOL_APP_LDFLAGS -all-static"])
 
      AC_PATH_PROG([MAKENSIS], [makensis], none)
      if test x$MAKENSIS = xnone; then
@@ -747,14 +747,14 @@ case $host in
      postdeps_CXX=
 
      dnl We require Windows 7 (NT 6.1) or later
-     AX_CHECK_LINK_FLAG([[-Wl,--major-subsystem-version -Wl,6 -Wl,--minor-subsystem-version -Wl,1]],[CORE_LDFLAGS="$CORE_LDFLAGS -Wl,--major-subsystem-version -Wl,6 -Wl,--minor-subsystem-version -Wl,1"],,[[$LDFLAG_WERROR]])
+     AX_CHECK_LINK_FLAG([-Wl,--major-subsystem-version -Wl,6 -Wl,--minor-subsystem-version -Wl,1], [CORE_LDFLAGS="$CORE_LDFLAGS -Wl,--major-subsystem-version -Wl,6 -Wl,--minor-subsystem-version -Wl,1"], [], [$LDFLAG_WERROR])
      ;;
   *darwin*)
      TARGET_OS=darwin
      if  test x$cross_compiling != xyes; then
        BUILD_OS=darwin
 
-       AX_CHECK_LINK_FLAG([[-Wl,-headerpad_max_install_names]], [CORE_LDFLAGS="$CORE_LDFLAGS -Wl,-headerpad_max_install_names"],, [[$LDFLAG_WERROR]])
+       AX_CHECK_LINK_FLAG([-Wl,-headerpad_max_install_names], [CORE_LDFLAGS="$CORE_LDFLAGS -Wl,-headerpad_max_install_names"], [], [$LDFLAG_WERROR])
 
        AC_CHECK_PROG([BREW],brew, brew)
        if test x$BREW = xbrew; then
@@ -893,7 +893,7 @@ if test x$use_lcov = xyes; then
   AC_SUBST(COV_TOOL_WRAPPER, "cov_tool_wrapper.sh")
   LCOV="$LCOV --gcov-tool $(pwd)/$COV_TOOL_WRAPPER"
 
-  AX_CHECK_LINK_FLAG([[--coverage]], [CORE_LDFLAGS="$CORE_LDFLAGS --coverage"],
+  AX_CHECK_LINK_FLAG([--coverage], [CORE_LDFLAGS="$CORE_LDFLAGS --coverage"],
     [AC_MSG_ERROR("lcov testing requested but --coverage linker flag does not work")])
   AX_CHECK_COMPILE_FLAG([--coverage],[CORE_CXXFLAGS="$CORE_CXXFLAGS --coverage"],
     [AC_MSG_ERROR("lcov testing requested but --coverage flag does not work")])
@@ -950,9 +950,9 @@ if test "x$enable_gprof" = xyes; then
     AX_CHECK_COMPILE_FLAG([-pg],[GPROF_CXXFLAGS="-pg"],
         [AC_MSG_ERROR(gprof profiling requested but not available)], [[$CXXFLAG_WERROR]])
 
-    AX_CHECK_LINK_FLAG([[-no-pie]], [GPROF_LDFLAGS="-no-pie"])
-    AX_CHECK_LINK_FLAG([[-pg]],[GPROF_LDFLAGS="$GPROF_LDFLAGS -pg"],
-        [AC_MSG_ERROR(gprof profiling requested but not available)], [[$GPROF_LDFLAGS]])
+    AX_CHECK_LINK_FLAG([-no-pie], [GPROF_LDFLAGS="-no-pie"])
+    AX_CHECK_LINK_FLAG([-pg], [GPROF_LDFLAGS="$GPROF_LDFLAGS -pg"],
+        [AC_MSG_ERROR(gprof profiling requested but not available)], [$GPROF_LDFLAGS])
 fi
 
 if test x$TARGET_OS != xwindows; then
@@ -973,7 +973,7 @@ if test x$use_hardening != xno; then
   dnl -fcf-protection used with Clang 7 causes ld to emit warnings:
   dnl ld: error: ... <corrupt x86 feature size: 0x8>
   dnl Use CHECK_LINK_FLAG & --fatal-warnings to ensure we wont use the flag in this case.
-  AX_CHECK_LINK_FLAG([-fcf-protection=full],[HARDENED_CXXFLAGS="$HARDENED_CXXFLAGS -fcf-protection=full"],, [[$LDFLAG_WERROR]])
+  AX_CHECK_LINK_FLAG([-fcf-protection=full], [HARDENED_CXXFLAGS="$HARDENED_CXXFLAGS -fcf-protection=full"], [], [$LDFLAG_WERROR])
 
   case $host in
     *mingw*)
@@ -1004,14 +1004,14 @@ if test x$use_hardening != xno; then
     ])
   fi
 
-  AX_CHECK_LINK_FLAG([[-Wl,--enable-reloc-section]], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,--enable-reloc-section"],, [[$LDFLAG_WERROR]])
-  AX_CHECK_LINK_FLAG([[-Wl,--dynamicbase]], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,--dynamicbase"],, [[$LDFLAG_WERROR]])
-  AX_CHECK_LINK_FLAG([[-Wl,--nxcompat]], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,--nxcompat"],, [[$LDFLAG_WERROR]])
-  AX_CHECK_LINK_FLAG([[-Wl,--high-entropy-va]], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,--high-entropy-va"],, [[$LDFLAG_WERROR]])
-  AX_CHECK_LINK_FLAG([[-Wl,-z,relro]], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,-z,relro"],, [[$LDFLAG_WERROR]])
-  AX_CHECK_LINK_FLAG([[-Wl,-z,now]], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,-z,now"],, [[$LDFLAG_WERROR]])
-  AX_CHECK_LINK_FLAG([[-Wl,-z,separate-code]], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,-z,separate-code"],, [[$LDFLAG_WERROR]])
-  AX_CHECK_LINK_FLAG([[-fPIE -pie]], [PIE_FLAGS="-fPIE"; HARDENED_LDFLAGS="$HARDENED_LDFLAGS -pie"],, [[$CXXFLAG_WERROR]])
+  AX_CHECK_LINK_FLAG([-Wl,--enable-reloc-section], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,--enable-reloc-section"], [], [$LDFLAG_WERROR])
+  AX_CHECK_LINK_FLAG([-Wl,--dynamicbase], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,--dynamicbase"], [], [$LDFLAG_WERROR])
+  AX_CHECK_LINK_FLAG([-Wl,--nxcompat], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,--nxcompat"], [], [$LDFLAG_WERROR])
+  AX_CHECK_LINK_FLAG([-Wl,--high-entropy-va], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,--high-entropy-va"], [], [$LDFLAG_WERROR])
+  AX_CHECK_LINK_FLAG([-Wl,-z,relro], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,-z,relro"], [], [$LDFLAG_WERROR])
+  AX_CHECK_LINK_FLAG([-Wl,-z,now], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,-z,now"], [], [$LDFLAG_WERROR])
+  AX_CHECK_LINK_FLAG([-Wl,-z,separate-code], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,-z,separate-code"], [], [$LDFLAG_WERROR])
+  AX_CHECK_LINK_FLAG([-fPIE -pie], [PIE_FLAGS="-fPIE"; HARDENED_LDFLAGS="$HARDENED_LDFLAGS -pie"], [], [$CXXFLAG_WERROR])
 
   case $host in
     *mingw*)
@@ -1024,9 +1024,9 @@ dnl These flags are specific to ld64, and may cause issues with other linkers.
 dnl For example: GNU ld will interpret -dead_strip as -de and then try and use
 dnl "ad_strip" as the symbol for the entry point.
 if test x$TARGET_OS = xdarwin; then
-  AX_CHECK_LINK_FLAG([[-Wl,-dead_strip]], [CORE_LDFLAGS="$CORE_LDFLAGS -Wl,-dead_strip"],, [[$LDFLAG_WERROR]])
-  AX_CHECK_LINK_FLAG([[-Wl,-dead_strip_dylibs]], [CORE_LDFLAGS="$CORE_LDFLAGS -Wl,-dead_strip_dylibs"],, [[$LDFLAG_WERROR]])
-  AX_CHECK_LINK_FLAG([[-Wl,-fixup_chains]], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,-fixup_chains"], [], [[$LDFLAG_WERROR]])
+  AX_CHECK_LINK_FLAG([-Wl,-dead_strip], [CORE_LDFLAGS="$CORE_LDFLAGS -Wl,-dead_strip"], [], [$LDFLAG_WERROR])
+  AX_CHECK_LINK_FLAG([-Wl,-dead_strip_dylibs], [CORE_LDFLAGS="$CORE_LDFLAGS -Wl,-dead_strip_dylibs"], [], [$LDFLAG_WERROR])
+  AX_CHECK_LINK_FLAG([-Wl,-fixup_chains], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,-fixup_chains"], [], [$LDFLAG_WERROR])
 fi
 
 AC_CHECK_HEADERS([endian.h sys/endian.h byteswap.h stdio.h stdlib.h unistd.h strings.h sys/types.h sys/stat.h sys/select.h sys/prctl.h sys/sysctl.h vm/vm_param.h sys/vmmeter.h sys/resources.h])
@@ -1504,8 +1504,8 @@ fi
 dnl Check for reduced exports
 if test x$use_reduce_exports = xyes; then
     AX_CHECK_COMPILE_FLAG([-fvisibility=hidden],[CORE_CXXFLAGS="$CORE_CXXFLAGS -fvisibility=hidden"],
-    [AC_MSG_ERROR([Cannot set hidden symbol visibility. Use --disable-reduce-exports.])],[[$CXXFLAG_WERROR]])
-    AX_CHECK_LINK_FLAG([[-Wl,--exclude-libs,ALL]],[RELDFLAGS="-Wl,--exclude-libs,ALL"],,[[$LDFLAG_WERROR]])
+    [AC_MSG_ERROR([Cannot set hidden symbol visibility. Use --disable-reduce-exports.])], [$CXXFLAG_WERROR])
+    AX_CHECK_LINK_FLAG([-Wl,--exclude-libs,ALL], [RELDFLAGS="-Wl,--exclude-libs,ALL"], [], [$LDFLAG_WERROR])
     AX_CHECK_LINK_FLAG([-Wl,-no_exported_symbols], [LIBTOOL_APP_LDFLAGS="$LIBTOOL_APP_LDFLAGS -Wl,-no_exported_symbols"], [], [$LDFLAG_WERROR])
 fi
 
