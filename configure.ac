@@ -110,18 +110,18 @@ AC_PATH_TOOL(RANLIB, ranlib)
 AC_PATH_TOOL(STRIP, strip)
 AC_PATH_TOOL(GCOV, gcov)
 AC_PATH_TOOL(LLVM_COV, llvm-cov)
-AC_PATH_PROG(LCOV, lcov)
+AC_PATH_PROG([LCOV], [lcov])
 dnl The minimum supported version is specified in .python-version and should be used if available, see doc/dependencies.md
 AC_PATH_PROGS([PYTHON], [python3.9 python3.10 python3.11 python3.12 python3 python])
-AC_PATH_PROG(GENHTML, genhtml)
+AC_PATH_PROG([GENHTML], [genhtml])
 AC_PATH_PROG([GIT], [git])
-AC_PATH_PROG(CCACHE,ccache)
-AC_PATH_PROG(XGETTEXT,xgettext)
-AC_PATH_PROG(HEXDUMP,hexdump)
+AC_PATH_PROG([CCACHE], [ccache])
+AC_PATH_PROG([XGETTEXT], [xgettext])
+AC_PATH_PROG([HEXDUMP], [hexdump])
 AC_PATH_TOOL(OBJCOPY, objcopy)
 AC_PATH_TOOL([OBJDUMP], [objdump])
-AC_PATH_TOOL(DSYMUTIL, dsymutil)
-AC_PATH_PROG(DOXYGEN, doxygen)
+AC_PATH_TOOL([DSYMUTIL], [dsymutil])
+AC_PATH_PROG([DOXYGEN], [doxygen])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
 
 AC_ARG_ENABLE([wallet],
@@ -723,7 +723,7 @@ case $host in
      dnl In libtool-speak, it's -all-static.
      AX_CHECK_LINK_FLAG([-static], [LIBTOOL_APP_LDFLAGS="$LIBTOOL_APP_LDFLAGS -all-static"])
 
-     AC_PATH_PROG([MAKENSIS], [makensis], none)
+     AC_PATH_PROG([MAKENSIS], [makensis], [none])
      if test x$MAKENSIS = xnone; then
        AC_MSG_WARN("makensis not found. Cannot create installer.")
      fi
