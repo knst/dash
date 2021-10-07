@@ -4,6 +4,7 @@
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test fee estimation code."""
 from decimal import Decimal
+import os
 import random
 
 from test_framework.messages import (
@@ -158,6 +159,21 @@ def check_estimates(node, fees_seen):
     check_raw_estimates(node, fees_seen)
     check_smart_estimates(node, fees_seen)
 
+
+def send_tx(node, utxo, feerate):
+    """Broadcast a 1in-1out transaction with a specific input and feerate (sat/vb)."""
+    overhead, op, scriptsig, nseq, value, spk = 10, 36, 5, 4, 8, 24
+    tx_size = overhead + op + scriptsig + nseq + value + spk
+    fee = tx_size * feerate
+
+    tx = CTransaction()
+    tx.vin = [CTxIn(COutPoint(int(utxo["txid"], 16), utxo["vout"]), SCRIPT_SIG[utxo["vout"]])]
+    tx.vout = [CTxOut(int(utxo["amount"] * COIN) - fee, P2SH_1)]
+    txid = node.sendrawtransaction(tx.serialize().hex())
+
+    return txid
+
+
 class EstimateFeeTest(BitcoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 3
@@ -215,20 +231,16 @@ class EstimateFeeTest(BitcoinTestFramework):
                     newmem.append(utx)
             self.memutxo = newmem
 
-    def run_test(self):
-        self.log.info("This test is time consuming, please be patient")
-        self.log.info("Splitting inputs so we can generate tx's")
-
-        # Start node0
-        self.start_node(0)
+    def initial_split(self, node):
+        """Split two coinbase UTxOs into many small coins"""
         self.txouts = []
         self.txouts2 = []
         # Split a coinbase into two transaction puzzle outputs
-        split_inputs(self.nodes[0], self.nodes[0].listunspent(0), self.txouts, True)
+        split_inputs(node, node.listunspent(0), self.txouts, True)
 
         # Mine
         while len(self.nodes[0].getrawmempool()) > 0:
-            self.generate(self.nodes[0], 1, sync_fun=self.no_op)
+            self.generate(node, 1, sync_fun=self.no_op)
 
         # Repeatedly split those 2 outputs, doubling twice for each rep
         # Use txouts to monitor the available utxo, since these won't be tracked in wallet
@@ -236,27 +248,19 @@ class EstimateFeeTest(BitcoinTestFramework):
         while reps < 5:
             # Double txouts to txouts2
             while len(self.txouts) > 0:
-                split_inputs(self.nodes[0], self.txouts, self.txouts2)
-            while len(self.nodes[0].getrawmempool()) > 0:
-                self.generate(self.nodes[0], 1, sync_fun=self.no_op)
+                split_inputs(node, self.txouts, self.txouts2)
+            while len(node.getrawmempool()) > 0:
+                self.generate(node, 1, sync_fun=self.no_op)
             # Double txouts2 to txouts
             while len(self.txouts2) > 0:
-                split_inputs(self.nodes[0], self.txouts2, self.txouts)
-            while len(self.nodes[0].getrawmempool()) > 0:
-                self.generate(self.nodes[0], 1, sync_fun=self.no_op)
+                split_inputs(node, self.txouts2, self.txouts)
+            while len(node.getrawmempool()) > 0:
+                self.generate(node, 1, sync_fun=self.no_op)
             reps += 1
-        self.log.info("Finished splitting")
 
-        # Now we can connect the other nodes, didn't want to connect them earlier
-        # so the estimates would not be affected by the splitting transactions
-        self.start_node(1)
-        self.start_node(2)
-        self.connect_nodes(1, 0)
-        self.connect_nodes(0, 2)
-        self.connect_nodes(2, 1)
-
-        self.sync_all()
-
+    def sanity_check_estimates_range(self):
+        """Populate estimation buckets, assert estimates are in a sane range and
+        are strictly increasing as the target decreases."""
         self.fees_per_kb = []
         self.memutxo = []
         self.confutxo = self.txouts  # Start with the set of confirmed txouts after splitting
@@ -282,12 +286,48 @@ class EstimateFeeTest(BitcoinTestFramework):
         self.log.info("Final estimates after emptying mempools")
         check_estimates(self.nodes[1], self.fees_per_kb)
 
-        # check that the effective feerate is greater than or equal to the mempoolminfee even for high mempoolminfee
-        self.log.info("Test fee rate estimation after restarting node with high MempoolMinFee")
+    def test_feerate_mempoolminfee(self):
         high_val = 3*self.nodes[1].estimatesmartfee(1)['feerate']
         self.restart_node(1, extra_args=[f'-minrelaytxfee={high_val}'])
         check_estimates(self.nodes[1], self.fees_per_kb)
         self.stop_node(1, expected_stderr="Warning: -minrelaytxfee is set very high! The wallet will avoid paying less than the minimum relay fee.")
+        # TODO CHECK CHECK MAY BE THIS
+        # self.restart_node(1)
+
+
+    def run_test(self):
+        self.log.info("This test is time consuming, please be patient")
+        self.log.info("Splitting inputs so we can generate tx's")
+
+        # Split two coinbases into many small utxos
+        self.start_node(0)
+        self.initial_split(self.nodes[0])
+        self.log.info("Finished splitting")
+
+        # Now we can connect the other nodes, didn't want to connect them earlier
+        # so the estimates would not be affected by the splitting transactions
+        self.start_node(1)
+        self.start_node(2)
+        self.connect_nodes(1, 0)
+        self.connect_nodes(0, 2)
+        self.connect_nodes(2, 1)
+        self.sync_all()
+
+        self.log.info("Testing estimates with single transactions.")
+        self.sanity_check_estimates_range()
+
+        # check that the effective feerate is greater than or equal to the mempoolminfee even for high mempoolminfee
+        self.log.info("Test fee rate estimation after restarting node with high MempoolMinFee")
+        self.test_feerate_mempoolminfee()
+
+        self.log.info("Restarting node with fresh estimation")
+        self.stop_node(0)
+        fee_dat = os.path.join(self.nodes[0].datadir, self.chain, "fee_estimates.dat")
+        os.remove(fee_dat)
+        self.start_node(0)
+        self.connect_nodes(0, 1)
+        self.connect_nodes(0, 2)
+
 
         self.log.info("Testing that fee estimation is disabled in blocksonly.")
         self.restart_node(0, ["-blocksonly"])
