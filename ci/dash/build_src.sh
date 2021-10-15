@@ -23,7 +23,7 @@ if [ -n "$ANDROID_TOOLS_URL" ]; then
   make distclean || true
   ./autogen.sh
   ./configure $BITCOIN_CONFIG --prefix=$DEPENDS_DIR/aarch64-linux-android || ( (DOCKER_EXEC cat config.log) && false)
-  "cd src/qt && make $MAKEJOBS && ANDROID_HOME=${ANDROID_HOME} ANDROID_NDK_HOME=${ANDROID_NDK_HOME} make apk"
+  bash -c "make $MAKEJOBS && cd src/qt && ANDROID_HOME=${ANDROID_HOME} ANDROID_NDK_HOME=${ANDROID_NDK_HOME} make apk"
   exit 0
 fi
 
