@@ -30,7 +30,7 @@ BITCOIN_MP_GUI_NAME=dash-gui
 
 dnl Unless the user specified ARFLAGS, force it to be cr
 dnl This is also the default as-of libtool 2.4.7
-AC_ARG_VAR(ARFLAGS, [Flags for the archiver, defaults to <cr> if not set])
+AC_ARG_VAR([ARFLAGS], [Flags for the archiver, defaults to <cr> if not set])
 if test "x${ARFLAGS+set}" != "xset"; then
   ARFLAGS="cr"
 fi
