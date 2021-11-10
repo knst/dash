@@ -756,7 +756,7 @@ case $host in
 
        AX_CHECK_LINK_FLAG([-Wl,-headerpad_max_install_names], [CORE_LDFLAGS="$CORE_LDFLAGS -Wl,-headerpad_max_install_names"], [], [$LDFLAG_WERROR])
 
-       AC_CHECK_PROG([BREW],brew, brew)
+       AC_CHECK_PROG([BREW], [brew], [brew])
        if test x$BREW = xbrew; then
          dnl These Homebrew packages may be keg-only, meaning that they won't be found
          dnl in expected paths because they may conflict with system files. Ask
