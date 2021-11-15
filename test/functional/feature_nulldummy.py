@@ -115,7 +115,6 @@ class NULLDUMMYTest(BitcoinTestFramework):
             tx.rehash()
             block.vtx.append(tx)
         block.hashMerkleRoot = block.calc_merkle_root()
-        block.rehash()
         block.solve()
         assert_equal(None if accept else NULLDUMMY_ERROR, node.submitblock(block.serialize().hex()))
         if accept:
