@@ -62,6 +62,7 @@ IGNORED_WARNINGS=(
 )
 
 # We should attempt to update this with all dash specific code
+# shellcheck disable=SC2046
 FILES=$(git ls-files -- $(cat test/util/data/non-backported.txt))
 
 
