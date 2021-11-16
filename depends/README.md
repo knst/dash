@@ -132,7 +132,8 @@ Common `host-platform-triplet`s for cross compilation are:
 - `aarch64-linux-android` for Android ARM 64 bit
 - `x86_64-linux-android` for Android x86 64 bit
 
-The paths are automatically configured and no other options are needed.
+The paths are automatically configured and no other options are needed unless targeting [Android](../doc/build-android.md).
+
 
 #### For macOS cross compilation
 
@@ -179,3 +180,12 @@ For linux S390X cross compilation:
     download-osx: run 'make download-osx' to fetch all sources needed for macOS builds
     download-win: run 'make download-win' to fetch all sources needed for win builds
     download-linux: run 'make download-linux' to fetch all sources needed for linux builds
+<<<<<<< HEAD
+=======
+
+
+### Other documentation
+
+- [description.md](description.md): General description of the depends system
+- [packages.md](packages.md): Steps for adding packages
+>>>>>>> 6780759a01 (Merge bitcoin/bitcoin#23478: build: Add support for Android NDK r23 LTS)
