@@ -12,9 +12,7 @@
         "6a00",
         {
             "asm": "OP_RETURN 0",
-            "type": "nulldata",
-            "p2sh": "93JSZ4DRLAifokPwn3C6WtnZoAVHwDa6UP",
-            "desc": "raw(6a00)#ncfmkl43"
+            "type": "nulldata"
         }
     ]
 ]
