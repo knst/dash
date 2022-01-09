@@ -89,6 +89,7 @@ public:
         CoinJoinMultiSession, // bool
         Listen,               // bool
         Server,               // bool
+        EnablePSBTControls,   // bool
         OptionIDRowCount,
     };
 
@@ -109,6 +110,7 @@ public:
     QString getThirdPartyTxUrls() const { return strThirdPartyTxUrls; }
     bool getCoinControlFeatures() const { return fCoinControlFeatures; }
     bool getSubFeeFromAmount() const { return m_sub_fee_from_amount; }
+    bool getEnablePSBTControls() const { return m_enable_psbt_controls; }
     bool getKeepChangeAddress() const { return fKeepChangeAddress; }
     bool getShowAdvancedCJUI() { return fShowAdvancedCJUI; }
     const QString& getOverriddenByCommandLine() { return strOverriddenByCommandLine; }
@@ -137,6 +139,7 @@ private:
     QString strThirdPartyTxUrls;
     bool fCoinControlFeatures;
     bool m_sub_fee_from_amount;
+    bool m_enable_psbt_controls;
     bool fKeepChangeAddress;
     bool fShowAdvancedCJUI;
     /* settings that were overridden by command-line */
