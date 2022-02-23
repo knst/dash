@@ -390,6 +390,7 @@ BITCOIN_CORE_H = \
   undo.h \
   unordered_lru_cache.h \
   util/bip32.h \
+  util/bitdeque.h \
   util/bytevectorhash.h \
   util/check.h \
   util/edge.h \
