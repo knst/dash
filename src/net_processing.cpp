@@ -418,6 +418,9 @@ struct Peer {
      * reorgs) **/
     std::unique_ptr<HeadersSyncState> m_headers_sync PT_GUARDED_BY(m_headers_sync_mutex) GUARDED_BY(m_headers_sync_mutex) {};
 
+    /** Whether we've sent our peer a sendheaders message. **/
+    std::atomic<bool> m_sent_sendheaders{false};
+
     explicit Peer(NodeId id, ServiceFlags our_services)
         : m_id(id)
         , m_our_services{our_services}
@@ -852,6 +855,9 @@ private:
     /** Send `addr` messages on a regular schedule. */
     void MaybeSendAddr(CNode& node, Peer& peer, std::chrono::microseconds current_time)
         EXCLUSIVE_LOCKS_REQUIRED(g_msgproc_mutex);
+
+    /** Send a single `sendheaders` message, after we have completed headers sync with a peer. */
+    void MaybeSendSendHeaders(CNode& node, Peer& peer);
 
     /** Relay (gossip) an address to a few randomly chosen nodes.
      *
@@ -4262,12 +4268,6 @@ void PeerManagerImpl::ProcessMessage(
             CMNAuth::PushMNAUTH(pfrom, m_connman, *m_active_ctx->nodeman);
         }
 
-        // Tell our peer we prefer to receive headers rather than inv's
-        // We send this to non-NODE NETWORK peers as well, because even
-        // non-NODE NETWORK peers can announce blocks (such as pruning
-        // nodes)
-        m_connman.PushMessage(&pfrom, msgMaker.Make(UsesCompressedHeaders(*peer) ? NetMsgType::SENDHEADERS2 : NetMsgType::SENDHEADERS));
-
         if (pfrom.CanRelay()) {
             // Tell our peer we are willing to provide version 1 cmpctblocks.
             // However, we do not request new block announcements using
@@ -6212,6 +6212,28 @@ void PeerManagerImpl::MaybeSendAddr(CNode& node, Peer& peer, std::chrono::micros
     }
 }
 
+void PeerManagerImpl::MaybeSendSendHeaders(CNode& node, Peer& peer)
+{
+    // Delay sending SENDHEADERS (BIP 130) until we're done with an
+    // initial-headers-sync with this peer. Receiving headers announcements for
+    // new blocks while trying to sync their headers chain is problematic,
+    // because of the state tracking done.
+    if (!peer.m_sent_sendheaders) {
+        LOCK(cs_main);
+        CNodeState &state = *State(node.GetId());
+        if (state.pindexBestKnownBlock != nullptr &&
+                state.pindexBestKnownBlock->nChainWork > nMinimumChainWork) {
+            // Tell our peer we prefer to receive headers rather than inv's
+            // We send this to non-NODE NETWORK peers as well, because even
+            // non-NODE NETWORK peers can announce blocks (such as pruning
+            // nodes)
+            m_connman.PushMessage(&node, CNetMsgMaker(node.GetCommonVersion()).Make(UsesCompressedHeaders(peer) ? NetMsgType::SENDHEADERS2 : NetMsgType::SENDHEADERS));
+
+            peer.m_sent_sendheaders = true;
+        }
+    }
+}
+
 namespace {
 class CompareInvMempoolOrder
 {
@@ -6295,6 +6317,8 @@ bool PeerManagerImpl::SendMessages(CNode* pto)
     if (pto->fDisconnect) return true;
 
     MaybeSendAddr(*pto, *peer, current_time);
+
+    MaybeSendSendHeaders(*pto, *peer);
 
     {
         LOCK(cs_main);
