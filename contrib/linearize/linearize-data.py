@@ -14,6 +14,7 @@ import os.path
 import sys
 import dash_hash
 import datetime
+import hashlib
 import time
 import glob
 from collections import namedtuple
