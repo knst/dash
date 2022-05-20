@@ -20,7 +20,6 @@ class CSporkManager;
 class CTransaction;
 class uint256;
 
-namespace Consensus { struct Params; }
 namespace llmq {
 class CChainLocksHandler;
 class CInstantSendManager;
@@ -39,7 +38,7 @@ public:
     explicit CChainstateHelper(CCreditPoolManager& cpoolman, CDeterministicMNManager& dmnman, CMNHFManager& mnhfman,
                                CGovernanceManager& govman, llmq::CInstantSendManager& isman,
                                llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumSnapshotManager& qsnapman,
-                               const ChainstateManager& chainman, const Consensus::Params& consensus_params,
+                               const ChainstateManager& chainman,
                                const CMasternodeSync& mn_sync, const CSporkManager& sporkman,
                                const llmq::CChainLocksHandler& clhandler, const llmq::CQuorumManager& qman);
     ~CChainstateHelper();

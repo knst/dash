@@ -1376,7 +1376,7 @@ bool AppInitParameterInteraction(const ArgsManager& args)
     }
 
     if (args.IsArgSet("-masternodeblsprivkey")) {
-        if (!args.GetBoolArg("-listen", DEFAULT_LISTEN) && Params().RequireRoutableExternalIP()) {
+        if (!args.GetBoolArg("-listen", DEFAULT_LISTEN) && chainman.GetParams().RequireRoutableExternalIP()) {
             return InitError(Untranslated("Masternode must accept connections from outside, set -listen=1"));
         }
         if (!args.GetBoolArg("-txindex", DEFAULT_TXINDEX)) {
@@ -1664,7 +1664,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     if (args.IsArgSet("-sporkaddr")) {
         vSporkAddresses = args.GetArgs("-sporkaddr");
     } else {
-        vSporkAddresses = Params().SporkAddresses();
+        vSporkAddresses = chainman.GetParams().SporkAddresses();
     }
     for (const auto& address: vSporkAddresses) {
         if (!node.sporkman->SetSporkAddress(address)) {
@@ -1672,7 +1672,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         }
     }
 
-    int minsporkkeys = args.GetIntArg("-minsporkkeys", Params().MinSporkKeys());
+    int minsporkkeys = args.GetIntArg("-minsporkkeys", chainman.GetParams().MinSporkKeys());
     if (!node.sporkman->SetMinSporkKeys(minsporkkeys)) {
         return InitError(_("Invalid minimum number of spork signers specified with -minsporkkeys"));
     }
@@ -1980,7 +1980,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                                               args.GetBoolArg("-spentindex", DEFAULT_SPENTINDEX),
                                               args.GetBoolArg("-timestampindex", DEFAULT_TIMESTAMPINDEX),
                                               args.GetBoolArg("-txindex", DEFAULT_TXINDEX),
-                                              chainparams.GetConsensus(),
                                               chainparams.NetworkIDString(),
                                               fReindexChainState,
                                               cache_sizes.block_tree_db,
@@ -2068,10 +2067,8 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                                                             *Assert(node.evodb.get()),
                                                             fReset,
                                                             fReindexChainState,
-                                                            chainparams.GetConsensus(),
                                                             check_blocks,
                                                             args.GetIntArg("-checklevel", DEFAULT_CHECKLEVEL),
-                                                            /*get_unix_time_seconds=*/static_cast<int64_t(*)()>(GetTime),
                                                             [](bool bls_state) {
                                                                 LogPrintf("%s: bls_legacy_scheme=%d\n", __func__, bls_state);
                                                             });
@@ -2133,7 +2130,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     ChainstateManager& chainman = *Assert(node.chainman);
 
     assert(!node.peerman);
-    node.peerman = PeerManager::make(chainparams, *node.connman, *node.addrman, node.banman.get(),
+    node.peerman = PeerManager::make(*node.connman, *node.addrman, node.banman.get(),
                                      chainman, *node.mempool, *node.mn_metaman, *node.mn_sync,
                                      *node.govman, *node.sporkman, node.mn_activeman.get(), node.dmnman,
                                      node.active_ctx, node.cj_ctx, node.llmq_ctx, ignores_incoming_txs);
@@ -2390,9 +2387,9 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         chain_active_height = chainman.ActiveChain().Height();
         if (tip_info) {
             tip_info->block_height = chain_active_height;
-            tip_info->block_time = chainman.ActiveChain().Tip() ? chainman.ActiveChain().Tip()->GetBlockTime() : Params().GenesisBlock().GetBlockTime();
-            tip_info->block_hash = chainman.ActiveChain().Tip() ? chainman.ActiveChain().Tip()->GetBlockHash() : Params().GenesisBlock().GetHash();
-            tip_info->verification_progress = GuessVerificationProgress(Params().TxData(), chainman.ActiveChain().Tip());
+            tip_info->block_time = chainman.ActiveChain().Tip() ? chainman.ActiveChain().Tip()->GetBlockTime() : chainman.GetParams().GenesisBlock().GetBlockTime();
+            tip_info->block_hash = chainman.ActiveChain().Tip() ? chainman.ActiveChain().Tip()->GetBlockHash() : chainman.GetParams().GenesisBlock().GetHash();
+            tip_info->verification_progress = GuessVerificationProgress(chainman.GetParams().TxData(), chainman.ActiveChain().Tip());
         }
         if (tip_info && chainman.m_best_header) {
             tip_info->header_height = chainman.m_best_header->nHeight;
@@ -2426,7 +2423,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
 
     // Port to bind to if `-bind=addr` is provided without a `:port` suffix.
     const uint16_t default_bind_port =
-        static_cast<uint16_t>(args.GetIntArg("-port", Params().GetDefaultPort()));
+        static_cast<uint16_t>(args.GetIntArg("-port", chainman.GetParams().GetDefaultPort()));
 
     const auto BadPortWarning = [](const char* prefix, uint16_t port) {
         return strprintf(_("%s request to listen on port %u. This port is considered \"bad\" and "

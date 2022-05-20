@@ -591,7 +591,7 @@ struct CNodeState {
 class PeerManagerImpl final : public PeerManager
 {
 public:
-    PeerManagerImpl(const CChainParams& chainparams, CConnman& connman, AddrMan& addrman, BanMan* banman,
+    PeerManagerImpl(CConnman& connman, AddrMan& addrman, BanMan* banman,
                     ChainstateManager& chainman, CTxMemPool& pool,
                     CMasternodeMetaMan& mn_metaman, CMasternodeSync& mn_sync,
                     CGovernanceManager& govman, CSporkManager& sporkman,
@@ -1465,8 +1465,6 @@ void PeerManagerImpl::FindNextBlocksToDownload(const Peer& peer, unsigned int co
 
 void PeerManagerImpl::PushNodeVersion(CNode& pnode, const Peer& peer)
 {
-    const auto& params = Params();
-
     uint64_t my_services{peer.m_our_services};
     const int64_t nTime{count_seconds(GetTime<std::chrono::seconds>())};
     uint64_t nonce = pnode.GetLocalNonce();
@@ -1482,7 +1480,7 @@ void PeerManagerImpl::PushNodeVersion(CNode& pnode, const Peer& peer)
     pnode.SetSentMNAuthChallenge(mnauthChallenge);
 
     int nProtocolVersion = PROTOCOL_VERSION;
-    if (params.NetworkIDString() != CBaseChainParams::MAIN && gArgs.IsArgSet("-pushversion")) {
+    if (m_chainparams.NetworkIDString() != CBaseChainParams::MAIN && gArgs.IsArgSet("-pushversion")) {
         nProtocolVersion = gArgs.GetIntArg("-pushversion", PROTOCOL_VERSION);
     }
 
@@ -1962,7 +1960,7 @@ std::optional<std::string> PeerManagerImpl::FetchBlock(NodeId peer_id, const CBl
     return std::nullopt;
 }
 
-std::unique_ptr<PeerManager> PeerManager::make(const CChainParams& chainparams, CConnman& connman, AddrMan& addrman, BanMan* banman,
+std::unique_ptr<PeerManager> PeerManager::make(CConnman& connman, AddrMan& addrman, BanMan* banman,
                                                ChainstateManager& chainman, CTxMemPool& pool,
                                                CMasternodeMetaMan& mn_metaman, CMasternodeSync& mn_sync,
                                                CGovernanceManager& govman, CSporkManager& sporkman,
@@ -1972,10 +1970,10 @@ std::unique_ptr<PeerManager> PeerManager::make(const CChainParams& chainparams, 
                                                const std::unique_ptr<CJContext>& cj_ctx,
                                                const std::unique_ptr<LLMQContext>& llmq_ctx, bool ignore_incoming_txs)
 {
-    return std::make_unique<PeerManagerImpl>(chainparams, connman, addrman, banman, chainman, pool, mn_metaman, mn_sync, govman, sporkman, mn_activeman, dmnman, active_ctx, cj_ctx, llmq_ctx, ignore_incoming_txs);
+    return std::make_unique<PeerManagerImpl>(connman, addrman, banman, chainman, pool, mn_metaman, mn_sync, govman, sporkman, mn_activeman, dmnman, active_ctx, cj_ctx, llmq_ctx, ignore_incoming_txs);
 }
 
-PeerManagerImpl::PeerManagerImpl(const CChainParams& chainparams, CConnman& connman, AddrMan& addrman, BanMan* banman,
+PeerManagerImpl::PeerManagerImpl(CConnman& connman, AddrMan& addrman, BanMan* banman,
                                  ChainstateManager& chainman, CTxMemPool& pool,
                                  CMasternodeMetaMan& mn_metaman, CMasternodeSync& mn_sync,
                                  CGovernanceManager& govman, CSporkManager& sporkman,
@@ -1985,7 +1983,7 @@ PeerManagerImpl::PeerManagerImpl(const CChainParams& chainparams, CConnman& conn
                                  const std::unique_ptr<CJContext>& cj_ctx,
                                  const std::unique_ptr<LLMQContext>& llmq_ctx,
                                  bool ignore_incoming_txs)
-    : m_chainparams(chainparams),
+    : m_chainparams(chainman.GetParams()),
       m_connman(connman),
       m_addrman(addrman),
       m_banman(banman),
@@ -3586,7 +3584,7 @@ MessageProcessingResult PeerManagerImpl::ProcessPlatformBanMessage(NodeId node, 
         return ret;
     }
 
-    Consensus::LLMQType llmq_type = Params().GetConsensus().llmqTypePlatform;
+    Consensus::LLMQType llmq_type = m_chainparams.GetConsensus().llmqTypePlatform;
     auto quorum = m_llmq_ctx->qman->GetQuorum(llmq_type, ban_msg.m_quorum_hash);
     if (!quorum) {
         LogPrintf("PLATFORMBAN -- hash: %s protx_hash: %s missing quorum_hash: %s llmq_type: %d\n", hash.ToString(), ban_msg.m_protx_hash.ToString(), ban_msg.m_quorum_hash.ToString(), ToUnderlying(llmq_type));
@@ -3732,7 +3730,7 @@ void PeerManagerImpl::ProcessMessage(
             PushNodeVersion(pfrom, *peer);
         }
 
-        if (Params().NetworkIDString() == CBaseChainParams::DEVNET) {
+        if (m_chainparams.NetworkIDString() == CBaseChainParams::DEVNET) {
             if (cleanSubVer.find(strprintf("devnet.%s", gArgs.GetDevNetName())) == std::string::npos) {
                 LogPrintf("connected to wrong devnet. Reported version is %s, expected devnet name is %s\n", cleanSubVer, gArgs.GetDevNetName());
                 if (!pfrom.IsInboundConn())

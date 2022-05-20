@@ -52,7 +52,7 @@ private:
 public:
     explicit CMNPaymentsProcessor(CDeterministicMNManager& dmnman, CGovernanceManager& govman, const ChainstateManager& chainman,
                                   const Consensus::Params& consensus_params, const CMasternodeSync& mn_sync, const CSporkManager& sporkman) :
-        m_dmnman{dmnman}, m_govman{govman}, m_chainman{chainman}, m_consensus_params{consensus_params}, m_mn_sync{mn_sync},
+        m_dmnman{dmnman}, m_govman{govman}, m_chainman{chainman}, m_consensus_params{m_chainman.GetParams()}, m_mn_sync{mn_sync},
         m_sporkman{sporkman} {}
 
     bool IsBlockValueValid(const CBlock& block, const int nBlockHeight, const CAmount blockReward, std::string& strErrorRet, const bool check_superblock);
