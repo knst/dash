@@ -7,13 +7,16 @@
 # then create onion_seeds.txt and add some active onion services to it; check tor.md for some
 #
 
+import argparse
+import ipaddress
 import re
 import sys
-import dns.resolver
 import collections
 import json
 import multiprocessing
 from typing import List, Dict, Union
+
+from asmap import ASMap, net_to_prefix
 
 NSEEDS=512
 
@@ -123,8 +126,7 @@ def resolveasn(resolver, ip : Dict) -> Union[int, None]:
         sys.stderr.write('ERR: Could not resolve ASN for "' + ip + '"\n')
         return None
 
-# Based on Greg Maxwell's seed_filter.py
-def filterbyasn(ips: List[Dict], max_per_asn: Dict, max_per_net: int) -> List[Dict]:
+def filterbyasn(asmap: ASMap, ips: List[Dict], max_per_asn: Dict, max_per_net: int) -> List[Dict]:
     """ Prunes `ips` by
     (a) trimming ips to have at most `max_per_net` ips from each net (e.g. ipv4, ipv6); and
     (b) trimming ips to have at most `max_per_asn` ips from each asn in each net.
@@ -139,8 +141,8 @@ def filterbyasn(ips: List[Dict], max_per_asn: Dict, max_per_net: int) -> List[Di
     # OpenDNS servers
     my_resolver.nameservers = ['208.67.222.222', '208.67.220.220']
 
-    # Resolve ASNs in parallel
-    asns = [pool.apply_async(resolveasn, args=(my_resolver, ip)) for ip in ips_ipv46]
+#    # Resolve ASNs in parallel
+#    asns = [pool.apply_async(resolveasn, args=(my_resolver, ip)) for ip in ips_ipv46]
 
     # Filter IPv46 by ASN, and limit to max_per_net per network
     result = []
@@ -148,21 +150,18 @@ def filterbyasn(ips: List[Dict], max_per_asn: Dict, max_per_net: int) -> List[Di
     asn_count: Dict[int, int] = collections.defaultdict(int)
 
     for i, ip in enumerate(ips_ipv46):
-        if i % 10 == 0:
-            # give progress update
-            print(f"{i:6d}/{len(ips_ipv46)} [{100*i/len(ips_ipv46):04.1f}%]\r", file=sys.stderr, end='', flush=True)
-
         if net_count[ip['net']] == max_per_net:
             # do not add this ip as we already too many
             # ips from this network
             continue
-        asn = asns[i].get()
-        if asn is None or asn_count[asn] == max_per_asn[ip['net']]:
+        asn = asmap.lookup(net_to_prefix(ipaddress.ip_network(ip['ip'])))
+        if not asn or asn_count[ip['net'], asn] == max_per_asn[ip['net']]:
             # do not add this ip as we already have too many
             # ips from this ASN on this network
             continue
-        asn_count[asn] += 1
+        asn_count[ip['net'], asn] += 1
         net_count[ip['net']] += 1
+        ip['asn'] = asn
         result.append(ip)
 
     # Add back Onions (up to max_per_net)
@@ -178,18 +177,39 @@ def ip_stats(ips: List[Dict]) -> str:
 
     return f"{hist['ipv4']:6d} {hist['ipv6']:6d} {hist['onion']:6d}"
 
+def parse_args():
+    argparser = argparse.ArgumentParser(description='Generate a list of bitcoin node seed ip addresses.')
+    argparser.add_argument("-a","--asmap", help='the location of the asmap asn database file (required)', required=True)
+    argparser.add_argument("-o","--protx", help='the location of the protx list file (required). This expects a json as outputted by `protx list valid 1`', required=True)
+    argparser.add_argument("-p","--onion", help='the location of the onion seeds file (optional)', required=False)
+    return argparser.parse_args()
+
 def main():
-    # This expects a json as outputted by "protx list valid 1"
-    if len(sys.argv) > 1:
-        with open(sys.argv[1], 'r', encoding="utf8") as f:
-            mns = json.load(f)
-    else:
-        mns = json.load(sys.stdin)
+    args = parse_args()
+
+    print(f'Loading asmap database "{args.asmap}"…', end='', file=sys.stderr, flush=True)
+    with open(args.asmap, 'rb') as f:
+        asmap = ASMap.from_binary(f.read())
+    print('Done.', file=sys.stderr)
+
+    print('Loading and parsing DNS seeds…', end='', file=sys.stderr, flush=True)
+    lines = sys.stdin.readlines()
+    ips = [parseline(line) for line in lines]
+
+    print('Done.', file=sys.stderr)
+
+    print(f'Loading Masternodes List "{args.protx}"…', end='', file=sys.stderr, flush=True)
+    with open(args.protx, 'r', encoding="utf8") as f:
+        mns = json.load(f)
+    print('Done.', file=sys.stderr)
 
     onions = []
-    if len(sys.argv) > 2:
-        with open(sys.argv[2], 'r', encoding="utf8") as f:
+    if args.onion is not None:
+        print(f'Loading onion seeds "{args.onion}"…', end='', file=sys.stderr, flush=True)
+        with open(args.onion, 'r', encoding="utf8") as f:
             onions = f.read().split('\n')
+        print('Done.', file=sys.stderr)
+
 
     print(f'Total mns: {len(mns)}', file=sys.stderr)
     # Skip PoSe banned MNs
@@ -219,16 +239,19 @@ def main():
     print(f'{ip_stats(ips):s} Skip entries with invalid address', file=sys.stderr)
 
     # Look up ASNs and limit results, both per ASN and globally.
-    ips = filterbyasn(ips, MAX_SEEDS_PER_ASN, NSEEDS)
+    ips = filterbyasn(asmap, ips, MAX_SEEDS_PER_ASN, NSEEDS)
     print(f'{ip_stats(ips):s} Look up ASNs and limit results per ASN and per net', file=sys.stderr)
     # Sort the results by IP address (for deterministic output).
     ips.sort(key=lambda x: (x['net'], x['sortkey']), reverse=True)
 
     for ip in ips:
         if ip['net'] == 'ipv6':
-            print('[%s]:%i' % (ip['ip'], ip['port']))
+            print(f"[{ip['ip']}]:{ip['port']}", end="")
         else:
-            print('%s:%i' % (ip['ip'], ip['port']))
+            print(f"{ip['ip']}:{ip['port']}", end="")
+        if 'asn' in ip:
+            print(f" # AS{ip['asn']}", end="")
+        print()
 
 if __name__ == '__main__':
     main()
