@@ -483,12 +483,12 @@ std::optional<SelectionResult> ChooseSelectionResult(const CWallet& wallet, cons
     if (auto knapsack_result{KnapsackSolver(all_groups, nTargetValue, coin_selection_params.m_min_change_target,
                                             coin_selection_params.rng_fast, max_inputs_weight, nCoinType == CoinType::ONLY_FULLY_MIXED,
                                             wallet.m_default_max_tx_fee)}) {
-        knapsack_result->ComputeAndSetWaste(coin_selection_params.m_cost_of_change);
+        knapsack_result->ComputeAndSetWaste(coin_selection_params.min_viable_change, coin_selection_params.m_cost_of_change, coin_selection_params.m_change_fee);
         results.push_back(*knapsack_result);
     }
 
     if (auto srd_result{SelectCoinsSRD(positive_groups, nTargetValue, coin_selection_params.rng_fast, max_inputs_weight, nCoinType == CoinType::ONLY_FULLY_MIXED)}) {
-        srd_result->ComputeAndSetWaste(coin_selection_params.m_cost_of_change);
+        srd_result->ComputeAndSetWaste(coin_selection_params.min_viable_change, coin_selection_params.m_cost_of_change, coin_selection_params.m_change_fee);
         results.push_back(*srd_result);
     }
 
@@ -589,7 +589,7 @@ std::optional<SelectionResult> SelectCoins(const CWallet& wallet, CoinsResult& a
             result.AddInput(preset_inputs);
         }
         if (result.GetSelectedValue() < nTargetValue) return std::nullopt;
-        result.ComputeAndSetWaste(coin_selection_params.m_cost_of_change);
+        result.ComputeAndSetWaste(coin_selection_params.min_viable_change, coin_selection_params.m_cost_of_change, coin_selection_params.m_change_fee);
         return result;
     }
 
@@ -680,7 +680,7 @@ std::optional<SelectionResult> SelectCoins(const CWallet& wallet, CoinsResult& a
     // Add preset inputs to result
     res->Merge(preselected);
     if (res->GetAlgo() == SelectionAlgorithm::MANUAL) {
-        res->ComputeAndSetWaste(coin_selection_params.m_cost_of_change);
+        res->ComputeAndSetWaste(coin_selection_params.min_viable_change, coin_selection_params.m_cost_of_change, coin_selection_params.m_change_fee);
     }
 
     return res;
