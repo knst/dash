@@ -470,8 +470,7 @@ std::optional<SelectionResult> ChooseSelectionResult(const CWallet& wallet, cons
 
     int max_inputs_weight = MAX_STANDARD_TX_SIZE - coin_selection_params.tx_noinputs_size;
 
-    // Note that unlike KnapsackSolver, we do not include the fee for creating a change output as BnB will not create a change output.
-    std::vector<OutputGroup> positive_groups = GroupOutputs(wallet, available_coins, coin_selection_params, eligibility_filter, true /* positive_only */);
+    std::vector<OutputGroup> positive_groups = GroupOutputs(wallet, available_coins, coin_selection_params, eligibility_filter, /*positive_only=*/true);
     positive_groups.clear(); // Cleared to skip BnB and SRD as they're unaware of mixed coins
     if (auto bnb_result{SelectCoinsBnB(positive_groups, nTargetValue, coin_selection_params.m_cost_of_change, max_inputs_weight)}) {
         results.push_back(*bnb_result);
@@ -480,27 +479,15 @@ std::optional<SelectionResult> ChooseSelectionResult(const CWallet& wallet, cons
     max_inputs_weight -= coin_selection_params.change_output_size;
 
     // The knapsack solver has some legacy behavior where it will spend dust outputs. We retain this behavior, so don't filter for positive only here.
-    std::vector<OutputGroup> all_groups = GroupOutputs(wallet, available_coins, coin_selection_params, eligibility_filter, false /* positive_only */);
-    CAmount target_with_change = nTargetValue;
-    // While nTargetValue includes the transaction fees for non-input things, it does not include the fee for creating a change output.
-    // So we need to include that for KnapsackSolver as well, as we are expecting to create a change output.
-    // There is also no change output when spending fully mixed coins.
-    if (!coin_selection_params.m_subtract_fee_outputs && nCoinType != CoinType::ONLY_FULLY_MIXED) {
-        target_with_change += coin_selection_params.m_change_fee;
-    }
-    if (auto knapsack_result{KnapsackSolver(all_groups, target_with_change, coin_selection_params.m_min_change_target,
+    std::vector<OutputGroup> all_groups = GroupOutputs(wallet, available_coins, coin_selection_params, eligibility_filter, /*positive_only=*/false);
+    if (auto knapsack_result{KnapsackSolver(all_groups, nTargetValue, coin_selection_params.m_min_change_target,
                                             coin_selection_params.rng_fast, max_inputs_weight, nCoinType == CoinType::ONLY_FULLY_MIXED,
                                             wallet.m_default_max_tx_fee)}) {
         knapsack_result->ComputeAndSetWaste(coin_selection_params.m_cost_of_change);
         results.push_back(*knapsack_result);
     }
 
-    // Include change for SRD as we want to avoid making really small change if the selection just
-    // barely meets the target. Just use the lower bound change target instead of the randomly
-    // generated one, since SRD will result in a random change amount anyway; avoid making the
-    // target needlessly large.
-    const CAmount srd_target = target_with_change + CHANGE_LOWER;
-    if (auto srd_result{SelectCoinsSRD(positive_groups, srd_target, coin_selection_params.rng_fast, max_inputs_weight)}) {
+    if (auto srd_result{SelectCoinsSRD(positive_groups, nTargetValue, coin_selection_params.rng_fast, max_inputs_weight, nCoinType == CoinType::ONLY_FULLY_MIXED)}) {
         srd_result->ComputeAndSetWaste(coin_selection_params.m_cost_of_change);
         results.push_back(*srd_result);
     }
