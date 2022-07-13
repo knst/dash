@@ -874,6 +874,11 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     if (!coin_selection_params.m_subtract_fee_outputs) {
         coin_selection_params.tx_noinputs_size = 9; // Static vsize overhead + outputs vsize. 4 nVersion, 4 nLocktime, 1 input count
         coin_selection_params.tx_noinputs_size += GetSizeOfCompactSize(vecSend.size()); // bytes for output count
+        if (nExtraPayloadSize != 0) {
+            // The extra payload is not part of txNew, so coin selection has to be told about it
+            // explicitly. Otherwise the target falls short of the fee computed from nBytes below.
+            coin_selection_params.tx_noinputs_size += GetSizeOfCompactSize(nExtraPayloadSize) + nExtraPayloadSize;
+        }
     }
     for (const auto& recipient : vecSend)
     {
@@ -922,23 +927,24 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     }
     TRACE5(coin_selection, selected_coins, wallet.GetName().c_str(), GetAlgorithmName(result->GetAlgo()).c_str(), result->GetTarget(), result->GetWaste(), result->GetSelectedValue());
 
-    // Always make a change output
-    // We will reduce the fee from this change output later, and remove the output if it is too small.
-    const CAmount change_and_fee = result->GetSelectedValue() - recipients_sum;
-    assert(change_and_fee >= 0);
-    CTxOut newTxOut(change_and_fee, scriptChange);
+    // Fully mixed coins are spent in whole denominations, so no change is allowed there and
+    // whatever the solver selected above the target is paid as fees instead.
+    const CAmount change_amount = coin_control.nCoinType == CoinType::ONLY_FULLY_MIXED
+                                      ? 0
+                                      : result->GetChange(coin_selection_params.min_viable_change, coin_selection_params.m_change_fee);
+    CTxOut newTxOut(change_amount, scriptChange);
+    if (change_amount > 0) {
+        if (nChangePosInOut == -1) {
+            // Insert change txn at random position:
+            nChangePosInOut = rng_fast.randrange(txNew.vout.size() + 1);
+        } else if ((unsigned int)nChangePosInOut > txNew.vout.size()) {
+            return util::Error{_("Transaction change output index out of range")};
+        }
+        txNew.vout.insert(txNew.vout.begin() + nChangePosInOut, newTxOut);
 
-    if (nChangePosInOut == -1) {
-        // Insert change txn at random position:
-        nChangePosInOut = rng_fast.randrange(txNew.vout.size() + 1);
+    } else {
+        nChangePosInOut = -1;
     }
-    else if ((unsigned int)nChangePosInOut > txNew.vout.size()) {
-        return util::Error{_("Transaction change output index out of range")};
-    }
-
-    assert(nChangePosInOut != -1);
-    auto change_position = txNew.vout.insert(txNew.vout.begin() + nChangePosInOut, newTxOut);
-
     // We're making a copy of vecSend because it's const, sortedVecSend should be used
     // in place of vecSend in all subsequent usage.
     std::vector<CRecipient> sortedVecSend{vecSend};
@@ -953,10 +959,9 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
 
         // If there was a change output added before, we must update its position now
         if (const auto it = std::find(txNew.vout.begin(), txNew.vout.end(), newTxOut); it != txNew.vout.end()) {
-            change_position = it;
-            nChangePosInOut = std::distance(txNew.vout.begin(), change_position);
+            nChangePosInOut = std::distance(txNew.vout.begin(), it);
         }
-    };
+    }
 
     // The sequence number is set to non-maxint so that DiscourageFeeSniping
     // works.
@@ -982,26 +987,6 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     }
 
     CAmount fee_needed = coin_selection_params.m_effective_feerate.GetFee(nBytes);
-
-    if (!coin_selection_params.m_subtract_fee_outputs) {
-        change_position->nValue -= fee_needed;
-    }
-
-    // We want to drop the change to fees if:
-    // 1. The change output would be dust
-    // 2. The change is within the (almost) exact match window, i.e. it is less than or equal to the cost of the change output (cost_of_change)
-    // 3. We are working with fully mixed CoinJoin denominations
-    CAmount change_amount = change_position->nValue;
-    if (IsDust(*change_position, coin_selection_params.m_discard_feerate) || change_amount <= coin_selection_params.m_cost_of_change || coin_control.nCoinType == CoinType::ONLY_FULLY_MIXED)
-    {
-        nChangePosInOut = -1;
-        change_amount = 0;
-        txNew.vout.erase(change_position);
-
-        nBytes = CalculateMaximumSignedTxSize(CTransaction(txNew), &wallet, &coin_control);
-        fee_needed = coin_selection_params.m_effective_feerate.GetFee(nBytes);
-    }
-
     nFeeRet = result->GetSelectedValue() - recipients_sum - change_amount;
 
     // The only time that fee_needed should be less than the amount available for fees is when
@@ -1010,14 +995,16 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
         return util::Error{Untranslated(STR_INTERNAL_BUG("Fee needed > fee paid"))};
     }
 
-    // Update nFeeRet in case fee_needed changed due to dropping the change output
-    if (fee_needed <= change_and_fee - change_amount) {
-        nFeeRet = change_and_fee - change_amount;
+    // If there is a change output and we overpay the fees then increase the change to match the fee needed
+    if (nChangePosInOut != -1 && fee_needed < nFeeRet) {
+        auto& change = txNew.vout.at(nChangePosInOut);
+        change.nValue += nFeeRet - fee_needed;
+        nFeeRet = fee_needed;
     }
 
     // Reduce output values for subtractFeeFromAmount
     if (coin_selection_params.m_subtract_fee_outputs) {
-        CAmount to_reduce = fee_needed + change_amount - change_and_fee;
+        CAmount to_reduce = fee_needed - nFeeRet;
         int i = 0;
         bool fFirst = true;
         for (const auto& recipient : sortedVecSend)
