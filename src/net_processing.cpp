@@ -416,7 +416,7 @@ struct Peer {
     std::deque<CInv> m_getdata_requests GUARDED_BY(m_getdata_requests_mutex);
 
     /** Time of the last getheaders message to this peer */
-    std::atomic<NodeClock::time_point> m_last_getheaders_timestamp GUARDED_BY(NetEventsInterface::g_msgproc_mutex){NodeSeconds{}};
+    NodeClock::time_point m_last_getheaders_timestamp GUARDED_BY(NetEventsInterface::g_msgproc_mutex){};
 
     explicit Peer(NodeId id, ServiceFlags our_services)
         : m_id(id)
@@ -3023,7 +3023,7 @@ bool PeerManagerImpl::MaybeSendGetHeaders(CNode& pfrom, const std::string& msg_t
 
     // Only allow a new getheaders message to go out if we don't have a recent
     // one already in-flight
-    if (current_time - peer.m_last_getheaders_timestamp.load() > HEADERS_RESPONSE_TIME) {
+    if (current_time - peer.m_last_getheaders_timestamp > HEADERS_RESPONSE_TIME) {
         m_connman.PushMessage(&pfrom, msgMaker.Make(msg_type, locator, uint256()));
         peer.m_last_getheaders_timestamp = current_time;
         return true;
@@ -4997,7 +4997,7 @@ void PeerManagerImpl::ProcessMessage(
 
         // Assume that this is in response to any outstanding getheaders
         // request we may have sent, and clear out the time of our last request
-        peer->m_last_getheaders_timestamp.store(NodeSeconds{});
+        peer->m_last_getheaders_timestamp = {};
 
         std::vector<CBlockHeader> headers;
 
