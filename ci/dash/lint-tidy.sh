@@ -21,7 +21,9 @@ fi
 cd "${BASE_ROOT_DIR}/build-ci/dashcore-${BUILD_TARGET}"
 iwyu_tool.py \
   "src/compat" \
+  "src/dbwrapper.cpp" \
   "src/init" \
+  "src/node/chainstate.cpp" \
   "src/rpc/fees.cpp" \
   "src/rpc/signmessage.cpp" \
   "src/test/fuzz/txorphan.cpp" \

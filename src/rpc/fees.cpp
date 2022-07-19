@@ -7,7 +7,6 @@
 #include <node/context.h>
 #include <policy/feerate.h>
 #include <policy/fees.h>
-#include <policy/policy.h>
 #include <policy/settings.h>
 #include <rpc/protocol.h>
 #include <rpc/request.h>
@@ -17,7 +16,6 @@
 #include <txmempool.h>
 #include <univalue.h>
 #include <util/fees.h>
-#include <util/system.h>
 
 #include <algorithm>
 #include <array>

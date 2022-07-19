@@ -4,10 +4,17 @@
 
 #include <node/chainstate.h>
 
+#include <chain.h>
+#include <coins.h>
 #include <chainparamsbase.h>
 #include <consensus/params.h>
 #include <deploymentstatus.h>
 #include <node/blockstorage.h>
+#include <sync.h>
+#include <threadsafety.h>
+#include <txdb.h>
+#include <uint256.h>
+#include <util/time.h>
 #include <validation.h>
 
 #include <evo/chainhelper.h>
@@ -16,6 +23,12 @@
 #include <evo/evodb.h>
 #include <evo/mnhftx.h>
 #include <llmq/context.h>
+
+#include <algorithm>
+#include <atomic>
+#include <cassert>
+#include <memory>
+#include <vector>
 
 namespace node {
 std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
