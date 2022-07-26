@@ -135,7 +135,7 @@ static RPCHelpMan masternode_outputs()
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
     const std::shared_ptr<const CWallet> wallet = GetWalletForJSONRPCRequest(request);
-    if (!wallet) return NullUniValue;
+    if (!wallet) return UniValue::VNULL;
 
     // Find possible candidates
     CCoinControl coin_control(CoinType::ONLY_MASTERNODE_COLLATERAL);
@@ -242,7 +242,7 @@ static RPCHelpMan masternode_winners()
     {
         LOCK(::cs_main);
         pindexTip = chainman.ActiveChain().Tip();
-        if (!pindexTip) return NullUniValue;
+        if (!pindexTip) return UniValue::VNULL;
     }
 
     int nCount = 10;

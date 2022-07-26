@@ -150,7 +150,7 @@ static RPCHelpMan gobject_prepare()
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
     std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(request);
-    if (!wallet) return NullUniValue;
+    if (!wallet) return UniValue::VNULL;
 
     EnsureWalletIsUnlocked(*wallet);
 
@@ -259,7 +259,7 @@ static RPCHelpMan gobject_list_prepared()
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
     std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(request);
-    if (!wallet) return NullUniValue;
+    if (!wallet) return UniValue::VNULL;
     EnsureWalletIsUnlocked(*wallet);
 
     int64_t nCount = request.params.empty() ? 10 : ParseInt64V(request.params[0], "count");
@@ -499,7 +499,7 @@ static RPCHelpMan gobject_vote_many()
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
     const std::shared_ptr<const CWallet> wallet = GetWalletForJSONRPCRequest(request);
-    if (!wallet) return NullUniValue;
+    if (!wallet) return UniValue::VNULL;
 
     const NodeContext& node = EnsureAnyNodeContext(request.context);
 
@@ -552,7 +552,7 @@ static RPCHelpMan gobject_vote_alias()
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
     const std::shared_ptr<const CWallet> wallet = GetWalletForJSONRPCRequest(request);
-    if (!wallet) return NullUniValue;
+    if (!wallet) return UniValue::VNULL;
 
     const NodeContext& node = EnsureAnyNodeContext(request.context);
 

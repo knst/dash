@@ -683,7 +683,7 @@ static UniValue protx_register_common_wrapper(const JSONRPCRequest& request,
     const bool isEvoRequested = mnType == MnType::Evo;
 
     std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
-    if (!pwallet) return NullUniValue;
+    if (!pwallet) return UniValue::VNULL;
 
     if (action == ProTxRegisterAction::External || action == ProTxRegisterAction::Fund) {
         EnsureWalletIsUnlocked(*pwallet);
@@ -888,7 +888,7 @@ static RPCHelpMan protx_register_submit()
     CChainstateHelper& chain_helper = *CHECK_NONFATAL(node.chain_helper);
 
     const std::shared_ptr<const CWallet> wallet = GetWalletForJSONRPCRequest(request);
-    if (!wallet) return NullUniValue;
+    if (!wallet) return UniValue::VNULL;
 
     EnsureWalletIsUnlocked(*wallet);
 
@@ -997,7 +997,7 @@ static UniValue protx_update_service_common_wrapper(const JSONRPCRequest& reques
 
     const bool isEvoRequested = mnType == MnType::Evo;
     std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(request);
-    if (!wallet) return NullUniValue;
+    if (!wallet) return UniValue::VNULL;
 
     EnsureWalletIsUnlocked(*wallet);
 
@@ -1131,7 +1131,7 @@ static RPCHelpMan protx_update_registrar_wrapper(const bool specific_legacy_bls_
     CChainstateHelper& chain_helper = *CHECK_NONFATAL(node.chain_helper);
 
     std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(request);
-    if (!wallet) return NullUniValue;
+    if (!wallet) return UniValue::VNULL;
 
     EnsureWalletIsUnlocked(*wallet);
 
@@ -1251,7 +1251,7 @@ static RPCHelpMan protx_revoke()
     CChainstateHelper& chain_helper = *CHECK_NONFATAL(node.chain_helper);
 
     std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
-    if (!pwallet) return NullUniValue;
+    if (!pwallet) return UniValue::VNULL;
 
     EnsureWalletIsUnlocked(*pwallet);
 
