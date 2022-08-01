@@ -87,6 +87,8 @@ using interfaces::Node;
 using interfaces::WalletLoader;
 
 namespace node {
+// All members of the classes in this namespace are intentionally public, as the
+// classes themselves are private.
 namespace {
 class EVOImpl : public EVO
 {
@@ -405,15 +407,12 @@ class ExternalSignerImpl : public interfaces::ExternalSigner
 public:
     ExternalSignerImpl(::ExternalSigner signer) : m_signer(std::move(signer)) {}
     std::string getName() override { return m_signer.m_name; }
-private:
     ::ExternalSigner m_signer;
 };
 #endif
 
 class NodeImpl : public Node
 {
-private:
-    ChainstateManager& chainman() { return *Assert(m_context->chainman); }
 public:
     EVOImpl m_evo;
     GOVImpl m_gov;
@@ -640,12 +639,7 @@ public:
     }
     double getVerificationProgress() override
     {
-        const CBlockIndex* tip;
-        {
-            LOCK(::cs_main);
-            tip = chainman().ActiveChain().Tip();
-        }
-        return GuessVerificationProgress(Params().TxData(), tip);
+        return GuessVerificationProgress(Params().TxData(), WITH_LOCK(::cs_main, return chainman().ActiveChain().Tip()));
     }
     bool isInitialBlockDownload() override {
         return chainman().ActiveChainstate().IsInitialBlockDownload();
@@ -768,6 +762,7 @@ public:
             }));
     }
     NodeContext* context() override { return m_context; }
+    ChainstateManager& chainman() { return *Assert(m_node.chainman); }
     void setContext(NodeContext* context) override
     {
         m_context = context;
@@ -776,6 +771,7 @@ public:
         m_llmq.setContext(context);
         m_masternodeSync.setContext(context);
     }
+    ChainstateManager& chainman() { return *Assert(m_context->chainman); }
     NodeContext* m_context{nullptr};
 };
 
@@ -895,8 +891,6 @@ public:
 
 class ChainImpl : public Chain
 {
-private:
-    ChainstateManager& chainman() { return *Assert(m_node.chainman); }
 public:
     explicit ChainImpl(NodeContext& node) : m_node(node) {}
     std::optional<int> getHeight() override
@@ -1015,11 +1009,10 @@ public:
     bool findAncestorByHash(const uint256& block_hash, const uint256& ancestor_hash, const FoundBlock& ancestor_out) override
     {
         WAIT_LOCK(cs_main, lock);
-        const CChain& active = chainman().ActiveChain();
         const CBlockIndex* block = chainman().m_blockman.LookupBlockIndex(block_hash);
         const CBlockIndex* ancestor = chainman().m_blockman.LookupBlockIndex(ancestor_hash);
         if (block && ancestor && block->GetAncestor(ancestor->nHeight) != ancestor) ancestor = nullptr;
-        return FillBlock(ancestor, ancestor_out, lock, active);
+        return FillBlock(ancestor, ancestor_out, lock, chainman().ActiveChain());
     }
     bool findCommonAncestor(const uint256& block_hash1, const uint256& block_hash2, const FoundBlock& ancestor_out, const FoundBlock& block1_out, const FoundBlock& block2_out) override
     {
