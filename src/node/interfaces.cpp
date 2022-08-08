@@ -1055,8 +1055,7 @@ public:
     {
         LOCK(::cs_main);
         const CBlockIndex* index = chainman().m_blockman.LookupBlockIndex(block_hash);
-        if (!index) return {};
-        return chainman().ActiveChain().GetLocator(index);
+        return GetLocator(index);
     }
     std::optional<int> findLocatorFork(const CBlockLocator& locator) override
     {
