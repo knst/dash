@@ -624,7 +624,7 @@ public:
 
     /** Implement NetEventsInterface */
     void InitializeNode(CNode& node, ServiceFlags our_services) override EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex);
-    void FinalizeNode(const CNode& node) override EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex);
+    void FinalizeNode(const CNode& node) override EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex, !m_headers_presync_mutex);
     bool ProcessMessages(CNode* pfrom, std::atomic<bool>& interrupt) override
         EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex, !m_recent_confirmed_transactions_mutex, !m_most_recent_block_mutex, g_msgproc_mutex);
     bool SendMessages(CNode* pto) override
@@ -648,7 +648,7 @@ public:
     void Misbehaving(const NodeId pnode, const int howmuch, const std::string& message = "") override EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex);
     void ProcessMessage(CNode& pfrom, const std::string& msg_type, CDataStream& vRecv,
                         const std::chrono::microseconds time_received, const std::atomic<bool>& interruptMsgProc) override
-        EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex, !m_recent_confirmed_transactions_mutex, !m_most_recent_block_mutex, g_msgproc_mutex);
+        EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex, !m_recent_confirmed_transactions_mutex, !m_most_recent_block_mutex, !m_headers_presync_mutex, g_msgproc_mutex);
     void UpdateLastBlockAnnounceTime(NodeId node, int64_t time_in_seconds) override;
     bool IsBanned(NodeId pnode) override EXCLUSIVE_LOCKS_REQUIRED(cs_main, !m_peer_mutex);
     size_t GetRequestedObjectCount(NodeId nodeid) const override EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
@@ -773,7 +773,7 @@ private:
                                bool via_compact_block, bool uses_compressed)
         EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex, g_msgproc_mutex);
     [[nodiscard]] MessageProcessingResult ProcessPlatformBanMessage(NodeId node, std::string_view msg_type, CDataStream& vRecv)
-        EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex, g_msgproc_mutex);
+        EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex, !m_headers_presync_mutex, g_msgproc_mutex);
 
     /** Various helpers for headers processing, invoked by ProcessHeadersMessage() */
     /** Return true if headers are continuous and have valid proof-of-work (DoS points assigned on failure) */
@@ -807,7 +807,7 @@ private:
      */
     bool IsContinuationOfLowWorkHeadersSync(Peer& peer, CNode& pfrom,
             std::vector<CBlockHeader>& headers)
-        EXCLUSIVE_LOCKS_REQUIRED(peer.m_headers_sync_mutex);
+        EXCLUSIVE_LOCKS_REQUIRED(peer.m_headers_sync_mutex, !m_headers_presync_mutex);
     /** Check work on a headers chain to be processed, and if insufficient,
      * initiate our anti-DoS headers sync mechanism.
      *
@@ -823,7 +823,7 @@ private:
     bool TryLowWorkHeadersSync(Peer& peer, CNode& pfrom,
                                   const CBlockIndex* chain_start_header,
                                   std::vector<CBlockHeader>& headers, bool uses_compressed)
-        EXCLUSIVE_LOCKS_REQUIRED(!peer.m_headers_sync_mutex, !m_peer_mutex);
+        EXCLUSIVE_LOCKS_REQUIRED(!peer.m_headers_sync_mutex, !m_peer_mutex, !m_headers_presync_mutex);
 
     /** Return true if the given header is an ancestor of
      *  m_chainman.m_best_header or our current tip */
@@ -1089,6 +1089,24 @@ private:
     std::shared_ptr<const CBlock> m_most_recent_block GUARDED_BY(m_most_recent_block_mutex);
     std::shared_ptr<const CBlockHeaderAndShortTxIDs> m_most_recent_compact_block GUARDED_BY(m_most_recent_block_mutex);
     uint256 m_most_recent_block_hash GUARDED_BY(m_most_recent_block_mutex);
+
+    // Data about the low-work headers synchronization, aggregated from all peers' HeadersSyncStates.
+    /** Mutex guarding the other m_headers_presync_* variables. */
+    Mutex m_headers_presync_mutex;
+    /** A type to represent statistics about a peer's low-work headers sync.
+     *
+     * - The first field is the total verified amount of work in that synchronization.
+     * - The second is:
+     *   - nullopt: the sync is in REDOWNLOAD phase (phase 2).
+     *   - {height, timestamp}: the sync has the specified tip height and block timestamp (phase 1).
+     */
+    using HeadersPresyncStats = std::pair<arith_uint256, std::optional<std::pair<int64_t, uint32_t>>>;
+    /** Statistics for all peers in low-work headers sync. */
+    std::map<NodeId, HeadersPresyncStats> m_headers_presync_stats GUARDED_BY(m_headers_presync_mutex) {};
+    /** The peer with the most-work entry in m_headers_presync_stats. */
+    NodeId m_headers_presync_bestpeer GUARDED_BY(m_headers_presync_mutex) {-1};
+    /** The m_headers_presync_stats improved, and needs signalling. */
+    std::atomic_bool m_headers_presync_should_signal{false};
 
     /** Height of the highest block announced using BIP 152 high-bandwidth mode. */
     int m_highest_fast_announce GUARDED_BY(::cs_main){0};
@@ -1868,7 +1886,10 @@ void PeerManagerImpl::FinalizeNode(const CNode& node) {
         // fSuccessfullyConnected set.
         m_addrman.Connected(node.addr);
     }
-
+    {
+        LOCK(m_headers_presync_mutex);
+        m_headers_presync_stats.erase(nodeid);
+    }
     LogPrint(BCLog::NET, "Cleared nodestate for peer=%d\n", nodeid);
 }
 
@@ -3252,6 +3273,48 @@ bool PeerManagerImpl::IsContinuationOfLowWorkHeadersSync(Peer& peer, CNode& pfro
 
         if (peer.m_headers_sync->GetState() == HeadersSyncState::State::FINAL) {
             peer.m_headers_sync.reset(nullptr);
+
+            // Delete this peer's entry in m_headers_presync_stats.
+            // If this is m_headers_presync_bestpeer, it will be replaced later
+            // by the next peer that triggers the else{} branch below.
+            LOCK(m_headers_presync_mutex);
+            m_headers_presync_stats.erase(pfrom.GetId());
+        } else {
+            // Build statistics for this peer's sync.
+            HeadersPresyncStats stats;
+            stats.first = peer.m_headers_sync->GetPresyncWork();
+            if (peer.m_headers_sync->GetState() == HeadersSyncState::State::PRESYNC) {
+                stats.second = {peer.m_headers_sync->GetPresyncHeight(),
+                                peer.m_headers_sync->GetPresyncTime()};
+            }
+
+            // Update statistics in stats.
+            LOCK(m_headers_presync_mutex);
+            m_headers_presync_stats[pfrom.GetId()] = stats;
+            auto best_it = m_headers_presync_stats.find(m_headers_presync_bestpeer);
+            bool best_updated = false;
+            if (best_it == m_headers_presync_stats.end()) {
+                // If the cached best peer is outdated, iterate over all remaining ones (including
+                // newly updated one) to find the best one.
+                NodeId peer_best{-1};
+                const HeadersPresyncStats* stat_best{nullptr};
+                for (const auto& [peer, stat] : m_headers_presync_stats) {
+                    if (!stat_best || stat > *stat_best) {
+                        peer_best = peer;
+                        stat_best = &stat;
+                    }
+                }
+                m_headers_presync_bestpeer = peer_best;
+                best_updated = (peer_best == pfrom.GetId());
+            } else if (best_it->first == pfrom.GetId() || stats > best_it->second) {
+                // pfrom was and remains the best peer, or pfrom just became best.
+                m_headers_presync_bestpeer = pfrom.GetId();
+                best_updated = true;
+            }
+            if (best_updated && stats.second.has_value()) {
+                // If the best peer updated, and it is in its first phase, signal.
+                m_headers_presync_should_signal = true;
+            }
         }
 
         if (result.success) {
@@ -3481,6 +3544,8 @@ void PeerManagerImpl::ProcessHeadersMessage(CNode& pfrom, Peer& peer,
         LOCK(peer.m_headers_sync_mutex);
         if (peer.m_headers_sync) {
             peer.m_headers_sync.reset(nullptr);
+            LOCK(m_headers_presync_mutex);
+            m_headers_presync_stats.erase(pfrom.GetId());
         }
         return;
     }
@@ -5396,7 +5461,23 @@ void PeerManagerImpl::ProcessMessage(
             }
         }
 
-        return ProcessHeadersMessage(pfrom, *peer, std::move(headers), /*via_compact_block=*/false, msg_type == NetMsgType::HEADERS2);
+        ProcessHeadersMessage(pfrom, *peer, std::move(headers), /*via_compact_block=*/false, msg_type == NetMsgType::HEADERS2);
+
+        // Check if the headers presync progress needs to be reported to validation.
+        // This needs to be done without holding the m_headers_presync_mutex lock.
+        if (m_headers_presync_should_signal.exchange(false)) {
+            HeadersPresyncStats stats;
+            {
+                LOCK(m_headers_presync_mutex);
+                auto it = m_headers_presync_stats.find(m_headers_presync_bestpeer);
+                if (it != m_headers_presync_stats.end()) stats = it->second;
+            }
+            if (stats.second) {
+                m_chainman.ReportHeadersPresync(stats.first, stats.second->first, stats.second->second);
+            }
+        }
+
+        return;
     }
 
     if (msg_type == NetMsgType::BLOCK)
