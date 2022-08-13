@@ -306,8 +306,8 @@ void ClientModel::subscribeToCoreSignals()
             TipChanged(sync_state, tip, verification_progress, /*header=*/false);
         }));
     m_event_handlers.emplace_back(m_node.handleNotifyHeaderTip(
-        [this](SynchronizationState sync_state, interfaces::BlockTip tip, double verification_progress) {
-            TipChanged(sync_state, tip, verification_progress, /*header=*/true);
+        [this](SynchronizationState sync_state, interfaces::BlockTip tip, bool presync) {
+            if (!presync) TipChanged(sync_state, tip, /*verification_progress=*/0.0, /*header=*/true);
         }));
     m_event_handlers.emplace_back(m_node.handleNotifyAdditionalDataSyncProgressChanged(
         [this](double nSyncProgress) {
