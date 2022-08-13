@@ -40,6 +40,12 @@ enum class BlockSource {
     NETWORK,
 };
 
+enum class SyncType {
+    HEADER_PRESYNC,
+    HEADER_SYNC,
+    BLOCK_SYNC
+};
+
 enum NumConnections {
     CONNECTIONS_NONE = 0,
     CONNECTIONS_IN   = (1U << 0),
@@ -122,7 +128,7 @@ private:
     interfaces::MnListPtr mnListCached GUARDED_BY(cs_mnlist){};
     const CBlockIndex* mnListTip{nullptr};
 
-    void TipChanged(SynchronizationState sync_state, interfaces::BlockTip tip, double verification_progress, bool header) EXCLUSIVE_LOCKS_REQUIRED(!m_cached_tip_mutex);
+    void TipChanged(SynchronizationState sync_state, interfaces::BlockTip tip, double verification_progress, SyncType synctype) EXCLUSIVE_LOCKS_REQUIRED(!m_cached_tip_mutex);
     void subscribeToCoreSignals();
     void unsubscribeFromCoreSignals();
 
@@ -130,7 +136,7 @@ Q_SIGNALS:
     void numConnectionsChanged(int count);
     void masternodeListChanged() const;
     void chainLockChanged(const QString& bestChainLockHash, int bestChainLockHeight);
-    void numBlocksChanged(int count, const QDateTime& blockDate, const QString& blockHash, double nVerificationProgress, bool header, SynchronizationState sync_state);
+    void numBlocksChanged(int count, const QDateTime& blockDate, const QString& blockHash, double nVerificationProgress, SyncType header, SynchronizationState sync_state);
     void additionalDataSyncProgressChanged(double nSyncProgress);
     void mempoolSizeChanged(long count, size_t mempoolSizeInBytes, size_t mempoolMaxSizeInBytes);
     void islockCountChanged(size_t count);
