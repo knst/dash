@@ -163,8 +163,6 @@ OverviewPage::OverviewPage(QWidget* parent) :
 
     GUIUtil::updateFonts();
 
-    m_balances.balance = -1;
-
     // Recent transactions
     ui->listTransactions->setItemDelegate(txdelegate);
     // Note: minimum height of listTransactions will be set later in updateAdvancedCJUI() to reflect actual settings
@@ -202,8 +200,9 @@ void OverviewPage::setPrivacy(bool privacy)
 {
     m_privacy = privacy;
     clientModel->getOptionsModel()->setOption(OptionsModel::OptionID::MaskValues, privacy);
-    if (m_balances.balance != -1) {
-        setBalance(m_balances);
+    const auto& balances = walletModel->getCachedBalance();
+    if (balances.balance != -1) {
+        setBalance(balances);
         coinJoinStatus(true);
     }
 
@@ -226,7 +225,6 @@ OverviewPage::~OverviewPage()
 void OverviewPage::setBalance(const interfaces::WalletBalances& balances)
 {
     BitcoinUnit unit = walletModel->getOptionsModel()->getDisplayUnit();
-    m_balances = balances;
     if (walletModel->wallet().isLegacy()) {
         if (walletModel->wallet().privateKeysDisabled()) {
             ui->labelBalance->setText(BitcoinUnits::floorHtmlWithPrivacy(unit, balances.watch_only_balance, BitcoinUnits::SeparatorStyle::ALWAYS, m_privacy));
@@ -312,12 +310,11 @@ void OverviewPage::setWalletModel(WalletModel *model)
         // update the display unit, to not use the default ("DASH")
         updateDisplayUnit();
         // Keep up to date with wallet
-        interfaces::Wallet& wallet = model->wallet();
-        interfaces::WalletBalances balances = wallet.getBalances();
-        setBalance(balances);
+        setBalance(model->getCachedBalance());
         connect(model, &WalletModel::balanceChanged, this, &OverviewPage::setBalance);
 
-        updateWatchOnlyLabels((wallet.haveWatchOnly() && !model->wallet().privateKeysDisabled()) || gArgs.GetBoolArg("-debug-ui", false));
+        interfaces::Wallet& wallet = model->wallet();
+        updateWatchOnlyLabels((wallet.haveWatchOnly() && !wallet.privateKeysDisabled()) || gArgs.GetBoolArg("-debug-ui", false));
         connect(model, &WalletModel::notifyWatchonlyChanged, [this](bool showWatchOnly) {
             updateWatchOnlyLabels(showWatchOnly && !walletModel->wallet().privateKeysDisabled());
         });
@@ -348,11 +345,11 @@ void OverviewPage::setWalletModel(WalletModel *model)
 
 void OverviewPage::updateDisplayUnit()
 {
-    if(walletModel && walletModel->getOptionsModel())
-    {
+    if (walletModel && walletModel->getOptionsModel()) {
         m_display_bitcoin_unit = walletModel->getOptionsModel()->getDisplayUnit();
-        if (m_balances.balance != -1) {
-            setBalance(m_balances);
+        const auto& balances = walletModel->getCachedBalance();
+        if (balances.balance != -1) {
+            setBalance(balances);
         }
 
         // Update txdelegate->unit with the current unit
