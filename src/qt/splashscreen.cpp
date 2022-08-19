@@ -55,7 +55,7 @@ SplashScreen::SplashScreen(const NetworkStyle *networkStyle) :
     // define text to place
     QString titleText       = PACKAGE_NAME;
     QString versionText = QString::fromStdString(FormatFullVersion()).remove(0, 1);
-    QString titleAddText    = networkStyle->getTitleAddText();
+    const QString& titleAddText = networkStyle->getTitleAddText();
 
     QFont fontNormal = GUIUtil::getFontNormal();
     QFont fontBold = GUIUtil::getFontBold();
