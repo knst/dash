@@ -247,6 +247,7 @@ BITCOIN_CORE_H = \
   governance/votedb.h \
   gsl/assert.h \
   gsl/pointers.h \
+  headerssync.h \
   httprpc.h \
   httpserver.h \
   i2p.h \
@@ -410,6 +411,7 @@ BITCOIN_CORE_H = \
   unordered_lru_cache.h \
   util/asmap.h \
   util/bip32.h \
+  util/bitdeque.h \
   util/bytevectorhash.h \
   util/check.h \
   util/edge.h \
@@ -545,6 +547,7 @@ libbitcoin_node_a_SOURCES = \
   governance/vote.cpp \
   governance/votedb.cpp \
   gsl/assert.cpp \
+  headerssync.cpp \
   httprpc.cpp \
   httpserver.cpp \
   i2p.cpp \

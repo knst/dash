@@ -275,7 +275,7 @@ void FuncDIP3Activation(TestChainSetup& setup)
 
     // We start one block before DIP3 activation, so mining a block with a DIP3 transaction should fail
     auto block = std::make_shared<CBlock>(setup.CreateBlock(txns, coinbase_pk, chainman.ActiveChainstate()));
-    chainman.ProcessNewBlock(block, true, nullptr);
+    chainman.ProcessNewBlock(block, true, true, nullptr);
     BOOST_CHECK_EQUAL(tip_height(), nHeight);
     BOOST_REQUIRE(block->GetHash() != tip_hash());
     BOOST_REQUIRE(!dmnman.GetListAtChainTip().HasMN(tx.GetHash()));
@@ -285,7 +285,7 @@ void FuncDIP3Activation(TestChainSetup& setup)
     BOOST_CHECK_EQUAL(tip_height(), nHeight + 1);
     // Mining a block with a DIP3 transaction should succeed now
     block = std::make_shared<CBlock>(setup.CreateBlock(txns, coinbase_pk, chainman.ActiveChainstate()));
-    BOOST_REQUIRE(chainman.ProcessNewBlock(block, true, nullptr));
+    BOOST_REQUIRE(chainman.ProcessNewBlock(block, true, true, nullptr));
     sync_dmn_tip();
     BOOST_CHECK_EQUAL(tip_height(), nHeight + 2);
     BOOST_CHECK_EQUAL(block->GetHash(), tip_hash());
@@ -316,7 +316,7 @@ void FuncV19Activation(TestChainSetup& setup)
     int nHeight = tip_height();
 
     auto block = std::make_shared<CBlock>(setup.CreateBlock({tx_reg}, coinbase_pk, chainman.ActiveChainstate()));
-    BOOST_REQUIRE(chainman.ProcessNewBlock(block, true, nullptr));
+    BOOST_REQUIRE(chainman.ProcessNewBlock(block, true, true, nullptr));
     BOOST_REQUIRE(!DeploymentActiveAfter(tip_index(), chainman.GetConsensus(), Consensus::DEPLOYMENT_V19));
     ++nHeight;
     BOOST_CHECK_EQUAL(tip_height(), nHeight);
@@ -334,7 +334,7 @@ void FuncV19Activation(TestChainSetup& setup)
     auto tx_upreg = WITH_LOCK(::cs_main, return CreateProUpRegTx(chainman.ActiveChain(), *(setup.m_node.mempool), utxos, tx_reg_hash, owner_key, operator_key_new.GetPublicKey(), owner_key.GetPubKey().GetID(), collateralScript, setup.coinbaseKey));
 
     block = std::make_shared<CBlock>(setup.CreateBlock({tx_upreg}, coinbase_pk, chainman.ActiveChainstate()));
-    BOOST_REQUIRE(chainman.ProcessNewBlock(block, true, nullptr));
+    BOOST_REQUIRE(chainman.ProcessNewBlock(block, true, true, nullptr));
     BOOST_REQUIRE(!DeploymentActiveAfter(tip_index(), chainman.GetConsensus(), Consensus::DEPLOYMENT_V19));
     ++nHeight;
     BOOST_CHECK_EQUAL(tip_height(), nHeight);
@@ -354,7 +354,7 @@ void FuncV19Activation(TestChainSetup& setup)
     signing_provider.AddKeyPubKey(collateral_key, collateral_key.GetPubKey());
     BOOST_REQUIRE(SignSignature(signing_provider, CTransaction(tx_reg), tx_spend, 0, SIGHASH_ALL));
     block = std::make_shared<CBlock>(setup.CreateBlock({tx_spend}, coinbase_pk, chainman.ActiveChainstate()));
-    BOOST_REQUIRE(chainman.ProcessNewBlock(block, true, nullptr));
+    BOOST_REQUIRE(chainman.ProcessNewBlock(block, true, true, nullptr));
     BOOST_REQUIRE(!DeploymentActiveAfter(tip_index(), chainman.GetConsensus(), Consensus::DEPLOYMENT_V19));
     ++nHeight;
     BOOST_CHECK_EQUAL(tip_height(), nHeight);
@@ -820,7 +820,7 @@ void FuncMNPaymentMultiplicityV24Boundary(TestChainSetup& setup)
         for (int i = 0; i < 2000; ++i) {
             CBlock good = setup.CreateBlock({}, coinbase_pk, chainman.ActiveChainstate());
             if (auto dup = find_duplicate(good)) return {good, *dup};
-            BOOST_REQUIRE(chainman.ProcessNewBlock(std::make_shared<CBlock>(good), /*force_processing=*/true, nullptr));
+            BOOST_REQUIRE(chainman.ProcessNewBlock(std::make_shared<CBlock>(good), /*force_processing=*/true, true, nullptr));
             sync_dmn_tip();
         }
         BOOST_REQUIRE_MESSAGE(false, "expected owner/operator collision to yield a duplicate coinbase output");
@@ -865,7 +865,7 @@ void FuncMNPaymentMultiplicityV24Boundary(TestChainSetup& setup)
         // testing post-v24 behaviour by accident.
         BOOST_REQUIRE(!DeploymentActiveAfter(tip_index(), chainman, Consensus::DEPLOYMENT_V24));
         const CBlock merged = build_merge_cheat(good, dup);
-        BOOST_REQUIRE(chainman.ProcessNewBlock(std::make_shared<CBlock>(merged), /*force_processing=*/true, nullptr));
+        BOOST_REQUIRE(chainman.ProcessNewBlock(std::make_shared<CBlock>(merged), /*force_processing=*/true, true, nullptr));
         BOOST_CHECK_EQUAL(tip_hash(), merged.GetHash());
         sync_dmn_tip();
     }
@@ -883,12 +883,12 @@ void FuncMNPaymentMultiplicityV24Boundary(TestChainSetup& setup)
         const auto [good, dup] = mine_until_duplicate();
         const CBlock merged = build_merge_cheat(good, dup);
         const uint256 tip_before = tip_hash();
-        chainman.ProcessNewBlock(std::make_shared<CBlock>(merged), /*force_processing=*/true, nullptr);
+        chainman.ProcessNewBlock(std::make_shared<CBlock>(merged), /*force_processing=*/true, true, nullptr);
         BOOST_CHECK(tip_hash() == tip_before);
         BOOST_CHECK(tip_hash() != merged.GetHash());
 
         // The faithful block (both identical outputs present) connects.
-        BOOST_REQUIRE(chainman.ProcessNewBlock(std::make_shared<CBlock>(good), /*force_processing=*/true, nullptr));
+        BOOST_REQUIRE(chainman.ProcessNewBlock(std::make_shared<CBlock>(good), /*force_processing=*/true, true, nullptr));
         BOOST_CHECK_EQUAL(tip_hash(), good.GetHash());
     }
 }
@@ -1204,7 +1204,7 @@ void FuncTestMempoolReorg(TestChainSetup& setup)
     SignTransaction(*(setup.m_node.mempool), tx_collateral, setup.coinbaseKey);
 
     auto block = std::make_shared<CBlock>(setup.CreateBlock({tx_collateral}, coinbase_pk, chainman.ActiveChainstate()));
-    BOOST_REQUIRE(chainman.ProcessNewBlock(block, true, nullptr));
+    BOOST_REQUIRE(chainman.ProcessNewBlock(block, true, true, nullptr));
     setup.m_node.dmnman->UpdatedBlockTip(tip_index());
     BOOST_CHECK_EQUAL(tip_height(), nHeight + 1);
     BOOST_CHECK_EQUAL(block->GetHash(), tip_hash());
@@ -1354,7 +1354,7 @@ void FuncVerifyDB(TestChainSetup& setup)
     SignTransaction(*(setup.m_node.mempool), tx_collateral, setup.coinbaseKey);
 
     auto block = std::make_shared<CBlock>(setup.CreateBlock({tx_collateral}, coinbase_pk, chainman.ActiveChainstate()));
-    BOOST_REQUIRE(chainman.ProcessNewBlock(block, true, nullptr));
+    BOOST_REQUIRE(chainman.ProcessNewBlock(block, true, true, nullptr));
     sync_dmn_tip();
     BOOST_CHECK_EQUAL(tip_height(), nHeight + 1);
     BOOST_CHECK_EQUAL(block->GetHash(), tip_hash());
@@ -1387,7 +1387,7 @@ void FuncVerifyDB(TestChainSetup& setup)
     auto tx_reg_hash = tx_reg.GetHash();
 
     block = std::make_shared<CBlock>(setup.CreateBlock({tx_reg}, coinbase_pk, chainman.ActiveChainstate()));
-    BOOST_REQUIRE(chainman.ProcessNewBlock(block, true, nullptr));
+    BOOST_REQUIRE(chainman.ProcessNewBlock(block, true, true, nullptr));
     sync_dmn_tip();
     BOOST_CHECK_EQUAL(tip_height(), nHeight + 2);
     BOOST_CHECK_EQUAL(block->GetHash(), tip_hash());
@@ -1399,7 +1399,7 @@ void FuncVerifyDB(TestChainSetup& setup)
     auto proUpRevTx = WITH_LOCK(::cs_main, return CreateProUpRevTx(chainman.ActiveChain(), *(setup.m_node.mempool), collateral_utxos, tx_reg_hash, operatorKey, collateralKey));
 
     block = std::make_shared<CBlock>(setup.CreateBlock({proUpRevTx}, coinbase_pk, chainman.ActiveChainstate()));
-    BOOST_REQUIRE(chainman.ProcessNewBlock(block, true, nullptr));
+    BOOST_REQUIRE(chainman.ProcessNewBlock(block, true, true, nullptr));
     sync_dmn_tip();
     BOOST_CHECK_EQUAL(tip_height(), nHeight + 3);
     BOOST_CHECK_EQUAL(block->GetHash(), tip_hash());
