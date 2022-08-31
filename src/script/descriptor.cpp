@@ -548,7 +548,7 @@ public:
             if (pos++) ret += ",";
             std::string tmp;
             if (!scriptarg->ToStringHelper(arg, tmp, type, cache)) return false;
-            ret += std::move(tmp);
+            ret += tmp;
         }
         return true;
     }
@@ -572,7 +572,7 @@ public:
                     tmp = pubkey->ToString();
                     break;
             }
-            ret += std::move(tmp);
+            ret += tmp;
         }
         std::string subscript;
         if (!ToStringSubScriptHelper(arg, subscript, type, cache)) return false;
