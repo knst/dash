@@ -8,6 +8,7 @@
 #include <policy/settings.h>
 #include <psbt.h>
 #include <tinyformat.h>
+#include <policy/policy.h>
 #include <util/check.h>
 #include <util/strencodings.h>
 
