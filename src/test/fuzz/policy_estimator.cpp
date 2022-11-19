@@ -11,6 +11,7 @@
 #include <test/fuzz/util.h>
 #include <test/fuzz/util/mempool.h>
 #include <test/util/setup_common.h>
+#include <txmempool_entry.h>
 
 #include <optional>
 #include <vector>

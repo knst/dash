@@ -17,6 +17,7 @@
 #include <rpc/server_util.h>
 #include <rpc/util.h>
 #include <txmempool.h>
+#include <txmempool_entry.h>
 #include <univalue.h>
 #include <util/fs.h>
 #include <util/helpers.h>

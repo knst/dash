@@ -46,6 +46,7 @@
 #include <timedata.h>
 #include <txdb.h>
 #include <txmempool.h>
+#include <txmempool_entry.h>
 #include <util/check.h>
 #include <util/strencodings.h>
 #include <util/string.h>
