@@ -10,6 +10,8 @@
 #include <test/fuzz/util/mempool.h>
 #include <txmempool_entry.h>
 
+#include <cassert>
+#include <cstdint>
 #include <limits>
 
 CTxMemPoolEntry ConsumeTxMemPoolEntry(FuzzedDataProvider& fuzzed_data_provider, const CTransaction& tx) noexcept
