@@ -164,7 +164,7 @@ BOOST_FIXTURE_TEST_CASE(AbandonedSpendReleasesItsInputs, AvailableCoinsTestingSe
 {
     LOCK(wallet->cs_wallet);
 
-    const CoinsResult before{AvailableCoins(*wallet)};
+    CoinsResult before{AvailableCoins(*wallet)};
     BOOST_CHECK(before.Size() > 0);
 
     CCoinControl coin_control;
@@ -186,9 +186,9 @@ BOOST_FIXTURE_TEST_CASE(AbandonedSpendReleasesItsInputs, AvailableCoinsTestingSe
 
     // Abandoning it makes the coins it spent available again, without a reload.
     BOOST_CHECK(wallet->AbandonTransaction(tx->GetHash()));
-    const CoinsResult after{AvailableCoins(*wallet)};
+    CoinsResult after{AvailableCoins(*wallet)};
     BOOST_CHECK_EQUAL(after.Size(), before.Size());
-    BOOST_CHECK_EQUAL(after.total_amount, before.total_amount);
+    BOOST_CHECK_EQUAL(after.GetTotalAmount(), before.GetTotalAmount());
     BOOST_CHECK_EQUAL(wallet->CountInputsWithAmount(input_amount), inputs_before);
 
     // The abandoned transaction re-entering the mempool spends the inputs
