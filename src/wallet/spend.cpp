@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <algorithm>
 #include <coinjoin/common.h>
 #include <coinjoin/options.h>
 #include <consensus/consensus.h>
@@ -10,6 +11,7 @@
 #include <evo/dmn_types.h>
 #include <evo/specialtx.h>
 #include <interfaces/chain.h>
+#include <numeric>
 #include <policy/policy.h>
 #include <primitives/transaction.h>
 #include <script/signingprovider.h>
@@ -584,9 +586,19 @@ std::optional<SelectionResult> ChooseSelectionResult(const CWallet& wallet, cons
         return std::nullopt;
     }
 
+    std::vector<SelectionResult> eligible_results;
+    std::copy_if(results.begin(), results.end(), std::back_inserter(eligible_results), [coin_selection_params](const SelectionResult& result) {
+        const auto initWeight{coin_selection_params.tx_noinputs_size * WITNESS_SCALE_FACTOR};
+        return initWeight + result.GetWeight() <= static_cast<int>(MAX_STANDARD_TX_WEIGHT);
+    });
+
+    if (eligible_results.empty()) {
+        return std::nullopt;
+    }
+
     // Choose the result with the least waste
     // If the waste is the same, choose the one which spends more inputs.
-    return *std::min_element(results.begin(), results.end());
+    return *std::min_element(eligible_results.begin(), eligible_results.end());
 }
 
 std::optional<SelectionResult> SelectCoins(const CWallet& wallet, CoinsResult& available_coins, const PreSelectedInputs& pre_set_inputs,
@@ -933,20 +945,16 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     const auto change_spend_fee = coin_selection_params.m_discard_feerate.GetFee(coin_selection_params.change_spend_size);
     coin_selection_params.min_viable_change = std::max(change_spend_fee + 1, dust);
 
+    // Static vsize overhead + outputs vsize. 4 nVersion, 4 nLocktime, 1 input count
+    coin_selection_params.tx_noinputs_size = 9 + GetSizeOfCompactSize(vecSend.size()) + extra_payload_bytes; // bytes for output count
+
     // vouts to the payees
-    if (!coin_selection_params.m_subtract_fee_outputs) {
-        coin_selection_params.tx_noinputs_size = 9; // Static vsize overhead + outputs vsize. 4 nVersion, 4 nLocktime, 1 input count
-        coin_selection_params.tx_noinputs_size += GetSizeOfCompactSize(vecSend.size()); // bytes for output count
-        coin_selection_params.tx_noinputs_size += extra_payload_bytes; // bytes for the special transaction payload
-    }
     for (const auto& recipient : vecSend)
     {
         CTxOut txout(recipient.nAmount, recipient.scriptPubKey);
 
         // Include the fee cost for outputs.
-        if (!coin_selection_params.m_subtract_fee_outputs) {
-            coin_selection_params.tx_noinputs_size += ::GetSerializeSize(txout, PROTOCOL_VERSION);
-        }
+        coin_selection_params.tx_noinputs_size += ::GetSerializeSize(txout, PROTOCOL_VERSION);
 
         if (IsDust(txout, wallet.chain().relayDustFee())) {
             return util::Error{_("Transaction amount too small")};
@@ -955,7 +963,7 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     }
 
     // Include the fees for things that aren't inputs, excluding the change output
-    const CAmount not_input_fees = coin_selection_params.m_effective_feerate.GetFee(coin_selection_params.tx_noinputs_size);
+    const CAmount not_input_fees = coin_selection_params.m_effective_feerate.GetFee(coin_selection_params.m_subtract_fee_outputs ? 0 : coin_selection_params.tx_noinputs_size);
     CAmount selection_target = recipients_sum + not_input_fees;
 
     // This can only happen if feerate is 0, and requested destinations are value of 0 (e.g. OP_RETURN)
