@@ -6,6 +6,7 @@
 
 #include <consensus/amount.h>
 #include <node/context.h>
+#include <policy/policy.h>
 #include <primitives/transaction.h>
 #include <random.h>
 #include <util/translation.h>
