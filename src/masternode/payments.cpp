@@ -12,6 +12,7 @@
 #include <governance/governance.h>
 #include <key_io.h>
 #include <logging.h>
+#include <llmq/utils.h>
 #include <masternode/sync.h>
 #include <primitives/block.h>
 #include <script/standard.h>
@@ -291,12 +292,22 @@ bool CMasternodePayments::GetBlockTxOuts(int nBlockHeight, CAmount blockReward, 
         operatorReward = (masternodeReward * dmnPayee->nOperatorReward) / 10000;
         masternodeReward -= operatorReward;
     }
+    bool fV20Active_context = llmq::utils::IsV20Active(::ChainActive().Tip());
 
-    if (masternodeReward > 0) {
-        voutMasternodePaymentsRet.emplace_back(masternodeReward, dmnPayee->pdmnState->scriptPayout);
-    }
-    if (operatorReward > 0) {
-        voutMasternodePaymentsRet.emplace_back(operatorReward, dmnPayee->pdmnState->scriptOperatorPayout);
+    if (fV20Active_context) {
+        if (masternodeReward > 0) {
+            voutMasternodePaymentsRet.emplace_back(masternodeReward, CScript() << OP_RETURN);
+        }
+        if (operatorReward > 0) {
+            voutMasternodePaymentsRet.emplace_back(operatorReward, CScript() << OP_RETURN);
+        }
+    } else {
+        if (masternodeReward > 0) {
+            voutMasternodePaymentsRet.emplace_back(masternodeReward, dmnPayee->pdmnState->scriptPayout);
+        }
+        if (operatorReward > 0) {
+            voutMasternodePaymentsRet.emplace_back(operatorReward, dmnPayee->pdmnState->scriptOperatorPayout);
+        }
     }
 
     return true;
