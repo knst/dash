@@ -128,6 +128,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "getmerkleblocks", 2, "count" },
     { "gettransaction", 1, "include_watchonly" },
     { "gettransaction", 2, "verbose" },
+    { "getrawtransaction", 1, "verbosity" },
     { "getrawtransaction", 1, "verbose" },
     { "getislocks", 0, "txids" },
     { "getrawtransactionmulti", 0, "transactions" },
