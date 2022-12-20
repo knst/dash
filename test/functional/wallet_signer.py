@@ -185,6 +185,7 @@ class WalletSignerTest(BitcoinTestFramework):
 
         self.log.info('Test send using hww1')
 
+        # Don't broadcast transaction yet so the RPC returns the raw hex
         res = hww.send(outputs={dest:0.5},options={"add_to_wallet": False})
         assert res["complete"]
         assert_equal(res["hex"], mock_tx)
