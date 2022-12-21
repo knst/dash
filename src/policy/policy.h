@@ -25,8 +25,8 @@ static constexpr unsigned int DEFAULT_BLOCK_MAX_SIZE{2000000};
 static constexpr unsigned int DEFAULT_BLOCK_MIN_TX_FEE{1000};
 /** The maximum size for transactions we're willing to relay/mine */
 static constexpr unsigned int MAX_STANDARD_TX_SIZE{100000};
-/** The minimum size for transactions we're willing to relay/mine (1 empty scriptSig input + 1 P2SH output = 83 bytes) */
-static constexpr unsigned int MIN_STANDARD_TX_SIZE{83};
+/** The minimum size for transactions we're willing to relay/mine: one larger than 64  */
+static constexpr unsigned int MIN_STANDARD_TX_SIZE{65};
 /** Maximum number of signature check operations in an IsStandard() P2SH script */
 static constexpr unsigned int MAX_P2SH_SIGOPS{15};
 /** The maximum number of sigops we're willing to relay/mine in a single tx */
