@@ -19,10 +19,17 @@ if [ -n "$CONFIG_SHELL" ]; then
   export CONFIG_SHELL="$CONFIG_SHELL"
 fi
 
-BITCOIN_CONFIG_ALL="--enable-external-signer --disable-dependency-tracking --prefix=$DEPENDS_DIR/$HOST --bindir=$BASE_OUTDIR/bin --libdir=$BASE_OUTDIR/lib"
+BITCOIN_CONFIG_ALL="--disable-dependency-tracking"
+
+if [ -z "$NO_DEPENDS" ]; then
+  BITCOIN_CONFIG_ALL="${BITCOIN_CONFIG_ALL} CONFIG_SITE=$DEPENDS_DIR/$HOST/share/config.site"
+fi
+
 if [ -z "$NO_WERROR" ]; then
   BITCOIN_CONFIG_ALL="${BITCOIN_CONFIG_ALL} --enable-werror"
 fi
+
+BITCOIN_CONFIG_ALL="${BITCOIN_CONFIG_ALL} --enable-external-signer --prefix=$BASE_OUTDIR"
 
 ( test -n "$CONFIG_SHELL" && eval '"$CONFIG_SHELL" -c "./autogen.sh"' ) || ./autogen.sh
 
