@@ -288,7 +288,7 @@ CoinsResult AvailableCoins(const CWallet& wallet,
             if (coinControl && coinControl->HasSelected() && coinControl->IsSelected(outpoint))
                 continue;
 
-            if (wallet.IsLockedCoin(outpoint) && nCoinType != CoinType::ONLY_MASTERNODE_COLLATERAL)
+            if (wallet.IsLockedCoin(outpoint) && nCoinType != CoinType::ONLY_MASTERNODE_COLLATERAL && params.skip_locked)
                 continue;
 
             if (wallet.IsSpent(outpoint))
