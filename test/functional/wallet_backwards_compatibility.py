@@ -194,11 +194,11 @@ class BackwardsCompatibilityTest(BitcoinTestFramework):
                         txs = wallet.listtransactions()
                         assert_equal(len(txs), 1)
                     elif wallet_name == "w2":
-                        assert(info['private_keys_enabled'] == False)
+                        assert info['private_keys_enabled'] == False
                         if node.version > 20999999:
                             assert info['keypoolsize'] > 0
                     elif wallet_name == "w3":
-                        assert(info['private_keys_enabled'] == True)
+                        assert info['private_keys_enabled'] == True
                         assert 'keypoolsize' not in info or info['keypoolsize'] == 0
                     else:
                         assert False

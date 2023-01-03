@@ -250,7 +250,7 @@ class DashGovernanceTest (DashTestFramework):
         data_string = list(self.nodes[0].gobject("list", "valid", "triggers").values())[0]["DataString"]
         payment_amounts_trigger = json.loads(data_string)["payment_amounts"].split("|")
         for amount_str in payment_amounts_trigger:
-            assert(amount_str in payment_amounts_expected)
+            assert amount_str in payment_amounts_expected
 
         self.log.info("Move another block inside the Superblock maturity window on non-isolated nodes")
         self.bump_mocktime(1)

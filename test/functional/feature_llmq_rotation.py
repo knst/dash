@@ -167,8 +167,8 @@ class LLMQQuorumRotationTest(DashTestFramework):
             self.wait_for_chainlocked_block_all_nodes(self.nodes[0].getbestblockhash())
 
         (quorum_info_0_0, quorum_info_0_1) = self.mine_cycle_quorum()
-        assert(self.test_quorum_listextended(quorum_info_0_0, llmq_type_name))
-        assert(self.test_quorum_listextended(quorum_info_0_1, llmq_type_name))
+        assert self.test_quorum_listextended(quorum_info_0_0, llmq_type_name)
+        assert self.test_quorum_listextended(quorum_info_0_1, llmq_type_name)
         quorum_members_0_0 = extract_quorum_members(quorum_info_0_0)
         quorum_members_0_1 = extract_quorum_members(quorum_info_0_1)
         assert_equal(len(intersection(quorum_members_0_0, quorum_members_0_1)), 0)
@@ -188,8 +188,8 @@ class LLMQQuorumRotationTest(DashTestFramework):
         self.wait_for_chainlocked_block_all_nodes(self.nodes[0].getbestblockhash())
 
         (quorum_info_1_0, quorum_info_1_1) = self.mine_cycle_quorum()
-        assert(self.test_quorum_listextended(quorum_info_1_0, llmq_type_name))
-        assert(self.test_quorum_listextended(quorum_info_1_1, llmq_type_name))
+        assert self.test_quorum_listextended(quorum_info_1_0, llmq_type_name)
+        assert self.test_quorum_listextended(quorum_info_1_1, llmq_type_name)
         quorum_members_1_0 = extract_quorum_members(quorum_info_1_0)
         quorum_members_1_1 = extract_quorum_members(quorum_info_1_1)
         assert_equal(len(intersection(quorum_members_1_0, quorum_members_1_1)), 0)
