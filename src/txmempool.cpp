@@ -408,7 +408,6 @@ CTxMemPool::CTxMemPool(const Options& opts)
       m_spent_index_enabled{opts.spent_index_enabled},
       m_limits{opts.limits}
 {
-    _clear(); //lock free clear
 }
 
 bool CTxMemPool::isSpent(const COutPoint& outpoint) const
@@ -1098,29 +1097,6 @@ void CTxMemPool::removeExpiredAssetUnlock(int nBlockHeight)
     for (const auto& tx : entries) {
         removeRecursive(*tx, MemPoolRemovalReason::EXPIRY);
     }
-}
-
-void CTxMemPool::_clear()
-{
-    vTxHashes.clear();
-    mapTx.clear();
-    mapNextTx.clear();
-    mapProTxAddresses.clear();
-    mapProTxPubKeyIDs.clear();
-    mapProTxPlatformNodeIDs.clear();
-    totalTxSize = 0;
-    m_total_fee = 0;
-    cachedInnerUsage = 0;
-    lastRollingFeeUpdate = GetTime();
-    blockSinceLastRollingFeeBump = false;
-    rollingMinimumFeeRate = 0;
-    ++nTransactionsUpdated;
-}
-
-void CTxMemPool::clear()
-{
-    LOCK(cs);
-    _clear();
 }
 
 void CTxMemPool::check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) const
