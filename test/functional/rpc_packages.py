@@ -270,24 +270,16 @@ class RPCPackagesTest(BitcoinTestFramework):
         # Check that each result is present, with the correct size and fees
         for package_txn in package_txns:
             tx = package_txn["tx"]
-            assert tx.hash in submitpackage_result["tx-results"]
-            tx_result = submitpackage_result["tx-results"][tx.hash]
-            assert_equal(tx_result, {
-                "txid": package_txn["txid"],
-                "size": tx.get_vsize(),
-                "fees": {
-                    "base": DEFAULT_FEE,
-                }
-            })
+            assert tx.hash() in submitpackage_result["tx-results"]
+            txid = tx.hash()
+            assert txid in submitpackage_result["tx-results"]
+            tx_result = submitpackage_result["tx-results"][txid]
+            assert_equal(tx_result["txid"], tx.rehash())
+            assert_equal(tx_result["vsize"], tx.get_vsize())
+            assert_equal(tx_result["fees"]["base"], DEFAULT_FEE)
 
         # submitpackage result should be consistent with testmempoolaccept and getmempoolentry
         self.assert_equal_package_results(node, testmempoolaccept_result, submitpackage_result)
-
-        # Package feerate is calculated for the remaining transactions after deduplication and
-        # individual submission. If only 0 or 1 transaction is left, e.g. because all transactions
-        # had high-feerates or were already in the mempool, no package feerate is provided.
-        # In this case, since all of the parents have high fees, each is accepted individually.
-        assert "package-feerate" not in submitpackage_result
 
         # The node should announce each transaction. No guarantees for propagation.
         self.bump_mocktime(30)
@@ -320,6 +312,16 @@ class RPCPackagesTest(BitcoinTestFramework):
             node.getnetworkinfo()["relayfee"],
         )
         assert_equal(child_result["fees"]["base"], DEFAULT_FEE)
+
+        # The "rich" parent does not require CPFP so its effective feerate.
+        assert_fee_amount(DEFAULT_FEE, tx_rich["tx"].get_vsize(), rich_parent_result["fees"]["effective-feerate"])
+        assert_equal(rich_parent_result["fees"]["effective-includes"], [tx_rich["txid"]])
+        # The "poor" parent and child's effective feerates are the same, composed of the child's fee
+        # divided by their combined vsize.
+        assert_fee_amount(DEFAULT_FEE, tx_poor["tx"].get_vsize() + tx_child["tx"].get_vsize(), poor_parent_result["fees"]["effective-feerate"])
+        assert_fee_amount(DEFAULT_FEE, tx_poor["tx"].get_vsize() + tx_child["tx"].get_vsize(), child_result["fees"]["effective-feerate"])
+        assert_equal([tx_poor["txid"], tx_child["tx"].hash], poor_parent_result["fees"]["effective-includes"])
+        assert_equal([tx_poor["txid"], tx_child["tx"].hash], child_result["fees"]["effective-includes"])
 
         # The node will broadcast each transaction, still abiding by its peer's fee filter
         self.bump_mocktime(30)
