@@ -22,7 +22,6 @@
 #include <sync.h>
 #include <util/bip32.h>
 #include <util/fs.h>
-#include <util/system.h>
 #include <util/time.h>
 #include <util/translation.h>
 #include <validation.h>
@@ -1716,7 +1715,7 @@ static UniValue ProcessDescriptorImport(CWallet& wallet, const UniValue& data, c
             } else {
                 warnings.push_back("Range not given, using default keypool range");
                 range_start = 0;
-                range_end = gArgs.GetIntArg("-keypool", DEFAULT_KEYPOOL_SIZE);
+                range_end = wallet.m_keypool_size;
             }
             next_index = range_start;
 
