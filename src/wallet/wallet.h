@@ -870,6 +870,9 @@ public:
      *  are automatically locked to prevent dust attacks. 0 = disabled. Override with -dustprotectionthreshold. */
     CAmount m_dust_protection_threshold{DEFAULT_DUST_PROTECTION_THRESHOLD};
 
+    /** Number of pre-generated keys/scripts by each spkm (part of the look-ahead process, used to detect payments) */
+    int64_t m_keypool_size{DEFAULT_KEYPOOL_SIZE};
+
     size_t KeypoolCountExternalKeys() const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
     bool TopUpKeyPool(unsigned int kpSize = 0);
 
