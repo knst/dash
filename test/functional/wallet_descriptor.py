@@ -4,7 +4,11 @@
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test descriptor wallet function."""
 import os
-import sqlite3
+
+try:
+    import sqlite3
+except ImportError:
+    pass
 
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import (
@@ -26,6 +30,7 @@ class WalletDescriptorTest(BitcoinTestFramework):
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
         self.skip_if_no_sqlite()
+        self.skip_if_no_py_sqlite3()
 
     def run_test(self):
         if self.is_bdb_compiled():
