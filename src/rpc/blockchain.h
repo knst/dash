@@ -17,8 +17,6 @@
 #include <optional>
 #include <vector>
 
-extern RecursiveMutex cs_main; // NOLINT(readability-redundant-declaration)
-
 class CBlock;
 class CBlockIndex;
 class Chainstate;
