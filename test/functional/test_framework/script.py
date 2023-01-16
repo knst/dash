@@ -592,6 +592,13 @@ class CScript(bytes):
             lastOpcode = opcode
         return n
 
+    def IsWitnessProgram(self):
+        """A witness program is any valid CScript that consists of a 1-byte
+           push opcode followed by a data push between 2 and 40 bytes."""
+        return ((4 <= len(self) <= 42) and
+                (self[0] == OP_0 or (OP_1 <= self[0] <= OP_16)) and
+                (self[1] + 2 == len(self)))
+
 
 SIGHASH_ALL = 1
 SIGHASH_NONE = 2
