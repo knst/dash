@@ -163,7 +163,7 @@ RPCHelpMan listaddressbalances()
     return RPCHelpMan{"listaddressbalances",
         "\nLists addresses of this wallet and their balances\n",
         {
-            {"minamount", RPCArg::Type::NUM, RPCArg::Default{0}, "Minimum balance in " + CURRENCY_UNIT + " an address should have to be shown in the list"},
+            {"minamount", RPCArg::Type::AMOUNT, RPCArg::Default{0}, "Minimum balance in " + CURRENCY_UNIT + " an address should have to be shown in the list"},
         },
         RPCResult{
                 RPCResult::Type::OBJ_DYN, "", "Balances of addresses",

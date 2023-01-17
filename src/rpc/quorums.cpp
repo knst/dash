@@ -274,7 +274,8 @@ static RPCHelpMan quorum_info()
         {
             {"llmqType", RPCArg::Type::NUM, RPCArg::Optional::NO, "LLMQ type."},
             {"quorumHash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Block hash of quorum."},
-            {"includeSkShare", RPCArg::Type::BOOL, RPCArg::Default{false}, "Include secret key share in output."},
+            {"includeSkShare", RPCArg::Type::BOOL, RPCArg::Default{false}, "Include secret key share in output.",
+             RPCArgOptions{.skip_type_check = true}},
         },
         RPCResult{
             RPCResult::Type::OBJ, "", "",
@@ -627,7 +628,8 @@ static RPCHelpMan quorum_sign()
             {"msgHash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Message hash."},
             {"quorumHash", RPCArg::Type::STR_HEX, RPCArg::Default{""}, "The quorum identifier."},
             {"submit", RPCArg::Type::BOOL, RPCArg::Default{true}, "Submits the signature share to the network if this is true. "
-                                                                "Returns an object containing the signature share if this is false."},
+                                                                "Returns an object containing the signature share if this is false.",
+             RPCArgOptions{.skip_type_check = true}},
         },
         quorum_sign_result,
         RPCExamples{""},
@@ -654,7 +656,8 @@ static RPCHelpMan quorum_platformsign()
             {"msgHash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Message hash."},
             {"quorumHash", RPCArg::Type::STR_HEX, RPCArg::Default{""}, "The quorum identifier."},
             {"submit", RPCArg::Type::BOOL, RPCArg::Default{true}, "Submits the signature share to the network if this is true. "
-                                                                "Returns an object containing the signature share if this is false."},
+                                                                "Returns an object containing the signature share if this is false.",
+             RPCArgOptions{.skip_type_check = true}},
         },
         quorum_sign_result,
         RPCExamples{""},
@@ -980,7 +983,8 @@ static RPCHelpMan quorum_rotationinfo()
         "Get quorum rotation information\n",
         {
             {"blockRequestHash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The blockHash of the request."},
-            {"extraShare", RPCArg::Type::BOOL, RPCArg::Default{false}, "Extra share"},
+            {"extraShare", RPCArg::Type::BOOL, RPCArg::Default{false}, "Extra share",
+             RPCArgOptions{.skip_type_check = true}},
             {"baseBlockHashes", RPCArg::Type::ARR, RPCArg::Default{UniValue::VARR}, "The list of block hashes",
             {
                 {"baseBlockHash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The block hash"},
