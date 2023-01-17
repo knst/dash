@@ -31,7 +31,6 @@ class MempoolLimitTest(BitcoinTestFramework):
         self.extra_args = [[
             "-datacarriersize=100000",
             "-maxmempool=5",
-            "-spendzeroconfchange=0",
         ]]
         self.supports_cli = False
 
