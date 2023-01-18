@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // P2PK compressed - Legacy
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         keystore.SetupLegacyScriptPubKeyMan();
         LOCK(keystore.GetLegacyScriptPubKeyMan()->cs_KeyStore);
         scriptPubKey = GetScriptForRawPubKey(pubkeys[0]);
@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // P2PK compressed - Descriptor
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         std::string desc_str = "pk(" + EncodeSecret(keys[0]) + ")";
 
         auto spk_manager = CreateDescriptor(keystore, desc_str, true);
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // P2PK uncompressed - Legacy
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         keystore.SetupLegacyScriptPubKeyMan();
         LOCK(keystore.GetLegacyScriptPubKeyMan()->cs_KeyStore);
         scriptPubKey = GetScriptForRawPubKey(uncompressedPubkey);
@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // P2PK uncompressed - Descriptor
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         std::string desc_str = "pk(" + EncodeSecret(uncompressedKey) + ")";
 
         auto spk_manager = CreateDescriptor(keystore, desc_str, true);
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // P2PKH compressed - Legacy
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         keystore.SetupLegacyScriptPubKeyMan();
         LOCK(keystore.GetLegacyScriptPubKeyMan()->cs_KeyStore);
         scriptPubKey = GetScriptForDestination(PKHash(pubkeys[0]));
@@ -137,7 +137,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // P2PKH compressed - Descriptor
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         std::string desc_str = "pkh(" + EncodeSecret(keys[0]) + ")";
 
         auto spk_manager = CreateDescriptor(keystore, desc_str, true);
@@ -149,7 +149,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // P2PKH uncompressed - Legacy
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         keystore.SetupLegacyScriptPubKeyMan();
         LOCK(keystore.GetLegacyScriptPubKeyMan()->cs_KeyStore);
         scriptPubKey = GetScriptForDestination(PKHash(uncompressedPubkey));
@@ -168,7 +168,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // P2PKH uncompressed - Descriptor
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         std::string desc_str = "pkh(" + EncodeSecret(uncompressedKey) + ")";
 
         auto spk_manager = CreateDescriptor(keystore, desc_str, true);
@@ -180,7 +180,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // P2SH - Legacy
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         keystore.SetupLegacyScriptPubKeyMan();
         LOCK(keystore.GetLegacyScriptPubKeyMan()->cs_KeyStore);
 
@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // P2SH - Descriptor
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         std::string desc_str = "sh(pkh(" + EncodeSecret(keys[0]) + "))";
 
         auto spk_manager = CreateDescriptor(keystore, desc_str, true);
@@ -220,7 +220,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // (P2PKH inside) P2SH inside P2SH (invalid) - Legacy
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         keystore.SetupLegacyScriptPubKeyMan();
         LOCK(keystore.GetLegacyScriptPubKeyMan()->cs_KeyStore);
 
@@ -239,7 +239,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // (P2PKH inside) P2SH inside P2SH (invalid) - Descriptor
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         std::string desc_str = "sh(sh(" + EncodeSecret(keys[0]) + "))";
 
         auto spk_manager = CreateDescriptor(keystore, desc_str, false);
@@ -251,7 +251,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // scriptPubKey multisig - Legacy
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         keystore.SetupLegacyScriptPubKeyMan();
         LOCK(keystore.GetLegacyScriptPubKeyMan()->cs_KeyStore);
 
@@ -286,7 +286,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // scriptPubKey multisig - Descriptor
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         std::string desc_str = "multi(2, " + EncodeSecret(uncompressedKey) + ", " + EncodeSecret(keys[1]) + ")";
 
         auto spk_manager = CreateDescriptor(keystore, desc_str, true);
@@ -298,7 +298,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // P2SH multisig - Legacy
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         keystore.SetupLegacyScriptPubKeyMan();
         LOCK(keystore.GetLegacyScriptPubKeyMan()->cs_KeyStore);
         BOOST_CHECK(keystore.GetLegacyScriptPubKeyMan()->AddKey(uncompressedKey));
@@ -321,7 +321,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // P2SH multisig - Descriptor
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
 
         std::string desc_str = "sh(multi(2, " + EncodeSecret(uncompressedKey) + ", " + EncodeSecret(keys[1]) + "))";
 
@@ -335,7 +335,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // Combo - Descriptor
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
 
         std::string desc_str = "combo(" + EncodeSecret(keys[0]) + ")";
 
@@ -353,12 +353,54 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
         CScript redeemScript = GetScriptForDestination(PKHash(pubkeys[0]));
         scriptPubKey = GetScriptForDestination(ScriptHash(redeemScript));
         result = spk_manager->IsMine(scriptPubKey);
+<<<<<<< HEAD
+=======
+        BOOST_CHECK_EQUAL(result, ISMINE_NO);
+
+        // Test P2WPKH
+        scriptPubKey = GetScriptForDestination(WitnessV0KeyHash(pubkeys[0]));
+        result = spk_manager->IsMine(scriptPubKey);
+        BOOST_CHECK_EQUAL(result, ISMINE_SPENDABLE);
+
+        // P2SH-P2WPKH output
+        redeemScript = GetScriptForDestination(WitnessV0KeyHash(pubkeys[0]));
+        scriptPubKey = GetScriptForDestination(ScriptHash(redeemScript));
+        result = spk_manager->IsMine(scriptPubKey);
+        BOOST_CHECK_EQUAL(result, ISMINE_SPENDABLE);
+
+        // Test P2TR (combo descriptor does not describe P2TR)
+        XOnlyPubKey xpk(pubkeys[0]);
+        Assert(xpk.IsFullyValid());
+        TaprootBuilder builder;
+        builder.Finalize(xpk);
+        WitnessV1Taproot output = builder.GetOutput();
+        scriptPubKey = GetScriptForDestination(output);
+        result = spk_manager->IsMine(scriptPubKey);
+        BOOST_CHECK_EQUAL(result, ISMINE_NO);
+    }
+
+    // Taproot - Descriptor
+    {
+        CWallet keystore(chain.get(), "", CreateDummyWalletDatabase());
+
+        std::string desc_str = "tr(" + EncodeSecret(keys[0]) + ")";
+
+        auto spk_manager = CreateDescriptor(keystore, desc_str, true);
+
+        XOnlyPubKey xpk(pubkeys[0]);
+        Assert(xpk.IsFullyValid());
+        TaprootBuilder builder;
+        builder.Finalize(xpk);
+        WitnessV1Taproot output = builder.GetOutput();
+        scriptPubKey = GetScriptForDestination(output);
+        result = spk_manager->IsMine(scriptPubKey);
+>>>>>>> 6c9b342c30 (refactor: wallet, remove global 'ArgsManager' access)
         BOOST_CHECK_EQUAL(result, ISMINE_SPENDABLE);
     }
 
     // OP_RETURN
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         keystore.SetupLegacyScriptPubKeyMan();
         LOCK(keystore.GetLegacyScriptPubKeyMan()->cs_KeyStore);
         BOOST_CHECK(keystore.GetLegacyScriptPubKeyMan()->AddKey(keys[0]));
@@ -373,7 +415,7 @@ BOOST_AUTO_TEST_CASE(ismine_standard)
 
     // Nonstandard
     {
-        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+        CWallet keystore(chain.get(), /*coinjoin_loader=*/nullptr, "", CreateDummyWalletDatabase());
         keystore.SetupLegacyScriptPubKeyMan();
         LOCK(keystore.GetLegacyScriptPubKeyMan()->cs_KeyStore);
         BOOST_CHECK(keystore.GetLegacyScriptPubKeyMan()->AddKey(keys[0]));
