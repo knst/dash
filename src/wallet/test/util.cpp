@@ -16,7 +16,7 @@
 #include <memory>
 
 namespace wallet {
-std::unique_ptr<CWallet> CreateSyncedWallet(interfaces::Chain& chain, ChainstateManager& chainman, ArgsManager& args, const CKey& key)
+std::unique_ptr<CWallet> CreateSyncedWallet(interfaces::Chain& chain, ChainstateManager& chainman, const CKey& key)
 {
     struct ChainInfo {
         int height;
@@ -28,7 +28,7 @@ std::unique_ptr<CWallet> CreateSyncedWallet(interfaces::Chain& chain, Chainstate
         chainman.ActiveChain().Tip()->GetBlockHash(),
         chainman.ActiveChain().Genesis()->GetBlockHash()}))};
 
-    auto wallet = std::make_unique<CWallet>(&chain, "", args, CreateMockWalletDatabase());
+    auto wallet = std::make_unique<CWallet>(&chain, "", CreateMockWalletDatabase());
     {
         LOCK(wallet->cs_wallet);
         wallet->SetLastBlockProcessed(chain_info.height, chain_info.tip_hash);

@@ -26,7 +26,7 @@ static void WalletBalance(benchmark::Bench& bench, const bool set_dirty, const b
     const auto test_setup = MakeNoLogFileContext<const TestingSetup>();
     const auto& ADDRESS_WATCHONLY = ADDRESS_B58T_UNSPENDABLE;
 
-    CWallet wallet{test_setup->m_node.chain.get(), "", gArgs, CreateMockWalletDatabase()};
+    CWallet wallet{test_setup->m_node.chain.get(), "", CreateMockWalletDatabase()};
     {
         LOCK(wallet.cs_wallet);
         wallet.SetWalletFlag(WALLET_FLAG_DESCRIPTORS);

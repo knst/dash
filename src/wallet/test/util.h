@@ -25,7 +25,7 @@ class CWallet;
 struct DatabaseOptions;
 class WalletDatabase;
 
-std::unique_ptr<CWallet> CreateSyncedWallet(interfaces::Chain& chain, ChainstateManager& chainman, ArgsManager& args, const CKey& key);
+std::unique_ptr<CWallet> CreateSyncedWallet(interfaces::Chain& chain, ChainstateManager& chainman, const CKey& key);
 
 // Creates a copy of the provided database
 std::unique_ptr<WalletDatabase> DuplicateMockDatabase(WalletDatabase& database, DatabaseOptions& options);
