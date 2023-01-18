@@ -13,6 +13,7 @@
 #include <interfaces/coinjoin.h>
 #include <interfaces/handler.h>
 #include <kernel/cs_main.h> // IWYU pragma: export
+#include <logging.h>
 #include <policy/feerate.h>
 #include <psbt.h>
 #include <saltedhasher.h>
@@ -22,8 +23,6 @@
 #include <util/message.h>
 #include <util/result.h>
 #include <util/string.h>
-#include <util/system.h>
-#include <util/strencodings.h>
 #include <util/time.h>
 #include <util/ui_change_type.h>
 #include <validationinterface.h>
