@@ -36,6 +36,7 @@
 #include <util/fs_helpers.h>
 #include <util/moneystr.h>
 #include <util/string.h>
+#include <util/system.h>
 #include <util/time.h>
 #include <util/translation.h>
 #ifdef USE_BDB
