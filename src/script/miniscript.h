@@ -1252,7 +1252,7 @@ inline NodeRef<Key> Parse(Span<const char> in, const Ctx& ctx)
     // Sanity checks on the produced miniscript
     assert(constructed.size() == 1);
     if (in.size() > 0) return {};
-    const NodeRef<Key> tl_node = std::move(constructed.front());
+    NodeRef<Key> tl_node = std::move(constructed.front());
     if (!tl_node->IsValidTopLevel()) return {};
     return tl_node;
 }
@@ -1687,7 +1687,7 @@ inline NodeRef<Key> DecodeScript(I& in, I last, const Ctx& ctx)
         }
     }
     if (constructed.size() != 1) return {};
-    const NodeRef<Key> tl_node = std::move(constructed.front());
+    NodeRef<Key> tl_node = std::move(constructed.front());
     // Note that due to how ComputeType works (only assign the type to the node if the
     // subs' types are valid) this would fail if any node of tree is badly typed.
     if (!tl_node->IsValidTopLevel()) return {};
