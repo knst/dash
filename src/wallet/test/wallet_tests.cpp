@@ -66,10 +66,10 @@ class FailBatch : public DatabaseBatch
 {
 private:
     bool m_pass{true};
-    bool ReadKey(CDataStream&&, CDataStream&) override { return m_pass; }
-    bool WriteKey(CDataStream&&, CDataStream&&, bool) override { return m_pass; }
-    bool EraseKey(CDataStream&&) override { return m_pass; }
-    bool HasKey(CDataStream&&) override { return m_pass; }
+    bool ReadKey(DataStream&&, DataStream&) override { return m_pass; }
+    bool WriteKey(DataStream&&, DataStream&&, bool) override { return m_pass; }
+    bool EraseKey(DataStream&&) override { return m_pass; }
+    bool HasKey(DataStream&&) override { return m_pass; }
     bool ErasePrefix(Span<const std::byte>) override { return m_pass; }
 
 public:

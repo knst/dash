@@ -195,12 +195,12 @@ BOOST_AUTO_TEST_CASE(normal_marker_preserves_legacy_key_bytes)
     WriteMarker(db, EvoDbIdentity::NORMAL, BlockHash(20));
     BOOST_REQUIRE(db.CommitRootTransaction(EvoDbIdentity::NORMAL));
 
-    CDataStream expected{SER_DISK, CLIENT_VERSION};
+    DataStream expected{};
     expected << EVODB_BEST_BLOCK;
     std::unique_ptr<CDBIterator> it{db.GetRawDB().NewIterator()};
     it->SeekToFirst();
     BOOST_REQUIRE(it->Valid());
-    const CDataStream actual = it->GetKey();
+    const DataStream actual = it->GetKey();
     BOOST_CHECK_EQUAL_COLLECTIONS(actual.begin(), actual.end(), expected.begin(), expected.end());
     it->Next();
     BOOST_CHECK(!it->Valid());
