@@ -89,16 +89,12 @@ FUZZ_TARGET(txorphan, .init = initialize_orphanage)
             CallOneOf(
                 fuzzed_data_provider,
                 [&] {
-                    orphanage.AddChildrenToWorkSet(*tx, peer_id);
+                    orphanage.AddChildrenToWorkSet(*tx);
                 },
                 [&] {
                     {
-                        NodeId originator;
-                        bool more = true;
-                        CTransactionRef ref = orphanage.GetTxToReconsider(peer_id, originator, more);
-                        if (!ref) {
-                            Assert(!more);
-                        } else {
+                        CTransactionRef ref = orphanage.GetTxToReconsider(peer_id);
+                        if (ref) {
                             bool have_tx = orphanage.HaveTx(ref->GetHash());
                             Assert(have_tx);
                         }
