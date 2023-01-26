@@ -149,7 +149,7 @@ FUZZ_TARGET(integer, .init = initialize_integer)
     const ScriptHash script_id{u160};
 
     {
-        CDataStream stream(SER_NETWORK, INIT_PROTO_VERSION);
+        DataStream stream{};
 
         uint256 deserialized_u256;
         stream << u256;
@@ -214,7 +214,7 @@ FUZZ_TARGET(integer, .init = initialize_integer)
     }
 
     {
-        CDataStream stream(SER_NETWORK, INIT_PROTO_VERSION);
+        DataStream stream{};
 
         ser_writedata64(stream, u64);
         const uint64_t deserialized_u64 = ser_readdata64(stream);
@@ -242,7 +242,7 @@ FUZZ_TARGET(integer, .init = initialize_integer)
     }
 
     {
-        CDataStream stream(SER_NETWORK, INIT_PROTO_VERSION);
+        DataStream stream{};
 
         WriteCompactSize(stream, u64);
         try {

@@ -4117,7 +4117,7 @@ void PeerManagerImpl::ProcessMessage(
             AddTimeData(pfrom.addr, nTimeOffset);
         }
 
-        // Feeler connections exist only to verify if address is online.
+:       // Feeler connections exist only to verify if address is online.
         if (pfrom.IsFeelerConn()) {
             LogPrint(BCLog::NET_NETCONN, "feeler connection completed peer=%d; disconnecting\n", pfrom.GetId());
             pfrom.fDisconnect = true;

@@ -114,7 +114,7 @@ static RPCHelpMan gettxoutproof()
                 throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Not all transactions found in specified or retrieved block");
             }
 
-            CDataStream ssMB(SER_NETWORK, PROTOCOL_VERSION);
+            DataStream ssMB{};
             CMerkleBlock mb(block, setTxids);
             ssMB << mb;
             std::string strHex = HexStr(ssMB);
@@ -143,7 +143,7 @@ static RPCHelpMan verifytxoutproof()
         },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
         {
-            CDataStream ssMB(ParseHexV(request.params[0], "proof"), SER_NETWORK, PROTOCOL_VERSION);
+            DataStream ssMB{ParseHexV(request.params[0], "proof")};
             CMerkleBlock merkleBlock;
             ssMB >> merkleBlock;
 

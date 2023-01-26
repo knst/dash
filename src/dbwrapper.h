@@ -80,7 +80,7 @@ private:
     const CDBWrapper &parent;
     leveldb::WriteBatch batch;
 
-    CDataStream ssKey;
+    DataStream ssKey{};
     CDataStream ssValue;
 
     size_t size_estimate{0};
@@ -89,7 +89,7 @@ public:
     /**
      * @param[in] _parent    CDBWrapper that this batch is to be submitted to
      */
-    explicit CDBBatch(const CDBWrapper& _parent) : parent(_parent), ssKey(SER_DISK, CLIENT_VERSION), ssValue(SER_DISK, CLIENT_VERSION) {};
+    explicit CDBBatch(const CDBWrapper& _parent) : parent(_parent), ssValue(SER_DISK, CLIENT_VERSION) {};
 
     void Clear()
     {
@@ -170,7 +170,7 @@ public:
     void SeekToFirst();
 
     template<typename K> void Seek(const K& key) {
-        CDataStream ssKey(SER_DISK, CLIENT_VERSION);
+        DataStream ssKey{};
         ssKey.reserve(DBWRAPPER_PREALLOC_KEY_SIZE);
         ssKey << key;
         Seek(ssKey);
@@ -185,7 +185,7 @@ public:
 
     template<typename K> bool GetKey(K& key) {
         try {
-            CDataStream ssKey = GetKey();
+            DataStream ssKey = GetKey();
             ssKey >> key;
         } catch (const std::exception&) {
             return false;
@@ -195,7 +195,7 @@ public:
 
     CDataStream GetKey() {
         leveldb::Slice slKey = piter->key();
-        return CDataStream{MakeByteSpan(slKey), SER_DISK, CLIENT_VERSION};
+        return CDataStream{MakeByteSpan(slKey)};
     }
 
     unsigned int GetKeySize() {
@@ -278,7 +278,7 @@ public:
     template <typename K>
     bool ReadDataStream(const K& key, CDataStream& ssValue) const
     {
-        CDataStream ssKey(SER_DISK, CLIENT_VERSION);
+        DataStream ssKey{};
         ssKey.reserve(DBWRAPPER_PREALLOC_KEY_SIZE);
         ssKey << key;
         return ReadDataStream(ssKey, ssValue);
@@ -346,7 +346,7 @@ public:
     template <typename K>
     bool Exists(const K& key) const
     {
-        CDataStream ssKey(SER_DISK, CLIENT_VERSION);
+        DataStream ssKey{};
         ssKey.reserve(DBWRAPPER_PREALLOC_KEY_SIZE);
         ssKey << key;
         return Exists(ssKey);
@@ -393,7 +393,7 @@ public:
     template<typename K>
     size_t EstimateSize(const K& key_begin, const K& key_end) const
     {
-        CDataStream ssKey1(SER_DISK, CLIENT_VERSION), ssKey2(SER_DISK, CLIENT_VERSION);
+        DataStream ssKey1{}, ssKey2{};
         ssKey1.reserve(DBWRAPPER_PREALLOC_KEY_SIZE);
         ssKey2.reserve(DBWRAPPER_PREALLOC_KEY_SIZE);
         ssKey1 << key_begin;

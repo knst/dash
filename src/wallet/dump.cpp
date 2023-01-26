@@ -67,8 +67,8 @@ bool DumpWallet(const ArgsManager& args, WalletDatabase& db, bilingual_str& erro
 
         // Read the records
         while (true) {
-            CDataStream ss_key(SER_DISK, CLIENT_VERSION);
-            CDataStream ss_value(SER_DISK, CLIENT_VERSION);
+            DataStream ss_key{};
+            DataStream ss_value{};
             DatabaseCursor::Status status = cursor->Next(ss_key, ss_value);
             if (status == DatabaseCursor::Status::DONE) {
                 ret = true;
@@ -252,8 +252,8 @@ bool CreateFromDump(const ArgsManager& args, const std::string& name, const fs::
             std::vector<unsigned char> k = ParseHex(key);
             std::vector<unsigned char> v = ParseHex(value);
 
-            CDataStream ss_key(k, SER_DISK, CLIENT_VERSION);
-            CDataStream ss_value(v, SER_DISK, CLIENT_VERSION);
+            DataStream ss_key{k};
+            DataStream ss_value{v};
 
             if (!batch->Write(ss_key, ss_value)) {
                 error = strprintf(_("Error: Unable to write record to new wallet"));
