@@ -25,8 +25,6 @@ CTransactionRef GetTransaction(const CBlockIndex* const block_index, const CTxMe
                                const uint256& hash, const Consensus::Params& consensusParams, uint256& hashBlock);
 } // namespace node
 
-using node::fImporting;
-using node::fReindex;
 using node::GetTransaction;
 
 namespace instantsend {
@@ -97,7 +95,7 @@ llmq::RecoveredSigResult InstantSendSigner::HandleNewRecoveredSig(const llmq::CR
 
 bool InstantSendSigner::IsInstantSendMempoolSigningEnabled() const
 {
-    return !fReindex && !fImporting && m_sporkman.GetSporkValue(SPORK_2_INSTANTSEND_ENABLED) == 0;
+    return !m_chainman.m_blockman.LoadingBlocks() && m_sporkman.GetSporkValue(SPORK_2_INSTANTSEND_ENABLED) == 0;
 }
 
 void InstantSendSigner::HandleNewInputLockRecoveredSig(const llmq::CRecoveredSig& recoveredSig, const uint256& txid)

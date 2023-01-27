@@ -10,9 +10,6 @@
 #include <spork.h>
 #include <stats/client.h>
 
-using node::fImporting;
-using node::fReindex;
-
 namespace llmq {
 CInstantSendManager::CInstantSendManager(CSporkManager& sporkman, const util::DbWrapperParams& db_params) :
     db{db_params},
@@ -478,7 +475,7 @@ int CInstantSendManager::GetTipHeight() const
 
 bool CInstantSendManager::IsInstantSendEnabled() const
 {
-    return !fReindex && !fImporting && spork_manager.IsSporkActive(SPORK_2_INSTANTSEND_ENABLED);
+    return !m_chainman.m_blockman.LoadingBlocks() && spork_manager.IsSporkActive(SPORK_2_INSTANTSEND_ENABLED);
 }
 
 Uint256HashMap<instantsend::InstantSendLockPtr> CInstantSendManager::RemoveConfirmedInstantSendLocks(const CBlockIndex* pindex)

@@ -79,9 +79,6 @@
 #include <vector>
 
 using node::ReadBlockFromDisk;
-using node::fImporting;
-using node::fPruneMode;
-using node::fReindex;
 
 /** Maximum number of in-flight object requests from a peer. It is not a hard limit, but the
  *  threshold at which point the OVERLOADED_PEER_OBJECT_DELAY kicks in. */
@@ -2044,8 +2041,7 @@ bool PeerManagerImpl::BlockRequestAllowed(const CBlockIndex* pindex)
 
 std::optional<std::string> PeerManagerImpl::FetchBlock(NodeId peer_id, const CBlockIndex& block_index)
 {
-    if (fImporting) return "Importing...";
-    if (fReindex) return "Reindexing...";
+    if (m_chainman.m_blockman.LoadingBlocks()) return "Loading blocks ...";
 
     // Ensure this peer exists and hasn't been disconnected
     PeerRef peer = GetPeerRef(peer_id);
@@ -4484,7 +4480,7 @@ void PeerManagerImpl::ProcessMessage(
                 ::g_stats_client->inc(strprintf("message.received.inv_%s", inv.GetCommand()), 1.0f);
 
                 UpdateBlockAvailability(pfrom.GetId(), inv.hash);
-                if (!fAlreadyHave && !fImporting && !fReindex && !IsBlockRequested(inv.hash)) {
+                if (!fAlreadyHave && !m_chainman.m_blockman.LoadingBlocks() && !IsBlockRequested(inv.hash)) {
                     // Headers-first is the primary method of announcement on
                     // the network. If a node fell back to sending blocks by
                     // inv, it may be for a re-org, or because we haven't
@@ -4633,8 +4629,7 @@ void PeerManagerImpl::ProcessMessage(
             // If pruning, don't inv blocks unless we have on disk and are likely to still have
             // for some reasonable time window (1 hour) that block relay might require.
             const int nPrunedBlocksLikelyToHave = MIN_BLOCKS_TO_KEEP - 3600 / m_chainparams.GetConsensus().nPowTargetSpacing;
-            if (fPruneMode && (!(pindex->nStatus & BLOCK_HAVE_DATA) || pindex->nHeight <= m_chainman.ActiveChain().Tip()->nHeight - nPrunedBlocksLikelyToHave))
-            {
+            if (m_chainman.m_blockman.IsPruneMode() && (!(pindex->nStatus & BLOCK_HAVE_DATA) || pindex->nHeight <= m_chainman.ActiveChain().Tip()->nHeight - nPrunedBlocksLikelyToHave)) {
                 LogPrint(BCLog::NET, " getblocks stopping, pruned or too old block at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
                 break;
             }
@@ -4719,7 +4714,7 @@ void PeerManagerImpl::ProcessMessage(
             return;
         }
 
-        if (fImporting || fReindex) {
+        if (m_chainman.m_blockman.LoadingBlocks()) {
             LogPrint(BCLog::NET, "Ignoring %s from peer=%d while importing/reindexing\n", msg_type, pfrom.GetId());
             return;
         }
@@ -4985,7 +4980,7 @@ void PeerManagerImpl::ProcessMessage(
     if (msg_type == NetMsgType::CMPCTBLOCK)
     {
         // Ignore cmpctblock received while importing
-        if (fImporting || fReindex) {
+        if (m_chainman.m_blockman.LoadingBlocks()) {
             LogPrint(BCLog::NET, "Unexpected cmpctblock message received from peer %d\n", pfrom.GetId());
             return;
         }
@@ -5228,7 +5223,7 @@ void PeerManagerImpl::ProcessMessage(
     if (msg_type == NetMsgType::BLOCKTXN)
     {
         // Ignore blocktxn received while importing
-        if (fImporting || fReindex) {
+        if (m_chainman.m_blockman.LoadingBlocks()) {
             LogPrint(BCLog::NET, "Unexpected blocktxn message received from peer %d\n", pfrom.GetId());
             return;
         }
@@ -5241,7 +5236,7 @@ void PeerManagerImpl::ProcessMessage(
 
     if (msg_type == NetMsgType::HEADERS || msg_type == NetMsgType::HEADERS2) {
         // Ignore headers received while importing
-        if (fImporting || fReindex) {
+        if (m_chainman.m_blockman.LoadingBlocks()) {
             LogPrint(BCLog::NET, "Unexpected headers message received from peer %d\n", pfrom.GetId());
             return;
         }
@@ -5281,7 +5276,7 @@ void PeerManagerImpl::ProcessMessage(
     if (msg_type == NetMsgType::BLOCK)
     {
         // Ignore block received while importing
-        if (fImporting || fReindex) {
+        if (m_chainman.m_blockman.LoadingBlocks()) {
             LogPrint(BCLog::NET, "Unexpected block message received from peer %d\n", pfrom.GetId());
             return;
         }
@@ -6060,7 +6055,7 @@ void PeerManagerImpl::CheckForStaleTipAndEvictPeers()
     if (now > m_stale_tip_check_time) {
         // Check whether our tip is stale, and if so, allow using an extra
         // outbound peer
-        if (!fImporting && !fReindex && m_connman.GetNetworkActive() && m_connman.GetUseAddrmanOutgoing() && TipMayBeStale()) {
+        if (!m_chainman.m_blockman.LoadingBlocks() && m_connman.GetNetworkActive() && m_connman.GetUseAddrmanOutgoing() && TipMayBeStale()) {
             LogPrintf("Potential stale tip detected, will try using extra outbound peer (last tip update: %d seconds ago)\n",
                       count_seconds(now - m_last_tip_update.load()));
             m_connman.SetTryNewOutboundPeer(true);
@@ -6296,7 +6291,7 @@ bool PeerManagerImpl::SendMessages(CNode* pto)
             }
         }
 
-        if (!state.fSyncStarted && CanServeBlocks(*peer) && !fImporting && !fReindex && pto->CanRelay()) {
+        if (!state.fSyncStarted && CanServeBlocks(*peer) && !m_chainman.m_blockman.LoadingBlocks() && pto->CanRelay()) {
             // Only actively request headers from a single peer, unless we're close to end of initial download.
             if ((nSyncStarted == 0 && sync_blocks_and_headers_from_peer) || m_chainman.m_best_header->Time() > NodeClock::now() - m_chainman.m_options.max_tip_age) {
                 const CBlockIndex* pindexStart = m_chainman.m_best_header;
