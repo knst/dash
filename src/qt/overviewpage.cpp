@@ -343,6 +343,16 @@ void OverviewPage::setWalletModel(WalletModel *model)
     }
 }
 
+// Only show most recent NUM_ITEMS rows
+void OverviewPage::LimitTransactionRows()
+{
+    if (filter && ui->listTransactions && ui->listTransactions->model() && filter.get() == ui->listTransactions->model()) {
+        for (int i = 0; i < filter->rowCount(); ++i) {
+            ui->listTransactions->setRowHidden(i, i >= NUM_ITEMS);
+        }
+    }
+}
+
 void OverviewPage::updateDisplayUnit()
 {
     if (walletModel && walletModel->getOptionsModel()) {
@@ -767,7 +777,6 @@ void OverviewPage::SetupTransactionList(int nNumItems)
         return;
     }
 
-    filter->setLimit(nNumItems);
     ui->listTransactions->setMinimumHeight(nNumItems * ITEM_HEIGHT);
 }
 

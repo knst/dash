@@ -68,6 +68,7 @@ private:
     void DisableCoinJoinCompletely();
 
 private Q_SLOTS:
+    void LimitTransactionRows();
     void toggleCoinJoin();
     void updateDisplayUnit();
     void updateCoinJoinProgress();
