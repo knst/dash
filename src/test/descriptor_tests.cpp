@@ -235,9 +235,11 @@ void DoCheck(std::string prv, std::string pub, const std::string& norm_pub, int 
                 BOOST_CHECK_EQUAL(ref[n], HexStr(spks[n]));
                 BOOST_CHECK_EQUAL(IsSolvable(FlatSigningProvider{key_provider}.Merge(FlatSigningProvider{script_provider}), spks[n]), (flags & UNSOLVABLE) == 0);
 
-                if (flags & SIGNABLE) {
+                if (flags & (SIGNABLE | SIGNABLE_FAILS)) {
                     CMutableTransaction spend;
+                    spend.nLockTime = spender_nlocktime;
                     spend.vin.resize(1);
+                    spend.vin[0].nSequence = spender_nsequence;
                     spend.vout.resize(1);
                     BOOST_CHECK_MESSAGE(SignSignature(FlatSigningProvider{keys_priv}.Merge(FlatSigningProvider{script_provider}), spks[n], spend, 0, 1, SIGHASH_ALL), prv);
                 }
@@ -267,10 +269,15 @@ void DoCheck(std::string prv, std::string pub, const std::string& norm_pub, int 
     BOOST_CHECK_MESSAGE(left_paths.empty(), "Not all expected key paths found: " + prv);
 }
 
-void Check(const std::string& prv, const std::string& pub, const std::string& norm_pub, int flags, const std::vector<std::vector<std::string>>& scripts, const std::optional<OutputType>& type, const std::set<std::vector<uint32_t>>& paths = ONLY_EMPTY)
+void Check(const std::string& prv, const std::string& pub, const std::string& norm_pub, int flags,
+           const std::vector<std::vector<std::string>>& scripts, const std::optional<OutputType>& type,
+           const std::set<std::vector<uint32_t>>& paths = ONLY_EMPTY, uint32_t spender_nlocktime=0,
+           uint32_t spender_nsequence=CTxIn::SEQUENCE_FINAL, std::map<std::vector<uint8_t>, std::vector<uint8_t>> preimages={})
 {
     // Do not replace apostrophes with 'h' in prv and pub
-    DoCheck(prv, pub, norm_pub, flags, scripts, type, paths);
+    DoCheck(prv, pub, norm_pub, flags, scripts, type, paths, /*replace_apostrophe_with_h_in_prv=*/false,
+            /*replace_apostrophe_with_h_in_pub=*/false, /*spender_nlocktime=*/spender_nlocktime,
+            /*spender_nsequence=*/spender_nsequence, /*preimages=*/preimages);
 
     // Replace apostrophes with 'h' both in prv and in pub, if apostrophes are found in both
     if (prv.find('\'') != std::string::npos && pub.find('\'') != std::string::npos) {
