@@ -12,6 +12,7 @@
 #include <interfaces/chain.h>
 #include <interfaces/handler.h>
 #include <kernel/cs_main.h> // IWYU pragma: export
+#include <logging.h>
 #include <policy/feerate.h>
 #include <psbt.h>
 #include <saltedhasher.h>
@@ -21,8 +22,6 @@
 #include <util/message.h>
 #include <util/result.h>
 #include <util/string.h>
-#include <util/system.h>
-#include <util/strencodings.h>
 #include <util/time.h>
 #include <util/ui_change_type.h>
 #include <validationinterface.h>
@@ -413,9 +412,6 @@ private:
     // Decreases amount of nKeysLeftSinceAutoBackup after KeepDestination
     void KeepDestinationCallback(bool erased) override;
 
-    /** Provider of aplication-wide arguments. */
-    const ArgsManager& m_args;
-
     /** Interface for accessing chain state. */
     interfaces::Chain* m_chain;
 
@@ -529,9 +525,8 @@ public:
     unsigned int nMasterKeyMaxID = 0;
 
     /** Construct wallet with specified name and database implementation. */
-    CWallet(interfaces::Chain* chain, const std::string& name, const ArgsManager& args, std::unique_ptr<WalletDatabase> database)
-        : m_args(args),
-          m_chain(chain),
+    CWallet(interfaces::Chain* chain, const std::string& name, std::unique_ptr<WalletDatabase> database)
+        : m_chain(chain),
           m_name(name),
           m_database(std::move(database))
     {
@@ -882,6 +877,18 @@ public:
     /** Dust protection threshold in duffs. UTXOs from external transactions at or below this value
      *  are automatically locked to prevent dust attacks. 0 = disabled. Override with -dustprotectionthreshold. */
     CAmount m_dust_protection_threshold{DEFAULT_DUST_PROTECTION_THRESHOLD};
+
+    /** Number of pre-generated keys/scripts by each spkm (part of the look-ahead process, used to detect payments) */
+    int64_t m_keypool_size{DEFAULT_KEYPOOL_SIZE};
+
+    /** Entropy in bits of a generated mnemonic (handled by -mnemonicbits) */
+    int m_mnemonic_bits{CHDChain::DEFAULT_MNEMONIC_BITS};
+
+    /** Notify external script when a wallet transaction comes in or is updated (handled by -walletnotify) */
+    std::string m_notify_tx_changed_script;
+
+    /** Notify external script when a wallet transaction is locked by InstantSend (handled by -instantsendnotify) */
+    std::string m_notify_tx_locked_script;
 
     size_t KeypoolCountExternalKeys() const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
     bool TopUpKeyPool(unsigned int kpSize = 0);

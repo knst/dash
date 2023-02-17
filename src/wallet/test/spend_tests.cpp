@@ -17,7 +17,7 @@ BOOST_FIXTURE_TEST_SUITE(spend_tests, WalletTestingSetup)
 BOOST_FIXTURE_TEST_CASE(SubtractFee, TestChain100Setup)
 {
     CreateAndProcessBlock({}, GetScriptForRawPubKey(coinbaseKey.GetPubKey()));
-    auto wallet = CreateSyncedWallet(*m_node.chain, *Assert(m_node.chainman), m_args, coinbaseKey);
+    auto wallet = CreateSyncedWallet(*m_node.chain, *Assert(m_node.chainman), coinbaseKey);
 
     // Check that a subtract-from-recipient transaction slightly less than the
     // coinbase input amount does not create a change output (because it would
@@ -111,7 +111,7 @@ BOOST_FIXTURE_TEST_CASE(wallet_duplicated_preset_inputs_test, TestChain100Setup)
 
     // Add 4 spendable UTXO, 500 DASH each, to the wallet (total balance 2000 DASH)
     for (int i = 0; i < 4; i++) CreateAndProcessBlock({}, GetScriptForRawPubKey(coinbaseKey.GetPubKey()));
-    auto wallet = CreateSyncedWallet(*m_node.chain, *Assert(m_node.chainman), m_args, coinbaseKey);
+    auto wallet = CreateSyncedWallet(*m_node.chain, *Assert(m_node.chainman), coinbaseKey);
 
     LOCK(wallet->cs_wallet);
     auto available_coins = AvailableCoins(*wallet);

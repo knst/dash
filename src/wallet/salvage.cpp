@@ -135,7 +135,7 @@ bool RecoverDatabaseFile(const ArgsManager& args, const fs::path& file_path, bil
     }
 
     DbTxn* ptxn = env->TxnBegin();
-    CWallet dummyWallet(/*chain=*/nullptr, "", gArgs, CreateDummyWalletDatabase());
+    CWallet dummyWallet(/*chain=*/nullptr, "", CreateDummyWalletDatabase());
     dummyWallet.SetupLegacyScriptPubKeyMan();
     for (KeyValPair& row : salvagedData)
     {

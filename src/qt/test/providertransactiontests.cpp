@@ -221,7 +221,7 @@ void ProviderTransactionTests::providerTransactionHistory()
 
     WalletContext& context{*m_node.walletLoader().context()};
     std::shared_ptr<CWallet> wallet{
-        std::make_shared<CWallet>(test.m_node.chain.get(), "", test.m_args, CreateMockWalletDatabase())};
+        std::make_shared<CWallet>(test.m_node.chain.get(), "", CreateMockWalletDatabase())};
     wallet->LoadWallet();
     wallet->SetWalletFlag(WALLET_FLAG_DESCRIPTORS);
     {
