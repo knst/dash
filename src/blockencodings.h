@@ -133,7 +133,7 @@ protected:
 public:
     CBlockHeader header;
 
-    // Can be overriden for testing
+    // Can be overridden for testing
     using IsBlockMutatedFn = std::function<bool(const CBlock&)>;
     IsBlockMutatedFn m_check_block_mutated_mock{nullptr};
 
