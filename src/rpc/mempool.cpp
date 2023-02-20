@@ -838,15 +838,16 @@ static RPCHelpMan submitpackage()
                     NONFATAL_UNREACHABLE();
                 }
             }
+            size_t num_broadcast{0};
             for (const auto& tx : txns) {
-                size_t num_submitted{0};
                 bilingual_str err_string;
-                const auto err = BroadcastTransaction(node, tx, err_string, 0, true, true);
+                const auto err = BroadcastTransaction(node, tx, err_string, /*highfee=*/0, /*relay=*/true, /*wait_callback=*/true);
                 if (err != TransactionError::OK) {
                     throw JSONRPCTransactionError(err,
                         strprintf("transaction broadcast failed: %s (all transactions were submitted, %d transactions were broadcast successfully)",
-                            err_string.original, num_submitted));
+                            err_string.original, num_broadcast));
                 }
+                num_broadcast++;
             }
             UniValue rpc_result{UniValue::VOBJ};
             UniValue tx_result_map{UniValue::VOBJ};
