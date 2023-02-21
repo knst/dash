@@ -335,7 +335,7 @@ static RPCHelpMan upgradetohd()
     bool generate_mnemonic = request.params[0].isNull() || request.params[0].get_str().empty();
     bool mnemonic_passphrase_has_null{false};
     {
-        LOCK(pwallet->cs_wallet);
+        LOCK2(pwallet->m_relock_mutex, pwallet->cs_wallet);
 
         SecureString wallet_passphrase;
         wallet_passphrase.reserve(100);
