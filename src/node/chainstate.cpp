@@ -433,13 +433,24 @@ ChainstateLoadResult VerifyLoadedChainstate(ChainstateManager& chainman, const C
                 if (notify_bls_state) notify_bls_state(bls::bls_legacy_scheme.load());
             }
 
-            if (!CVerifyDB().VerifyDB(
-                    *chainstate, chainman.GetConsensus(), chainstate->CoinsDB(),
-                    evodb,
-                    options.check_level,
-                    options.check_blocks)) {
+            VerifyDBResult result = CVerifyDB().VerifyDB(
+                *chainstate, chainman.GetConsensus(), chainstate->CoinsDB(),
+                evodb,
+                options.check_level,
+                options.check_blocks);
+            switch (result) {
+            case VerifyDBResult::SUCCESS:
+            case VerifyDBResult::INTERRUPTED:
+            case VerifyDBResult::SKIPPED_MISSING_BLOCKS:
+                break;
+            case VerifyDBResult::CORRUPTED_BLOCK_DB:
                 return {ChainstateLoadStatus::FAILURE, _("Corrupted block database detected")};
-            }
+            case VerifyDBResult::SKIPPED_L3_CHECKS:
+                if (options.require_full_verification) {
+                    return {ChainstateLoadStatus::FAILURE_INSUFFICIENT_DBCACHE, _("Insufficient dbcache for block verification")};
+                }
+                break;
+            } // no default case, so the compiler can warn about missing cases
 
             // VerifyDB() disconnects blocks which might result in us switching back to legacy.
             // Make sure we use the right scheme.
