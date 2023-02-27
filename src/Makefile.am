@@ -1219,11 +1219,12 @@ dash_chainstate_SOURCES = bitcoin-chainstate.cpp
 dash_chainstate_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(BOOST_CPPFLAGS)
 dash_chainstate_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 
-# $(LIBTOOL_APP_LDFLAGS) deliberately omitted here so that we can test linking
-# dash-chainstate against libdashkernel as a shared or static library by
-# setting --{en,dis}able-shared.
-dash_chainstate_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(PTHREAD_FLAGS)
+dash_chainstate_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(PTHREAD_FLAGS) $(LIBTOOL_APP_LDFLAGS) -static
 dash_chainstate_LDADD = $(LIBBITCOINKERNEL)
+
+# libtool is unable to calculate this indirect dependency, presumably because it's a subproject.
+# libsecp256k1 and libdashbls only need to be linked in when libdashkernel is static.
+dash_chainstate_LDADD += $(LIBSECP256K1) $(LIBDASHBLS)
 #
 
 # dashkernel library #
@@ -1241,15 +1242,6 @@ libdashkernel_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(builddir)/obj -I$(srcdir)/secp256
 # Note this is a quick hack that will be removed as we incrementally define what
 # to export from the library.
 libdashkernel_la_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS) -fvisibility=default
-
-# TODO: For now, Specify -static in both CXXFLAGS and LDFLAGS when building for
-#       windows targets so libtool will only build a static version of this
-#       library. There are unresolved problems when building dll's for mingw-w64
-#       and attempting to statically embed libstdc++, libpthread, etc.
-if TARGET_WINDOWS
-libdashkernel_la_LDFLAGS += -static
-libdashkernel_la_CXXFLAGS += -static
-endif
 
 # TODO: libdashkernel is a work in progress consensus engine library, as more
 #       and more modules are decoupled from the consensus engine, this list will

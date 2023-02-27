@@ -77,6 +77,12 @@ case $host in
      dnl fear of mixing pic/non-pic objects, and import/export complications. Since
      dnl we have those under control, re-enable that functionality.
      lt_cv_deplibs_check_method="pass_all"
+
+     dnl Remove unwanted -DDLL_EXPORT from these variables.
+     dnl We do not use this macro, but system headers may export unwanted symbols
+     dnl if it's set.
+     lt_cv_prog_compiler_pic="-DPIC"
+     lt_cv_prog_compiler_pic_CXX="-DPIC"
   ;;
   *darwin*)
      dnl Because it prints a verbose warning, lld fails the following check
