@@ -162,7 +162,7 @@ void SignVerifyMessageDialog::on_signMessageButton_SM_clicked()
     }
 
     CKey key;
-    if (!model->wallet().getPrivKey(GetScriptForDestination(destination), CKeyID(*pkhash), key))
+    if (!model->wallet().getPrivKey(GetScriptForDestination(destination), ToKeyID(*pkhash), key))
     {
         ui->statusLabel_SM->setStyleSheet(GUIUtil::getThemedStyleQString(GUIUtil::ThemedStyle::TS_ERROR));
         ui->statusLabel_SM->setText(tr("Private key for the entered address is not available."));

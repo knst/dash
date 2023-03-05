@@ -718,7 +718,7 @@ const CKeyMetadata* LegacyScriptPubKeyMan::GetMetadata(const CTxDestination& des
 
     const PKHash *pkhash = std::get_if<PKHash>(&dest);
     if (pkhash != nullptr && !pkhash->IsNull()) {
-        auto it = mapKeyMetadata.find(CKeyID(*pkhash));
+        auto it = mapKeyMetadata.find(ToKeyID(*pkhash));
         if (it != mapKeyMetadata.end()) {
             return &it->second;
         }

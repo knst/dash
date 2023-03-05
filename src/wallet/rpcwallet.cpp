@@ -605,7 +605,7 @@ static UniValue signmessage(const JSONRPCRequest& request)
     }
 
     CKey key;
-    if (!provider->GetKey(CKeyID(*pkhash), key)) {
+    if (!provider->GetKey(ToKeyID(*pkhash), key)) {
         throw JSONRPCError(RPC_WALLET_ERROR, "Private key not available");
     }
 
@@ -3574,7 +3574,7 @@ public:
     UniValue operator()(const CNoDestination &dest) const { return UniValue(UniValue::VOBJ); }
 
     UniValue operator()(const PKHash& pkhash) const {
-        CKeyID keyID(pkhash);
+        CKeyID keyID{ToKeyID(pkhash)};
         UniValue obj(UniValue::VOBJ);
         CPubKey vchPubKey;
         if (provider && provider->GetPubKey(keyID, vchPubKey)) {
@@ -3738,7 +3738,7 @@ UniValue getaddressinfo(const JSONRPCRequest& request)
             if (legacy_spk_man != nullptr) {
                 LOCK(pwallet->cs_KeyStore);
                 AssertLockHeld(legacy_spk_man->cs_KeyStore);
-                if (pkhash && pwallet->mapHdPubKeys.count(CKeyID(*pkhash)) && legacy_spk_man->GetHDChain(hdChainCurrent)) {
+                if (pkhash && pwallet->mapHdPubKeys.count(ToKeyID(*pkhash)) && legacy_spk_man->GetHDChain(hdChainCurrent)) {
                     ret.pushKV("hdchainid", hdChainCurrent.GetID().GetHex());
                 }
             }
