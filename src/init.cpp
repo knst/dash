@@ -2189,7 +2189,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
                         // work when we allow VerifyDB to be parameterized by chainstate.
                         if (&::ChainstateActive() == chainstate &&
                             !CVerifyDB().VerifyDB(
-                                chainparams, *chainstate, &chainstate->CoinsDB(),
+                                *chainstate, chainparams, chainstate->CoinsDB(),
                                 *node.evodb,
                                 args.GetArg("-checklevel", DEFAULT_CHECKLEVEL),
                                 args.GetArg("-checkblocks", DEFAULT_CHECKBLOCKS))) {
