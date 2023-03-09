@@ -13,7 +13,7 @@ Example usage:
 import subprocess
 import sys
 import os
-from typing import List, Optional
+from typing import Optional
 
 import lief
 import pixie
