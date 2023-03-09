@@ -40,7 +40,8 @@ RUN pip3 install \
     pyzmq \
     vulture==2.3 \
     yq \
-    multiprocess
+    multiprocess \
+    lief
 
 # dash_hash
 RUN git clone --depth 1 --no-tags https://github.com/dashpay/dash_hash
