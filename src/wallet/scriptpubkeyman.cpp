@@ -14,6 +14,8 @@
 #include <wallet/scriptpubkeyman.h>
 #include <wallet/wallet.h>
 
+using interfaces::FoundBlock;
+
 bool LegacyScriptPubKeyMan::GetNewDestination(CTxDestination& dest, std::string& error)
 {
     error.clear();
@@ -281,7 +283,7 @@ void LegacyScriptPubKeyMan::MarkUnusedAddresses(WalletBatch &batch, const CScrip
         }
         if (!hashBlock.IsNull()) {
             int64_t block_time;
-            bool found_block = m_wallet.chain().findBlock(hashBlock, nullptr /* block */, &block_time);
+            bool found_block = m_wallet.chain().findBlock(hashBlock, FoundBlock().time(block_time));
             assert(found_block);
             if (mapKeyMetadata[keyid].nCreateTime > block_time) {
                 WalletLogPrintf("%s: Found a key which appears to be used earlier than we expected, updating metadata\n", __func__);
