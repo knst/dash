@@ -71,7 +71,7 @@ void CQuorumBlockProcessor::ProcessMessage(const CNode& peer, std::string_view m
     const CBlockIndex* pQuorumBaseBlockIndex;
     {
         LOCK(cs_main);
-        pQuorumBaseBlockIndex = LookupBlockIndex(qc.quorumHash);
+        pQuorumBaseBlockIndex = g_chainman.m_blockman.LookupBlockIndex(qc.quorumHash);
         if (pQuorumBaseBlockIndex == nullptr) {
             LogPrint(BCLog::LLMQ, "CQuorumBlockProcessor::%s -- unknown block %s in commitment, peer=%d\n", __func__,
                      qc.quorumHash.ToString(), peer.GetId());
@@ -255,7 +255,7 @@ bool CQuorumBlockProcessor::ProcessCommitment(int nHeight, const uint256& blockH
         return state.Invalid(ValidationInvalidReason::CONSENSUS, false, REJECT_INVALID, "bad-qc-height");
     }
 
-    const auto* pQuorumBaseBlockIndex = LookupBlockIndex(qc.quorumHash);
+    const auto* pQuorumBaseBlockIndex = g_chainman.m_blockman.LookupBlockIndex(qc.quorumHash);
 
     if (!qc.Verify(pQuorumBaseBlockIndex, fBLSChecks)) {
         LogPrint(BCLog::LLMQ, "CQuorumBlockProcessor::%s height=%d, type=%d, quorumIndex=%d, quorumHash=%s, signers=%s, validMembers=%d, quorumPublicKey=%s qc verify failed.\n", __func__,
@@ -377,7 +377,7 @@ bool CQuorumBlockProcessor::UpgradeDB()
                 if (qc.IsNull()) {
                     continue;
                 }
-                const auto* pQuorumBaseBlockIndex = LookupBlockIndex(qc.quorumHash);
+                const auto* pQuorumBaseBlockIndex = g_chainman.m_blockman.LookupBlockIndex(qc.quorumHash);
                 m_evoDb.GetRawDB().Write(std::make_pair(DB_MINED_COMMITMENT, std::make_pair(qc.llmqType, qc.quorumHash)), std::make_pair(qc, pindex->GetBlockHash()));
                 if (llmq::utils::IsQuorumRotationEnabled(qc.llmqType, pQuorumBaseBlockIndex)) {
                     m_evoDb.GetRawDB().Write(BuildInversedHeightKeyIndexed(qc.llmqType, pindex->nHeight, int(qc.quorumIndex)), pQuorumBaseBlockIndex->nHeight);
