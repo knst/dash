@@ -394,8 +394,6 @@ libbitcoin_server_a_SOURCES = \
   index/base.cpp \
   index/blockfilterindex.cpp \
   index/txindex.cpp \
-  interfaces/chain.cpp \
-  interfaces/node.cpp \
   init.cpp \
   governance/governance.cpp \
   governance/classes.cpp \
@@ -432,6 +430,7 @@ libbitcoin_server_a_SOURCES = \
   node/coin.cpp \
   node/coinstats.cpp \
   node/context.cpp \
+  node/interfaces.cpp \
   node/transaction.cpp \
   noui.cpp \
   policy/fees.cpp \
@@ -491,12 +490,12 @@ libbitcoin_wallet_a_SOURCES = \
   coinjoin/client.cpp \
   coinjoin/options.cpp \
   coinjoin/util.cpp \
-  interfaces/wallet.cpp \
   wallet/coincontrol.cpp \
   wallet/context.cpp \
   wallet/crypter.cpp \
   wallet/db.cpp \
   wallet/fees.cpp \
+  wallet/interfaces.cpp \
   wallet/load.cpp \
   wallet/psbtwallet.cpp \
   wallet/rpcdump.cpp \
