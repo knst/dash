@@ -95,7 +95,7 @@ class InvalidAddressErrorMessageTest(BitcoinTestFramework):
 
     def test_validateaddress(self):
         # Invalid Bech32
-        self.check_invalid(BECH32_INVALID_PREFIX, 'Not a valid Bech32m or Base58 encoding')
+        self.check_invalid(BECH32_INVALID_PREFIX, 'Invalid or unsupported Bech32m or Base58 encoding.')
         self.check_invalid(BECH32_TOO_LONG, 'Bech32 string too long', list(range(90, len(BECH32_TOO_LONG))))
         self.check_invalid(BECH32_ONE_ERROR, 'Invalid Bech32m checksum', [10])
         self.check_invalid(BECH32_TWO_ERRORS, 'Invalid Bech32m checksum', [10, 30])
@@ -117,16 +117,16 @@ class InvalidAddressErrorMessageTest(BitcoinTestFramework):
         self.check_platform(BECH32_VALID_P2SH, BECH32_VALID_P2SH, p2sh_script, True)
 
         # Invalid Base58
-        self.check_invalid(BASE58_INVALID_PREFIX, 'Invalid prefix for Base58-encoded address')
-        self.check_invalid(BASE58_INVALID_CHECKSUM, 'Invalid checksum or length of Base58 address')
-        self.check_invalid(BASE58_INVALID_LENGTH, 'Invalid checksum or length of Base58 address')
+        self.check_invalid(BASE58_INVALID_PREFIX, 'Invalid or unsupported Base58-encoded address.')
+        self.check_invalid(BASE58_INVALID_CHECKSUM, 'Invalid checksum or length of Base58 address (P2PKH or P2SH)')
+        self.check_invalid(BASE58_INVALID_LENGTH, 'Invalid checksum or length of Base58 address (P2PKH or P2SH)')
 
         # Valid Base58
         self.check_valid(BASE58_VALID)
 
         # Invalid address format
-        self.check_invalid(INVALID_ADDRESS, 'Not a valid Bech32m or Base58 encoding')
-        self.check_invalid(INVALID_ADDRESS_2, 'Not a valid Bech32m or Base58 encoding')
+        self.check_invalid(INVALID_ADDRESS, 'Invalid or unsupported Bech32m or Base58 encoding.')
+        self.check_invalid(INVALID_ADDRESS_2, 'Invalid or unsupported Bech32m or Base58 encoding.')
 
         node = self.nodes[0]
 
@@ -139,9 +139,9 @@ class InvalidAddressErrorMessageTest(BitcoinTestFramework):
         node = self.nodes[0]
 
         assert_raises_rpc_error(-5, "Invalid Platform address payload length", node.getaddressinfo, BECH32_INVALID_SIZE)
-        assert_raises_rpc_error(-5, "Not a valid Bech32m or Base58 encoding", node.getaddressinfo, BECH32_INVALID_PREFIX)
-        assert_raises_rpc_error(-5, "Invalid prefix for Base58-encoded address", node.getaddressinfo, BASE58_INVALID_PREFIX)
-        assert_raises_rpc_error(-5, "Not a valid Bech32m or Base58 encoding", node.getaddressinfo, INVALID_ADDRESS)
+        assert_raises_rpc_error(-5, "Invalid or unsupported Bech32m or Base58 encoding.", node.getaddressinfo, BECH32_INVALID_PREFIX)
+        assert_raises_rpc_error(-5, "Invalid or unsupported Base58-encoded address.", node.getaddressinfo, BASE58_INVALID_PREFIX)
+        assert_raises_rpc_error(-5, "Invalid or unsupported Bech32m or Base58 encoding.", node.getaddressinfo, INVALID_ADDRESS)
 
         # A DIP-18 Platform address is described against the credit output script an
         # asset lock would carry for it
