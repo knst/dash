@@ -719,7 +719,7 @@ const CKeyMetadata* LegacyScriptPubKeyMan::GetMetadata(const CTxDestination& des
     AssertLockHeld(cs_wallet);
 
     const PKHash *pkhash = std::get_if<PKHash>(&dest);
-    if (pkhash != nullptr && !pkhash->IsNull()) {
+    if (pkhash != nullptr && !ToKeyID(*pkhash).IsNull()) {
         auto it = mapKeyMetadata.find(ToKeyID(*pkhash));
         if (it != mapKeyMetadata.end()) {
             return &it->second;
