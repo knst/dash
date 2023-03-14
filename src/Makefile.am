@@ -446,6 +446,7 @@ BITCOIN_CORE_H = \
   util/edge.h \
   util/epochguard.h \
   util/error.h \
+  util/exception.h \
   util/fastrange.h \
   util/fees.h \
   util/fs.h \
@@ -1065,6 +1066,7 @@ libbitcoin_util_a_SOURCES = \
   util/check.cpp \
   util/edge.cpp \
   util/error.cpp \
+  util/exception.cpp \
   util/fees.cpp \
   util/fs.cpp \
   util/fs_helpers.cpp \
@@ -1377,6 +1379,7 @@ libdashkernel_la_SOURCES = \
   uint256.cpp \
   util/bytevectorhash.cpp \
   util/check.cpp \
+  util/exception.cpp \
   util/fs.cpp \
   util/fs_helpers.cpp \
   util/getuniquepath.cpp \
