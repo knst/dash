@@ -114,6 +114,47 @@ static UniValue getnetworkhashps(const JSONRPCRequest& request)
 }
 
 #if ENABLE_MINER
+
+int BruteAndCheck(CBlock& block, unsigned int nBits, int max_tries, const Consensus::Params& params)
+{
+    bool fNegative;
+    bool fOverflow;
+    arith_uint256 bnTarget;
+
+    bnTarget.SetCompact(nBits, &fNegative, &fOverflow);
+
+    // Check range
+    if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit))
+        return -1;
+
+    std::vector<unsigned char> vch(80);
+    CVectorWriter ss(SER_GETHASH, PROTOCOL_VERSION, vch, 0);
+    ss << block;
+    for (int i = 0; i< 10000000 & !ShutdownRequested(); ++i) {
+        int* block_nonce = reinterpret_cast<int*>(&vch[76]);
+        ++*block_nonce;
+        uint256 hash = HashX11((const char *)vch.data(), (const char *)vch.data() + vch.size());
+
+        // Check proof of work matches claimed amount
+        if (UintToArith256(hash) > bnTarget) {
+            continue;
+        } else {
+            block.nNonce = __builtin_bswap32(*block_nonce);
+            break;
+        }
+    }
+
+    return block.nNonce;
+}
+
+bool CheckProofOfWork(uint256 hash, const arith_uint256& bnTarget)
+{
+    // Check proof of work matches claimed amount
+    if (UintToArith256(hash) > bnTarget)
+        return false;
+
+    return true;
+}
 static bool GenerateBlock(ChainstateManager& chainman, CBlock& block, uint64_t& max_tries, unsigned int& extra_nonce, uint256& block_hash)
 {
     block_hash.SetNull();
@@ -123,26 +164,86 @@ static bool GenerateBlock(ChainstateManager& chainman, CBlock& block, uint64_t& 
         IncrementExtraNonce(&block, ::ChainActive().Tip(), extra_nonce);
     }
 
-    CChainParams chainparams(Params());
+    if (max_tries < 10000) {
+        CChainParams chainparams(Params());
+/*        if (BruteAndCheck(block, block.nBits, max_tries, chainparams.GetConsensus()) && !ShutdownRequested() == -1) {
+            max_tries = 0;
+        }
+        */
+        while (max_tries > 0 && block.nNonce < std::numeric_limits<uint32_t>::max() && !CheckProofOfWork(block.GetHash(), block.nBits, chainparams.GetConsensus()) && !ShutdownRequested()) {
+            ++block.nNonce;
+            --max_tries;
+        }
+        if (max_tries == 0 || ShutdownRequested()) {
+            return false;
+        }
+        if (block.nNonce == std::numeric_limits<uint32_t>::max()) {
+            return true;
+        }
 
-    while (max_tries > 0 && block.nNonce < std::numeric_limits<uint32_t>::max() && !CheckProofOfWork(block.GetHash(), block.nBits, chainparams.GetConsensus()) && !ShutdownRequested()) {
-        ++block.nNonce;
-        --max_tries;
-    }
-    if (max_tries == 0 || ShutdownRequested()) {
-        return false;
-    }
-    if (block.nNonce == std::numeric_limits<uint32_t>::max()) {
+        std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
+        if (!chainman.ProcessNewBlock(chainparams, shared_pblock, true, nullptr)) {
+            throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
+        }
+
+        block_hash = block.GetHash();
         return true;
-    }
+    } else {
+        int nthreads = std::max<uint32_t>(2, std::thread::hardware_concurrency() - 1);
+        std::vector<CBlock> candidates(nthreads, block);
+        std::vector<std::thread> threads(nthreads);
+        std::vector<int> rets(nthreads, false);
+        int max_tries_t = max_tries / nthreads;
 
-    std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
-    if (!chainman.ProcessNewBlock(chainparams, shared_pblock, true, nullptr)) {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
-    }
+        CChainParams chainparams(Params());
+        arith_uint256 bnTarget;
+        {
+            const Consensus::Params& consensusParams = chainparams.GetConsensus();
+            bool fNegative;
+            bool fOverflow;
 
-    block_hash = block.GetHash();
-    return true;
+            bnTarget.SetCompact(block.nBits, &fNegative, &fOverflow);
+
+            // Check range
+            if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(consensusParams.powLimit)) return false;
+        }
+
+        auto ff = [](CBlock& block, int tries, int& ret, const arith_uint256& bnTarget) -> void{
+            while (tries > 0 && block.nNonce < std::numeric_limits<uint32_t>::max() && !CheckProofOfWork(block.GetHash(), bnTarget) && !ShutdownRequested()) {
+                ++block.nNonce;
+                --tries;
+            }
+            if (tries == 0 || ShutdownRequested()) {
+                ret = false;
+                return ;
+            }
+            if (block.nNonce == std::numeric_limits<uint32_t>::max()) {
+                ret = false;
+                return;
+            }
+            ret = true;
+        };
+        for (int i = 0; i < nthreads; ++i) {
+            candidates[i].nNonce = max_tries_t * i;
+            threads[i] = std::thread(ff, std::ref(candidates[i]), max_tries_t, std::ref(rets[i]), bnTarget);
+        }
+        for (auto& t : threads) {
+            t.join();
+        }
+        for (int i = 0; i < nthreads; ++i) {
+            if (!rets[i]) continue;
+
+            block = candidates[i];
+            std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
+            if (!chainman.ProcessNewBlock(chainparams, shared_pblock, true, nullptr)) {
+                throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
+            }
+            return true;
+        }
+
+    }
+    return false;
+
 }
 
 static UniValue generateBlocks(ChainstateManager& chainman, const CTxMemPool& mempool, CEvoDB& evodb,
