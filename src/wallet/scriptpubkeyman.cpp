@@ -27,7 +27,7 @@ util::Result<CTxDestination> LegacyScriptPubKeyMan::GetNewDestination()
 
     // Generate a new key that is added to wallet
     CPubKey new_key;
-    if (!GetKeyFromPool(new_key, false)) {
+    if (!GetKeyFromPool(new_key)) {
         return util::Error{_("Error: Keypool ran out, please call keypoolrefill first")};
     }
     //LearnRelatedScripts(new_key);
@@ -1591,9 +1591,9 @@ void LegacyScriptPubKeyMan::ReturnDestination(int64_t nIndex, bool fInternal, co
     WalletLogPrintf("keypool return %d\n", nIndex);
 }
 
-bool LegacyScriptPubKeyMan::GetKeyFromPool(CPubKey& result, bool internal)
+bool LegacyScriptPubKeyMan::GetKeyFromPool(CPubKey& result)
 {
-    if (!CanGetAddresses(internal)) {
+    if (!CanGetAddresses(/*internal=*/ false)) {
         return false;
     }
 
@@ -1601,11 +1601,11 @@ bool LegacyScriptPubKeyMan::GetKeyFromPool(CPubKey& result, bool internal)
     {
         LOCK(cs_KeyStore);
         int64_t nIndex;
-        if (!ReserveKeyFromKeyPool(nIndex, keypool, internal) && !m_storage.IsWalletFlagSet(WALLET_FLAG_DISABLE_PRIVATE_KEYS)) {
+        if (!ReserveKeyFromKeyPool(nIndex, keypool, /*fRequestedInternal=*/ false) && !m_storage.IsWalletFlagSet(WALLET_FLAG_DISABLE_PRIVATE_KEYS)) {
             if (m_storage.IsLocked(true)) return false;
             // TODO: implement keypool for all accouts?
             WalletBatch batch(m_storage.GetDatabase());
-            result = GenerateNewKey(batch, 0, internal);
+            result = GenerateNewKey(batch, 0, /*fInternal=*/false);
             return true;
         }
         KeepDestination(nIndex);
