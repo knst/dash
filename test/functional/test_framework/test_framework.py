@@ -46,6 +46,7 @@ from .util import (
     get_datadir_path,
     hex_str_to_bytes,
     initialize_datadir,
+    make_change,
     p2p_port,
     set_node_times,
     set_timeout_scale,
@@ -1393,6 +1394,7 @@ class DashTestFramework(BitcoinTestFramework):
     def create_raw_tx(self, node_from, node_to, amount, min_inputs, max_inputs):
         assert min_inputs <= max_inputs
         # fill inputs
+        fee = 0.001
         inputs = []
         balances = node_from.listunspent()
         in_amount = 0.0
@@ -1404,7 +1406,7 @@ class DashTestFramework(BitcoinTestFramework):
                 input['vout'] = tx['vout']
                 in_amount += float(tx['amount'])
                 inputs.append(input)
-            elif in_amount > amount:
+            elif in_amount >= amount + fee:
                 break
             elif len(inputs) < max_inputs:
                 input = {}
@@ -1423,14 +1425,11 @@ class DashTestFramework(BitcoinTestFramework):
 
         assert len(inputs) >= min_inputs
         assert len(inputs) <= max_inputs
-        assert in_amount >= amount
+        assert in_amount >= amount + fee
         # fill outputs
+        outputs = make_change(node_from, satoshi_round(in_amount), satoshi_round(amount), satoshi_round(fee))
         receiver_address = node_to.getnewaddress()
-        change_address = node_from.getnewaddress()
-        fee = 0.001
-        outputs = {}
         outputs[receiver_address] = satoshi_round(amount)
-        outputs[change_address] = satoshi_round(in_amount - amount - fee)
         rawtx = node_from.createrawtransaction(inputs, outputs)
         ret = node_from.signrawtransactionwithwallet(rawtx)
         decoded = node_from.decoderawtransaction(ret['hex'])
