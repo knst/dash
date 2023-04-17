@@ -16,11 +16,12 @@
 #include <masternode/sync.h>
 #include <primitives/block.h>
 #include <script/standard.h>
+#include <spork.h>
 #include <tinyformat.h>
 #include <util/ranges.h>
 #include <util/system.h>
 #include <validation.h>
-
+#include <evo/creditpool.h>
 #include <string>
 
 CMasternodePayments mnpayments;
@@ -292,9 +293,11 @@ bool CMasternodePayments::GetBlockTxOuts(int nBlockHeight, CAmount blockReward, 
         operatorReward = (masternodeReward * dmnPayee->nOperatorReward) / 10000;
         masternodeReward -= operatorReward;
     }
-    bool fV20Active_context = llmq::utils::IsV20Active(::ChainActive().Tip());
+    //bool fV20Active_context = llmq::utils::IsV20Active(::ChainActive().Tip());
+    LogPrintf("check RRE in masternode payments... ");
+    if (IsRewardReallocationEnabled(*sporkManager)) {
 
-    if (fV20Active_context) {
+    //if (fV20Active_context) {
         if (masternodeReward > 0) {
             voutMasternodePaymentsRet.emplace_back(masternodeReward, CScript() << OP_RETURN);
         }

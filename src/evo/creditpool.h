@@ -21,6 +21,7 @@
 
 class CBlockIndex;
 class TxValidationState;
+class CSporkManager;
 
 namespace Consensus
 {
@@ -103,6 +104,7 @@ private:
 
     CAmount sessionLocked{0};
     CAmount sessionUnlocked{0};
+    CAmount masternodeReward{0};
 
     // target value is used to validate CbTx. If values mismatched, block is invalid
     std::optional<CAmount> targetLocked;
@@ -119,9 +121,12 @@ public:
     bool processTransaction(const CTransaction& tx, TxValidationState& state);
 
     CAmount getTotalLocked() const {
-        return pool.locked + sessionLocked - sessionUnlocked;
+        return pool.locked + sessionLocked - sessionUnlocked + masternodeReward;
     }
 
+    void addMasternodeReward(const CAmount extra) {
+        masternodeReward += extra;
+    }
     const std::optional<CAmount>& getTargetLocked() const {
         return targetLocked;
     }
@@ -169,6 +174,8 @@ private:
 
     CCreditPool constructCreditPool(const CBlockIndex* block_index, CCreditPool prev, const Consensus::Params& consensusParams);
 };
+
+bool IsRewardReallocationEnabled(const CSporkManager& spork_manager);
 
 extern std::unique_ptr<CCreditPoolManager> creditPoolManager;
 

@@ -7,10 +7,10 @@
 #include <evo/assetlocktx.h>
 #include <evo/cbtx.h>
 
-#include <llmq/utils.h>
-
 #include <chain.h>
+#include <llmq/utils.h>
 #include <logging.h>
+#include <spork.h>
 #include <util/validation.h>
 #include <validation.h>
 
@@ -333,3 +333,11 @@ bool CCreditPoolDiff::processTransaction(const CTransaction& tx, TxValidationSta
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "failed-procassetlocksinblock");
     }
 }
+
+bool IsRewardReallocationEnabled(const CSporkManager& spork_manager) {
+    bool ret = spork_manager.IsSporkActive(SPORK_24_MN_REWARD_REALLOCED);
+    LogPrintf("check RRE is %d\n", ret);
+    return ret;
+}
+
+

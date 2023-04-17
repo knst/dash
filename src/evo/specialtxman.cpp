@@ -17,9 +17,15 @@
 #include <llmq/commitment.h>
 #include <llmq/utils.h>
 #include <primitives/block.h>
+#include <spork.h>
 #include <validation.h>
 
+<<<<<<< HEAD
 bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, const CCreditPool& creditPool, bool check_sigs, TxValidationState& state)
+=======
+#include <masternode/payments.h>
+bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, const CCreditPool& creditPool, bool check_sigs, CValidationState& state)
+>>>>>>> 6f63cafc74 (update assetlock with rewards)
 {
     AssertLockHeld(cs_main);
 
@@ -160,6 +166,36 @@ bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, ll
             CAmount locked_proposed{0};
             if(creditPoolDiff->getTargetLocked()) locked_proposed = *creditPoolDiff->getTargetLocked();
 
+            LogPrintf("check RRE in specialtxman... dip3: %d\n", deterministicMNManager->IsDIP3Enforced(pindex->nHeight ) );
+            if (deterministicMNManager->IsDIP3Enforced(pindex->nHeight ) &&
+                IsRewardReallocationEnabled(*sporkManager)) {
+                CAmount masternodeReward{0};
+                auto cb = block.vtx[0];
+                bool isFirst =  true;
+                for (auto i : cb->vout) {
+                    std::cout  << "CB!" << std::endl;
+                    std::cout << "next: " << i.nValue << std::endl;
+                    if (isFirst) {
+                        isFirst = false;
+                        continue;
+                    }
+                    masternodeReward += i.nValue;
+                }
+//                CCbTx cbTx;
+ //               GetTxPayload(coinbaseTx, cbTx);
+                /*
+                if (!CMasternodePayments::GetMasternodeTxOuts(nHeight, blockReward, pblocktemplate->voutMasternodePayments)) {
+                    LogPrint(BCLog::MNPAYMENTS, "%s -- no masternode to pay (MN list probably empty)\n", __func__);
+                }
+                for (const auto& txout : pblocktemplate->voutMasternodePayments) {
+                    // subtract MN payment from miner reward
+                    masternodeReward += txout.nValue;
+                }
+                */
+//                masternodeReward += 
+//                locked_proposed += masternodeReward;
+                creditPoolDiff->addMasternodeReward(masternodeReward);
+            }
             CAmount locked_calculated = creditPoolDiff->getTotalLocked();
             if (locked_proposed != locked_calculated) {
                 LogPrintf("%s: mismatched locked amount in CbTx: %lld against re-calculated: %lld\n", __func__, locked_proposed, locked_calculated);

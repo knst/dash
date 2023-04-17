@@ -232,6 +232,17 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(CChainState& chai
                     LogPrintf("CreateNewBlock() height[%d] CBTx bestCLHeightDiff[%d] CLSig[%s]\n", nHeight, cbTx.bestCLHeightDiff, cbTx.bestCLSignature.ToString());
                 }
                 assert(creditPoolDiff);
+
+                LogPrintf("check RRE in miner...\n");
+                if (IsRewardReallocationEnabled(spork_manager)) {
+                    if (!CMasternodePayments::GetMasternodeTxOuts(nHeight, blockReward, pblocktemplate->voutMasternodePayments)) {
+                        LogPrint(BCLog::MNPAYMENTS, "%s -- no masternode to pay (MN list probably empty)\n", __func__);
+                    }
+                    for (const auto& txout : pblocktemplate->voutMasternodePayments) {
+                        // subtract MN payment from miner reward
+                        creditPoolDiff->addMasternodeReward(txout.nValue);
+                    }
+                }
                 cbTx.assetLockedAmount = creditPoolDiff->getTotalLocked();
             }
         }

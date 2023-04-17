@@ -257,7 +257,23 @@ class AssetLocksTest(DashTestFramework):
         self.sync_all()
 
         assert_equal(get_credit_pool_amount(node), locked_2)
+        self.log.info(f'locked: {get_credit_pool_amount(node)}')
+        self.nodes[0].sporkupdate("SPORK_24_MN_REWARD_REALLOCED", 0)
+        self.wait_for_sporks_same()
+        self.log.info(f'locked-a: {get_credit_pool_amount(node)}')
+        node.generate(1)
+        self.log.info(f'locked-a: {get_credit_pool_amount(node)}')
+        node.generate(1)
+        self.log.info(f'locked-a: {get_credit_pool_amount(node)}')
+        self.nodes[0].sporkupdate("SPORK_24_MN_REWARD_REALLOCED", 4070908800)
+        self.wait_for_sporks_same()
+        self.log.info(f'locked-b: {get_credit_pool_amount(node)}')
+        node.generate(1)
+        self.log.info(f'locked-b: {get_credit_pool_amount(node)}')
+        node.generate(1)
+        self.log.info(f'locked-end: {get_credit_pool_amount(node)}')
 
+        locked_2 += 16026249822 * 2
         node.generate(3)
         self.sync_all()
         assert_equal(get_credit_pool_amount(node), locked_2)
