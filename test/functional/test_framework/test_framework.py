@@ -1459,17 +1459,12 @@ class DashTestFramework(BitcoinTestFramework):
         message_hash = tx.hash
 
         llmq_type = 103 if deterministic else 104
-        quorum_member = None
-        for mn in self.mninfo:
-            res = mn.node.quorum('sign', llmq_type, request_id, message_hash)
-            if (res and quorum_member is None):
-                quorum_member = mn
 
-        rec_sig = self.get_recovered_sig(request_id, message_hash, node=quorum_member.node, llmq_type=llmq_type)
+        rec_sig = self.get_recovered_sig(request_id, message_hash, llmq_type=llmq_type)
 
         if deterministic:
-            block_count = quorum_member.node.getblockcount()
-            cycle_hash = int(quorum_member.node.getblockhash(block_count - (block_count % 24)), 16)
+            block_count = self.mninfo[0].node.getblockcount()
+            cycle_hash = int(self.mninfo[0].node.getblockhash(block_count - (block_count % 24)), 16)
             islock = msg_isdlock(1, inputs, tx.sha256, cycle_hash, hex_str_to_bytes(rec_sig['sig']))
         else:
             islock = msg_islock(inputs, tx.sha256, hex_str_to_bytes(rec_sig['sig']))
@@ -1901,16 +1896,31 @@ class DashTestFramework(BitcoinTestFramework):
         time.sleep(1)
         self.log.info('Moved from block %d to %d' % (cur_block, self.nodes[0].getblockcount()))
 
-    def get_recovered_sig(self, rec_sig_id, rec_sig_msg_hash, llmq_type=100, node=None):
+    def check_sigs(self, rec_sig_id, rec_sig_msg_hash, llmq_type):
+        for mn in self.mninfo:
+            if not mn.node.quorum("hasrecsig", llmq_type, rec_sig_id, rec_sig_msg_hash):
+                return False
+        return True
+
+    def wait_for_sigs(self, rec_sig_id, rec_sig_msg_hash, llmq_type, timeout):
+        wait_until(lambda: self.check_sigs(rec_sig_id, rec_sig_msg_hash, llmq_type), timeout = timeout)
+
+    def get_recovered_sig(self, rec_sig_id, rec_sig_msg_hash, llmq_type=100):
         # Note: recsigs aren't relayed to regular nodes by default,
         # make sure to pick a mn as a node to query for recsigs.
-        node = self.mninfo[0].node if node is None else node
-        stop_time = time.time() + 10 * self.options.timeout_scale
-        while time.time() < stop_time:
-            try:
-                return node.quorum('getrecsig', llmq_type, rec_sig_id, rec_sig_msg_hash)
-            except JSONRPCException:
-                time.sleep(0.1)
+        try:
+            self.bump_mocktime(1)
+
+            quorumHash = self.mninfo[0].node.quorum("selectquorum", llmq_type, rec_sig_id)["quorumHash"]
+            for mn in self.mninfo:
+                mn.node.quorum("sign", llmq_type, rec_sig_id, rec_sig_msg_hash, quorumHash)
+
+            self.wait_for_sigs(rec_sig_id, rec_sig_msg_hash, llmq_type, 10 * self.options.timeout_scale)
+
+            return self.mninfo[0].node.quorum("getrecsig", llmq_type, rec_sig_id, rec_sig_msg_hash)
+        except JSONRPCException as e:
+            self.log.info(f"getrecsig failed with '{e}'")
+
         assert False
 
     def get_quorum_masternodes(self, q, llmq_type=100):
