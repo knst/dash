@@ -20,12 +20,8 @@
 #include <spork.h>
 #include <validation.h>
 
-<<<<<<< HEAD
-bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, const CCreditPool& creditPool, bool check_sigs, TxValidationState& state)
-=======
 #include <masternode/payments.h>
-bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, const CCreditPool& creditPool, bool check_sigs, CValidationState& state)
->>>>>>> 6f63cafc74 (update assetlock with rewards)
+bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, const CCreditPool& creditPool, bool check_sigs, TxValidationState& state)
 {
     AssertLockHeld(cs_main);
 
@@ -192,7 +188,7 @@ bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, ll
                     masternodeReward += txout.nValue;
                 }
                 */
-//                masternodeReward += 
+//                masternodeReward +=
 //                locked_proposed += masternodeReward;
                 creditPoolDiff->addMasternodeReward(masternodeReward);
             }
