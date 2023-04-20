@@ -339,5 +339,3 @@ bool IsRewardReallocationEnabled(const CSporkManager& spork_manager) {
     LogPrintf("check RRE is %d\n", ret);
     return ret;
 }
-
-
