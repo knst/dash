@@ -45,7 +45,6 @@ from test_framework.util import (
 llmq_type_test = 100
 tiny_amount = int(Decimal("0.0007") * COIN)
 blocks_in_one_day = 576
-REWARD = 16026249822
 
 def create_assetlock(node, coin, amount, pubkey):
     inputs = [CTxIn(COutPoint(int(coin["txid"], 16), coin["vout"]))]
@@ -259,6 +258,7 @@ class AssetLocksTest(DashTestFramework):
         node.generate(1)
         self.sync_all()
 
+        assert_equal(get_credit_pool_amount(node), locked_2)
 
         node.generate(3)
         self.sync_all()

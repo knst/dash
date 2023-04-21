@@ -64,7 +64,6 @@ uint256 BuildSignHash(Consensus::LLMQType llmqType, const uint256& quorumHash, c
 
 bool IsAllMembersConnectedEnabled(Consensus::LLMQType llmqType);
 bool IsQuorumPoseEnabled(Consensus::LLMQType llmqType);
-//bool IsRewardReallocationEnabled(Consensus::LLMQType llmqType);
 uint256 DeterministicOutboundConnection(const uint256& proTxHash1, const uint256& proTxHash2);
 std::set<uint256> GetQuorumConnections(const Consensus::LLMQParams& llmqParams, const CBlockIndex* pQuorumBaseBlockIndex, const uint256& forMember, bool onlyOutbound);
 std::set<uint256> GetQuorumRelayMembers(const Consensus::LLMQParams& llmqParams, const CBlockIndex* pQuorumBaseBlockIndex, const uint256& forMember, bool onlyOutbound);

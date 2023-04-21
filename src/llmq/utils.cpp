@@ -610,13 +610,6 @@ bool IsQuorumPoseEnabled(Consensus::LLMQType llmqType)
     return EvalSpork(llmqType, sporkManager->GetSporkValue(SPORK_23_QUORUM_POSE));
 }
 
-/*
-bool IsRewardReallocationEnabled(Consensus::LLMQType llmqType)
-{
-    return EvalSpork(llmqType, sporkManager->GetSporkValue(SPORK_24_MN_REWARD_REALLOCED));
-}
-*/
-
 bool IsQuorumRotationEnabled(const Consensus::LLMQParams& llmqParams, const CBlockIndex* pindex)
 {
     assert(pindex);
