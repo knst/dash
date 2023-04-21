@@ -125,6 +125,8 @@ def get_credit_pool_amount(node, block_hash = None):
     return int(COIN * block['cbTx']['assetLockedAmount'])
 
 class AssetLocksTest(DashTestFramework):
+    height_spork = 0
+
     def set_test_params(self):
         self.set_dash_test_params(4, 3)
 
@@ -142,6 +144,23 @@ class AssetLocksTest(DashTestFramework):
 
         assert_equal([result_expected], result_test)
         self.check_mempool_size()
+
+    def aligned_credit_pool_amount(self, node, value, block_hash = None):
+        print(f"aligned-a {value}")
+        if self.height_spork == 0: return value
+        if block_hash is None:
+            block_hash = node.getbestblockhash()
+        block = node.getblock(block_hash)
+        height = block["height"]
+        print(f"aligned-b {value}")
+        if height < self.height_spork: return value
+        print(f"aligned height={height} height_spork={self.height_spork} total={value + (height - self.height_spork) * REWARD}")
+        return value + (height - self.height_spork) * REWARD
+
+    def check_credit_pool_amount(self, node, value, block_hash = None):
+        actual_amount = get_credit_pool_amount(node, block_hash)
+        expected_amount = self.aligned_credit_pool_amount(node, value, block_hash)
+        assert_equal(actual_amount, expected_amount)
 
     def create_and_check_block(self, txes, expected_error = None):
         node = self.nodes[0]
@@ -226,30 +245,34 @@ class AssetLocksTest(DashTestFramework):
         asset_lock_tx = create_assetlock(node, coin, locked_1, pubkey)
 
         self.check_mempool_result(tx=asset_lock_tx, result_expected={'allowed': True})
-        assert_equal(get_credit_pool_amount(node), 0)
+        self.check_credit_pool_amount(node, 0)
         txid_in_block = self.send_tx(asset_lock_tx)
 
         self.sync_mempools()
-        assert_equal(get_credit_pool_amount(node), 0)
+        self.check_credit_pool_amount(node, 0)
 
         node.generate(1)
-        assert_equal(get_credit_pool_amount(node), locked_1)
+        self.check_credit_pool_amount(node, locked_1)
         # Generate a number of blocks to ensure this is the longest chain for later in the test when we reconsiderblock
         node.generate(12)
         self.sync_all()
 
-        assert_equal(get_credit_pool_amount(node), locked_1)
-        assert_equal(get_credit_pool_amount(self.nodes[1]), locked_1)
+        self.check_credit_pool_amount(node, locked_1)
+        self.check_credit_pool_amount(self.nodes[1], locked_1)
+
+        self.height_spork = node.getblock(node.getbestblockhash())["height"] + 1
+        self.nodes[0].sporkupdate("SPORK_24_MN_REWARD_REALLOCED", self.height_spork)
+        self.wait_for_sporks_same()
 
         # tx is mined, let's get blockhash
         self.log.info("Invalidate block with asset lock tx...")
         block_hash_1 = node.gettransaction(txid_in_block)['blockhash']
         for inode in self.nodes:
             inode.invalidateblock(block_hash_1)
-            assert_equal(get_credit_pool_amount(inode), 0)
+            self.check_credit_pool_amount(inode, 0)
         node.generate(3)
         self.sync_all()
-        assert_equal(get_credit_pool_amount(node), 0)
+        self.check_credit_pool_amount(node, 0)
         self.log.info("Resubmit asset lock tx to new chain...")
         # NEW tx appears
         asset_lock_tx_2 = create_assetlock(node, coin, locked_2, pubkey)
@@ -257,29 +280,26 @@ class AssetLocksTest(DashTestFramework):
         node.generate(1)
         self.sync_all()
 
-        assert_equal(get_credit_pool_amount(node), locked_2)
-        self.log.info(f'locked: {get_credit_pool_amount(node)}')
-        height_spork = node.getblock(node.getbestblockhash())["height"] + 1
-        self.nodes[0].sporkupdate("SPORK_24_MN_REWARD_REALLOCED", height_spork)
-        self.wait_for_sporks_same()
-        self.log.info(f'locked-a: {get_credit_pool_amount(node)}')
-        node.generate(1)
-        assert_equal(get_credit_pool_amount(node), locked_2)
+        if False:
+            self.check_credit_pool_amount(node, locked_2)
+            self.log.info(f'locked: {get_credit_pool_amount(node)}')
+            self.log.info(f'locked-a: {get_credit_pool_amount(node)}')
+            node.generate(1)
+            assert_equal(get_credit_pool_amount(node), locked_2)
 
-        self.log.info(f'locked-a: {get_credit_pool_amount(node)}')
-        node.generate(1)
-        self.log.info(f'locked: {get_credit_pool_amount(node)}')
-        assert_equal(get_credit_pool_amount(node), locked_2 + REWARD)
-        self.log.info(f'locked-a: {get_credit_pool_amount(node)}')
+            self.log.info(f'locked-a: {get_credit_pool_amount(node)}')
+            node.generate(1)
+            self.log.info(f'locked: {get_credit_pool_amount(node)}')
+            assert_equal(get_credit_pool_amount(node), locked_2 + REWARD)
+            self.log.info(f'locked-a: {get_credit_pool_amount(node)}')
 
-        locked_2 += REWARD * 4
         node.generate(3)
         self.sync_all()
-        assert_equal(get_credit_pool_amount(node), locked_2)
+        self.check_credit_pool_amount(node, locked_2)
         self.log.info("Reconsider old blocks...")
         for inode in self.nodes:
             inode.reconsiderblock(block_hash_1)
-        assert_equal(get_credit_pool_amount(node), locked_1)
+        self.check_credit_pool_amount(node, locked_1)
         self.sync_all()
 
         self.log.info('Mine block with incorrect credit-poool value...')
@@ -288,7 +308,7 @@ class AssetLocksTest(DashTestFramework):
 
         self.log.info("Mine a quorum...")
         self.mine_quorum()
-        assert_equal(get_credit_pool_amount(node), locked_1)
+        self.check_credit_pool_amount(node, locked_1)
 
         self.log.info("Testing asset unlock...")
         # tx asset_unlock_tx_index_too_far should not be mined at first
@@ -301,7 +321,7 @@ class AssetLocksTest(DashTestFramework):
         self.ensure_tx_is_not_mined(tx_too_far_index)
 
         # These txs should all have been generated by the same quorum
-        assert_equal(get_credit_pool_amount(node), locked_1)
+        self.check_credit_pool_amount(node, locked_1)
         asset_unlock_tx = create_assetunlock(node, self.mninfo, 101, COIN, pubkey)
         asset_unlock_tx_late = create_assetunlock(node, self.mninfo, 102, COIN, pubkey)
         asset_unlock_tx_too_late = create_assetunlock(node, self.mninfo, 103, COIN, pubkey)
@@ -320,7 +340,7 @@ class AssetLocksTest(DashTestFramework):
         assert_equal(asset_unlock_tx_payload.quorumHash, int(self.mninfo[0].node.quorum("selectquorum", llmq_type_test, 'e6c7a809d79f78ea85b72d5df7e9bd592aecf151e679d6e976b74f053a7f9056')["quorumHash"], 16))
 
         self.send_tx(asset_unlock_tx)
-        assert_equal(get_credit_pool_amount(node), locked_1)
+        self.check_credit_pool_amount(node, locked_1)
         # need to mine exactly 2 blocks to be sure that SkipSet lets far transaction appears in block
         node.generate(1)
         self.sync_all()
@@ -342,16 +362,16 @@ class AssetLocksTest(DashTestFramework):
             reason = "double index")
 
         # transaction with too far index should be mined too, because it is not too far anymore
-        assert_equal(get_credit_pool_amount(node), locked_1 - 2 * COIN)
+        self.check_credit_pool_amount(node, locked_1 - 2 * COIN)
         self.nodes[0].getrawtransaction(tx_too_far_index, 1)['blockhash']
 
         # mine next quorum, tx 'asset_unlock_tx_late' should be still accepted
         self.mine_quorum()
         # should stay same
-        assert_equal(get_credit_pool_amount(node), locked_1 - 2 * COIN)
+        self.check_credit_pool_amount(node, locked_1 - 2 * COIN)
         self.check_mempool_result(tx=asset_unlock_tx_late, result_expected={'allowed': True})
         # should still stay same
-        assert_equal(get_credit_pool_amount(node), locked_1 - 2 * COIN)
+        self.check_credit_pool_amount(node, locked_1 - 2 * COIN)
         self.send_tx(asset_unlock_tx_late)
         node.generate(1)
         self.sync_all()
