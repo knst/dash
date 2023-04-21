@@ -267,7 +267,7 @@ bool CCreditPoolDiff::setTarget(const CTransaction& tx, TxValidationState& state
     targetLocked = cbTx.assetLockedAmount;
 
 
-    if (!isIgnoringMNRewardReallocation(*sporkManager)) return true;
+    if (isIgnoringMNRewardReallocation(*sporkManager)) return true;
 
     CAmount blockReward = 0;
     for (const CTxOut& txout : tx.vout) {
