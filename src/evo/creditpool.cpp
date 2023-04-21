@@ -353,17 +353,6 @@ bool isIgnoringMNRewardReallocation(const CSporkManager& spork_manager) {
     if (Params().NetworkIDString() != CBaseChainParams::REGTEST) return false;
 
     bool ret = spork_manager.IsSporkActive(SPORK_24_IGNORE_MN_REWARD_REALLOCED);
-    LogPrintf("check ignore RRE is %d\n", ret);
+    LogPrintf("%s: spork IGNORE_MN_REWARD_REALLOCED value: %d\n", ret);
     return ret;
 }
-/*
-bool IsRewardRealloced(const CSporkManager& spork_manager, int height) {
-    return true;
-    bool ret = spork_manager.IsSporkActive(SPORK_24_MN_REWARD_REALLOCED);
-    LogPrintf("check RRE is %d\n", ret);
-    if (!ret) return false;
-    int val = spork_manager.GetSporkValue(SPORK_24_MN_REWARD_REALLOCED);
-    LogPrintf("RRE at %d vs %d\n", val, height);
-    return val < height;
-}
-*/
