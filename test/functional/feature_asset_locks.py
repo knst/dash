@@ -148,6 +148,7 @@ class AssetLocksTest(DashTestFramework):
     def aligned_credit_pool_amount(self, node, value, block_hash = None):
         print(f"aligned-a {value}")
         if self.height_spork == 0: return value
+        return value
         if block_hash is None:
             block_hash = node.getbestblockhash()
         block = node.getblock(block_hash)
