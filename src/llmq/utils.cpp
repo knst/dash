@@ -678,6 +678,14 @@ bool IsV20Active(const CBlockIndex* pindex)
     return VersionBitsState(pindex, Params().GetConsensus(), Consensus::DEPLOYMENT_V20, llmq_versionbitscache) == ThresholdState::ACTIVE;
 }
 
+bool IsMNRewardReallocationActive(const CBlockIndex* pindex)
+{
+    if (!IsV20Active(pindex)) false;
+
+    LOCK(cs_llmq_vbc);
+    return VersionBitsState(pindex, Params().GetConsensus(), Consensus::DEPLOYMENT_MN_RR, llmq_versionbitscache) == ThresholdState::ACTIVE;
+}
+
 bool IsInstantSendLLMQTypeShared()
 {
     if (Params().GetConsensus().llmqTypeInstantSend == Params().GetConsensus().llmqTypeChainLocks ||
