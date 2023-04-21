@@ -45,6 +45,7 @@ from test_framework.util import (
 llmq_type_test = 100
 tiny_amount = int(Decimal("0.0007") * COIN)
 blocks_in_one_day = 576
+REWARD = 16026249822
 
 def create_assetlock(node, coin, amount, pubkey):
     inputs = [CTxIn(COutPoint(int(coin["txid"], 16), coin["vout"]))]
@@ -258,22 +259,20 @@ class AssetLocksTest(DashTestFramework):
 
         assert_equal(get_credit_pool_amount(node), locked_2)
         self.log.info(f'locked: {get_credit_pool_amount(node)}')
-        self.nodes[0].sporkupdate("SPORK_24_MN_REWARD_REALLOCED", 0)
+        height_spork = node.getblock(node.getbestblockhash())["height"] + 1
+        self.nodes[0].sporkupdate("SPORK_24_MN_REWARD_REALLOCED", height_spork)
         self.wait_for_sporks_same()
         self.log.info(f'locked-a: {get_credit_pool_amount(node)}')
         node.generate(1)
-        self.log.info(f'locked-a: {get_credit_pool_amount(node)}')
-        node.generate(1)
-        self.log.info(f'locked-a: {get_credit_pool_amount(node)}')
-        self.nodes[0].sporkupdate("SPORK_24_MN_REWARD_REALLOCED", 4070908800)
-        self.wait_for_sporks_same()
-        self.log.info(f'locked-b: {get_credit_pool_amount(node)}')
-        node.generate(1)
-        self.log.info(f'locked-b: {get_credit_pool_amount(node)}')
-        node.generate(1)
-        self.log.info(f'locked-end: {get_credit_pool_amount(node)}')
+        assert_equal(get_credit_pool_amount(node), locked_2)
 
-        locked_2 += 16026249822 * 2
+        self.log.info(f'locked-a: {get_credit_pool_amount(node)}')
+        node.generate(1)
+        self.log.info(f'locked: {get_credit_pool_amount(node)}')
+        assert_equal(get_credit_pool_amount(node), locked_2 + REWARD)
+        self.log.info(f'locked-a: {get_credit_pool_amount(node)}')
+
+        locked_2 += REWARD * 4
         node.generate(3)
         self.sync_all()
         assert_equal(get_credit_pool_amount(node), locked_2)

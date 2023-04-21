@@ -164,7 +164,8 @@ bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, ll
 
             LogPrintf("check RRE in specialtxman... dip3: %d\n", deterministicMNManager->IsDIP3Enforced(pindex->nHeight ) );
             if (deterministicMNManager->IsDIP3Enforced(pindex->nHeight ) &&
-                IsRewardReallocationEnabled(*sporkManager)) {
+            llmq::utils::IsV20Active(pindex) &&
+                IsRewardRealloced(*sporkManager, pindex->nHeight)) {
                 CAmount masternodeReward{0};
                 auto cb = block.vtx[0];
                 bool isFirst =  true;

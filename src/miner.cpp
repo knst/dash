@@ -234,7 +234,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(CChainState& chai
                 assert(creditPoolDiff);
 
                 LogPrintf("check RRE in miner...\n");
-                if (IsRewardReallocationEnabled(spork_manager)) {
+                if (IsRewardRealloced(spork_manager, nHeight)) {
                     if (!CMasternodePayments::GetMasternodeTxOuts(nHeight, blockReward, pblocktemplate->voutMasternodePayments)) {
                         LogPrint(BCLog::MNPAYMENTS, "%s -- no masternode to pay (MN list probably empty)\n", __func__);
                     }

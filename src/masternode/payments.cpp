@@ -295,9 +295,10 @@ bool CMasternodePayments::GetBlockTxOuts(int nBlockHeight, CAmount blockReward, 
     }
     //bool fV20Active_context = llmq::utils::IsV20Active(::ChainActive().Tip());
     LogPrintf("check RRE in masternode payments... ");
-    if (IsRewardReallocationEnabled(*sporkManager)) {
-
     //if (fV20Active_context) {
+    if ( IsRewardRealloced(*sporkManager, nBlockHeight)) {
+        LogPrintf("check RRE in masternode payments... yes");
+
         if (masternodeReward > 0) {
             voutMasternodePaymentsRet.emplace_back(masternodeReward, CScript() << OP_RETURN);
         }

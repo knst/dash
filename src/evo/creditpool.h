@@ -175,7 +175,7 @@ private:
     CCreditPool constructCreditPool(const CBlockIndex* block_index, CCreditPool prev, const Consensus::Params& consensusParams);
 };
 
-bool IsRewardReallocationEnabled(const CSporkManager& spork_manager);
+bool IsRewardRealloced(const CSporkManager& spork_manager, int height);
 
 extern std::unique_ptr<CCreditPoolManager> creditPoolManager;
 

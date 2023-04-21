@@ -334,8 +334,11 @@ bool CCreditPoolDiff::processTransaction(const CTransaction& tx, TxValidationSta
     }
 }
 
-bool IsRewardReallocationEnabled(const CSporkManager& spork_manager) {
+bool IsRewardRealloced(const CSporkManager& spork_manager, int height) {
     bool ret = spork_manager.IsSporkActive(SPORK_24_MN_REWARD_REALLOCED);
     LogPrintf("check RRE is %d\n", ret);
-    return ret;
+    if (!ret) return false;
+    int val = spork_manager.GetSporkValue(SPORK_24_MN_REWARD_REALLOCED);
+    LogPrintf("RRE at %d vs %d\n", val, height);
+    return val < height;
 }
