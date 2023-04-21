@@ -38,7 +38,7 @@ enum SporkId : int32_t {
     SPORK_19_CHAINLOCKS_ENABLED                            = 10018,
     SPORK_21_QUORUM_ALL_CONNECTED                          = 10020,
     SPORK_23_QUORUM_POSE                                   = 10022,
-    SPORK_24_MN_REWARD_REALLOCED                           = 10023,
+    SPORK_24_IGNORE_MN_REWARD_REALLOCED                    = 10023,
 
     SPORK_INVALID                                          = -1,
 };
@@ -72,7 +72,7 @@ struct CSporkDef
     MAKE_SPORK_DEF(SPORK_19_CHAINLOCKS_ENABLED,            4070908800ULL), // OFF
     MAKE_SPORK_DEF(SPORK_21_QUORUM_ALL_CONNECTED,          4070908800ULL), // OFF
     MAKE_SPORK_DEF(SPORK_23_QUORUM_POSE,                   4070908800ULL), // OFF
-    MAKE_SPORK_DEF(SPORK_24_MN_REWARD_REALLOCED,           4070908800ULL), // OFF
+    MAKE_SPORK_DEF(SPORK_24_IGNORE_MN_REWARD_REALLOCED,    4070908800ULL), // OFF
 };
 #undef MAKE_SPORK_DEF
 extern std::unique_ptr<CSporkManager> sporkManager;

@@ -352,7 +352,7 @@ bool CCreditPoolDiff::processTransaction(const CTransaction& tx, TxValidationSta
 bool isIgnoringMNRewardReallocation(const CSporkManager& spork_manager) {
     if (Params().NetworkIDString() != CBaseChainParams::REGTEST) return false;
 
-    bool ret = spork_manager.IsSporkActive(SPORK_24_MN_REWARD_REALLOCED);
+    bool ret = spork_manager.IsSporkActive(SPORK_24_IGNORE_MN_REWARD_REALLOCED);
     LogPrintf("check ignore RRE is %d\n", ret);
     return ret;
 }
