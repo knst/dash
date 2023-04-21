@@ -120,13 +120,16 @@ public:
      */
     bool processTransaction(const CTransaction& tx, TxValidationState& state);
 
+    /**
+     * This function should be called by miner for initalization of MasterNode reward
+     *
+     */
+    void addRewardRealloced(const CAmount reward);
+
     CAmount getTotalLocked() const {
         return pool.locked + sessionLocked - sessionUnlocked + masternodeReward;
     }
 
-    void addMasternodeReward(const CAmount extra) {
-        masternodeReward += extra;
-    }
     const std::optional<CAmount>& getTargetLocked() const {
         return targetLocked;
     }

@@ -251,6 +251,10 @@ CCreditPoolDiff::CCreditPoolDiff(CCreditPool starter, const CBlockIndex *pindex,
     assert(pindex);
 }
 
+void CCreditPoolDiff::addRewardRealloced(const CAmount reward) {
+    masternodeReward += reward;
+}
+
 bool CCreditPoolDiff::setTarget(const CTransaction& tx, TxValidationState& state)
 {
     CCbTx cbTx;
@@ -258,8 +262,40 @@ bool CCreditPoolDiff::setTarget(const CTransaction& tx, TxValidationState& state
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-cbtx-payload");
     }
 
-    if (cbTx.nVersion == 3) {
-        targetLocked = cbTx.assetLockedAmount;
+    if (cbTx.nVersion != 3) return true;
+
+
+    targetLocked = cbTx.assetLockedAmount;
+
+
+    LogPrintf("check RRE in setTarget... realloced: %d\n", IsRewardRealloced(*sporkManager, cbTx.nHeight) );
+    if (//deterministicMNManager->IsDIP3Enforced(pindex->nHeight ) &&
+// it's always V20 because other CCreditPoolDiff won't be init
+//    llmq::utils::IsV20Active(pindex) &&
+        IsRewardRealloced(*sporkManager, cbTx.nHeight)) {
+        bool isFirst =  true;
+        for (auto i : tx.vout) {
+            std::cout  << "CB!" << std::endl;
+            std::cout << "next: " << i.nValue << std::endl;
+            if (isFirst) {
+                isFirst = false;
+                continue;
+            }
+            masternodeReward += i.nValue;
+        }
+//                CCbTx cbTx;
+//               GetTxPayload(coinbaseTx, cbTx);
+        /*
+        if (!CMasternodePayments::GetMasternodeTxOuts(nHeight, blockReward, pblocktemplate->voutMasternodePayments)) {
+            LogPrint(BCLog::MNPAYMENTS, "%s -- no masternode to pay (MN list probably empty)\n", __func__);
+        }
+        for (const auto& txout : pblocktemplate->voutMasternodePayments) {
+            // subtract MN payment from miner reward
+            masternodeReward += txout.nValue;
+        }
+        */
+//                masternodeReward +=
+//                locked_proposed += masternodeReward;
     }
     return true;
 }

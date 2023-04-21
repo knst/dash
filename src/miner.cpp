@@ -240,7 +240,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(CChainState& chai
                     }
                     for (const auto& txout : pblocktemplate->voutMasternodePayments) {
                         // subtract MN payment from miner reward
-                        creditPoolDiff->addMasternodeReward(txout.nValue);
+                        creditPoolDiff->addRewardRealloced(txout.nValue);
                     }
                 }
                 cbTx.assetLockedAmount = creditPoolDiff->getTotalLocked();
