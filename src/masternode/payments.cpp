@@ -278,6 +278,15 @@ bool CMasternodePayments::GetBlockTxOuts(int nBlockHeight, CAmount blockReward, 
 {
     voutMasternodePaymentsRet.clear();
 
+    CAmount masternodeReward = GetMasternodePayment(nBlockHeight, blockReward, Params().GetConsensus().BRRHeight);
+
+    bool fV20Active_context = llmq::utils::IsV20Active(::ChainActive().Tip());
+    if (fV20Active_context && !isIgnoringMNRewardReallocation(*sporkManager)) {
+        LogPrintf("CMasternodePayments::%s -- MN reward %lld reallocated to credit pool\n", __func__, masternodeReward);
+        voutMasternodePaymentsRet.emplace_back(masternodeReward, CScript() << OP_RETURN);
+        return true;
+    }
+
     const CBlockIndex* pindex = WITH_LOCK(cs_main, return ::ChainActive()[nBlockHeight - 1]);
     auto dmnPayee = deterministicMNManager->GetListForBlock(pindex).GetMNPayee(pindex);
     if (!dmnPayee) {
@@ -285,32 +294,17 @@ bool CMasternodePayments::GetBlockTxOuts(int nBlockHeight, CAmount blockReward, 
     }
 
     CAmount operatorReward = 0;
-    CAmount masternodeReward = GetMasternodePayment(nBlockHeight, blockReward, Params().GetConsensus().BRRHeight);
-
     if (dmnPayee->nOperatorReward != 0 && dmnPayee->pdmnState->scriptOperatorPayout != CScript()) {
         // This calculation might eventually turn out to result in 0 even if an operator reward percentage is given.
         // This will however only happen in a few years when the block rewards drops very low.
         operatorReward = (masternodeReward * dmnPayee->nOperatorReward) / 10000;
         masternodeReward -= operatorReward;
     }
-    bool fV20Active_context = llmq::utils::IsV20Active(::ChainActive().Tip());
-    LogPrintf("check RRE in masternode payments... ");
-    if (fV20Active_context && IsRewardRealloced(*sporkManager, nBlockHeight)) {
-        LogPrintf("check RRE in masternode payments... yes");
-
-        if (masternodeReward > 0) {
-            voutMasternodePaymentsRet.emplace_back(masternodeReward, CScript() << OP_RETURN);
-        }
-        if (operatorReward > 0) {
-            voutMasternodePaymentsRet.emplace_back(operatorReward, CScript() << OP_RETURN);
-        }
-    } else {
-        if (masternodeReward > 0) {
-            voutMasternodePaymentsRet.emplace_back(masternodeReward, dmnPayee->pdmnState->scriptPayout);
-        }
-        if (operatorReward > 0) {
-            voutMasternodePaymentsRet.emplace_back(operatorReward, dmnPayee->pdmnState->scriptOperatorPayout);
-        }
+    if (masternodeReward > 0) {
+        voutMasternodePaymentsRet.emplace_back(masternodeReward, dmnPayee->pdmnState->scriptPayout);
+    }
+    if (operatorReward > 0) {
+        voutMasternodePaymentsRet.emplace_back(operatorReward, dmnPayee->pdmnState->scriptOperatorPayout);
     }
 
     return true;

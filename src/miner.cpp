@@ -233,13 +233,13 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(CChainState& chai
                 }
                 assert(creditPoolDiff);
 
-                LogPrintf("check RRE in miner...\n");
-                if (IsRewardRealloced(spork_manager, nHeight)) {
+                if (!isIgnoringMNRewardReallocation(spork_manager)) {
                     if (!CMasternodePayments::GetMasternodeTxOuts(nHeight, blockReward, pblocktemplate->voutMasternodePayments)) {
                         LogPrint(BCLog::MNPAYMENTS, "%s -- no masternode to pay (MN list probably empty)\n", __func__);
                     }
                     for (const auto& txout : pblocktemplate->voutMasternodePayments) {
                         // subtract MN payment from miner reward
+                        LogPrintf("CreateNewBlock() add MN reward %lld to credit pool\n", txout.nValue);
                         creditPoolDiff->addRewardRealloced(txout.nValue);
                     }
                 }

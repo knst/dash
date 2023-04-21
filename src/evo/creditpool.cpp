@@ -264,39 +264,18 @@ bool CCreditPoolDiff::setTarget(const CTransaction& tx, TxValidationState& state
 
     if (cbTx.nVersion != 3) return true;
 
-
     targetLocked = cbTx.assetLockedAmount;
 
 
-    LogPrintf("check RRE in setTarget... realloced: %d\n", IsRewardRealloced(*sporkManager, cbTx.nHeight) );
-    if (//deterministicMNManager->IsDIP3Enforced(pindex->nHeight ) &&
-// it's always V20 because other CCreditPoolDiff won't be init
-//    llmq::utils::IsV20Active(pindex) &&
-        IsRewardRealloced(*sporkManager, cbTx.nHeight)) {
-        bool isFirst =  true;
-        for (auto i : tx.vout) {
-            std::cout  << "CB!" << std::endl;
-            std::cout << "next: " << i.nValue << std::endl;
-            if (isFirst) {
-                isFirst = false;
-                continue;
-            }
-            masternodeReward += i.nValue;
-        }
-//                CCbTx cbTx;
-//               GetTxPayload(coinbaseTx, cbTx);
-        /*
-        if (!CMasternodePayments::GetMasternodeTxOuts(nHeight, blockReward, pblocktemplate->voutMasternodePayments)) {
-            LogPrint(BCLog::MNPAYMENTS, "%s -- no masternode to pay (MN list probably empty)\n", __func__);
-        }
-        for (const auto& txout : pblocktemplate->voutMasternodePayments) {
-            // subtract MN payment from miner reward
-            masternodeReward += txout.nValue;
-        }
-        */
-//                masternodeReward +=
-//                locked_proposed += masternodeReward;
+    if (!isIgnoringMNRewardReallocation(*sporkManager)) return true;
+
+    CAmount blockReward = 0;
+    for (const CTxOut& txout : tx.vout) {
+        blockReward += txout.nValue;
     }
+    masternodeReward = GetMasternodePayment(cbTx.nHeight, blockReward, Params().GetConsensus().BRRHeight);
+    LogPrintf("CreditPool: set target to %lld with MN reward %lld\n", *targetLocked, masternodeReward);
+
     return true;
 }
 
@@ -370,7 +349,16 @@ bool CCreditPoolDiff::processTransaction(const CTransaction& tx, TxValidationSta
     }
 }
 
+bool isIgnoringMNRewardReallocation(const CSporkManager& spork_manager) {
+    if (Params().NetworkIDString() != CBaseChainParams::REGTEST) return false;
+
+    bool ret = spork_manager.IsSporkActive(SPORK_24_MN_REWARD_REALLOCED);
+    LogPrintf("check ignore RRE is %d\n", ret);
+    return ret;
+}
+/*
 bool IsRewardRealloced(const CSporkManager& spork_manager, int height) {
+    return true;
     bool ret = spork_manager.IsSporkActive(SPORK_24_MN_REWARD_REALLOCED);
     LogPrintf("check RRE is %d\n", ret);
     if (!ret) return false;
@@ -378,3 +366,4 @@ bool IsRewardRealloced(const CSporkManager& spork_manager, int height) {
     LogPrintf("RRE at %d vs %d\n", val, height);
     return val < height;
 }
+*/
