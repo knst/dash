@@ -169,7 +169,6 @@ class AssetLocksTest(DashTestFramework):
         self.nodes[0].sporkupdate("SPORK_19_CHAINLOCKS_ENABLED", spork_disabled)
         self.nodes[0].sporkupdate("SPORK_3_INSTANTSEND_BLOCK_FILTERING", spork_disabled)
         self.nodes[0].sporkupdate("SPORK_2_INSTANTSEND_ENABLED", spork_disabled)
-        self.nodes[0].sporkupdate("SPORK_24_IGNORE_MN_REWARD_REALLOCED", spork_enabled)
 
         self.wait_for_sporks_same()
 

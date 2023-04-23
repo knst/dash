@@ -10,7 +10,6 @@
 #include <chain.h>
 #include <llmq/utils.h>
 #include <logging.h>
-#include <spork.h>
 #include <util/validation.h>
 #include <validation.h>
 
@@ -246,7 +245,8 @@ CCreditPoolManager::CCreditPoolManager(CEvoDB& _evoDb)
 
 CCreditPoolDiff::CCreditPoolDiff(CCreditPool starter, const CBlockIndex *pindex, const Consensus::Params& consensusParams) :
     pool(std::move(starter)),
-    pindex(pindex)
+    pindex(pindex),
+    params(consensusParams)
 {
     assert(pindex);
 }
@@ -267,13 +267,13 @@ bool CCreditPoolDiff::setTarget(const CTransaction& tx, TxValidationState& state
     targetLocked = cbTx.assetLockedAmount;
 
 
-    if (isIgnoringMNRewardReallocation(*sporkManager)) return true;
+    if (!llmq::utils::IsMNRewardReallocationActive(pindex)) return true;
 
     CAmount blockReward = 0;
     for (const CTxOut& txout : tx.vout) {
         blockReward += txout.nValue;
     }
-    masternodeReward = GetMasternodePayment(cbTx.nHeight, blockReward, Params().GetConsensus().BRRHeight);
+    masternodeReward = GetMasternodePayment(cbTx.nHeight, blockReward, params.BRRHeight);
     LogPrintf("CreditPool: set target to %lld with MN reward %lld\n", *targetLocked, masternodeReward);
 
     return true;
@@ -347,12 +347,4 @@ bool CCreditPoolDiff::processTransaction(const CTransaction& tx, TxValidationSta
         LogPrintf("%s -- failed: %s\n", __func__, e.what());
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "failed-procassetlocksinblock");
     }
-}
-
-bool isIgnoringMNRewardReallocation(const CSporkManager& spork_manager) {
-    if (Params().NetworkIDString() != CBaseChainParams::REGTEST) return false;
-
-    bool ret = spork_manager.IsSporkActive(SPORK_24_IGNORE_MN_REWARD_REALLOCED);
-    LogPrintf("%s: spork IGNORE_MN_REWARD_REALLOCED value: %d\n", __func__, ret);
-    return ret;
 }

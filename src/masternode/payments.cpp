@@ -280,8 +280,9 @@ bool CMasternodePayments::GetBlockTxOuts(int nBlockHeight, CAmount blockReward, 
 
     CAmount masternodeReward = GetMasternodePayment(nBlockHeight, blockReward, Params().GetConsensus().BRRHeight);
 
-    bool fV20Active_context = llmq::utils::IsV20Active(::ChainActive().Tip());
-    if (fV20Active_context && !isIgnoringMNRewardReallocation(*sporkManager)) {
+    bool fMNRewardReallocated =  llmq::utils::IsMNRewardReallocationActive(::ChainActive().Tip());
+
+    if (fMNRewardReallocated) {
         LogPrintf("CMasternodePayments::%s -- MN reward %lld reallocated to credit pool\n", __func__, masternodeReward);
         voutMasternodePaymentsRet.emplace_back(masternodeReward, CScript() << OP_RETURN);
         return true;

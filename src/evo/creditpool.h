@@ -110,6 +110,7 @@ private:
     std::optional<CAmount> targetLocked;
 
     const CBlockIndex *pindex{nullptr};
+    const Consensus::Params& params;
 public:
     explicit CCreditPoolDiff(CCreditPool starter, const CBlockIndex *pindex, const Consensus::Params& consensusParams);
 
@@ -177,8 +178,6 @@ private:
 
     CCreditPool constructCreditPool(const CBlockIndex* block_index, CCreditPool prev, const Consensus::Params& consensusParams);
 };
-
-bool isIgnoringMNRewardReallocation(const CSporkManager& spork_manager);
 
 extern std::unique_ptr<CCreditPoolManager> creditPoolManager;
 

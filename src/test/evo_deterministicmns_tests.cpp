@@ -271,11 +271,6 @@ void FuncDIP3Protx(TestChainSetup& setup)
     sporkManager->SetSporkAddress(EncodeDestination(PKHash(sporkKey.GetPubKey())));
     sporkManager->SetPrivKey(EncodeSecret(sporkKey));
 
-    // broadcast new spork
-    if (sporkManager->UpdateSpork(SporkId::SPORK_24_IGNORE_MN_REWARD_REALLOCED, 0, *setup.m_node.connman)) {
-        LogPrintf("spork SPORK_24_IGNORE_MN_REWARD_REALLOCED updated\n");
-    }
-
     auto utxos = BuildSimpleUtxoMap(setup.m_coinbase_txns);
 
     int nHeight = ::ChainActive().Height();
