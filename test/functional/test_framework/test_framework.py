@@ -1049,8 +1049,9 @@ class DashTestFramework(BitcoinTestFramework):
             assert self.nodes[0].getblockchaininfo()['bip9_softforks'][name]['status'] != 'active'
 
         while self.nodes[0].getblockchaininfo()['bip9_softforks'][name]['status'] != 'active':
-            self.bump_mocktime(batch_size)
-            self.nodes[0].generate(batch_size)
+            next_batch = batch_size if expected_activation_height is None else 1
+            self.bump_mocktime(next_batch)
+            self.nodes[0].generate(next_batch)
             self.sync_blocks()
         self.sync_blocks()
 
