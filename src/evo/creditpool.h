@@ -21,7 +21,6 @@
 
 class CBlockIndex;
 class TxValidationState;
-class CSporkManager;
 
 namespace Consensus
 {
@@ -123,7 +122,6 @@ public:
 
     /**
      * This function should be called by miner for initalization of MasterNode reward
-     *
      */
     void addRewardRealloced(const CAmount reward);
 

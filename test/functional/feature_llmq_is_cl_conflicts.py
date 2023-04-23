@@ -20,7 +20,6 @@ from test_framework.mininode import P2PInterface
 from test_framework.test_framework import DashTestFramework
 from test_framework.util import assert_equal, assert_raises_rpc_error, hex_str_to_bytes, get_bip9_status, wait_until
 
-from test_framework.address import ADDRESS_BCRT1_UNSPENDABLE
 
 class TestP2PConn(P2PInterface):
     def __init__(self):
@@ -318,8 +317,6 @@ class LLMQ_IS_CL_Conflicts(DashTestFramework):
 
         outputs = {miner_address: str(Decimal(miner_amount) / COIN)}
         if mn_amount > 0:
-            if mn_payee is None or mn_payee == '':
-                mn_payee = ADDRESS_BCRT1_UNSPENDABLE
             outputs[mn_payee] = str(Decimal(mn_amount) / COIN)
 
         coinbase = FromHex(CTransaction(), node.createrawtransaction([], outputs))

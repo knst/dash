@@ -17,10 +17,8 @@
 #include <llmq/commitment.h>
 #include <llmq/utils.h>
 #include <primitives/block.h>
-#include <spork.h>
 #include <validation.h>
 
-#include <masternode/payments.h>
 bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, const CCreditPool& creditPool, bool check_sigs, TxValidationState& state)
 {
     AssertLockHeld(cs_main);
