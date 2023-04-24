@@ -494,5 +494,19 @@ class AssetLocksTest(DashTestFramework):
         assert_equal(new_total, get_credit_pool_amount(node))
         assert_equal(node.getmempoolinfo()['size'], 0)
 
+        self.activate_mn_rr(expected_activation_height=3089)
+        self.log.info(f'height: {node.getblock(node.getbestblockhash())["height"]} credit: {get_credit_pool_amount(node)}')
+        assert_equal(new_total, get_credit_pool_amount(node))
+        node.generate(1)
+        reward = 6132959502
+        new_total += reward
+        assert_equal(new_total, get_credit_pool_amount(node))
+
+        self.send_tx(create_assetlock(node, coin, locked_1, pubkey))
+        new_total += reward + locked_1
+        node.generate(1)
+        assert_equal(new_total, get_credit_pool_amount(node))
+
+
 if __name__ == '__main__':
     AssetLocksTest().main()

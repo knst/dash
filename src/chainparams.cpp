@@ -1021,9 +1021,9 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].bit = 10;
         consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].nStartTime = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].nTimeout = 999999999999ULL;
-        consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].nWindowSize = 1000;
-        consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].nThresholdStart = 800; // 80% of 300
-        consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].nThresholdMin = 600;   // 60% of 300
+        consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].nWindowSize = 1030;
+        consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].nThresholdStart = 800; // 80% of 1000
+        consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].nThresholdMin = 600;   // 60% of 1000
         consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].nFalloffCoeff = 5;     // this corresponds to 10 periods
 
         // The best chain should have at least this much work.
