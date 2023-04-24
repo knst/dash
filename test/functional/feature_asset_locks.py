@@ -502,8 +502,9 @@ class AssetLocksTest(DashTestFramework):
         new_total += reward
         assert_equal(new_total, get_credit_pool_amount(node))
 
-        self.send_tx(create_assetlock(node, coin, locked_1, pubkey))
-        new_total += reward + locked_1
+        coin = coins.pop()
+        self.send_tx(create_assetlock(node, coin, COIN, pubkey))
+        new_total += reward + COIN
         node.generate(1)
         assert_equal(new_total, get_credit_pool_amount(node))
 
