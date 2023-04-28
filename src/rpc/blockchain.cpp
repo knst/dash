@@ -1580,6 +1580,8 @@ UniValue getblockchaininfo(const JSONRPCRequest& request)
     BuriedForkDescPushBack(softforks, "csv", consensusParams.CSVHeight);
     BuriedForkDescPushBack(softforks, "dip0001", consensusParams.DIP0001Height);
     BuriedForkDescPushBack(softforks, "dip0008", consensusParams.DIP0008Height);
+    BuriedForkDescPushBack(softforks, "dip0020", consensusParams.DIP0020Height);
+    BuriedForkDescPushBack(softforks, "dip0024", consensusParams.DIP0024Height);
     for (int pos = Consensus::DEPLOYMENT_TESTDUMMY + 1; pos != Consensus::MAX_VERSION_BITS_DEPLOYMENTS; ++pos) {
         BIP9SoftForkDescPushBack(softforks, VersionBitsDeploymentInfo[pos].name, consensusParams, static_cast<Consensus::DeploymentPos>(pos));
     }

@@ -153,6 +153,8 @@ class BlockchainTest(BitcoinTestFramework):
             'csv': {'type': 'buried', 'active': False, 'height': 432},
             'dip0001': { 'type': 'buried', 'active': False, 'height': 2000},
             'dip0008': { 'type': 'buried', 'active': False, 'height': 432},
+            'dip0020': { 'type': 'buried', 'active': False, 'height': 300},
+            'dip0024': { 'type': 'buried', 'active': False, 'height': 900},
             'bip147': {
                'type': 'bip9',
                'bip9': {
@@ -188,24 +190,6 @@ class BlockchainTest(BitcoinTestFramework):
                 },
                'active': False},
             'realloc': {
-                'type': 'bip9',
-                'bip9': {
-                    'status': 'defined',
-                    'start_time': 0,
-                    'timeout': 999999999999,
-                    'since': 0
-                },
-                'active': False},
-            'dip0020': {
-                'type': 'bip9',
-                'bip9': {
-                    'status': 'locked_in',
-                    'start_time': 0,
-                    'timeout': 999999999999,
-                    'since': 200
-                },
-                'active': False},
-            'dip0024': {
                 'type': 'bip9',
                 'bip9': {
                     'status': 'defined',
