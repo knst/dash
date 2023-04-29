@@ -15,7 +15,6 @@ namespace Consensus {
 
 enum DeploymentPos {
     DEPLOYMENT_TESTDUMMY,
-    DEPLOYMENT_BIP147,  // Deployment of BIP147 (NULLDUMMY)
     DEPLOYMENT_DIP0003, // Deployment of DIP0002 and DIP0003 (txv3 and deterministic MN lists)
     DEPLOYMENT_REALLOC, // Deployment of Block Reward Reallocation
     DEPLOYMENT_V19,     // Deployment of Basic BLS, AssetLocks
@@ -73,6 +72,8 @@ struct Params {
     int BIP65Height;
     /** Block height at which BIP66 becomes active */
     int BIP66Height;
+    // Deployment of BIP147 (NULLDUMMY)
+    int BIP147Height;
     /** Block height at which CSV (BIP68, BIP112 and BIP113) becomes active */
     int CSVHeight;
     /** Block height at which DIP0001 becomes active */

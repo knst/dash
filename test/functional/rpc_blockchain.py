@@ -150,28 +150,12 @@ class BlockchainTest(BitcoinTestFramework):
             'bip34': {'type': 'buried', 'active': False, 'height': 500},
             'bip66': {'type': 'buried', 'active': False, 'height': 1251},
             'bip65': {'type': 'buried', 'active': False, 'height': 1351},
+            'bip147': { 'type': 'buried', 'active': False, 'height': 432},
             'csv': {'type': 'buried', 'active': False, 'height': 432},
             'dip0001': { 'type': 'buried', 'active': False, 'height': 2000},
             'dip0008': { 'type': 'buried', 'active': False, 'height': 432},
             'dip0020': { 'type': 'buried', 'active': False, 'height': 300},
             'dip0024': { 'type': 'buried', 'active': False, 'height': 900},
-            'bip147': {
-               'type': 'bip9',
-               'bip9': {
-                   'status': 'started',
-                   'bit': 2,
-                   'start_time': 0,
-                   'timeout': 999999999999,
-                   'since': 144,
-                   'statistics': {
-                       'period': 144,
-                       'threshold': 108,
-                       'elapsed': 57,
-                       'count': 57,
-                       'possible': True
-                   },
-                },
-               'active': False},
             'dip0003': {
                'type': 'bip9',
                'bip9': {
