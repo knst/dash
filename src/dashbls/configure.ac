@@ -783,3 +783,4 @@ AC_OUTPUT
 
 dnl Peplace conflict-prone PACKAGE-prefixed macros with DASHBLS
 sed -i.old 's/PACKAGE/DASHBLS/g' depends/relic/include/relic_conf.h
+sed -i.old 's/PACKAGE/DASHBLS/g' config.status
