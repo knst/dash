@@ -17,8 +17,8 @@ class CDSNotificationInterface : public CValidationInterface
 {
 public:
     explicit CDSNotificationInterface(CConnman& _connman,
-                                      std::unique_ptr<CMasternodeSync>& _mn_sync, std::unique_ptr<CDeterministicMNManager>& _dmnman,
-                                      std::unique_ptr<CGovernanceManager>& _govman, std::unique_ptr<LLMQContext>& _llmq_ctx);
+                                      CMasternodeSync &_mn_sync, std::unique_ptr<CDeterministicMNManager>& _dmnman,
+                                      CGovernanceManager& _govman, std::unique_ptr<LLMQContext>& _llmq_ctx);
     virtual ~CDSNotificationInterface() = default;
 
     // a small helper to initialize current block height in sub-modules on startup
@@ -40,9 +40,9 @@ protected:
 private:
     CConnman& connman;
 
-    std::unique_ptr<CMasternodeSync>& m_mn_sync;
+    CMasternodeSync& m_mn_sync;
     std::unique_ptr<CDeterministicMNManager>& dmnman;
-    std::unique_ptr<CGovernanceManager>& govman;
+    CGovernanceManager& govman;
 
     std::unique_ptr<LLMQContext>& llmq_ctx;
 };

@@ -1947,8 +1947,10 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     }
 #endif
 
+    assert(masternodeSync != nullptr);
+    assert(governance != nullptr);
     pdsNotificationInterface = new CDSNotificationInterface(
-        *node.connman, ::masternodeSync, ::deterministicMNManager, ::governance, node.llmq_ctx
+        *node.connman, *::masternodeSync, ::deterministicMNManager, *::governance, node.llmq_ctx
     );
     RegisterValidationInterface(pdsNotificationInterface);
 
