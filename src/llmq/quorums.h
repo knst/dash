@@ -218,8 +218,8 @@ private:
     CDKGSessionManager& dkgManager;
     CQuorumBlockProcessor& quorumBlockProcessor;
 
-    const std::unique_ptr<CMasternodeSync>& m_mn_sync;
-    const std::unique_ptr<PeerManager>& m_peerman;
+    const CMasternodeSync& m_mn_sync;
+    PeerManager& m_peerman;
 
     mutable RecursiveMutex cs_map_quorums;
     mutable std::map<Consensus::LLMQType, unordered_lru_cache<uint256, CQuorumPtr, StaticSaltedHasher>> mapQuorumsCache GUARDED_BY(cs_map_quorums);
@@ -231,8 +231,8 @@ private:
 
 public:
     CQuorumManager(CEvoDB& _evoDb, CConnman& _connman, CBLSWorker& _blsWorker, CQuorumBlockProcessor& _quorumBlockProcessor,
-                   CDKGSessionManager& _dkgManager, const std::unique_ptr<CMasternodeSync>& mnSync,
-                   const std::unique_ptr<PeerManager>& peerman);
+                   CDKGSessionManager& _dkgManager, const CMasternodeSync& mnSync,
+                   PeerManager& peerman);
     ~CQuorumManager() { Stop(); };
 
     void Start();

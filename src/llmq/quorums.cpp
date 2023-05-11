@@ -188,8 +188,8 @@ bool CQuorum::ReadContributions(CEvoDB& evoDb)
 }
 
 CQuorumManager::CQuorumManager(CEvoDB& _evoDb, CConnman& _connman, CBLSWorker& _blsWorker, CQuorumBlockProcessor& _quorumBlockProcessor,
-                               CDKGSessionManager& _dkgManager, const std::unique_ptr<CMasternodeSync>& mn_sync,
-                               const std::unique_ptr<PeerManager>& peerman) :
+                               CDKGSessionManager& _dkgManager, const CMasternodeSync& mn_sync,
+                               PeerManager& peerman) :
     m_evoDb(_evoDb),
     connman(_connman),
     blsWorker(_blsWorker),
@@ -272,7 +272,7 @@ void CQuorumManager::TriggerQuorumDataRecoveryThreads(const CBlockIndex* pIndex)
 
 void CQuorumManager::UpdatedBlockTip(const CBlockIndex* pindexNew, bool fInitialDownload) const
 {
-    if (!m_mn_sync->IsBlockchainSynced()) {
+    if (!m_mn_sync.IsBlockchainSynced()) {
         return;
     }
 
@@ -619,7 +619,7 @@ void CQuorumManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, C
     auto errorHandler = [&](const std::string& strError, int nScore = 10) {
         LogPrint(BCLog::LLMQ, "CQuorumManager::%s -- %s: %s, from peer=%d\n", strFunc, msg_type, strError, pfrom.GetId());
         if (nScore > 0) {
-            m_peerman->Misbehaving(pfrom.GetId(), nScore);
+            m_peerman.Misbehaving(pfrom.GetId(), nScore);
         }
     };
 
@@ -860,7 +860,7 @@ void CQuorumManager::StartQuorumDataRecoveryThread(const CQuorumCPtr pQuorum, co
         };
         printLog("Start");
 
-        while (!m_mn_sync->IsBlockchainSynced() && !quorumThreadInterrupt) {
+        while (!m_mn_sync.IsBlockchainSynced() && !quorumThreadInterrupt) {
             quorumThreadInterrupt.sleep_for(std::chrono::seconds(nRequestTimeout));
         }
 

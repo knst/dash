@@ -25,8 +25,8 @@ std::unique_ptr<CChainLocksHandler> chainLocksHandler;
 
 CChainLocksHandler::CChainLocksHandler(CTxMemPool& _mempool, CConnman& _connman, CSporkManager& sporkManager,
                                        CSigningManager& _sigman, CSigSharesManager& _shareman, CQuorumManager& _qman,
-                                       const std::unique_ptr<CMasternodeSync>& mn_sync,
-                                       const std::unique_ptr<PeerManager>& peerman) :
+                                       const CMasternodeSync& mn_sync,
+                                       PeerManager &peerman) :
     connman(_connman),
     mempool(_mempool),
     spork_manager(sporkManager),
@@ -128,7 +128,7 @@ void CChainLocksHandler::ProcessNewChainLock(const NodeId from, const llmq::CCha
     if (!VerifyChainLock(clsig)) {
         LogPrint(BCLog::CHAINLOCKS, "CChainLocksHandler::%s -- invalid CLSIG (%s), peer=%d\n", __func__, clsig.ToString(), from);
         if (from != -1) {
-            m_peerman->Misbehaving(from, 10);
+            m_peerman.Misbehaving(from, 10);
         }
         return;
     }
@@ -241,7 +241,7 @@ void CChainLocksHandler::TrySignChainTip()
         return;
     }
 
-    if (!m_mn_sync->IsBlockchainSynced()) {
+    if (!m_mn_sync.IsBlockchainSynced()) {
         return;
     }
 
@@ -357,7 +357,7 @@ void CChainLocksHandler::TransactionAddedToMempool(const CTransactionRef& tx, in
 
 void CChainLocksHandler::BlockConnected(const std::shared_ptr<const CBlock>& pblock, const CBlockIndex* pindex)
 {
-    if (!m_mn_sync->IsBlockchainSynced()) {
+    if (!m_mn_sync.IsBlockchainSynced()) {
         return;
     }
 
@@ -624,7 +624,7 @@ bool CChainLocksHandler::InternalHasConflictingChainLock(int nHeight, const uint
 
 void CChainLocksHandler::Cleanup()
 {
-    if (!m_mn_sync->IsBlockchainSynced()) {
+    if (!m_mn_sync.IsBlockchainSynced()) {
         return;
     }
 
