@@ -2325,7 +2325,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     ::coinJoinServer = std::make_unique<CCoinJoinServer>(*node.mempool, *node.connman, *::masternodeSync);
 #ifdef ENABLE_WALLET
     if (!ignores_incoming_txs) {
-        ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*node.connman, ::masternodeSync);
+        ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*node.connman, *::masternodeSync);
     }
 #endif // ENABLE_WALLET
 
