@@ -36,7 +36,7 @@ private:
     CEvoDB& m_evoDb;
     CConnman& connman;
 
-    const std::unique_ptr<PeerManager>& m_peerman;
+    PeerManager& m_peerman;
 
     // TODO cleanup
     mutable CCriticalSection minableCommitmentsCs;
@@ -46,7 +46,7 @@ private:
     mutable std::map<Consensus::LLMQType, unordered_lru_cache<uint256, bool, StaticSaltedHasher>> mapHasMinedCommitmentCache GUARDED_BY(minableCommitmentsCs);
 
 public:
-    explicit CQuorumBlockProcessor(CEvoDB& _evoDb, CConnman& _connman, const std::unique_ptr<PeerManager>& peerman);
+    explicit CQuorumBlockProcessor(CEvoDB& _evoDb, CConnman& _connman, PeerManager &peerman);
 
     bool UpgradeDB();
 
