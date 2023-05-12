@@ -16,7 +16,7 @@
 
 #include <string>
 
-extern const std::string CBLSIG_REQUESTID_PREFIX = "clsig";
+extern const std::string MNEHF_REQUESTID_PREFIX = "mnhf";
 
 bool MNHFTx::Verify(const CBlockIndex* pQuorumIndex) const
 {
@@ -29,7 +29,7 @@ bool MNHFTx::Verify(const CBlockIndex* pQuorumIndex) const
     assert(llmq_params_opt.has_value());
     int signOffset{llmq_params_opt->dkgInterval};
 
-    const uint256 requestId = ::SerializeHash(std::make_pair(CBLSIG_REQUESTID_PREFIX, pQuorumIndex->nHeight));
+    const uint256 requestId = ::SerializeHash(std::make_pair(MNEHF_REQUESTID_PREFIX, nVersion));
     return llmq::CSigningManager::VerifyRecoveredSig(llmqType, *llmq::quorumManager, pQuorumIndex->nHeight, requestId, pQuorumIndex->GetBlockHash(), sig, 0) ||
            llmq::CSigningManager::VerifyRecoveredSig(llmqType, *llmq::quorumManager, pQuorumIndex->nHeight, requestId, pQuorumIndex->GetBlockHash(), sig, signOffset);
 }
