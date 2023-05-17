@@ -15,7 +15,6 @@ namespace Consensus {
 
 enum DeploymentPos {
     DEPLOYMENT_TESTDUMMY,
-    DEPLOYMENT_REALLOC, // Deployment of Block Reward Reallocation
     DEPLOYMENT_V19,     // Deployment of Basic BLS, AssetLocks
     DEPLOYMENT_V20,     // Deployment of EHF, LLMQ Randomness Beacon
     // NOTE: Also add new deployments to VersionBitsDeploymentInfo in versionbits.cpp
@@ -84,7 +83,7 @@ struct Params {
     uint256 DIP0003EnforcementHash;
     /** Block height at which DIP0008 becomes active */
     int DIP0008Height;
-    /** Block height at which BRR becomes active */
+    /** Block height at which BRR (Block Reward Reallocation) becomes active */
     int BRRHeight;
     /** Block height at which DIP0020, DIP0021 and LLMQ_100_67 quorums become active */
     int DIP0020Height;

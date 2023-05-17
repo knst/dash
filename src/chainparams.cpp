@@ -180,15 +180,6 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999; // December 31, 2008
 
-        // Deployment of Block Reward Reallocation
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].bit = 5;
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nStartTime = 1601510400; // Oct 1st, 2020
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nTimeout = 1633046400; // Oct 1st, 2021
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nWindowSize = 4032;
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nThresholdStart = 3226; // 80% of 4032
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nThresholdMin = 2420; // 60% of 4032
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nFalloffCoeff = 5; // this corresponds to 10 periods
-
         // Deployment of Deployment of Basic BLS, AssetLocks, EHF
         consensus.vDeployments[Consensus::DEPLOYMENT_V19].bit = 8;
         consensus.vDeployments[Consensus::DEPLOYMENT_V19].nStartTime = 1682380800;     // Tuesday, April 25, 2023 0:00:00
@@ -381,15 +372,6 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999; // December 31, 2008
 
-        // Deployment of Block Reward Reallocation
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].bit = 5;
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nStartTime = 1598918400; // Sep 1st, 2020
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nTimeout = 999999999999ULL;
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nWindowSize = 100;
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nThresholdStart = 80; // 80% of 100
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nThresholdMin = 60; // 60% of 100
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nFalloffCoeff = 5; // this corresponds to 10 periods
-
         // Deployment of Deployment of Basic BLS, AssetLocks, EHF
         consensus.vDeployments[Consensus::DEPLOYMENT_V19].bit = 8;
         consensus.vDeployments[Consensus::DEPLOYMENT_V19].nStartTime = 1678838400;     // Wed, March 15, 2023 0:00:00
@@ -554,15 +536,6 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999; // December 31, 2008
-
-        // Deployment of Block Reward Reallocation
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].bit = 5;
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nStartTime = 1598918400; // Sep 1st, 2020
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nTimeout = 999999999999ULL;
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nWindowSize = 100;
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nThresholdStart = 80; // 80% of 100
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nThresholdMin = 60; // 60% of 100
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nFalloffCoeff = 5; // this corresponds to 10 periods
 
         // Deployment of Deployment of Basic BLS, AssetLocks, EHF
         consensus.vDeployments[Consensus::DEPLOYMENT_V19].bit = 8;
@@ -800,13 +773,6 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 999999999999ULL;
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].bit = 5;
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nStartTime = 0;
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nTimeout = 999999999999ULL;
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nWindowSize = 500;
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nThresholdStart = 400; // 80%
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nThresholdMin = 300; // 60%
-        consensus.vDeployments[Consensus::DEPLOYMENT_REALLOC].nFalloffCoeff = 5;
 
         // Deployment of Deployment of Basic BLS, AssetLocks, EHF
         consensus.vDeployments[Consensus::DEPLOYMENT_V19].bit = 8;
