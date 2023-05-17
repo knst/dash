@@ -1580,6 +1580,7 @@ UniValue getblockchaininfo(const JSONRPCRequest& request)
     BuriedForkDescPushBack(softforks,"bip147", consensusParams.BIP147Height);
     BuriedForkDescPushBack(softforks, "csv", consensusParams.CSVHeight);
     BuriedForkDescPushBack(softforks, "dip0001", consensusParams.DIP0001Height);
+    BuriedForkDescPushBack(softforks, "dip0003", consensusParams.DIP0003Height);
     BuriedForkDescPushBack(softforks, "dip0008", consensusParams.DIP0008Height);
     BuriedForkDescPushBack(softforks, "dip0020", consensusParams.DIP0020Height);
     BuriedForkDescPushBack(softforks, "dip0024", consensusParams.DIP0024Height);
