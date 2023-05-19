@@ -17,8 +17,8 @@ class CDSNotificationInterface : public CValidationInterface
 {
 public:
     explicit CDSNotificationInterface(CConnman& _connman,
-                                      CMasternodeSync &_mn_sync, std::unique_ptr<CDeterministicMNManager>& _dmnman,
-                                      CGovernanceManager& _govman, std::unique_ptr<LLMQContext>& _llmq_ctx);
+                                      CMasternodeSync &_mn_sync, const std::unique_ptr<CDeterministicMNManager>& _dmnman,
+                                      CGovernanceManager& _govman, const std::unique_ptr<LLMQContext>& _llmq_ctx);
     virtual ~CDSNotificationInterface() = default;
 
     // a small helper to initialize current block height in sub-modules on startup
@@ -41,10 +41,10 @@ private:
     CConnman& connman;
 
     CMasternodeSync& m_mn_sync;
-    std::unique_ptr<CDeterministicMNManager>& dmnman;
+    const std::unique_ptr<CDeterministicMNManager>& dmnman;
     CGovernanceManager& govman;
 
-    std::unique_ptr<LLMQContext>& llmq_ctx;
+    const std::unique_ptr<LLMQContext>& llmq_ctx;
 };
 
 #endif // BITCOIN_DSNOTIFICATIONINTERFACE_H

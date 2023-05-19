@@ -1296,9 +1296,9 @@ void CoinsViews::InitCache()
 }
 
 CChainState::CChainState(BlockManager& blockman,
-                         std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
-                         std::unique_ptr<llmq::CInstantSendManager>& isman,
-                         std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,
+                         const std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
+                         const std::unique_ptr<llmq::CInstantSendManager>& isman,
+                         const std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,
                          CEvoDB& evoDb,
                          CTxMemPool& mempool,
                          uint256 from_snapshot_blockhash)
@@ -5656,9 +5656,9 @@ std::vector<CChainState*> ChainstateManager::GetAll()
     return out;
 }
 
-CChainState& ChainstateManager::InitializeChainstate(std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
-                                                     std::unique_ptr<llmq::CInstantSendManager>& isman,
-                                                     std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,
+CChainState& ChainstateManager::InitializeChainstate(const std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
+                                                     const std::unique_ptr<llmq::CInstantSendManager>& isman,
+                                                     const std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,
                                                      CEvoDB& evoDb,
                                                      CTxMemPool& mempool,
                                                      const uint256& snapshot_blockhash)
