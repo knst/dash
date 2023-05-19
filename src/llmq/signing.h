@@ -170,7 +170,7 @@ private:
     CConnman& connman;
     const CQuorumManager& qman;
 
-    PeerManager& m_peerman;
+    const std::unique_ptr<PeerManager>& m_peerman;
 
     // Incoming and not verified yet
     std::unordered_map<NodeId, std::list<std::shared_ptr<const CRecoveredSig>>> pendingRecoveredSigs GUARDED_BY(cs);
@@ -184,7 +184,7 @@ private:
 
 public:
     CSigningManager(CConnman& _connman, const CQuorumManager& _qman,
-                    PeerManager& peerman, bool fMemory, bool fWipe);
+                    const std::unique_ptr<PeerManager>& peerman, bool fMemory, bool fWipe);
 
     bool AlreadyHave(const CInv& inv) const;
     bool GetRecoveredSigForGetData(const uint256& hash, CRecoveredSig& ret) const;

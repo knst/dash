@@ -186,7 +186,7 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
 #endif // ENABLE_WALLET
 
     deterministicMNManager.reset(new CDeterministicMNManager(*m_node.evodb, *m_node.connman));
-    m_node.llmq_ctx = std::make_unique<LLMQContext>(*m_node.evodb, *m_node.mempool, *m_node.connman, *sporkManager, *m_node.peerman, true, false);
+    m_node.llmq_ctx = std::make_unique<LLMQContext>(*m_node.evodb, *m_node.mempool, *m_node.connman, *sporkManager, m_node.peerman, true, false);
 
     // Start script-checking threads. Set g_parallel_script_checks to true so they are used.
     constexpr int script_check_threads = 2;

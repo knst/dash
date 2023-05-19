@@ -33,7 +33,7 @@ private:
     CDKGDebugManager& dkgDebugManager;
     CQuorumBlockProcessor& quorumBlockProcessor;
 
-    PeerManager& m_peerman;
+    const std::unique_ptr<PeerManager>& m_peerman;
 
     //TODO name struct instead of std::pair
     std::map<std::pair<Consensus::LLMQType, int>, CDKGSessionHandler> dkgSessionHandlers;
@@ -60,7 +60,7 @@ private:
 public:
     CDKGSessionManager(CConnman& _connman, CBLSWorker& _blsWorker, CDKGDebugManager& _dkgDebugManager,
                        CQuorumBlockProcessor& _quorumBlockProcessor, CSporkManager& sporkManager,
-                       PeerManager &peerman, bool unitTests, bool fWipe);
+                       const std::unique_ptr<PeerManager>& peerman, bool unitTests, bool fWipe);
     ~CDKGSessionManager() = default;
 
     void StartThreads();

@@ -25,8 +25,8 @@ std::unique_ptr<CChainLocksHandler> chainLocksHandler;
 
 CChainLocksHandler::CChainLocksHandler(CTxMemPool& _mempool, CConnman& _connman, CSporkManager& sporkManager,
                                        CSigningManager& _sigman, CSigSharesManager& _shareman, CQuorumManager& _qman,
-                                       const CMasternodeSync& mn_sync,
-                                       PeerManager &peerman) :
+                                       CMasternodeSync& mn_sync,
+                                       const std::unique_ptr<PeerManager>& peerman) :
     connman(_connman),
     mempool(_mempool),
     spork_manager(sporkManager),
@@ -128,7 +128,7 @@ void CChainLocksHandler::ProcessNewChainLock(const NodeId from, const llmq::CCha
     if (!VerifyChainLock(clsig)) {
         LogPrint(BCLog::CHAINLOCKS, "CChainLocksHandler::%s -- invalid CLSIG (%s), peer=%d\n", __func__, clsig.ToString(), from);
         if (from != -1) {
-            m_peerman.Misbehaving(from, 10);
+            m_peerman->Misbehaving(from, 10);
         }
         return;
     }

@@ -212,7 +212,7 @@ private:
     CChainLocksHandler& clhandler;
 
     const std::unique_ptr<CMasternodeSync>& m_mn_sync;
-    PeerManager& m_peerman;
+    const std::unique_ptr<PeerManager>& m_peerman;
 
     std::atomic<bool> fUpgradedDB{false};
 
@@ -263,7 +263,7 @@ public:
     explicit CInstantSendManager(CTxMemPool& _mempool, CConnman& _connman, CSporkManager& sporkManager,
                                  CQuorumManager& _qman, CSigningManager& _sigman, CSigSharesManager& _shareman,
                                  CChainLocksHandler& _clhandler, const std::unique_ptr<CMasternodeSync>& mn_sync,
-                                 PeerManager &peerman, bool unitTests, bool fWipe) :
+                                 const std::unique_ptr<PeerManager>& peerman, bool unitTests, bool fWipe) :
         db(unitTests, fWipe), connman(_connman), mempool(_mempool), spork_manager(sporkManager), qman(_qman), sigman(_sigman), shareman(_shareman),
         clhandler(_clhandler), m_mn_sync(mn_sync), m_peerman(peerman)
     {

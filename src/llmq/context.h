@@ -28,11 +28,11 @@ class CInstantSendManager;
 
 struct LLMQContext {
     LLMQContext(CEvoDB& evo_db, CTxMemPool& mempool, CConnman& connman, CSporkManager& sporkman,
-                PeerManager &peerman, bool unit_tests, bool wipe);
+                const std::unique_ptr<PeerManager>& peerman, bool unit_tests, bool wipe);
     ~LLMQContext();
 
     void Create(CEvoDB& evo_db, CTxMemPool& mempool, CConnman& connman, CSporkManager& sporkman,
-                PeerManager& peerman, bool unit_tests, bool wipe);
+                const std::unique_ptr<PeerManager>& peerman, bool unit_tests, bool wipe);
     void Destroy();
     void Interrupt();
     void Start();
