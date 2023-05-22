@@ -450,6 +450,7 @@ CDeterministicMNList CDeterministicMNList::ApplyDiff(const CBlockIndex* pindex, 
         if (!dmn) {
             throw(std::runtime_error(strprintf("%s: can't find a removed masternode, id=%d", __func__, id)));
         }
+        LogPrintf("Apply-diff: remove MN: %s\n", dmn->proTxHash.ToString());
         result.RemoveMN(dmn->proTxHash);
     }
     for (const auto& dmn : diff.addedMNs) {
@@ -850,6 +851,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, const C
                 // This might only happen with a ProRegTx that refers an external collateral
                 // In that case the new ProRegTx will replace the old one. This means the old one is removed
                 // and the new one is added like a completely fresh one, which is also at the bottom of the payment list
+                LogPrintf("build new list from block: remove MN: %s\n", replacedDmn->proTxHash.ToString());
                 newList.RemoveMN(replacedDmn->proTxHash);
                 if (debugLogs) {
                     LogPrintf("CDeterministicMNManager::%s -- MN %s removed from list because collateral was used for a new ProRegTx. collateralOutpoint=%s, nHeight=%d, mapCurMNs.allMNsCount=%d\n",
@@ -1007,6 +1009,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, const C
         for (const auto& in : tx.vin) {
             auto dmn = newList.GetMNByCollateral(in.prevout);
             if (dmn && dmn->collateralOutpoint == in.prevout) {
+                LogPrintf("BuildNewListFromBlock quantum : remove MN: %s\n", dmn->proTxHash.ToString());
                 newList.RemoveMN(dmn->proTxHash);
 
                 if (debugLogs) {
