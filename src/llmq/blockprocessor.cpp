@@ -146,8 +146,7 @@ bool CQuorumBlockProcessor::ProcessBlock(const CBlock& block, const CBlockIndex*
         return true;
     }
 
-    if (utils::IsV19Active(pindex->pprev))
-        bls::bls_legacy_scheme.store(false);
+    bls::bls_legacy_scheme.store(!utils::IsV19Active(pindex->pprev));
 
     llmq::utils::PreComputeQuorumMembers(pindex);
 
@@ -307,8 +306,7 @@ bool CQuorumBlockProcessor::UndoBlock(const CBlock& block, const CBlockIndex* pi
 {
     AssertLockHeld(cs_main);
 
-    if (!utils::IsV19Active(pindex->pprev))
-        bls::bls_legacy_scheme.store(true);
+    bls::bls_legacy_scheme.store(!utils::IsV19Active(pindex->pprev));
 
     llmq::utils::PreComputeQuorumMembers(pindex, true);
 

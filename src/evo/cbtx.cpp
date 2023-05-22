@@ -77,7 +77,17 @@ bool CheckCbTxMerkleRoots(const CBlock& block, const CBlockIndex* pindex, const 
             return false;
         }
         if (calculatedMerkleRoot != cbTx.merkleRootMNList) {
-            return state.Invalid(ValidationInvalidReason::CONSENSUS, false, REJECT_INVALID, "bad-cbtx-mnmerkleroot");
+            uint256 calculatedMerkleRoot_old = calculatedMerkleRoot;
+            bls::switchSignatureSchemeState();
+            bool fMerkleResult = CalcCbTxMerkleRootMNList(block, pindex->pprev, calculatedMerkleRoot, state, view);
+            if (calculatedMerkleRoot != cbTx.merkleRootMNList) {
+                LogPrintf("%s(): merkle tx failed even after scheme switch to %s, legacy: %s, basic: %s\n", __func__, bls::getSignatureSchemeState(), calculatedMerkleRoot_old.ToString(), calculatedMerkleRoot.ToString());
+                bls::switchSignatureSchemeState();
+
+                return state.Invalid(ValidationInvalidReason::CONSENSUS, false, REJECT_INVALID, "bad-cbtx-mnmerkleroot");
+            }
+            LogPrintf("%s(): merkle tx passed after scheme switch to %s, legacy: %s, basic: %s\n", __func__, bls::getSignatureSchemeState(), calculatedMerkleRoot_old.ToString(), calculatedMerkleRoot.ToString());
+            bls::switchSignatureSchemeState();
         }
 
         int64_t nTime3 = GetTimeMicros(); nTimeMerkleMNL += nTime3 - nTime2;
@@ -121,7 +131,7 @@ bool CalcCbTxMerkleRootMNList(const CBlock& block, const CBlockIndex* pindexPrev
         int64_t nTime2 = GetTimeMicros(); nTimeDMN += nTime2 - nTime1;
         LogPrint(BCLog::BENCHMARK, "            - BuildNewListFromBlock: %.2fms [%.2fs]\n", 0.001 * (nTime2 - nTime1), nTimeDMN * 0.000001);
 
-        bool v19active = llmq::utils::IsV19Active(pindexPrev);
+        bool v19active = !bls::bls_legacy_scheme.load();
         CSimplifiedMNList sml(tmpMNList, v19active);
 
         int64_t nTime3 = GetTimeMicros(); nTimeSMNL += nTime3 - nTime2;

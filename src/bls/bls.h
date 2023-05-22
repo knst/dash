@@ -30,6 +30,12 @@
 
 namespace bls {
     extern std::atomic<bool> bls_legacy_scheme;
+    inline void switchSignatureSchemeState() {
+        bls_legacy_scheme.store(!bls_legacy_scheme.load());
+    }
+    inline std::string getSignatureSchemeState() {
+        return bls_legacy_scheme.load() == true ? std::string("legacy") : std::string("basic");
+    }
 }
 
 // reversed BLS12-381
