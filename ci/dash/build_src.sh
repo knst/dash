@@ -54,14 +54,6 @@ bash -c "${MAYBE_BEAR} ${MAYBE_TOKEN} make ${MAKEJOBS} ${GOAL}" || ( echo "Build
 
 ccache --version | head -n 1 && ccache --show-stats
 
-if [[ ${USE_MEMORY_SANITIZER} == "true" ]]; then
-  # MemorySanitizer (MSAN) does not support tracking memory initialization done by
-  # using the Linux getrandom syscall. Avoid using getrandom by undefining
-  # HAVE_SYS_GETRANDOM. See https://github.com/google/sanitizers/issues/852 for
-  # details.
-  bash -c 'grep -v HAVE_SYS_GETRANDOM src/config/bitcoin-config.h > src/config/bitcoin-config.h.tmp && mv src/config/bitcoin-config.h.tmp src/config/bitcoin-config.h'
-fi
-
 if [ -n "$USE_VALGRIND" ]; then
     echo "valgrind in USE!"
     "${BASE_ROOT_DIR}/ci/test/wrap-valgrind.sh"
