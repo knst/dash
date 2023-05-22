@@ -459,6 +459,7 @@ private:
 
         CBLSPublicKey local_pub_key = oldValue.Get();
         CBLSPublicKeyVersionWrapper legacy_pub_key(local_pub_key, true);
+        CBLSPublicKeyVersionWrapper basic_pub_key(local_pub_key, false);
 
         auto oldHash = ::SerializeHash(oldValue);
         auto _oldHash = oldHash;
@@ -469,16 +470,18 @@ private:
 
             /* Recompute */
             oldHash = ::SerializeHash(legacy_pub_key);
+            auto basic_hash = ::SerializeHash(basic_pub_key);
+
             /* Reattempt */
             p = mnUniquePropertyMap.find(oldHash);
-            LogPrintf("%s(): attempting switch and revalidate, legacy: %s, basic: %s\n", __func__, oldHash.ToString(), _oldHash.ToString());
+            LogPrintf("%s(): attempting switch and revalidate, legacy: %s, basic: %s forced_basic: %s\n", __func__, oldHash.ToString(), _oldHash.ToString(), basic_hash.ToString());
             if (p == nullptr) {
                 LogPrintf("%s(): revalidate failed, still not found in mnUniquePropertyMap\n", __func__);
                 return false;
             }
         }
         if (p->first != dmn.proTxHash) {
-            if (switch_scheme) { 
+            if (switch_scheme) {
                 LogPrintf("%s(): revalidate failed, %s != %s\n", __func__, p->first.ToString(), dmn.proTxHash.ToString());
             }
             return false;
@@ -488,7 +491,7 @@ private:
         } else {
             mnUniquePropertyMap = mnUniquePropertyMap.set(oldHash, std::make_pair(dmn.proTxHash, p->second - 1));
         }
-        if (switch_scheme) { 
+        if (switch_scheme) {
             LogPrintf("%s(): revalidate successful\n", __func__);
         }
         return true;
