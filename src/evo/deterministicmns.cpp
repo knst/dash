@@ -636,9 +636,9 @@ void CDeterministicMNList::RemoveMN(const uint256& proTxHash)
         throw(std::runtime_error(strprintf("%s: Can't delete a masternode %s with a keyIDOwner=%s", __func__,
                 proTxHash.ToString(), EncodeDestination(PKHash(dmn->pdmnState->keyIDOwner)))));
     }
-    if (dmn->pdmnState->pubKeyOperator.Get().IsValid()) {
-        LogPrintf("%s(): pubKeyOperator is valid, pk: %s\n", __func__, dmn->pdmnState->pubKeyOperator.Get().ToString());
-    }
+    LogPrintf("%s(): pubKeyOperator is valid=%d, pk: %s\n", __func__,
+            dmn->pdmnState->pubKeyOperator.Get().IsValid(),
+            dmn->pdmnState->pubKeyOperator.Get().ToString());
     if (dmn->pdmnState->pubKeyOperator.Get().IsValid() && !DeleteUniquePropertyOrTransform(*dmn, dmn->pdmnState->pubKeyOperator)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
         throw(std::runtime_error(strprintf("%s: Can't delete a masternode %s with a pubKeyOperator=%s", __func__,
