@@ -445,12 +445,20 @@ CDeterministicMNList CDeterministicMNList::ApplyDiff(const CBlockIndex* pindex, 
     result.blockHash = pindex->GetBlockHash();
     result.nHeight = pindex->nHeight;
 
+    std::optional<bool> specificLegacyScheme = std::nullopt;
+    const CBlockIndex* v19activation = llmq::utils::V19ActivationIndex(pindex);
+    if (v19activation) {
+        if (pindex->nHeight < v19activation->nHeight) {
+            specificLegacyScheme = true;
+        }
+    }
+
     for (const auto& id : diff.removedMns) {
         auto dmn = result.GetMNByInternalId(id);
         if (!dmn) {
             throw(std::runtime_error(strprintf("%s: can't find a removed masternode, id=%d", __func__, id)));
         }
-        result.RemoveMN(dmn->proTxHash);
+        result.RemoveMN(dmn->proTxHash, specificLegacyScheme);
     }
     for (const auto& dmn : diff.addedMNs) {
         result.AddMN(dmn);
@@ -610,7 +618,7 @@ void CDeterministicMNList::UpdateMN(const CDeterministicMN& oldDmn, const CDeter
     UpdateMN(oldDmn, newState);
 }
 
-void CDeterministicMNList::RemoveMN(const uint256& proTxHash)
+void CDeterministicMNList::RemoveMN(const uint256& proTxHash, std::optional<bool> specificLegacyScheme)
 {
     auto dmn = GetMN(proTxHash);
     if (!dmn) {
@@ -636,7 +644,7 @@ void CDeterministicMNList::RemoveMN(const uint256& proTxHash)
         throw(std::runtime_error(strprintf("%s: Can't delete a masternode %s with a keyIDOwner=%s", __func__,
                 proTxHash.ToString(), EncodeDestination(PKHash(dmn->pdmnState->keyIDOwner)))));
     }
-    if (dmn->pdmnState->pubKeyOperator.Get().IsValid() && !DeleteUniqueProperty(*dmn, dmn->pdmnState->pubKeyOperator)) {
+    if (dmn->pdmnState->pubKeyOperator.Get().IsValid() && !DeleteUniqueProperty(*dmn, dmn->pdmnState->pubKeyOperator, specificLegacyScheme)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
         throw(std::runtime_error(strprintf("%s: Can't delete a masternode %s with a pubKeyOperator=%s", __func__,
                 proTxHash.ToString(), dmn->pdmnState->pubKeyOperator.Get().ToString())));
@@ -1141,7 +1149,6 @@ CDeterministicMNList CDeterministicMNManager::GetListForBlock(const CBlockIndex*
         listDiffIndexes.emplace_front(pindex);
         pindex = pindex->pprev;
     }
-
     for (const auto& diffIndex : listDiffIndexes) {
         const auto& diff = mnListDiffsCache.at(diffIndex->GetBlockHash());
         if (diff.HasChanges()) {

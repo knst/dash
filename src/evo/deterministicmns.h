@@ -391,7 +391,7 @@ public:
     void UpdateMN(const CDeterministicMN& oldDmn, const std::shared_ptr<const CDeterministicMNState>& pdmnState);
     void UpdateMN(const uint256& proTxHash, const std::shared_ptr<const CDeterministicMNState>& pdmnState);
     void UpdateMN(const CDeterministicMN& oldDmn, const CDeterministicMNStateDiff& stateDiff);
-    void RemoveMN(const uint256& proTxHash);
+    void RemoveMN(const uint256& proTxHash, std::optional<bool> specificLegacyScheme = std::nullopt);
 
     template <typename T>
     [[nodiscard]] bool HasUniqueProperty(const T& v) const
@@ -430,7 +430,7 @@ private:
         return true;
     }
     template <typename T>
-    [[nodiscard]] bool DeleteUniqueProperty(const CDeterministicMN& dmn, const T& oldValue)
+    [[nodiscard]] bool DeleteUniqueProperty(const CDeterministicMN& dmn, const T& oldValue, std::optional<bool> specificLegacyScheme = std::nullopt)
     {
         static const T nullValue;
         if (oldValue == nullValue) {
@@ -438,6 +438,34 @@ private:
         }
 
         auto oldHash = ::SerializeHash(oldValue);
+        auto p = mnUniquePropertyMap.find(oldHash);
+        if (p == nullptr || p->first != dmn.proTxHash) {
+            return false;
+        }
+        if (p->second == 1) {
+            mnUniquePropertyMap = mnUniquePropertyMap.erase(oldHash);
+        } else {
+            mnUniquePropertyMap = mnUniquePropertyMap.set(oldHash, std::make_pair(dmn.proTxHash, p->second - 1));
+        }
+        return true;
+    }
+    [[nodiscard]] bool DeleteUniqueProperty(const CDeterministicMN& dmn, const CBLSLazyPublicKey& oldValue, std::optional<bool> specificLegacyScheme = std::nullopt)
+    {
+        static const CBLSLazyPublicKey nullValue;
+        if (oldValue == nullValue) {
+            return false;
+        }
+
+        uint256 oldHash = uint256();
+        if (specificLegacyScheme.has_value() && specificLegacyScheme.value()) {
+            CBLSPublicKey local_pub_key = oldValue.Get();
+            CBLSPublicKeyVersionWrapper legacy_pub_key(local_pub_key, true);
+            oldHash = ::SerializeHash(legacy_pub_key);
+        }
+        else {
+            oldHash = ::SerializeHash(oldValue);
+        }
+
         auto p = mnUniquePropertyMap.find(oldHash);
         if (p == nullptr || p->first != dmn.proTxHash) {
             return false;
