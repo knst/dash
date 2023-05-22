@@ -112,12 +112,16 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 {
     int64_t nTimeStart = GetTimeMicros();
 
+    LogPrint(BCLog::MEMPOOL, "m-1");
     resetBlock();
 
+    LogPrint(BCLog::MEMPOOL, "m-2");
     pblocktemplate.reset(new CBlockTemplate());
 
+    LogPrint(BCLog::MEMPOOL, "m-3");
     if(!pblocktemplate.get())
         return nullptr;
+    LogPrint(BCLog::MEMPOOL, "m-4");
     CBlock* const pblock = &pblocktemplate->block; // pointer for convenience
 
     // Add dummy coinbase tx as first transaction
@@ -125,16 +129,20 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     pblocktemplate->vTxFees.push_back(-1); // updated at end
     pblocktemplate->vTxSigOps.push_back(-1); // updated at end
 
+    LogPrint(BCLog::MEMPOOL, "m-5");
     LOCK2(cs_main, m_mempool.cs);
 
     CBlockIndex* pindexPrev = ::ChainActive().Tip();
+    LogPrint(BCLog::MEMPOOL, "m-6");
     assert(pindexPrev != nullptr);
     nHeight = pindexPrev->nHeight + 1;
 
     bool fDIP0003Active_context = nHeight >= chainparams.GetConsensus().DIP0003Height;
     bool fDIP0008Active_context = nHeight >= chainparams.GetConsensus().DIP0008Height;
 
+    LogPrint(BCLog::MEMPOOL, "m-7");
     pblock->nVersion = ComputeBlockVersion(pindexPrev, chainparams.GetConsensus(), chainparams.BIP9CheckMasternodesUpgraded());
+    LogPrint(BCLog::MEMPOOL, "m-8");
     // -regtest only: allow overriding block.nVersion with
     // -blockversion=N to test forking scenarios
     if (chainparams.MineBlocksOnDemand())
@@ -147,13 +155,17 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                        ? nMedianTimePast
                        : pblock->GetBlockTime();
 
+    LogPrint(BCLog::MEMPOOL, "m-9");
     if (fDIP0003Active_context) {
         for (const Consensus::LLMQParams& params : llmq::utils::GetEnabledQuorumParams(pindexPrev)) {
+            LogPrint(BCLog::MEMPOOL, "m-dip-3_1");
             std::vector<CTransactionRef> vqcTx;
             if (quorum_block_processor.GetMineableCommitmentsTx(params,
                                                                 nHeight,
                                                                 vqcTx)) {
+                LogPrint(BCLog::MEMPOOL, "m-dip-3_2");
                 for (const auto& qcTx : vqcTx) {
+                    LogPrint(BCLog::MEMPOOL, "m-dip-3_3...");
                     pblock->vtx.emplace_back(qcTx);
                     pblocktemplate->vTxFees.emplace_back(0);
                     pblocktemplate->vTxSigOps.emplace_back(0);
@@ -166,6 +178,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     int nPackagesSelected = 0;
     int nDescendantsUpdated = 0;
+    LogPrint(BCLog::MEMPOOL, "m-txes...");
     addPackageTxs(nPackagesSelected, nDescendantsUpdated);
 
     int64_t nTime1 = GetTimeMicros();
@@ -182,6 +195,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
 
     // NOTE: unlike in bitcoin, we need to pass PREVIOUS block height here
+    LogPrint(BCLog::MEMPOOL, "m-subsidy...");
     CAmount blockReward = nFees + GetBlockSubsidy(pindexPrev->nBits, pindexPrev->nHeight, Params().GetConsensus());
 
     // Compute regular coinbase transaction.
@@ -189,8 +203,10 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     if (!fDIP0003Active_context) {
         coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
+        LogPrint(BCLog::MEMPOOL, "m-cbtx-1...");
     } else {
         coinbaseTx.vin[0].scriptSig = CScript() << OP_RETURN;
+        LogPrint(BCLog::MEMPOOL, "m-cbtx-2...");
 
         coinbaseTx.nVersion = 3;
         coinbaseTx.nType = TRANSACTION_COINBASE;
@@ -205,22 +221,29 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
         cbTx.nHeight = nHeight;
 
+        LogPrint(BCLog::MEMPOOL, "m-cbtx-3...");
         CValidationState state;
         if (!CalcCbTxMerkleRootMNList(*pblock, pindexPrev, cbTx.merkleRootMNList, state, ::ChainstateActive().CoinsTip())) {
+            LogPrint(BCLog::MEMPOOL, "m-cbtx-4...");
             throw std::runtime_error(strprintf("%s: CalcCbTxMerkleRootMNList failed: %s", __func__, FormatStateMessage(state)));
         }
         if (fDIP0008Active_context) {
+            LogPrint(BCLog::MEMPOOL, "m-cbtx-5...");
             if (!CalcCbTxMerkleRootQuorums(*pblock, pindexPrev, quorum_block_processor, cbTx.merkleRootQuorums, state)) {
+                LogPrint(BCLog::MEMPOOL, "m-cbtx-6...");
                 throw std::runtime_error(strprintf("%s: CalcCbTxMerkleRootQuorums failed: %s", __func__, FormatStateMessage(state)));
             }
         }
 
+        LogPrint(BCLog::MEMPOOL, "m-cbtx-7...");
         SetTxPayload(coinbaseTx, cbTx);
     }
 
     // Update coinbase transaction with additional info about masternode and governance payments,
     // get some info back to pass to getblocktemplate
+    LogPrint(BCLog::MEMPOOL, "m-cbtx-payments-1...");
     FillBlockPayments(spork_manager, governance_manager, coinbaseTx, nHeight, blockReward, pblocktemplate->voutMasternodePayments, pblocktemplate->voutSuperblockPayments);
+    LogPrint(BCLog::MEMPOOL, "m-cbtx-payments-2...");
 
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
     pblocktemplate->vTxFees[0] = -nFees;
@@ -233,6 +256,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     pblocktemplate->nPrevBits = pindexPrev->nBits;
     pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(*pblock->vtx[0]);
 
+    LogPrint(BCLog::MEMPOOL, "m-cbtx-payments-3...");
     CValidationState state;
     if (!TestBlockValidity(state, m_clhandler, m_evoDb, chainparams, *pblock, pindexPrev, false, false)) {
         throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));

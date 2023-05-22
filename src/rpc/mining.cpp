@@ -16,6 +16,7 @@
 #include <llmq/context.h>
 #include <llmq/chainlocks.h>
 #include <llmq/instantsend.h>
+#include <logging.h>
 #include <evo/evodb.h>
 #include <miner.h>
 #include <net.h>
@@ -118,17 +119,21 @@ static bool GenerateBlock(ChainstateManager& chainman, CBlock& block, uint64_t& 
 {
     block_hash.SetNull();
 
+    try {
+    LogPrint(BCLog::MEMPOOL, "check-a\n");
     {
         LOCK(cs_main);
         IncrementExtraNonce(&block, ::ChainActive().Tip(), extra_nonce);
+        LogPrint(BCLog::MEMPOOL, "check-increment\n");
     }
 
     CChainParams chainparams(Params());
 
-    while (max_tries > 0 && block.nNonce < std::numeric_limits<uint32_t>::max() && !CheckProofOfWork(block.GetHash(), block.nBits, chainparams.GetConsensus()) && !ShutdownRequested()) {
+    while (max_tries > 0 && block.nNonce < std::numeric_limits<uint32_t>::max() && !ShutdownRequested() && false) {
         ++block.nNonce;
         --max_tries;
     }
+    LogPrint(BCLog::MEMPOOL, "checked\n");
     if (max_tries == 0 || ShutdownRequested()) {
         return false;
     }
@@ -136,10 +141,18 @@ static bool GenerateBlock(ChainstateManager& chainman, CBlock& block, uint64_t& 
         return true;
     }
 
+    LogPrintf("ABABA_KNST-before shared ptr\n");
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
+    LogPrintf("ABABA_KNST-after shared ptr\n");
+    LogPrint(BCLog::MEMPOOL, "shared ptr\n");
     if (!chainman.ProcessNewBlock(chainparams, shared_pblock, true, nullptr)) {
         throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
     }
+    } catch (std::exception& e) {
+        LogPrint(BCLog::MEMPOOL, "exception: %s\n", e.what());
+        throw e;
+    }
+
 
     block_hash = block.GetHash();
     return true;
@@ -161,11 +174,16 @@ static UniValue generateBlocks(ChainstateManager& chainman, const CTxMemPool& me
     UniValue blockHashes(UniValue::VARR);
     while (nHeight < nHeightEnd && !ShutdownRequested())
     {
+        try {
+            LogPrint(BCLog::MEMPOOL, "a-1");
         std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(*sporkManager, *governance, quorum_block_processor, clhandler, isman, evodb, mempool, Params()).CreateNewBlock(coinbase_script));
+            LogPrint(BCLog::MEMPOOL, "a-2");
         if (!pblocktemplate.get())
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
+            LogPrint(BCLog::MEMPOOL, "a-3");
         CBlock *pblock = &pblocktemplate->block;
 
+            LogPrint(BCLog::MEMPOOL, "a-4");
         uint256 block_hash;
         if (!GenerateBlock(chainman, *pblock, nMaxTries, nExtraNonce, block_hash)) {
             break;
@@ -174,6 +192,10 @@ static UniValue generateBlocks(ChainstateManager& chainman, const CTxMemPool& me
         if (!block_hash.IsNull()) {
             ++nHeight;
             blockHashes.push_back(block_hash.GetHex());
+        }
+        } catch (const std::exception& e) {
+            LogPrint(BCLog::MEMPOOL, "excepted: %s\n", e.what());
+            throw e;
         }
     }
     return blockHashes;

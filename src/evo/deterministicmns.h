@@ -218,7 +218,8 @@ public:
                 const auto dmn = std::make_shared<CDeterministicMN>(deserialize, s, format_version);
                 mnMap = mnMap.set(dmn->proTxHash, dmn);
             } else {
-                AddMN(std::make_shared<CDeterministicMN>(deserialize, s, format_version), false);
+                const auto dmn = std::make_shared<CDeterministicMN>(deserialize, s, format_version);
+                AddMN(dmn, false);
             }
         }
     }
