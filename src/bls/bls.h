@@ -415,14 +415,21 @@ private:
     mutable uint256 hash;
 
 public:
-    CBLSLazyWrapper() :
+    CBLSLazyWrapper(bool fLegacy) :
             vecBytes(BLSObject::SerSize, 0),
-            bufLegacyScheme(bls::bls_legacy_scheme.load())
+            bufLegacyScheme(false)
     {
         // the all-zero buf is considered a valid buf, but the resulting object will return false for IsValid
         bufValid = true;
     }
 
+    CBLSLazyWrapper(const BLSObject& _obj, bool fLegacy) :
+        bufValid(false),
+        objInitialized(true),
+        obj(_obj),
+        bufLegacyScheme(fLegacy)
+    {
+    }
     explicit CBLSLazyWrapper(const CBLSLazyWrapper& r)
     {
         *this = r;
@@ -489,12 +496,13 @@ public:
         objInitialized = false;
         hash.SetNull();
     }
-
+/*
     template<typename Stream>
     inline void Unserialize(Stream& s) const
     {
         Unserialize(s, bufLegacyScheme);
     }
+    */
 
     void Set(const BLSObject& _obj)
     {

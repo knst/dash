@@ -74,9 +74,17 @@ public:
     CRecoveredSig() = default;
 
     CRecoveredSig(Consensus::LLMQType _llmqType, const uint256& _quorumHash, const uint256& _id, const uint256& _msgHash, const CBLSLazySignature& _sig) :
-                  CSigBase(_llmqType, _quorumHash, _id, _msgHash), sig(_sig) {UpdateHash();};
-    CRecoveredSig(Consensus::LLMQType _llmqType, const uint256& _quorumHash, const uint256& _id, const uint256& _msgHash, const CBLSSignature& _sig) :
-                  CSigBase(_llmqType, _quorumHash, _id, _msgHash) {const_cast<CBLSLazySignature&>(sig).Set(_sig); UpdateHash();};
+                  CSigBase(_llmqType, _quorumHash, _id, _msgHash),
+                  sig(_sig)
+    {
+        UpdateHash();
+    }
+    CRecoveredSig(Consensus::LLMQType _llmqType, const uint256& _quorumHash, const uint256& _id, const uint256& _msgHash, const CBLSSignature& _sig, bool fLegacy) :
+                  CSigBase(_llmqType, _quorumHash, _id, _msgHash),
+                  sig(_sig, fLegacy)
+    {
+        UpdateHash();
+    }
 
 private:
     // only in-memory
