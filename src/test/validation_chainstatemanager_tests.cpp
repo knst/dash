@@ -28,8 +28,8 @@ BOOST_FIXTURE_TEST_SUITE(validation_chainstatemanager_tests, ChainTestingSetup)
 BOOST_AUTO_TEST_CASE(chainstatemanager)
 {
     ChainstateManager& manager = *m_node.chainman;
-    CTxMemPool &mempool = *m_node.mempool;
-    CEvoDB &evodb = *m_node.evodb;
+    CTxMemPool& mempool = *m_node.mempool;
+    CEvoDB& evodb = *m_node.evodb;
     std::vector<CChainState*> chainstates;
     const CChainParams& chainparams = Params();
 

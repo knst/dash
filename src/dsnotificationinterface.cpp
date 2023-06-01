@@ -22,7 +22,7 @@
 #include <llmq/quorums.h>
 
 CDSNotificationInterface::CDSNotificationInterface(CConnman& _connman,
-                                                   CMasternodeSync &_mn_sync, const std::unique_ptr<CDeterministicMNManager>& _dmnman,
+                                                   CMasternodeSync& _mn_sync, const std::unique_ptr<CDeterministicMNManager>& _dmnman,
                                                    CGovernanceManager& _govman, const std::unique_ptr<LLMQContext>& _llmq_ctx
 ) : connman(_connman), m_mn_sync(_mn_sync), dmnman(_dmnman), govman(_govman), llmq_ctx(_llmq_ctx) {}
 
