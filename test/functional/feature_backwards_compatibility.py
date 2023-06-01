@@ -49,19 +49,28 @@ class BackwardsCompatibilityTest(BitcoinTestFramework):
         self.skip_if_no_wallet()
         self.skip_if_no_previous_releases()
 
-    def setup_nodes(self):
-        self.add_nodes(self.num_nodes, extra_args=self.extra_args, versions=[
-            None,
-            None,
-            190100,
-            180100,
-            170100,
-            160300,
-        ])
-        # adapt bitcoin.conf, because older bitcoind's don't recognize config sections
-        adjust_bitcoin_conf_for_pre_17(self.nodes[5].bitcoinconf)
+    def setup_network(self):
+        self.setup_nodes()
 
+    def setup_nodes(self):
+        self.add_nodes(self.num_nodes, versions=[None, None, None, None, None, None])
         self.start_nodes()
+#        self.add_nodes(self.num_nodes, extra_args=self.extra_args, versions=[
+#            None,
+#            None,
+#            None,
+#            None,
+#            None,
+#            None,
+#            190000,
+#            180100,
+#            170100,
+#            160300,
+#        ])
+        # adapt bitcoin.conf, because older bitcoind's don't recognize config sections
+#        adjust_bitcoin_conf_for_pre_17(self.nodes[5].bitcoinconf)
+
+#        self.start_nodes()
 
     def run_test(self):
         self.nodes[0].generatetoaddress(101, self.nodes[0].getnewaddress())
