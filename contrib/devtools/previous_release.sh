@@ -132,13 +132,13 @@ pushd "$TARGET" || exit 1
         echo "Using cached $tag"
       else
         mkdir "$tag"
-        URL="https://dash.org/dashpay/dash/releases/download/$tag/dashcore-${tag:1}-$PLATFORM.tar.gz"
+        URL="https://github.com/dashpay/dash/releases/download/$tag/dashcore-${tag:1}-$PLATFORM.tar.gz"
         echo "Fetching: $URL"
-        if ! curl -O -f $URL; then
+        if ! curl -L -O -f $URL; then
             echo "Download failed."
             exit 1
         fi
-        tar -zxf "dashcore-${tag:1}-$PLATFORM.tar.gz" -C "$tag" --strip-components=1 "dash-${tag:1}"
+        tar -zxf "dashcore-${tag:1}-$PLATFORM.tar.gz" -C "$tag" --strip-components=1 "dashcore-${tag:1}"
         rm "dashcore-${tag:1}-$PLATFORM.tar.gz"
       fi
     fi
