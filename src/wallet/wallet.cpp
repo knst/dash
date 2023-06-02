@@ -4788,7 +4788,7 @@ std::shared_ptr<CWallet> CWallet::Create(interfaces::Chain& chain, const std::st
     }
 
     assert(::masternodeSync != nullptr);
-    coinJoinClientManagers.emplace(std::make_pair(walletInstance->GetName(), std::make_shared<CCoinJoinClientManager>(*walletInstance, *masternodeSync)));
+    coinJoinClientManagers.emplace(std::make_pair(walletInstance->GetName(), std::make_shared<CCoinJoinClientManager>(*walletInstance, *::masternodeSync)));
 
     {
         LOCK(cs_wallets);
