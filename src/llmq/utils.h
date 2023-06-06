@@ -42,15 +42,6 @@ enum class QvvecSyncMode {
     OnlyIfTypeMember = 1,
 };
 
-//QuorumMembers per quorumIndex at heights H-Cycle, H-2Cycles, H-3Cycles
-struct PreviousQuorumQuarters {
-    std::vector<std::vector<CDeterministicMNCPtr>> quarterHMinusC;
-    std::vector<std::vector<CDeterministicMNCPtr>> quarterHMinus2C;
-    std::vector<std::vector<CDeterministicMNCPtr>> quarterHMinus3C;
-    explicit PreviousQuorumQuarters(size_t s) :
-        quarterHMinusC(s), quarterHMinus2C(s), quarterHMinus3C(s) {}
-};
-
 namespace utils
 {
 
