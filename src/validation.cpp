@@ -58,6 +58,7 @@
 
 #include <llmq/instantsend.h>
 #include <llmq/chainlocks.h>
+#include <llmq/context.h>
 
 #include <statsd_client.h>
 
@@ -1294,15 +1295,11 @@ void CoinsViews::InitCache()
 CChainState::CChainState(CTxMemPool* mempool,
                          BlockManager& blockman,
                          CEvoDB& evoDb,
-                         const std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
-                         const std::unique_ptr<llmq::CInstantSendManager>& isman,
-                         const std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,
+                         const std::unique_ptr<LLMQContext>& llmq_ctx,
                          std::optional<uint256> from_snapshot_blockhash)
     : m_mempool(mempool),
       m_params(::Params()),
-      m_clhandler(clhandler),
-      m_isman(isman),
-      m_quorum_block_processor(quorum_block_processor),
+      m_llmq_ctx(llmq_ctx),
       m_evoDb(evoDb),
       m_blockman(blockman),
       m_from_snapshot_blockhash(from_snapshot_blockhash) {}
@@ -1724,7 +1721,7 @@ int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out)
 DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view)
 {
     AssertLockHeld(cs_main);
-    assert(m_quorum_block_processor);
+    assert(m_llmq_ctx != nullptr);
 
     bool fDIP0003Active = pindex->nHeight >= Params().GetConsensus().DIP0003Height;
     if (fDIP0003Active && !m_evoDb.VerifyBestBlock(pindex->GetBlockHash())) {
@@ -1752,7 +1749,7 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
     std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > addressUnspentIndex;
     std::vector<std::pair<CSpentIndexKey, CSpentIndexValue> > spentIndex;
 
-    if (!UndoSpecialTxsInBlock(block, pindex, *m_quorum_block_processor)) {
+    if (!UndoSpecialTxsInBlock(block, pindex, *m_llmq_ctx->quorum_block_processor)) {
         return DISCONNECT_FAILED;
     }
 
@@ -2084,9 +2081,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     uint256 block_hash{block.GetHash()};
     assert(*pindex->phashBlock == block_hash);
 
-    assert(m_clhandler);
-    assert(m_isman);
-    assert(m_quorum_block_processor);
+    assert(m_llmq_ctx != nullptr);
     int64_t nTimeStart = GetTimeMicros();
 
     // Check it again in case a previous version let a bad block in
@@ -2112,7 +2107,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
         return error("%s: Consensus::CheckBlock: %s", __func__, state.ToString());
     }
 
-    if (pindex->pprev && pindex->phashBlock && m_clhandler->HasConflictingChainLock(pindex->nHeight, pindex->GetBlockHash())) {
+    if (pindex->pprev && pindex->phashBlock && m_llmq_ctx->clhandler->HasConflictingChainLock(pindex->nHeight, pindex->GetBlockHash())) {
         LogPrintf("ERROR: %s: conflicting with chainlock\n", __func__);
         return state.Invalid(BlockValidationResult::BLOCK_CHAINLOCK, "bad-chainlock");
     }
@@ -2254,7 +2249,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     bool fDIP0001Active_context = pindex->nHeight >= Params().GetConsensus().DIP0001Height;
 
     // MUST process special txes before updating UTXO to ensure consistency between mempool and block processing
-    if (!ProcessSpecialTxsInBlock(block, pindex, *m_quorum_block_processor, *m_clhandler, state, view, fJustCheck, fScriptChecks)) {
+    if (!ProcessSpecialTxsInBlock(block, pindex, *m_llmq_ctx->quorum_block_processor, *m_llmq_ctx->clhandler, state, view, fJustCheck, fScriptChecks)) {
         return error("ConnectBlock(DASH): ProcessSpecialTxsInBlock for block %s failed with %s",
                      pindex->GetBlockHash().ToString(), state.ToString());
     }
@@ -2427,16 +2422,16 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
 
     // DASH : CHECK TRANSACTIONS FOR INSTANTSEND
 
-    if (m_isman->RejectConflictingBlocks()) {
+    if (m_llmq_ctx->isman->RejectConflictingBlocks()) {
         // Require other nodes to comply, send them some data in case they are missing it.
         for (const auto& tx : block.vtx) {
             // skip txes that have no inputs
             if (tx->vin.empty()) continue;
-            while (llmq::CInstantSendLockPtr conflictLock = m_isman->GetConflictingLock(*tx)) {
-                if (m_clhandler->HasChainLock(pindex->nHeight, pindex->GetBlockHash())) {
+            while (llmq::CInstantSendLockPtr conflictLock = m_llmq_ctx->isman->GetConflictingLock(*tx)) {
+                if (m_llmq_ctx->clhandler->HasChainLock(pindex->nHeight, pindex->GetBlockHash())) {
                     LogPrint(BCLog::ALL, "ConnectBlock(DASH): chain-locked transaction %s overrides islock %s\n",
                             tx->GetHash().ToString(), ::SerializeHash(*conflictLock).ToString());
-                    m_isman->RemoveConflictingLock(::SerializeHash(*conflictLock), *conflictLock);
+                    m_llmq_ctx->isman->RemoveConflictingLock(::SerializeHash(*conflictLock), *conflictLock);
                 } else {
                     // The node which relayed this should switch to correct chain.
                     // TODO: relay instantsend data/proof.
@@ -4893,7 +4888,7 @@ bool CVerifyDB::VerifyDB(
 /** Apply the effects of a block on the utxo cache, ignoring that it may already have been applied. */
 bool CChainState::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& inputs)
 {
-    assert(m_quorum_block_processor);
+    assert(m_llmq_ctx);
 
     // TODO: merge with ConnectBlock
     CBlock block;
@@ -4903,7 +4898,7 @@ bool CChainState::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& i
 
     // MUST process special txes before updating UTXO to ensure consistency between mempool and block processing
     BlockValidationState state;
-    if (!ProcessSpecialTxsInBlock(block, pindex, *m_quorum_block_processor, *m_clhandler, state, inputs, false /*fJustCheck*/, false /*fScriptChecks*/)) {
+    if (!ProcessSpecialTxsInBlock(block, pindex, *m_llmq_ctx->quorum_block_processor, *m_llmq_ctx->clhandler, state, inputs, false /*fJustCheck*/, false /*fScriptChecks*/)) {
         return error("RollforwardBlock(DASH): ProcessSpecialTxsInBlock for block %s failed with %s",
             pindex->GetBlockHash().ToString(), state.ToString());
     }
@@ -5671,9 +5666,7 @@ std::vector<CChainState*> ChainstateManager::GetAll()
 
 CChainState& ChainstateManager::InitializeChainstate(CTxMemPool* mempool,
                                                      CEvoDB& evoDb,
-                                                     const std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
-                                                     const std::unique_ptr<llmq::CInstantSendManager>& isman,
-                                                     const std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,
+                                                     const std::unique_ptr<LLMQContext>& llmq_ctx,
                                                      const std::optional<uint256>& snapshot_blockhash)
 {
     bool is_snapshot = snapshot_blockhash.has_value();
@@ -5684,7 +5677,7 @@ CChainState& ChainstateManager::InitializeChainstate(CTxMemPool* mempool,
         throw std::logic_error("should not be overwriting a chainstate");
     }
 
-    to_modify.reset(new CChainState(mempool, m_blockman, evoDb, clhandler, isman, quorum_block_processor, snapshot_blockhash));
+    to_modify.reset(new CChainState(mempool, m_blockman, evoDb, llmq_ctx, snapshot_blockhash));
 
     // Snapshot chainstates and initial IBD chaintates always become active.
     if (is_snapshot || (!is_snapshot && !m_active_chainstate)) {
@@ -5755,8 +5748,7 @@ bool ChainstateManager::ActivateSnapshot(
 
     auto snapshot_chainstate = WITH_LOCK(::cs_main, return std::make_unique<CChainState>(
             /* mempool */ nullptr, m_blockman, this->ActiveChainstate().m_evoDb,
-            this->ActiveChainstate().m_clhandler, this->ActiveChainstate().m_isman,
-            this->ActiveChainstate().m_quorum_block_processor, base_blockhash
+            this->ActiveChainstate().m_llmq_ctx, base_blockhash
         )
     );
 

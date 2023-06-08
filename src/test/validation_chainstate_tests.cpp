@@ -3,9 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 //
 #include <index/txindex.h>
-#include <llmq/blockprocessor.h>
-#include <llmq/chainlocks.h>
-#include <llmq/instantsend.h>
 #include <evo/evodb.h>
 #include <random.h>
 #include <uint256.h>
@@ -14,6 +11,7 @@
 #include <test/util/setup_common.h>
 #include <validation.h>
 
+#include <memory>
 #include <vector>
 
 #include <boost/test/unit_test.hpp>
@@ -40,7 +38,7 @@ BOOST_AUTO_TEST_CASE(validation_chainstate_resize_caches)
         return outp;
     };
 
-    CChainState& c1 = *WITH_LOCK(cs_main, return &manager.InitializeChainstate(&mempool, *m_node.evodb, llmq::chainLocksHandler, llmq::quorumInstantSendManager, llmq::quorumBlockProcessor));
+    CChainState& c1 = *WITH_LOCK(cs_main, return &manager.InitializeChainstate(&mempool, *m_node.evodb, m_node.llmq_ctx));
     c1.InitCoinsDB(
         /* cache_size_bytes */ 1 << 23, /* in_memory */ true, /* should_wipe */ false);
     WITH_LOCK(::cs_main, c1.InitCoinsCache(1 << 23));
