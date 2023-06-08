@@ -54,15 +54,6 @@ static void BuildQuorumSnapshot(const Consensus::LLMQParams& llmqParams, const C
 
 static bool IsInstantSendLLMQTypeShared();
 
-void PreComputeQuorumMembers(const CBlockIndex* pindex, bool reset_cache)
-{
-    for (const Consensus::LLMQParams& params : GetEnabledQuorumParams(pindex->pprev)) {
-        if (IsQuorumRotationEnabled(params, pindex) && (pindex->nHeight % params.dkgInterval == 0)) {
-            GetAllQuorumMembers(params.type, pindex, reset_cache);
-        }
-    }
-}
-
 uint256 GetHashModifier(const Consensus::LLMQParams& llmqParams, const CBlockIndex* pCycleQuorumBaseBlockIndex)
 {
     ASSERT_IF_DEBUG(pCycleQuorumBaseBlockIndex->nHeight % llmqParams.dkgInterval == 0);
