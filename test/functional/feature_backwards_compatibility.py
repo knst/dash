@@ -41,6 +41,7 @@ class BackwardsCompatibilityTest(BitcoinTestFramework):
             ["-nowallet"], # v0.17.0.3
             ["-nowallet"], # v0.16.1.1
         ]
+        self.wallet_names = [self.default_wallet_name]
 
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
@@ -57,6 +58,7 @@ class BackwardsCompatibilityTest(BitcoinTestFramework):
         ])
 
         self.start_nodes()
+        self.import_deterministic_coinbase_privkeys()
 
     def run_test(self):
         self.nodes[0].generatetoaddress(101, self.nodes[0].getnewaddress())
