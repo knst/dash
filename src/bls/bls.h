@@ -160,11 +160,6 @@ public:
         return IsValid();
     }
 
-    bool SetHexStr(const std::string& str)
-    {
-        return SetHexStr(str, bls::bls_legacy_scheme.load());
-    }
-
     inline void Serialize(CSizeComputer& s) const
     {
         s.seek(SerSize);
