@@ -183,13 +183,13 @@ public:
     }
 
     template <typename Stream>
-    inline void Unserialize(Stream& s, const bool specificLegacyScheme, bool checkMalleable = true)
+    inline void Unserialize(Stream& s, const bool specificLegacyScheme)
     {
         std::vector<uint8_t> vecBytes(SerSize, 0);
         s.read(reinterpret_cast<char*>(vecBytes.data()), SerSize);
         SetByteVector(vecBytes, specificLegacyScheme);
 
-        if (checkMalleable && !CheckMalleable(vecBytes, specificLegacyScheme)) {
+        if (!CheckMalleable(vecBytes, specificLegacyScheme)) {
             // If CheckMalleable failed with specificLegacyScheme, we need to try again with the opposite scheme.
             // Probably we received the BLS object sent with legacy scheme, but in the meanwhile the fork activated.
             SetByteVector(vecBytes, !specificLegacyScheme);
@@ -205,9 +205,9 @@ public:
     }
 
     template <typename Stream>
-    inline void Unserialize(Stream& s, bool checkMalleable = true)
+    inline void Unserialize(Stream& s)
     {
-        Unserialize(s, bls::bls_legacy_scheme.load(), checkMalleable);
+        Unserialize(s, bls::bls_legacy_scheme.load());
     }
 
     inline bool CheckMalleable(Span<uint8_t> vecBytes, const bool specificLegacyScheme) const
@@ -333,12 +333,10 @@ class CBLSPublicKeyVersionWrapper {
 private:
     CBLSPublicKey& obj;
     bool legacy;
-    bool checkMalleable;
 public:
-    CBLSPublicKeyVersionWrapper(CBLSPublicKey& obj, bool legacy, bool checkMalleable = true)
+    CBLSPublicKeyVersionWrapper(CBLSPublicKey& obj, bool legacy)
             : obj(obj)
             , legacy(legacy)
-            , checkMalleable(checkMalleable)
     {}
     template <typename Stream>
     inline void Serialize(Stream& s) const {
@@ -346,7 +344,7 @@ public:
     }
     template <typename Stream>
     inline void Unserialize(Stream& s) {
-        obj.Unserialize(s, legacy, checkMalleable);
+        obj.Unserialize(s, legacy);
     }
 };
 
@@ -381,12 +379,10 @@ class CBLSSignatureVersionWrapper {
 private:
     CBLSSignature& obj;
     bool legacy;
-    bool checkMalleable;
 public:
-    CBLSSignatureVersionWrapper(CBLSSignature& obj, bool legacy, bool checkMalleable = true)
+    CBLSSignatureVersionWrapper(CBLSSignature& obj, bool legacy)
             : obj(obj)
             , legacy(legacy)
-            , checkMalleable(checkMalleable)
     {}
     template <typename Stream>
     inline void Serialize(Stream& s) const {
@@ -394,7 +390,7 @@ public:
     }
     template <typename Stream>
     inline void Unserialize(Stream& s) {
-        obj.Unserialize(s, legacy, checkMalleable);
+        obj.Unserialize(s, legacy);
     }
 };
 
