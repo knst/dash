@@ -181,7 +181,14 @@ bool CheckAssetUnlockTx(const CTransaction& tx, const CBlockIndex* pindexPrev, c
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-assetunlock-quorum-hash");
     }
 
-    return assetUnlockTx.VerifySig(tx.GetHash(), pindexPrev, state);
+    // Copy transaction except `quorumSig` field to calculate hash
+    CMutableTransaction tx_copy(tx);
+    auto payload_copy = CAssetUnlockPayload(assetUnlockTx.getVersion(), assetUnlockTx.getIndex(), assetUnlockTx.getFee(), assetUnlockTx.getRequestedHeight(), assetUnlockTx.getQuorumHash(), CBLSSignature());
+    SetTxPayload(tx_copy, payload_copy);
+
+    uint256 msgHash = tx_copy.GetHash();
+
+    return assetUnlockTx.VerifySig(msgHash, pindexPrev, state);
 }
 
 bool GetAssetUnlockFee(const CTransaction& tx, CAmount& txfee, TxValidationState& state)

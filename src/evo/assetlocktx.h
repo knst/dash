@@ -98,11 +98,9 @@ public:
             obj.index,
             obj.fee,
             obj.requestedHeight,
-            obj.quorumHash
+            obj.quorumHash,
+            obj.quorumSig
         );
-        if (!(s.GetType() & SER_GETHASH)) {
-            READWRITE(obj.quorumSig);
-        }
     }
 
     std::string ToString() const;
