@@ -66,7 +66,7 @@ namespace BCLog {
 #ifdef DEBUG_LOCKCONTENTION
         LOCK        = (1 << 24),
 #endif
-        BLOCKSTORE  = (1 << 26),
+        BLOCKSTORAGE = (1 << 26),
         TXRECONCILIATION = (1 << 27),
         SCAN        = (1 << 28),
 

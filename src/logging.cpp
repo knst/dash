@@ -177,7 +177,7 @@ const CLogCategoryDesc LogCategories[] =
 #ifdef DEBUG_LOCKCONTENTION
     {BCLog::LOCK, "lock"},
 #endif
-    {BCLog::BLOCKSTORE, "blockstorage"},
+    {BCLog::BLOCKSTORAGE, "blockstorage"},
     {BCLog::TXRECONCILIATION, "txreconciliation"},
     {BCLog::SCAN, "scan"},
     {BCLog::ALL, "1"},
@@ -291,7 +291,7 @@ std::string LogCategoryToStr(BCLog::LogFlags category)
     case BCLog::LogFlags::LOCK:
         return "lock";
 #endif
-    case BCLog::LogFlags::BLOCKSTORE:
+    case BCLog::LogFlags::BLOCKSTORAGE:
         return "blockstorage";
     case BCLog::LogFlags::TXRECONCILIATION:
         return "txreconciliation";

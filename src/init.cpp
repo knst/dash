@@ -81,6 +81,7 @@
 #include <util/fs.h>
 #include <util/fs_helpers.h>
 #include <util/moneystr.h>
+#include <util/result.h>
 #include <util/strencodings.h>
 #include <util/string.h>
 #include <util/syserror.h>
@@ -1309,8 +1310,10 @@ bool AppInitParameterInteraction(const ArgsManager& args)
         InitWarning(strprintf(_("Reducing -maxconnections from %d to %d, because of system limitations."), nUserMaxConnections, nMaxConnections));
 
     // ********************************************************* Step 3: parameter-to-internal-flags
-    init::SetLoggingCategories(args);
-    init::SetLoggingLevel(args);
+    auto result = init::SetLoggingCategories(args);
+    if (!result) return InitError(util::ErrorString(result));
+    result = init::SetLoggingLevel(args);
+    if (!result) return InitError(util::ErrorString(result));
 
     // block pruning; get the amount of disk space (in MiB) to allot for block & undo files
     int64_t nPruneArg = args.GetIntArg("-prune", 0);
