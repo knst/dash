@@ -111,6 +111,9 @@ const std::vector<CTxOut>& CAssetLockPayload::getCreditOutputs() const {
 /*
    Asset Unlock Transaction (withdrawals)
    */
+
+const std::string ASSETUNLOCK_REQUESTID_PREFIX = "plwdtx";
+
 bool CAssetUnlockPayload::VerifySig(const uint256& msgHash, const CBlockIndex* pindexTip, TxValidationState& state) const
 {
     // That quourm hash must be active at `requestHeight`,
@@ -137,13 +140,9 @@ bool CAssetUnlockPayload::VerifySig(const uint256& msgHash, const CBlockIndex* p
     const auto quorum = llmq::quorumManager->GetQuorum(llmqType, quorumHash);
     assert(quorum);
 
-    const std::string id(strprintf("plwdtx%lld", index));
+    const uint256 requestId = ::SerializeHash(std::make_pair(ASSETUNLOCK_REQUESTID_PREFIX, index));
 
-    std::vector<uint8_t> vchHash(32);
-    CSHA256().Write(reinterpret_cast<const uint8_t*>(id.data()), id.size()).Finalize(vchHash.data());
-    uint256 requestId(vchHash);
-
-    uint256 signHash = llmq::utils::BuildSignHash(llmqType, quorum->qc->quorumHash, requestId, msgHash);
+    const uint256 signHash = llmq::utils::BuildSignHash(llmqType, quorum->qc->quorumHash, requestId, msgHash);
     if (quorumSig.VerifyInsecure(quorum->qc->quorumPublicKey, signHash)) {
         return true;
     }
@@ -183,13 +182,7 @@ bool CheckAssetUnlockTx(const CTransaction& tx, const CBlockIndex* pindexPrev, c
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-assetunlock-quorum-hash");
     }
 
-    // Copy transaction except `quorumSig` field to calculate hash
-    CMutableTransaction tx_copy(tx);
-    auto payload_copy = CAssetUnlockPayload(assetUnlockTx.getVersion(), assetUnlockTx.getIndex(), assetUnlockTx.getFee(), assetUnlockTx.getRequestedHeight(), assetUnlockTx.getQuorumHash(), CBLSSignature());
-    SetTxPayload(tx_copy, payload_copy);
-
-    uint256 msgHash = tx_copy.GetHash();
-    return assetUnlockTx.VerifySig(msgHash, pindexPrev, state);
+    return assetUnlockTx.VerifySig(tx.GetHash(), pindexPrev, state);
 }
 
 std::string CAssetUnlockPayload::ToString() const

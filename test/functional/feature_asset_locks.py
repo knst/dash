@@ -4,8 +4,8 @@
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-import hashlib
 import copy
+import struct
 from decimal import Decimal
 from io import BytesIO
 
@@ -16,23 +16,25 @@ from test_framework.blocktools import (
 from test_framework.authproxy import JSONRPCException
 from test_framework.key import ECKey
 from test_framework.messages import (
-    FromHex,
     CAssetLockTx,
     CAssetUnlockTx,
-    COutPoint,
-    CTxOut,
-    CTxIn,
     COIN,
+    COutPoint,
     CTransaction,
+    CTxIn,
+    CTxOut,
+    FromHex,
+    hash256,
+    ser_string,
 )
 from test_framework.script import (
-    hash160,
     CScript,
-    OP_HASH160,
-    OP_RETURN,
     OP_CHECKSIG,
     OP_DUP,
     OP_EQUALVERIFY,
+    OP_HASH160,
+    OP_RETURN,
+    hash160,
 )
 from test_framework.test_framework import DashTestFramework
 from test_framework.util import (
@@ -84,12 +86,11 @@ class AssetLocksTest(DashTestFramework):
         tx_output = CTxOut(int(withdrawal) - tiny_amount, CScript([pubkey, OP_CHECKSIG]))
 
         # request ID = sha256("plwdtx", index)
-        sha256 = hashlib.sha256()
-        sha256.update(("plwdtx" + str(index)).encode())
-        id = sha256.digest()[::-1].hex()
+        request_id_buf = ser_string(b"plwdtx") + struct.pack("<Q", index)
+        request_id = hash256(request_id_buf)[::-1].hex()
 
         height = node.getblockcount()
-        quorumHash = mninfo[0].node.quorum("selectquorum", llmq_type_test, id)["quorumHash"]
+        quorumHash = mninfo[0].node.quorum("selectquorum", llmq_type_test, request_id)["quorumHash"]
         unlockTx_payload = CAssetUnlockTx(
             version = 1,
             index = index,
@@ -108,7 +109,7 @@ class AssetLocksTest(DashTestFramework):
         unlock_tx.calc_sha256()
         msgHash = format(unlock_tx.sha256, '064x')
 
-        recsig = self.get_recovered_sig(id, msgHash, llmq_type=llmq_type_test)
+        recsig = self.get_recovered_sig(request_id, msgHash, llmq_type=llmq_type_test)
 
         unlockTx_payload.quorumSig = bytearray.fromhex(recsig["sig"])
         unlock_tx.vExtraPayload = unlockTx_payload.serialize()
