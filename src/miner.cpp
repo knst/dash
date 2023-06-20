@@ -231,7 +231,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     // not an error
                     LogPrintf("CreateNewBlock() h[%d] CbTx failed to find best CL. Inserting null CL\n", nHeight);
                 }
-                assert(creditPoolDiff);
+                assert(creditPoolDiff != std::nullopt);
                 cbTx.assetLockedAmount = creditPoolDiff->getTotalLocked();
             }
         }
@@ -450,7 +450,7 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
             }
         }
 
-        if (creditPoolDiff) {
+        if (creditPoolDiff != std::nullopt) {
             // If one transaction is skipped due to limits, it is not a reason to interrupt
             // whole process of adding transactions.
             // `state` is local here because used to log info about this specific tx

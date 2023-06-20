@@ -22,7 +22,8 @@ static const std::string DB_CREDITPOOL_SNAPSHOT = "cpm_S";
 
 std::unique_ptr<CCreditPoolManager> creditPoolManager;
 
-static bool getDataFromUnlockTx(const CTransaction& tx, CAmount& toUnlock, uint64_t& index, TxValidationState& state) {
+static bool getDataFromUnlockTx(const CTransaction& tx, CAmount& toUnlock, uint64_t& index, TxValidationState& state)
+{
     CAssetUnlockPayload assetUnlockTx;
     if (!GetTxPayload(tx, assetUnlockTx)) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "failed-creditpool-unlock-payload");
@@ -31,8 +32,8 @@ static bool getDataFromUnlockTx(const CTransaction& tx, CAmount& toUnlock, uint6
     index = assetUnlockTx.getIndex();
     toUnlock = assetUnlockTx.getFee();
     for (const CTxOut& txout : tx.vout) {
-        if (txout.nValue < 0) {
-            return state.Invalid(TxValidationResult::TX_CONSENSUS, "failed-creditpool-unlock-negative-amount");
+        if (!MoneyRange(txout.nValue)) {
+            return state.Invalid(TxValidationResult::TX_CONSENSUS, "failed-creditpool-unlock-txout-outofrange");
         }
         toUnlock += txout.nValue;
     }
@@ -47,7 +48,8 @@ namespace {
 } // anonymous namespace
 
 // it throws exception if anything went wrong
-static UnlockDataPerBlock getDataFromUnlockTxes(const std::vector<CTransactionRef>& vtx) {
+static UnlockDataPerBlock getDataFromUnlockTxes(const std::vector<CTransactionRef>& vtx)
+{
     UnlockDataPerBlock blockData;
 
     for (CTransactionRef tx : vtx) {
@@ -65,7 +67,8 @@ static UnlockDataPerBlock getDataFromUnlockTxes(const std::vector<CTransactionRe
     return blockData;
 }
 
-bool CSkipSet::add(uint64_t value) {
+bool CSkipSet::add(uint64_t value)
+{
     assert(!contains(value));
 
     if (auto it = skipped.find(value); it != skipped.end()) {
@@ -87,7 +90,8 @@ bool CSkipSet::add(uint64_t value) {
     return true;
 }
 
-bool CSkipSet::canBeAdded(uint64_t value) const {
+bool CSkipSet::canBeAdded(uint64_t value) const
+{
     if (contains(value)) return false;
 
     if (skipped.find(value) != skipped.end()) return true;
@@ -99,17 +103,20 @@ bool CSkipSet::canBeAdded(uint64_t value) const {
     return true;
 }
 
-bool CSkipSet::contains(uint64_t value) const {
+bool CSkipSet::contains(uint64_t value) const
+{
     if (current_max <= value) return false;
     return skipped.find(value) == skipped.end();
 }
 
-std::string CCreditPool::ToString() const {
+std::string CCreditPool::ToString() const
+{
     return strprintf("CCreditPool(locked=%lld,currentLimit=%lld,nIndexes=%lld)",
             locked, currentLimit, indexes.size());
 }
 
-std::optional<CCreditPool> CCreditPoolManager::getFromCache(const CBlockIndex* const block_index) {
+std::optional<CCreditPool> CCreditPoolManager::getFromCache(const CBlockIndex* const block_index)
+{
     if (!llmq::utils::IsV20Active(block_index)) return CCreditPool{};
 
     uint256 block_hash = block_index->GetBlockHash();
@@ -130,7 +137,8 @@ std::optional<CCreditPool> CCreditPoolManager::getFromCache(const CBlockIndex* c
     return std::nullopt;
 }
 
-void CCreditPoolManager::addToCache(const uint256& block_hash, int height, const CCreditPool &pool) {
+void CCreditPoolManager::addToCache(const uint256& block_hash, int height, const CCreditPool &pool)
+{
     {
         LOCK(cache_mutex);
         creditPoolCache.insert(block_hash, pool);
@@ -140,7 +148,8 @@ void CCreditPoolManager::addToCache(const uint256& block_hash, int height, const
     }
 }
 
-static std::optional<CBlock> getBlockForCreditPool(const CBlockIndex *block_index, const Consensus::Params& consensusParams) {
+static std::optional<CBlock> getBlockForCreditPool(const CBlockIndex *block_index, const Consensus::Params& consensusParams)
+{
     CBlock block;
     if (!ReadBlockFromDisk(block, block_index, consensusParams)) {
         throw std::runtime_error("failed-getcbforblock-read");

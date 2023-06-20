@@ -52,7 +52,7 @@ bool CheckAssetLockTx(const CTransaction& tx, TxValidationState& state)
         if (txout.nValue <= 0) return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-assetlocktx-zeroout-return");
 
         // Should be only one OP_RETURN
-        if (returnAmount) return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-assetlocktx-multiple-return");
+        if (returnAmount > 0) return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-assetlocktx-multiple-return");
         returnAmount = txout.nValue;
     }
 
@@ -115,14 +115,9 @@ bool CAssetUnlockPayload::VerifySig(const uint256& msgHash, const CBlockIndex* p
 
     Consensus::LLMQType llmqType = Params().GetConsensus().llmqTypeAssetLocks;
 
-    const auto& llmq_params_opt = llmq::GetLLMQParams(llmqType);
-    if (!llmq_params_opt) {
-        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-assetunlock-llmq-type");
-    }
-
-    // We check at most 2 quorums, so, count is equal to 2
-    const int count = 2;
-    auto quorums = llmq::quorumManager->ScanQuorums(llmqType, pindexTip, count > -1 ? count : llmq_params_opt->signingActiveQuorumCount);
+    // We check at most 2 quorums, so, quorum_count is equal to 2
+    const int quorum_count = 2;
+    auto quorums = llmq::quorumManager->ScanQuorums(llmqType, pindexTip, quorum_count);
     bool isActive = std::any_of(quorums.begin(), quorums.end(), [&](const auto &q) { return q->qc->quorumHash == quorumHash; });
 
     if (!isActive) {
@@ -224,6 +219,5 @@ const CBLSSignature& CAssetUnlockPayload::getQuorumSig() const {
 }
 
 int CAssetUnlockPayload::getHeightToExpiry() const {
-    int expiryHeight = 48;
-    return requestedHeight + expiryHeight;
+    return requestedHeight + HEIGHT_DIFF_EXPIRING;
 }

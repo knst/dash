@@ -98,9 +98,11 @@ public:
             obj.index,
             obj.fee,
             obj.requestedHeight,
-            obj.quorumHash,
-            obj.quorumSig
+            obj.quorumHash
         );
+        if (!(s.GetType() & SER_GETHASH)) {
+            READWRITE(obj.quorumSig);
+        }
     }
 
     std::string ToString() const;
@@ -129,6 +131,7 @@ public:
 
     // used by mempool to know when possible to drop a transaction as expired
     int getHeightToExpiry() const;
+    static constexpr int HEIGHT_DIFF_EXPIRING = 48;
 };
 
 bool CheckAssetLockTx(const CTransaction& tx, TxValidationState& state);

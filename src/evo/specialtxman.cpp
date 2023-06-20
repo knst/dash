@@ -149,7 +149,7 @@ bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, ll
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, tx_state.GetRejectReason(),
                                  strprintf("Process Special Transaction failed (tx hash %s) %s", ptr_tx->GetHash().ToString(), tx_state.GetDebugMessage()));
             }
-            if (creditPoolDiff && !creditPoolDiff->processTransaction(*ptr_tx, tx_state)) {
+            if (creditPoolDiff != std::nullopt && !creditPoolDiff->processTransaction(*ptr_tx, tx_state)) {
                 assert(tx_state.GetResult() == TxValidationResult::TX_CONSENSUS || tx_state.GetResult() == TxValidationResult::TX_BAD_SPECIAL);
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, tx_state.GetRejectReason(),
                                  strprintf("Process Special Transaction failed at Credit Pool (tx hash %s) %s", ptr_tx->GetHash().ToString(), tx_state.GetDebugMessage()));
@@ -157,7 +157,7 @@ bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, ll
                 return false;
             }
         }
-        if (creditPoolDiff) {
+        if (creditPoolDiff != std::nullopt) {
             CAmount locked_proposed{0};
             if(creditPoolDiff->getTargetLocked()) locked_proposed = *creditPoolDiff->getTargetLocked();
 
