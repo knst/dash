@@ -194,30 +194,37 @@ std::string CAssetUnlockPayload::ToString() const
             nVersion, index, fee / COIN, fee % COIN, requestedHeight, quorumHash.GetHex(), quorumSig.ToString().c_str());
 }
 
-uint8_t CAssetUnlockPayload::getVersion() const {
+uint8_t CAssetUnlockPayload::getVersion() const
+{
     return nVersion;
 }
 
-uint64_t CAssetUnlockPayload::getIndex() const {
+uint64_t CAssetUnlockPayload::getIndex() const
+{
     return index;
 }
 
-uint32_t CAssetUnlockPayload::getFee() const {
+uint32_t CAssetUnlockPayload::getFee() const
+{
     return fee;
 }
 
-uint32_t CAssetUnlockPayload::getRequestedHeight() const {
+uint32_t CAssetUnlockPayload::getRequestedHeight() const
+{
     return requestedHeight;
 }
 
-const uint256& CAssetUnlockPayload::getQuorumHash() const {
+const uint256& CAssetUnlockPayload::getQuorumHash() const
+{
     return quorumHash;
 }
 
-const CBLSSignature& CAssetUnlockPayload::getQuorumSig() const {
+const CBLSSignature& CAssetUnlockPayload::getQuorumSig() const
+{
     return quorumSig;
 }
 
-int CAssetUnlockPayload::getHeightToExpiry() const {
+int CAssetUnlockPayload::getHeightToExpiry() const
+{
     return requestedHeight + HEIGHT_DIFF_EXPIRING;
 }

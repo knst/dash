@@ -316,7 +316,8 @@ bool CCreditPoolDiff::unlock(const CTransaction& tx, TxValidationState& state)
     return true;
 }
 
-bool CCreditPoolDiff::processTransaction(const CTransaction& tx, TxValidationState& state) {
+bool CCreditPoolDiff::processTransaction(const CTransaction& tx, TxValidationState& state)
+{
     if (tx.nVersion != 3) return true;
     if (tx.nType == TRANSACTION_COINBASE) return setTarget(tx, state);
 
