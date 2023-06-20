@@ -163,16 +163,7 @@ bool Consensus::CheckTxInputs(const CTransaction& tx, TxValidationState& state, 
 {
 
     if (bool isAssetUnlockTx = (tx.nVersion == 3 && tx.nType ==  TRANSACTION_ASSET_UNLOCK); isAssetUnlockTx) {
-        CAssetUnlockPayload assetUnlockTx;
-        if (!GetTxPayload(tx, assetUnlockTx)) {
-            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-assetunlocktx-payload");
-        }
-        CAmount txfee_aux = assetUnlockTx.getFee();
-        if (txfee_aux == 0 || !MoneyRange(txfee_aux)) {
-            return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-assetunlock-fee-outofrange");
-        }
-        txfee = txfee_aux;
-        return true;
+        return GetAssetUnlockFee(tx, txfee, state);
     }
 
     // are the actual inputs available?

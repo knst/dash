@@ -137,5 +137,6 @@ public:
 bool CheckAssetLockTx(const CTransaction& tx, TxValidationState& state);
 bool CheckAssetUnlockTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCreditPool& creditPool, TxValidationState& state);
 bool CheckAssetLockUnlockTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCreditPool& creditPool, TxValidationState& state);
+bool GetAssetUnlockFee(const CTransaction& tx, CAmount& txfee, TxValidationState& state);
 
 #endif // BITCOIN_EVO_ASSETLOCKTX_H

@@ -185,6 +185,20 @@ bool CheckAssetUnlockTx(const CTransaction& tx, const CBlockIndex* pindexPrev, c
     return assetUnlockTx.VerifySig(tx.GetHash(), pindexPrev, state);
 }
 
+bool GetAssetUnlockFee(const CTransaction& tx, CAmount& txfee, TxValidationState& state)
+{
+    CAssetUnlockPayload assetUnlockTx;
+    if (!GetTxPayload(tx, assetUnlockTx)) {
+        return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-assetunlocktx-payload");
+    }
+    CAmount txfee_aux = assetUnlockTx.getFee();
+    if (txfee_aux == 0 || !MoneyRange(txfee_aux)) {
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-assetunlock-fee-outofrange");
+    }
+    txfee = txfee_aux;
+    return true;
+}
+
 std::string CAssetUnlockPayload::ToString() const
 {
     return strprintf("CAssetUnlockPayload(nVersion=%d,index=%d,fee=%d.%08d,requestedHeight=%d,quorumHash=%d,quorumSig=%s",
