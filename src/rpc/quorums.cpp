@@ -961,7 +961,7 @@ static UniValue verifyislock(const JSONRPCRequest& request)
         signHeight = pindexMined->nHeight;
     }
 
-    CBlockIndex* pBlockIndex;
+    CBlockIndex* pBlockIndex{nullptr};
     {
         LOCK(cs_main);
         if (signHeight == -1) {
@@ -971,17 +971,12 @@ static UniValue verifyislock(const JSONRPCRequest& request)
         }
     }
 
+    CHECK_NONFATAL(pBlockIndex != nullptr);
+
     CBLSSignature sig;
-    if (pindexMined != nullptr) {
-        const bool use_bls_legacy = !llmq::utils::IsV19Active(pindexMined);
-        if (!sig.SetHexStr(request.params[2].get_str(), use_bls_legacy)) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "invalid signature format");
-        }
-    } else {
-        if (!sig.SetHexStr(request.params[2].get_str(), false) &&
-                !sig.SetHexStr(request.params[2].get_str(), true)) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "invalid signature format");
-        }
+    const bool use_bls_legacy = !llmq::utils::IsV19Active(pBlockIndex);
+    if (!sig.SetHexStr(request.params[2].get_str(), use_bls_legacy)) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "invalid signature format");
     }
 
     LLMQContext& llmq_ctx = EnsureLLMQContext(request.context);
