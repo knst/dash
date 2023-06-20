@@ -358,7 +358,7 @@ BOOST_FIXTURE_TEST_CASE(evo_assetunlock, TestChain100Setup)
 
 }
 
-BOOST_FIXTURE_TEST_CASE(evo_skipset, TestChain100Setup)
+BOOST_FIXTURE_TEST_CASE(evo_skipset, BasicTestingSetup)
 {
     std::mt19937 gen;
     for (size_t test = 0; test < 17; ++test) {
