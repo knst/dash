@@ -4,13 +4,13 @@
 
 #include <test/util/setup_common.h>
 
+#include <amount.h>
+#include <consensus/tx_check.h>
 #include <evo/assetlocktx.h>
 #include <evo/creditpool.h> // to test CSkipSet
 #include <policy/settings.h>
-#include <script/signingprovider.h>
-#include <consensus/tx_check.h>
 #include <script/script.h>
-
+#include <script/signingprovider.h>
 #include <validation.h> // for ::ChainActive()
 
 #include <boost/test/unit_test.hpp>
@@ -241,6 +241,21 @@ BOOST_FIXTURE_TEST_CASE(evo_assetlock, TestChain100Setup)
     }
 
     {
+        // zero/negative OP_RETURN
+        CMutableTransaction txReturnOutOfRange = tx;
+        txReturnOutOfRange.vout[0].nValue = 0;
+
+        BOOST_CHECK(!CheckAssetLockTx(CTransaction(txReturnOutOfRange), tx_state));
+        BOOST_CHECK(tx_state.GetRejectReason() == "bad-assetlocktx-opreturn-outofrange");
+
+        txReturnOutOfRange.vout[0].nValue = MAX_MONEY + 1;
+
+        BOOST_CHECK(!CheckAssetLockTx(CTransaction(txReturnOutOfRange), tx_state));
+        BOOST_CHECK(tx_state.GetRejectReason() == "bad-assetlocktx-opreturn-outofrange");
+    }
+
+
+    {
         // OP_RETURN is missing
         CMutableTransaction txNoReturn = tx;
         txNoReturn.vout[0].scriptPubKey = GetScriptForDestination(PKHash(key.GetPubKey()));
@@ -251,10 +266,10 @@ BOOST_FIXTURE_TEST_CASE(evo_assetlock, TestChain100Setup)
 
     {
         // OP_RETURN should not have any data
-        CMutableTransaction txMultipleReturn = tx;
-        txMultipleReturn.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex("abc");
+        CMutableTransaction txReturnData = tx;
+        txReturnData.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex("abc");
 
-        BOOST_CHECK(!CheckAssetLockTx(CTransaction(txMultipleReturn), tx_state));
+        BOOST_CHECK(!CheckAssetLockTx(CTransaction(txReturnData), tx_state));
         BOOST_CHECK(tx_state.GetRejectReason() == "bad-assetlocktx-non-empty-return");
     }
 }

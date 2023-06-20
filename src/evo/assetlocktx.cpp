@@ -49,7 +49,7 @@ bool CheckAssetLockTx(const CTransaction& tx, TxValidationState& state)
 
         if (script.size() != 2 || script[1] != 0) return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-assetlocktx-non-empty-return");
 
-        if (txout.nValue <= 0) return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-assetlocktx-zeroout-return");
+        if (txout.nValue == 0 || !MoneyRange(txout.nValue)) return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-assetlocktx-opreturn-outofrange");
 
         // Should be only one OP_RETURN
         if (returnAmount > 0) return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-assetlocktx-multiple-return");
