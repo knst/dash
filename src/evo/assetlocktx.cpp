@@ -122,9 +122,8 @@ bool CAssetUnlockPayload::VerifySig(const uint256& msgHash, const CBlockIndex* p
 
     Consensus::LLMQType llmqType = Params().GetConsensus().llmqTypeAssetLocks;
 
-    // We check at most 2 quorums, so, quorum_count is equal to 2
-    const int quorum_count = 2;
-    auto quorums = llmq::quorumManager->ScanQuorums(llmqType, pindexTip, quorum_count);
+    // We check at most 2 quorums
+    auto quorums = llmq::quorumManager->ScanQuorums(llmqType, pindexTip, 2);
     bool isActive = std::any_of(quorums.begin(), quorums.end(), [&](const auto &q) { return q->qc->quorumHash == quorumHash; });
 
     if (!isActive) {
