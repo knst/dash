@@ -73,6 +73,10 @@ bool CheckAssetLockTx(const CTransaction& tx, TxValidationState& state)
 
     CAmount creditOutputsAmount = 0;
     for (const CTxOut& out : assetLockTx.getCreditOutputs()) {
+        if (out.nValue == 0 || !MoneyRange(out.nValue) || !MoneyRange(creditOutputsAmount + out.nValue)) {
+            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-assetlocktx-credit-outofrange");
+        }
+
         creditOutputsAmount += out.nValue;
         if (!out.scriptPubKey.IsPayToPublicKeyHash()) {
             return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-assetlocktx-pubKeyHash");

@@ -217,6 +217,31 @@ BOOST_FIXTURE_TEST_CASE(evo_assetlock, TestChain100Setup)
     }
 
     {
+        // Credit output is out-of-range
+        std::vector<CTxOut> creditOutputsOutOfRange = creditOutputs;
+        creditOutputsOutOfRange[0].nValue = 0;
+        CAssetLockPayload invalidOutputsPayload(creditOutputsOutOfRange);
+
+        CMutableTransaction txInvalidOutputs = tx;
+        SetTxPayload(txInvalidOutputs, invalidOutputsPayload);
+
+        BOOST_CHECK(!CheckAssetLockTx(CTransaction(txInvalidOutputs), tx_state));
+        BOOST_CHECK(tx_state.GetRejectReason() == "bad-assetlocktx-credit-outofrange");
+
+        // one of output is out of range
+        creditOutputsOutOfRange[0].nValue = MAX_MONEY + 1;
+        SetTxPayload(txInvalidOutputs, CAssetLockPayload{creditOutputsOutOfRange});
+        BOOST_CHECK(!CheckAssetLockTx(CTransaction(txInvalidOutputs), tx_state));
+        BOOST_CHECK(tx_state.GetRejectReason() == "bad-assetlocktx-credit-outofrange");
+
+        // sum of some of output is out of range
+        creditOutputsOutOfRange[0].nValue = MAX_MONEY + 1 - creditOutputsOutOfRange[1].nValue;
+        SetTxPayload(txInvalidOutputs, CAssetLockPayload{creditOutputsOutOfRange});
+        BOOST_CHECK(!CheckAssetLockTx(CTransaction(txInvalidOutputs), tx_state));
+        BOOST_CHECK(tx_state.GetRejectReason() == "bad-assetlocktx-credit-outofrange");
+
+    }
+    {
         // One credit output keys is not pub key
         std::vector<CTxOut> creditOutputsNotPubkey = creditOutputs;
         creditOutputsNotPubkey[0].scriptPubKey = CScript() << OP_1;
