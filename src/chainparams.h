@@ -129,11 +129,7 @@ public:
     void UpdateDIP3Parameters(int nActivationHeight, int nEnforcementHeight);
     void UpdateDIP8Parameters(int nActivationHeight);
     void UpdateBudgetParameters(int nMasternodePaymentsStartBlock, int nBudgetPaymentsStartBlock, int nSuperblockStartBlock);
-    void UpdateSubsidyAndDiffParams(int nMinimumDifficultyBlocks, int nHighSubsidyBlocks, int nHighSubsidyFactor);
-    void UpdateLLMQChainLocks(Consensus::LLMQType llmqType);
     void UpdateLLMQInstantSend(Consensus::LLMQType llmqType);
-    void UpdateLLMQTestParams(int size, int threshold);
-    void UpdateLLMQDevnetParams(int size, int threshold);
     int PoolMinParticipants() const { return nPoolMinParticipants; }
     int PoolMaxParticipants() const { return nPoolMaxParticipants; }
     int FulfilledRequestExpireTime() const { return nFulfilledRequestExpireTime; }
