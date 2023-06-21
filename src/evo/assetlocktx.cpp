@@ -100,11 +100,13 @@ std::string CAssetLockPayload::ToString() const
     return strprintf("CAssetLockPayload(nVersion=%d,creditOutputs=%s)", nVersion, outputs.c_str());
 }
 
-uint8_t CAssetLockPayload::getVersion() const {
+uint8_t CAssetLockPayload::getVersion() const
+{
     return nVersion;
 }
 
-const std::vector<CTxOut>& CAssetLockPayload::getCreditOutputs() const {
+const std::vector<CTxOut>& CAssetLockPayload::getCreditOutputs() const
+{
     return creditOutputs;
 }
 
@@ -123,7 +125,7 @@ bool CAssetUnlockPayload::VerifySig(const uint256& msgHash, const CBlockIndex* p
     Consensus::LLMQType llmqType = Params().GetConsensus().llmqTypeAssetLocks;
 
     // We check at most 2 quorums
-    auto quorums = llmq::quorumManager->ScanQuorums(llmqType, pindexTip, 2);
+    const auto quorums = llmq::quorumManager->ScanQuorums(llmqType, pindexTip, 2);
     bool isActive = std::any_of(quorums.begin(), quorums.end(), [&](const auto &q) { return q->qc->quorumHash == quorumHash; });
 
     if (!isActive) {
@@ -183,7 +185,7 @@ bool CheckAssetUnlockTx(const CTransaction& tx, const CBlockIndex* pindexPrev, c
 
     // Copy transaction except `quorumSig` field to calculate hash
     CMutableTransaction tx_copy(tx);
-    auto payload_copy = CAssetUnlockPayload(assetUnlockTx.getVersion(), assetUnlockTx.getIndex(), assetUnlockTx.getFee(), assetUnlockTx.getRequestedHeight(), assetUnlockTx.getQuorumHash(), CBLSSignature());
+    const CAssetUnlockPayload payload_copy{assetUnlockTx.getVersion(), assetUnlockTx.getIndex(), assetUnlockTx.getFee(), assetUnlockTx.getRequestedHeight(), assetUnlockTx.getQuorumHash(), CBLSSignature{}};
     SetTxPayload(tx_copy, payload_copy);
 
     uint256 msgHash = tx_copy.GetHash();
@@ -197,7 +199,7 @@ bool GetAssetUnlockFee(const CTransaction& tx, CAmount& txfee, TxValidationState
     if (!GetTxPayload(tx, assetUnlockTx)) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-assetunlocktx-payload");
     }
-    CAmount txfee_aux = assetUnlockTx.getFee();
+    const CAmount txfee_aux = assetUnlockTx.getFee();
     if (txfee_aux == 0 || !MoneyRange(txfee_aux)) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-assetunlock-fee-outofrange");
     }

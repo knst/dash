@@ -119,7 +119,7 @@ std::optional<CCreditPool> CCreditPoolManager::getFromCache(const CBlockIndex* c
 {
     if (!llmq::utils::IsV20Active(block_index)) return CCreditPool{};
 
-    uint256 block_hash = block_index->GetBlockHash();
+    const uint256 block_hash = block_index->GetBlockHash();
     CCreditPool pool;
     {
         LOCK(cache_mutex);
@@ -148,7 +148,7 @@ void CCreditPoolManager::addToCache(const uint256& block_hash, int height, const
     }
 }
 
-static std::optional<CBlock> getBlockForCreditPool(const CBlockIndex *block_index, const Consensus::Params& consensusParams)
+static std::optional<CBlock> getBlockForCreditPool(const CBlockIndex* const block_index, const Consensus::Params& consensusParams)
 {
     CBlock block;
     if (!ReadBlockFromDisk(block, block_index, consensusParams)) {
@@ -164,7 +164,7 @@ static std::optional<CBlock> getBlockForCreditPool(const CBlockIndex *block_inde
     return block;
 }
 
-CCreditPool CCreditPoolManager::constructCreditPool(const CBlockIndex* block_index, CCreditPool prev, const Consensus::Params& consensusParams)
+CCreditPool CCreditPoolManager::constructCreditPool(const CBlockIndex* const block_index, CCreditPool prev, const Consensus::Params& consensusParams)
 {
     std::optional<CBlock> block = getBlockForCreditPool(block_index, consensusParams);
     if (!block) {
@@ -210,7 +210,7 @@ CCreditPool CCreditPoolManager::constructCreditPool(const CBlockIndex* block_ind
 
     // Unlock limits are # max(100, min(.10 * assetlockpool, 1000)) inside window
     CAmount currentLimit = locked;
-    CAmount latelyUnlocked = prev.latelyUnlocked + blockData.unlocked - distantUnlocked;
+    const CAmount latelyUnlocked = prev.latelyUnlocked + blockData.unlocked - distantUnlocked;
     if (currentLimit + latelyUnlocked > LimitAmountLow) {
         currentLimit = std::max(LimitAmountLow, locked / 10) - latelyUnlocked;
         if (currentLimit < 0) currentLimit = 0;
