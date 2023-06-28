@@ -13,6 +13,7 @@ class CDBWrapper;
 class CEvoDB;
 class CTxMemPool;
 class CSporkManager;
+class LLMQContextImpl;
 class PeerManager;
 
 namespace llmq {
@@ -47,8 +48,12 @@ struct LLMQContext {
      *  at this point. LLMQContext keeps just a pointer to them and doesn't own these objects,
      *  but it still guarantees that objects are created and valid
      */
+public:
     const std::shared_ptr<CBLSWorker> bls_worker;
-    const std::unique_ptr<llmq::CDKGDebugManager> dkg_debugman;
+private:
+    std::unique_ptr<LLMQContextImpl> llmq_ctx_impl;
+public:
+    llmq::CDKGDebugManager& dkg_debugman();
     llmq::CQuorumBlockProcessor* const quorum_block_processor;
     const std::unique_ptr<llmq::CDKGSessionManager> qdkgsman;
     llmq::CQuorumManager* const qman;

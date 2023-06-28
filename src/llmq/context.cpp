@@ -10,7 +10,6 @@
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
 #include <llmq/commitment.h>
-#include <llmq/debug.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/instantsend.h>
 #include <llmq/quorums.h>
@@ -18,17 +17,18 @@
 #include <llmq/signing_shares.h>
 #include <llmq/utils.h>
 #include <masternode/sync.h>
+#include <llmq/context_impl.h>
 
 LLMQContext::LLMQContext(CEvoDB& evo_db, CTxMemPool& mempool, CConnman& connman, CSporkManager& sporkman,
                          const std::unique_ptr<PeerManager>& peerman, bool unit_tests, bool wipe) :
     bls_worker{std::make_shared<CBLSWorker>()},
-    dkg_debugman{std::make_unique<llmq::CDKGDebugManager>()},
+    llmq_ctx_impl{std::make_unique<LLMQContextImpl>()},
     quorum_block_processor{[&]() -> llmq::CQuorumBlockProcessor* const {
         assert(llmq::quorumBlockProcessor == nullptr);
         llmq::quorumBlockProcessor = std::make_unique<llmq::CQuorumBlockProcessor>(evo_db, connman, peerman);
         return llmq::quorumBlockProcessor.get();
     }()},
-    qdkgsman{std::make_unique<llmq::CDKGSessionManager>(connman, *bls_worker, *dkg_debugman, *quorum_block_processor, sporkman, peerman, unit_tests, wipe)},
+    qdkgsman{std::make_unique<llmq::CDKGSessionManager>(connman, *bls_worker, dkg_debugman(), *quorum_block_processor, sporkman, peerman, unit_tests, wipe)},
     qman{[&]() -> llmq::CQuorumManager* const {
         assert(llmq::quorumManager == nullptr);
         llmq::quorumManager = std::make_unique<llmq::CQuorumManager>(evo_db, connman, *bls_worker, *quorum_block_processor, *qdkgsman, ::masternodeSync, peerman);
@@ -101,4 +101,9 @@ void LLMQContext::Stop() {
     qman->Stop();
     qdkgsman->StopThreads();
     bls_worker->Stop();
+}
+
+llmq::CDKGDebugManager& LLMQContext::dkg_debugman()
+{
+    return llmq_ctx_impl->dkg_debugman();
 }

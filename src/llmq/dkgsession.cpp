@@ -16,7 +16,6 @@
 #include <chainparams.h>
 #include <netmessagemaker.h>
 #include <univalue.h>
-#include <validation.h>
 
 #include <cxxtimer.hpp>
 #include <memory>

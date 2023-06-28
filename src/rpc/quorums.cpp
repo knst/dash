@@ -285,7 +285,7 @@ static UniValue quorum_dkgstatus(const JSONRPCRequest& request)
 
     llmq::CDKGDebugStatus status;
     LLMQContext& llmq_ctx = EnsureLLMQContext(request.context);
-    llmq_ctx.dkg_debugman->GetLocalDebugStatus(status);
+    llmq_ctx.dkg_debugman().GetLocalDebugStatus(status);
 
     auto ret = status.ToJson(detailLevel);
 
