@@ -127,7 +127,7 @@ public:
     }
 
     std::string ToString() const {
-        return strprintf("CCreditPoolDiff(target=%lld,sessionLocked=%lld,sessionUnlocked=%lld,newIndexes=%lld,pool=%s", getTargetLocked() ? *getTargetLocked() : -1, sessionLocked, sessionUnlocked, newIndexes.size(), pool.ToString());
+        return strprintf("CCreditPoolDiff(target=%lld, sessionLocked=%lld, sessionUnlocked=%lld, newIndexes=%lld, pool=%s)", getTargetLocked() ? *getTargetLocked() : -1, sessionLocked, sessionUnlocked, newIndexes.size(), pool.ToString());
     }
 
 private:

@@ -59,7 +59,7 @@ static UnlockDataPerBlock getDataFromUnlockTxes(const std::vector<CTransactionRe
         TxValidationState tx_state;
         uint64_t index{0};
         if (!getDataFromUnlockTx(*tx, unlocked, index, tx_state)) {
-            throw std::runtime_error(strprintf("%s: CCreditPoolManager::getCreditPool failed: %s", __func__, tx_state.ToString()));
+            throw std::runtime_error(strprintf("%s: CCreditPoolManager::getDataFromUnlockTx failed: %s", __func__, tx_state.ToString()));
         }
         blockData.unlocked += unlocked;
         blockData.indexes.insert(index);
@@ -111,7 +111,7 @@ bool CSkipSet::contains(uint64_t value) const
 
 std::string CCreditPool::ToString() const
 {
-    return strprintf("CCreditPool(locked=%lld,currentLimit=%lld,nIndexes=%lld)",
+    return strprintf("CCreditPool(locked=%lld, currentLimit=%lld, nIndexes=%lld)",
             locked, currentLimit, indexes.size());
 }
 
@@ -219,7 +219,7 @@ CCreditPool CCreditPoolManager::constructCreditPool(const CBlockIndex* const blo
 
     assert(currentLimit >= 0);
 
-    if (currentLimit || latelyUnlocked || locked) {
+    if (currentLimit > 0 || latelyUnlocked > 0 || locked > 0) {
         LogPrintf("CCreditPoolManager: asset unlock limits on height: %d locked: %d.%08d limit: %d.%08d previous: %d.%08d\n", block_index->nHeight, locked / COIN, locked % COIN,
                currentLimit / COIN, currentLimit % COIN,
                latelyUnlocked / COIN, latelyUnlocked % COIN);
@@ -304,11 +304,11 @@ bool CCreditPoolDiff::unlock(const CTransaction& tx, TxValidationState& state)
     }
 
     if (pool.indexes.contains(index) || newIndexes.count(index)) {
-        return state.Invalid(TxValidationResult::TX_CONSENSUS, "failed-creditpool-duplicated-index");
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "failed-creditpool-unlock-duplicated-index");
     }
 
     if (!pool.indexes.canBeAdded(index)) {
-        return state.Invalid(TxValidationResult::TX_CONSENSUS, "failed-getcbforblock-index-exceed");
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "failed-creditpool-unlock-cant-add");
     }
 
     newIndexes.insert(index);
