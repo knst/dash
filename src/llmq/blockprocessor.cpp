@@ -314,14 +314,18 @@ bool CQuorumBlockProcessor::UndoBlock(const CBlock& block, const CBlockIndex* pi
 {
     AssertLockHeld(cs_main);
 
+
+    LogPrintf("%s: quorum-processor-1\n", __func__);
     PreComputeQuorumMembers(pindex, true);
 
     std::multimap<Consensus::LLMQType, CFinalCommitment> qcs;
     BlockValidationState dummy;
     if (!GetCommitmentsFromBlock(block, pindex, qcs, dummy)) {
+        LogPrintf("%s: quorum-processor-f-1\n", __func__);
         return false;
     }
 
+    LogPrintf("%s: quorum-processor-2\n", __func__);
     for (auto& p : qcs) {
         auto& qc = p.second;
         if (qc.IsNull()) {
@@ -348,8 +352,10 @@ bool CQuorumBlockProcessor::UndoBlock(const CBlock& block, const CBlockIndex* pi
         AddMineableCommitment(qc);
     }
 
+    LogPrintf("%s: quorum-processor-3\n", __func__);
     m_evoDb.Write(DB_BEST_BLOCK_UPGRADE, pindex->pprev->GetBlockHash());
 
+    LogPrintf("%s: quorum-processor-4\n", __func__);
     return true;
 }
 
