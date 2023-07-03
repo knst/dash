@@ -54,6 +54,7 @@ class CChainParams;
 struct CCheckpointData;
 class CInv;
 class CConnman;
+class CMNHFManager;
 class CScriptCheck;
 class CTxMemPool;
 class TxValidationState;
@@ -586,6 +587,7 @@ private:
     const std::unique_ptr<llmq::CChainLocksHandler>& m_clhandler;
     const std::unique_ptr<llmq::CInstantSendManager>& m_isman;
     const std::unique_ptr<llmq::CQuorumBlockProcessor>& m_quorum_block_processor;
+    CMNHFManager& m_mnhfManager;
     CEvoDB& m_evoDb;
 
 public:
@@ -595,6 +597,7 @@ public:
 
     explicit CChainState(CTxMemPool* mempool,
                          BlockManager& blockman,
+                         CMNHFManager& mnhfManager,
                          CEvoDB& evoDb,
                          const std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
                          const std::unique_ptr<llmq::CInstantSendManager>& isman,
@@ -941,6 +944,7 @@ public:
     //! @param[in] snapshot_blockhash   If given, signify that this chainstate
     //!                                 is based on a snapshot.
     CChainState& InitializeChainstate(CTxMemPool* mempool,
+                                      CMNHFManager& mnhfManager,
                                       CEvoDB& evoDb,
                                       const std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
                                       const std::unique_ptr<llmq::CInstantSendManager>& isman,

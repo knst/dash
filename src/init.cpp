@@ -84,6 +84,7 @@
 
 #include <evo/creditpool.h>
 #include <evo/deterministicmns.h>
+#include <evo/mnhftx.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
 #include <llmq/context.h>
@@ -354,6 +355,7 @@ void PrepareShutdown(NodeContext& node)
         llmq::quorumSnapshotManager.reset();
         deterministicMNManager.reset();
         creditPoolManager.reset();
+        node.mnhf_manager.reset();
         node.evodb.reset();
     }
     for (const auto& client : node.chain_clients) {
@@ -2022,9 +2024,10 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
                 LOCK(cs_main);
                 node.evodb.reset();
                 node.evodb = std::make_unique<CEvoDB>(nEvoDbCache, false, fReset || fReindexChainState);
+                node.mnhf_manager = std::make_unique<CMNHFManager>(*node.evodb);
 
                 chainman.Reset();
-                chainman.InitializeChainstate(Assert(node.mempool.get()), *node.evodb, llmq::chainLocksHandler, llmq::quorumInstantSendManager, llmq::quorumBlockProcessor);
+                chainman.InitializeChainstate(Assert(node.mempool.get()), *node.mnhf_manager, *node.evodb, llmq::chainLocksHandler, llmq::quorumInstantSendManager, llmq::quorumBlockProcessor);
                 chainman.m_total_coinstip_cache = nCoinCacheUsage;
                 chainman.m_total_coinsdb_cache = nCoinDBCache;
 

@@ -11,7 +11,14 @@
 #include <threadsafety.h>
 #include <univalue.h>
 
+#include <saltedhasher.h>
+#include <unordered_map>
+#include <unordered_lru_cache.h>
+
+class BlockValidationState;
+class CBlock;
 class CBlockIndex;
+class CEvoDB;
 class TxValidationState;
 extern RecursiveMutex cs_main;
 
@@ -69,6 +76,35 @@ public:
         signal.ToJson(mnhfObj);
         obj.pushKV("signal", mnhfObj);
     }
+};
+
+class CMNHFManager
+{
+public:
+    using Signals = std::unordered_map<uint8_t, int>;
+
+private:
+    CEvoDB& m_evoDb;
+
+    static constexpr size_t MNHFCacheSize = 1000;
+    Mutex cs_cache;
+    // versionBit <-> height
+    unordered_lru_cache<uint256, Signals, StaticSaltedHasher> mnhfCache GUARDED_BY(cs_cache) {MNHFCacheSize};
+
+public:
+    explicit  CMNHFManager(CEvoDB& evoDb) :
+        m_evoDb(evoDb) {}
+    ~CMNHFManager() = default;
+
+    bool ProcessBlock(const CBlock& block, const CBlockIndex* const pindex, bool fJustCheck, BlockValidationState& state) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+
+    bool UndoBlock(const CBlock& block, const CBlockIndex* const pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+
+    void UpdateChainParams(const CBlockIndex* const pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+
+private:
+    void AddToCache(const Signals& signals, const CBlockIndex* const pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_cache);
+    Signals GetFromCache(const CBlockIndex* const pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_cache);
 };
 
 bool CheckMNHFTx(const CTransaction& tx, const CBlockIndex* pindexPrev, TxValidationState& state) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
