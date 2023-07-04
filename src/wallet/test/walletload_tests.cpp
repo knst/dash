@@ -19,7 +19,7 @@ public:
     explicit DummyDescriptor(const std::string& descriptor) : desc(descriptor) {};
     ~DummyDescriptor() = default;
 
-    std::string ToString() const override { return desc; }
+    std::string ToString(bool compat_format) const override { return desc; }
     std::optional<OutputType> GetOutputType() const override { return OutputType::UNKNOWN; }
 
     bool IsRange() const override { return false; }
@@ -32,7 +32,7 @@ public:
     void ExpandPrivate(int pos, const SigningProvider& provider, FlatSigningProvider& out) const override {}
 };
 
-BOOST_FIXTURE_TEST_CASE(wallet_load_unknown_descriptor, TestingSetup)
+BOOST_FIXTURE_TEST_CASE(wallet_load_descriptors, TestingSetup)
 {
     std::unique_ptr<WalletDatabase> database = CreateMockableWalletDatabase();
     {

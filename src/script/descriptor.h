@@ -106,7 +106,7 @@ struct Descriptor {
     virtual bool IsSolvable() const = 0;
 
     /** Convert the descriptor back to a string, undoing parsing. */
-    virtual std::string ToString() const = 0;
+    virtual std::string ToString(bool compat_format=false) const = 0;
 
     /** Return the single extended public key at the root of this descriptor's
      * key expression, if it has one. */
