@@ -127,11 +127,22 @@ bool CQuorum::IsValidMember(const uint256& proTxHash) const
 CBLSPublicKey CQuorum::GetPubKeyShare(size_t memberIdx) const
 {
     LOCK(cs);
-    if (!HasVerificationVector() || memberIdx >= members.size() || !qc->validMembers[memberIdx]) {
+    if (!HasVerificationVector()) {
+        LogPrint(BCLog::LLMQ, "%s: doesn't have verification vector while %d\n", __func__, memberIdx);
+        return CBLSPublicKey();
+    }
+    if (memberIdx >= members.size()) {
+        LogPrint(BCLog::LLMQ, "%s: memberIdx is too big: %d %d\n", __func__, memberIdx, members.size());
+        return CBLSPublicKey();
+    }
+    if (!qc->validMembers[memberIdx]) {
+        LogPrint(BCLog::LLMQ, "%s: member[%d] is not valid\n", __func__, memberIdx);
         return CBLSPublicKey();
     }
     const auto& m = members[memberIdx];
-    return blsCache.BuildPubKeyShare(m->proTxHash, quorumVvec, CBLSId(m->proTxHash));
+    auto ret = blsCache.BuildPubKeyShare(m->proTxHash, quorumVvec, CBLSId(m->proTxHash));
+    LogPrint(BCLog::LLMQ, "%s: ret key: %s\n", __func__, ret.ToString());
+    return ret;
 }
 
 bool CQuorum::HasVerificationVector() const {

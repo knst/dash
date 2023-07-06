@@ -8,7 +8,7 @@
 #include <bls/bls.h>
 
 #include <ctpl_stl.h>
-
+#include <logging.h>
 #include <future>
 #include <mutex>
 #include <utility>
@@ -179,6 +179,7 @@ private:
         if (it != cache.end()) {
             auto f = it->second;
             cacheCs.unlock();
+            LogPrintf("%s: returned from cache for %s\n", __func__, cacheKey.ToString());
             return f.get();
         }
 

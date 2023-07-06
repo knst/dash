@@ -10,6 +10,8 @@
 #include <support/allocators/mt_pooled_secure.h>
 #endif
 
+#include <logging.h>
+
 #include <cassert>
 #include <cstring>
 
@@ -177,21 +179,29 @@ bool CBLSPublicKey::PublicKeyShare(const std::vector<CBLSPublicKey>& mpk, const 
     cachedHash.SetNull();
 
     if (!_id.IsValid()) {
+        LogPrintf("%s: id %s is invalid\n", __func__, _id.ToString());
         return false;
     }
 
     std::vector<bls::G1Element> mpkVec;
     mpkVec.reserve(mpk.size());
+    int index = 0;
     for (const CBLSPublicKey& pk : mpk) {
         if (!pk.IsValid()) {
+            LogPrintf("%s: pk_%d %s is invalid\n", __func__, index, pk.ToString());
             return false;
         }
+        ++index;
         mpkVec.emplace_back(pk.impl);
     }
 
     try {
         impl = bls::Threshold::PublicKeyShare(mpkVec, bls::Bytes(_id.impl.begin(), _id.impl.size()));
+    } catch (const std::exception& e) {
+        LogPrintf("%s: PublicKeyShare failed with %s\n", __func__, e.what());
+        return false;
     } catch (...) {
+        LogPrintf("%s: PublicKeyShare unknown exception\n", __func__);
         return false;
     }
 
