@@ -364,6 +364,7 @@ BITCOIN_CORE_H = \
   netfulfilledman.h \
   netgroup.h \
   netmessagemaker.h \
+  node/abort.h \
   node/blockmanager_args.h \
   node/blockstorage.h \
   node/caches.h \
@@ -478,6 +479,7 @@ BITCOIN_CORE_H = \
   util/readwritefile.h \
   util/result.h \
   util/serfloat.h \
+  util/signalinterrupt.h \
   util/sock.h \
   util/spanparsing.h \
   util/std23.h \
@@ -652,6 +654,7 @@ libbitcoin_node_a_SOURCES = \
   net_processing.cpp \
   netfulfilledman.cpp \
   netgroup.cpp \
+  node/abort.cpp \
   node/blockmanager_args.cpp \
   node/blockstorage.cpp \
   node/caches.cpp \
@@ -1098,6 +1101,7 @@ libbitcoin_util_a_SOURCES = \
   util/moneystr.cpp \
   util/ranges_set.cpp \
   util/readwritefile.cpp \
+  util/signalinterrupt.cpp \
   util/serfloat.cpp \
   util/sock.cpp \
   util/spanparsing.cpp \
@@ -1363,6 +1367,7 @@ libdashkernel_la_SOURCES = \
   messagesigner.cpp \
   netaddress.cpp \
   netbase.cpp \
+  node/abort.cpp \
   node/blockstorage.cpp \
   node/chainstate.cpp \
   node/interface_ui.cpp \
@@ -1408,6 +1413,7 @@ libdashkernel_la_SOURCES = \
   util/moneystr.cpp \
   util/ranges_set.cpp \
   util/serfloat.cpp \
+  util/signalinterrupt.cpp \
   util/sock.cpp \
   util/strencodings.cpp \
   util/string.cpp \

@@ -37,7 +37,7 @@ CSpecialTxProcessor::CSpecialTxProcessor(CEvoDB& evodb, CDeterministicMNManager&
                                          const Consensus::Params& consensus_params,
                                          const chainlock::Chainlocks& chainlocks, const llmq::CQuorumManager& qman) :
     m_cpoolman{std::make_unique<CCreditPoolManager>(evodb, chainman)},
-    m_mnhfman{std::make_unique<CMNHFManager>(evodb, blockman, consensus_params)},
+    m_mnhfman{std::make_unique<CMNHFManager>(evodb, blockman, consensus_params, chainman.GetNotifications())},
     m_dmnman{dmnman},
     m_qblockman{qblockman},
     m_qsnapman{qsnapman},
@@ -1022,7 +1022,7 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(Chainstate& chainstate, const
             }
             mn_list.SetBlockHash(pindex->GetBlockHash());
 
-            if (!fJustCheck && !m_dmnman.ProcessBlock(block, pindex, state, updatesRet.old_list, mn_list, updatesRet)) {
+            if (!fJustCheck && !m_dmnman.ProcessBlock(block, pindex, state, updatesRet.old_list, mn_list, updatesRet, m_chainman.GetNotifications())) {
                 // pass the state returned by the function above
                 return false;
             }
