@@ -58,8 +58,15 @@ public:
     }
 
     // getters
-    uint8_t getVersion() const;
-    const std::vector<CTxOut>& getCreditOutputs() const;
+    uint8_t getVersion() const
+    {
+        return nVersion;
+    }
+
+    const std::vector<CTxOut>& getCreditOutputs() const
+    {
+        return creditOutputs;
+    }
 };
 
 class CAssetUnlockPayload
@@ -120,16 +127,42 @@ public:
     bool VerifySig(const uint256& msgHash, const CBlockIndex* pindexTip, TxValidationState& state) const;
 
     // getters
-    uint8_t getVersion() const;
-    uint64_t getIndex() const;
-    uint32_t getFee() const;
-    uint32_t getRequestedHeight() const;
-    const uint256& getQuorumHash() const;
-    const CBLSSignature& getQuorumSig() const;
+    uint8_t getVersion() const
+    {
+        return nVersion;
+    }
+
+    uint64_t getIndex() const
+    {
+        return index;
+    }
+
+    uint32_t getFee() const
+    {
+        return fee;
+    }
+
+    uint32_t getRequestedHeight() const
+    {
+        return requestedHeight;
+    }
+
+    const uint256& getQuorumHash() const
+    {
+        return quorumHash;
+    }
+
+    const CBLSSignature& getQuorumSig() const
+    {
+        return quorumSig;
+    }
 
     // used by mempool to know when possible to drop a transaction as expired
-    int getHeightToExpiry() const;
     static constexpr int HEIGHT_DIFF_EXPIRING = 48;
+    int getHeightToExpiry() const
+    {
+        return requestedHeight + HEIGHT_DIFF_EXPIRING;
+    }
 };
 
 bool CheckAssetLockTx(const CTransaction& tx, TxValidationState& state);

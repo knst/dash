@@ -100,16 +100,6 @@ std::string CAssetLockPayload::ToString() const
     return strprintf("CAssetLockPayload(nVersion=%d,creditOutputs=%s)", nVersion, outputs.c_str());
 }
 
-uint8_t CAssetLockPayload::getVersion() const
-{
-    return nVersion;
-}
-
-const std::vector<CTxOut>& CAssetLockPayload::getCreditOutputs() const
-{
-    return creditOutputs;
-}
-
 /*
    Asset Unlock Transaction (withdrawals)
    */
@@ -211,39 +201,4 @@ std::string CAssetUnlockPayload::ToString() const
 {
     return strprintf("CAssetUnlockPayload(nVersion=%d,index=%d,fee=%d.%08d,requestedHeight=%d,quorumHash=%d,quorumSig=%s",
             nVersion, index, fee / COIN, fee % COIN, requestedHeight, quorumHash.GetHex(), quorumSig.ToString().c_str());
-}
-
-uint8_t CAssetUnlockPayload::getVersion() const
-{
-    return nVersion;
-}
-
-uint64_t CAssetUnlockPayload::getIndex() const
-{
-    return index;
-}
-
-uint32_t CAssetUnlockPayload::getFee() const
-{
-    return fee;
-}
-
-uint32_t CAssetUnlockPayload::getRequestedHeight() const
-{
-    return requestedHeight;
-}
-
-const uint256& CAssetUnlockPayload::getQuorumHash() const
-{
-    return quorumHash;
-}
-
-const CBLSSignature& CAssetUnlockPayload::getQuorumSig() const
-{
-    return quorumSig;
-}
-
-int CAssetUnlockPayload::getHeightToExpiry() const
-{
-    return requestedHeight + HEIGHT_DIFF_EXPIRING;
 }
