@@ -171,7 +171,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     std::optional<CCreditPoolDiff> creditPoolDiff;
     if (fV20Active_context) {
-        CCreditPool creditPool = creditPoolManager->getCreditPool(pindexPrev, chainparams.GetConsensus());
+        CCreditPool creditPool = creditPoolManager->GetCreditPool(pindexPrev, chainparams.GetConsensus());
         LogPrintf("%s: CCreditPool is %s\n", __func__, creditPool.ToString());
         creditPoolDiff.emplace(std::move(creditPool), pindexPrev, chainparams.GetConsensus());
     }
@@ -232,7 +232,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     LogPrintf("CreateNewBlock() h[%d] CbTx failed to find best CL. Inserting null CL\n", nHeight);
                 }
                 assert(creditPoolDiff != std::nullopt);
-                cbTx.assetLockedAmount = creditPoolDiff->getTotalLocked();
+                cbTx.assetLockedAmount = creditPoolDiff->GetTotalLocked();
             }
         }
 
@@ -456,7 +456,7 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
             // `state` is local here because used to log info about this specific tx
             TxValidationState state;
 
-            if (!creditPoolDiff->processTransaction(iter->GetTx(), state)) {
+            if (!creditPoolDiff->ProcessTransaction(iter->GetTx(), state)) {
                 if (fUsingModified) {
                     mapModifiedTx.get<ancestor_score>().erase(modit);
                     failedTx.insert(iter);

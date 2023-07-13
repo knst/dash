@@ -22,16 +22,16 @@ public:
      * adding value that already exist in CKipSet will cause `assert`.
      *
      */
-    [[nodiscard]] bool add(uint64_t value);
+    [[nodiscard]] bool Add(uint64_t value);
 
-    bool canBeAdded(uint64_t value) const;
+    bool CanBeAdded(uint64_t value) const;
 
-    bool contains(uint64_t value) const;
+    bool Contains(uint64_t value) const;
 
-    size_t size() const {
+    size_t Size() const {
         return current_max - skipped.size();
     }
-    size_t capacity() const {
+    size_t Capacity() const {
         return skipped.size();
     }
 

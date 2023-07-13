@@ -80,24 +80,24 @@ public:
      * to change amount of credit pool
      * @return true if transaction can be included in this block
      */
-    bool processTransaction(const CTransaction& tx, TxValidationState& state);
+    bool ProcessTransaction(const CTransaction& tx, TxValidationState& state);
 
-    CAmount getTotalLocked() const {
+    CAmount GetTotalLocked() const {
         return pool.locked + sessionLocked - sessionUnlocked;
     }
 
-    const std::optional<CAmount>& getTargetLocked() const {
+    const std::optional<CAmount>& GetTargetLocked() const {
         return targetLocked;
     }
 
     std::string ToString() const {
-        return strprintf("CCreditPoolDiff(target=%lld, sessionLocked=%lld, sessionUnlocked=%lld, newIndexes=%lld, pool=%s)", getTargetLocked() ? *getTargetLocked() : -1, sessionLocked, sessionUnlocked, newIndexes.size(), pool.ToString());
+        return strprintf("CCreditPoolDiff(target=%lld, sessionLocked=%lld, sessionUnlocked=%lld, newIndexes=%lld, pool=%s)", GetTargetLocked() ? *GetTargetLocked() : -1, sessionLocked, sessionUnlocked, newIndexes.size(), pool.ToString());
     }
 
 private:
-    bool setTarget(const CTransaction& tx, TxValidationState& state);
-    bool lock(const CTransaction& tx, TxValidationState& state);
-    bool unlock(const CTransaction& tx, TxValidationState& state);
+    bool SetTarget(const CTransaction& tx, TxValidationState& state);
+    bool Lock(const CTransaction& tx, TxValidationState& state);
+    bool Unlock(const CTransaction& tx, TxValidationState& state);
 };
 
 class CCreditPoolManager
@@ -122,16 +122,16 @@ public:
 
     /**
       * @return CCreditPool with data or with empty depends on activation V19 at that block
-      * In case if block is invalid the function getCreditPool throws an exception
+      * In case if block is invalid the function GetCreditPool throws an exception
       * it can happen if there limits of withdrawal (unlock) exceed
       */
-    CCreditPool getCreditPool(const CBlockIndex* block, const Consensus::Params& consensusParams);
+    CCreditPool GetCreditPool(const CBlockIndex* block, const Consensus::Params& consensusParams);
 
 private:
-    std::optional<CCreditPool> getFromCache(const CBlockIndex* const block_index);
-    void addToCache(const uint256& block_hash, int height, const CCreditPool& pool);
+    std::optional<CCreditPool> GetFromCache(const CBlockIndex* const block_index);
+    void AddToCache(const uint256& block_hash, int height, const CCreditPool& pool);
 
-    CCreditPool constructCreditPool(const CBlockIndex* block_index, CCreditPool prev, const Consensus::Params& consensusParams);
+    CCreditPool ConstructCreditPool(const CBlockIndex* block_index, CCreditPool prev, const Consensus::Params& consensusParams);
 };
 
 extern std::unique_ptr<CCreditPoolManager> creditPoolManager;

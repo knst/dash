@@ -329,7 +329,7 @@ static std::string SignAndSendSpecialTx(const JSONRPCRequest& request, const CMu
     {
     LOCK(cs_main);
 
-    CCreditPool creditPool = creditPoolManager->getCreditPool(::ChainActive().Tip(), Params().GetConsensus());
+    CCreditPool creditPool = creditPoolManager->GetCreditPool(::ChainActive().Tip(), Params().GetConsensus());
 
     TxValidationState state;
     if (!CheckSpecialTx(CTransaction(tx), ::ChainActive().Tip(), ::ChainstateActive().CoinsTip(), creditPool, true, state)) {

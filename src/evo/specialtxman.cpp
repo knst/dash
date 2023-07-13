@@ -128,7 +128,7 @@ bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, ll
 
         int64_t nTime1 = GetTimeMicros();
 
-        const CCreditPool creditPool = creditPoolManager->getCreditPool(pindex->pprev, consensusParams);
+        const CCreditPool creditPool = creditPoolManager->GetCreditPool(pindex->pprev, consensusParams);
         std::optional<CCreditPoolDiff> creditPoolDiff;
         if (bool fV20Active_context = llmq::utils::IsV20Active(pindex->pprev); fV20Active_context) {
             LogPrintf("%s: CCreditPool is %s\n", __func__, creditPool.ToString());
@@ -149,7 +149,7 @@ bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, ll
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, tx_state.GetRejectReason(),
                                  strprintf("Process Special Transaction failed (tx hash %s) %s", ptr_tx->GetHash().ToString(), tx_state.GetDebugMessage()));
             }
-            if (creditPoolDiff != std::nullopt && !creditPoolDiff->processTransaction(*ptr_tx, tx_state)) {
+            if (creditPoolDiff != std::nullopt && !creditPoolDiff->ProcessTransaction(*ptr_tx, tx_state)) {
                 assert(tx_state.GetResult() == TxValidationResult::TX_CONSENSUS || tx_state.GetResult() == TxValidationResult::TX_BAD_SPECIAL);
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, tx_state.GetRejectReason(),
                                  strprintf("Process Special Transaction failed at Credit Pool (tx hash %s) %s", ptr_tx->GetHash().ToString(), tx_state.GetDebugMessage()));
@@ -159,9 +159,9 @@ bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, ll
         }
         if (creditPoolDiff != std::nullopt) {
             CAmount locked_proposed{0};
-            if(creditPoolDiff->getTargetLocked()) locked_proposed = *creditPoolDiff->getTargetLocked();
+            if(creditPoolDiff->GetTargetLocked()) locked_proposed = *creditPoolDiff->GetTargetLocked();
 
-            CAmount locked_calculated = creditPoolDiff->getTotalLocked();
+            CAmount locked_calculated = creditPoolDiff->GetTotalLocked();
             if (locked_proposed != locked_calculated) {
                 LogPrintf("%s: mismatched locked amount in CbTx: %lld against re-calculated: %lld\n", __func__, locked_proposed, locked_calculated);
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-assetlocked-amount");

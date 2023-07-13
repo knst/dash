@@ -6,9 +6,9 @@
 
 #include <logging.h>
 
-bool CSkipSet::add(uint64_t value)
+bool CSkipSet::Add(uint64_t value)
 {
-    assert(!contains(value));
+    assert(!Contains(value));
 
     if (auto it = skipped.find(value); it != skipped.end()) {
         skipped.erase(it);
@@ -16,9 +16,9 @@ bool CSkipSet::add(uint64_t value)
     }
 
     assert(current_max <= value);
-    if (capacity() + value - current_max > capacity_limit) {
-        LogPrintf("CSkipSet::add failed due to capacity exceeded: requested %lld to %lld while limit is %lld\n",
-                value - current_max, capacity(), capacity_limit);
+    if (Capacity() + value - current_max > capacity_limit) {
+        LogPrintf("CSkipSet::Add failed due to capacity exceeded: requested %lld to %lld while limit is %lld\n",
+                value - current_max, Capacity(), capacity_limit);
         return false;
     }
     for (uint64_t index = current_max; index < value; ++index) {
@@ -29,20 +29,20 @@ bool CSkipSet::add(uint64_t value)
     return true;
 }
 
-bool CSkipSet::canBeAdded(uint64_t value) const
+bool CSkipSet::CanBeAdded(uint64_t value) const
 {
-    if (contains(value)) return false;
+    if (Contains(value)) return false;
 
     if (skipped.find(value) != skipped.end()) return true;
 
-    if (capacity() + value - current_max > capacity_limit) {
+    if (Capacity() + value - current_max > capacity_limit) {
         return false;
     }
 
     return true;
 }
 
-bool CSkipSet::contains(uint64_t value) const
+bool CSkipSet::Contains(uint64_t value) const
 {
     if (current_max <= value) return false;
     return skipped.find(value) == skipped.end();

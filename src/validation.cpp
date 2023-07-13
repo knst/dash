@@ -710,7 +710,7 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
             }
         }
     }
-    CCreditPool creditPool = creditPoolManager->getCreditPool(::ChainActive().Tip(), chainparams.GetConsensus());
+    CCreditPool creditPool = creditPoolManager->GetCreditPool(::ChainActive().Tip(), chainparams.GetConsensus());
     LockPoints lp;
     m_view.SetBackend(m_viewmempool);
 

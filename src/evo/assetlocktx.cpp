@@ -165,7 +165,7 @@ bool CheckAssetUnlockTx(const CTransaction& tx, const CBlockIndex* pindexPrev, c
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-assetunlocktx-version");
     }
 
-    if (creditPool.indexes.contains(assetUnlockTx.getIndex())) {
+    if (creditPool.indexes.Contains(assetUnlockTx.getIndex())) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-assetunlock-duplicated-index");
     }
 

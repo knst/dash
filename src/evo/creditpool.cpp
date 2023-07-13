@@ -22,7 +22,7 @@ static const std::string DB_CREDITPOOL_SNAPSHOT = "cpm_S";
 
 std::unique_ptr<CCreditPoolManager> creditPoolManager;
 
-static bool getDataFromUnlockTx(const CTransaction& tx, CAmount& toUnlock, uint64_t& index, TxValidationState& state)
+static bool GetDataFromUnlockTx(const CTransaction& tx, CAmount& toUnlock, uint64_t& index, TxValidationState& state)
 {
     CAssetUnlockPayload assetUnlockTx;
     if (!GetTxPayload(tx, assetUnlockTx)) {
@@ -48,7 +48,7 @@ namespace {
 } // anonymous namespace
 
 // it throws exception if anything went wrong
-static UnlockDataPerBlock getDataFromUnlockTxes(const std::vector<CTransactionRef>& vtx)
+static UnlockDataPerBlock GetDataFromUnlockTxes(const std::vector<CTransactionRef>& vtx)
 {
     UnlockDataPerBlock blockData;
 
@@ -58,8 +58,8 @@ static UnlockDataPerBlock getDataFromUnlockTxes(const std::vector<CTransactionRe
         CAmount unlocked{0};
         TxValidationState tx_state;
         uint64_t index{0};
-        if (!getDataFromUnlockTx(*tx, unlocked, index, tx_state)) {
-            throw std::runtime_error(strprintf("%s: CCreditPoolManager::getDataFromUnlockTx failed: %s", __func__, tx_state.ToString()));
+        if (!GetDataFromUnlockTx(*tx, unlocked, index, tx_state)) {
+            throw std::runtime_error(strprintf("%s: CCreditPoolManager::GetDataFromUnlockTxes failed: %s", __func__, tx_state.ToString()));
         }
         blockData.unlocked += unlocked;
         blockData.indexes.insert(index);
@@ -70,10 +70,10 @@ static UnlockDataPerBlock getDataFromUnlockTxes(const std::vector<CTransactionRe
 std::string CCreditPool::ToString() const
 {
     return strprintf("CCreditPool(locked=%lld, currentLimit=%lld, nIndexes=%lld)",
-            locked, currentLimit, indexes.size());
+            locked, currentLimit, indexes.Size());
 }
 
-std::optional<CCreditPool> CCreditPoolManager::getFromCache(const CBlockIndex* const block_index)
+std::optional<CCreditPool> CCreditPoolManager::GetFromCache(const CBlockIndex* const block_index)
 {
     if (!llmq::utils::IsV20Active(block_index)) return CCreditPool{};
 
@@ -95,7 +95,7 @@ std::optional<CCreditPool> CCreditPoolManager::getFromCache(const CBlockIndex* c
     return std::nullopt;
 }
 
-void CCreditPoolManager::addToCache(const uint256& block_hash, int height, const CCreditPool &pool)
+void CCreditPoolManager::AddToCache(const uint256& block_hash, int height, const CCreditPool &pool)
 {
     {
         LOCK(cache_mutex);
@@ -106,7 +106,7 @@ void CCreditPoolManager::addToCache(const uint256& block_hash, int height, const
     }
 }
 
-static std::optional<CBlock> getBlockForCreditPool(const CBlockIndex* const block_index, const Consensus::Params& consensusParams)
+static std::optional<CBlock> GetBlockForCreditPool(const CBlockIndex* const block_index, const Consensus::Params& consensusParams)
 {
     CBlock block;
     if (!ReadBlockFromDisk(block, block_index, consensusParams)) {
@@ -122,17 +122,17 @@ static std::optional<CBlock> getBlockForCreditPool(const CBlockIndex* const bloc
     return block;
 }
 
-CCreditPool CCreditPoolManager::constructCreditPool(const CBlockIndex* const block_index, CCreditPool prev, const Consensus::Params& consensusParams)
+CCreditPool CCreditPoolManager::ConstructCreditPool(const CBlockIndex* const block_index, CCreditPool prev, const Consensus::Params& consensusParams)
 {
-    std::optional<CBlock> block = getBlockForCreditPool(block_index, consensusParams);
+    std::optional<CBlock> block = GetBlockForCreditPool(block_index, consensusParams);
     if (!block) {
         // If reading of previous block is not read successfully, but
         // prev contains credit pool related data, something strange happened
         assert(prev.locked == 0);
-        assert(prev.indexes.size() == 0);
+        assert(prev.indexes.Size() == 0);
 
         CCreditPool emptyPool;
-        addToCache(block_index->GetBlockHash(), block_index->nHeight, emptyPool);
+        AddToCache(block_index->GetBlockHash(), block_index->nHeight, emptyPool);
         return emptyPool;
     }
     CAmount locked{0};
@@ -148,9 +148,9 @@ CCreditPool CCreditPoolManager::constructCreditPool(const CBlockIndex* const blo
     // current limits for asset unlock transactions.
     // Indexes should not be duplicated since genesis block, but the Unlock Amount
     // of withdrawal transaction is limited only by this window
-    UnlockDataPerBlock blockData = getDataFromUnlockTxes(block->vtx);
+    UnlockDataPerBlock blockData = GetDataFromUnlockTxes(block->vtx);
     CSkipSet indexes{std::move(prev.indexes)};
-    if (std::any_of(blockData.indexes.begin(), blockData.indexes.end(), [&](const uint64_t index) { return !indexes.add(index); })) {
+    if (std::any_of(blockData.indexes.begin(), blockData.indexes.end(), [&](const uint64_t index) { return !indexes.Add(index); })) {
         throw std::runtime_error(strprintf("%s: failed-getcreditpool-index-exceed", __func__));
     }
 
@@ -161,8 +161,8 @@ CCreditPool CCreditPoolManager::constructCreditPool(const CBlockIndex* const blo
     }
     CAmount distantUnlocked{0};
     if (distant_block_index) {
-        if (std::optional<CBlock> distant_block = getBlockForCreditPool(distant_block_index, consensusParams); distant_block) {
-            distantUnlocked = getDataFromUnlockTxes(distant_block->vtx).unlocked;
+        if (std::optional<CBlock> distant_block = GetBlockForCreditPool(distant_block_index, consensusParams); distant_block) {
+            distantUnlocked = GetDataFromUnlockTxes(distant_block->vtx).unlocked;
         }
     }
 
@@ -184,22 +184,22 @@ CCreditPool CCreditPoolManager::constructCreditPool(const CBlockIndex* const blo
     }
 
     CCreditPool pool{locked, currentLimit, latelyUnlocked, indexes};
-    addToCache(block_index->GetBlockHash(), block_index->nHeight, pool);
+    AddToCache(block_index->GetBlockHash(), block_index->nHeight, pool);
     return pool;
 
 }
 
-CCreditPool CCreditPoolManager::getCreditPool(const CBlockIndex* block_index, const Consensus::Params& consensusParams)
+CCreditPool CCreditPoolManager::GetCreditPool(const CBlockIndex* block_index, const Consensus::Params& consensusParams)
 {
     std::stack<const CBlockIndex *> to_calculate;
 
     std::optional<CCreditPool> poolTmp;
-    while (!(poolTmp = getFromCache(block_index)).has_value()) {
+    while (!(poolTmp = GetFromCache(block_index)).has_value()) {
         to_calculate.push(block_index);
         block_index = block_index->pprev;
     }
     while (!to_calculate.empty()) {
-        poolTmp = constructCreditPool(to_calculate.top(), *poolTmp, consensusParams);
+        poolTmp = ConstructCreditPool(to_calculate.top(), *poolTmp, consensusParams);
         to_calculate.pop();
     }
     return *poolTmp;
@@ -217,7 +217,7 @@ CCreditPoolDiff::CCreditPoolDiff(CCreditPool starter, const CBlockIndex *pindex,
     assert(pindex);
 }
 
-bool CCreditPoolDiff::setTarget(const CTransaction& tx, TxValidationState& state)
+bool CCreditPoolDiff::SetTarget(const CTransaction& tx, TxValidationState& state)
 {
     CCbTx cbTx;
     if (!GetTxPayload(tx, cbTx)) {
@@ -230,7 +230,7 @@ bool CCreditPoolDiff::setTarget(const CTransaction& tx, TxValidationState& state
     return true;
 }
 
-bool CCreditPoolDiff::lock(const CTransaction& tx, TxValidationState& state)
+bool CCreditPoolDiff::Lock(const CTransaction& tx, TxValidationState& state)
 {
     CAssetLockPayload assetLockTx;
     if (!GetTxPayload(tx, assetLockTx)) {
@@ -248,12 +248,12 @@ bool CCreditPoolDiff::lock(const CTransaction& tx, TxValidationState& state)
     return state.Invalid(TxValidationResult::TX_CONSENSUS, "failed-creditpool-lock-invalid");
 }
 
-bool CCreditPoolDiff::unlock(const CTransaction& tx, TxValidationState& state)
+bool CCreditPoolDiff::Unlock(const CTransaction& tx, TxValidationState& state)
 {
     uint64_t index{0};
     CAmount toUnlock{0};
-    if (!getDataFromUnlockTx(tx, toUnlock, index, state)) {
-        // state is set up inside getDataFromUnlockTx
+    if (!GetDataFromUnlockTx(tx, toUnlock, index, state)) {
+        // state is set up inside GetDataFromUnlockTx
         return false;
     }
 
@@ -261,11 +261,11 @@ bool CCreditPoolDiff::unlock(const CTransaction& tx, TxValidationState& state)
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "failed-creditpool-unlock-too-much");
     }
 
-    if (pool.indexes.contains(index) || newIndexes.count(index)) {
+    if (pool.indexes.Contains(index) || newIndexes.count(index)) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "failed-creditpool-unlock-duplicated-index");
     }
 
-    if (!pool.indexes.canBeAdded(index)) {
+    if (!pool.indexes.CanBeAdded(index)) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "failed-creditpool-unlock-cant-add");
     }
 
@@ -274,10 +274,10 @@ bool CCreditPoolDiff::unlock(const CTransaction& tx, TxValidationState& state)
     return true;
 }
 
-bool CCreditPoolDiff::processTransaction(const CTransaction& tx, TxValidationState& state)
+bool CCreditPoolDiff::ProcessTransaction(const CTransaction& tx, TxValidationState& state)
 {
     if (tx.nVersion != 3) return true;
-    if (tx.nType == TRANSACTION_COINBASE) return setTarget(tx, state);
+    if (tx.nType == TRANSACTION_COINBASE) return SetTarget(tx, state);
 
     if (tx.nType != TRANSACTION_ASSET_LOCK && tx.nType != TRANSACTION_ASSET_UNLOCK) return true;
 
@@ -289,9 +289,9 @@ bool CCreditPoolDiff::processTransaction(const CTransaction& tx, TxValidationSta
     try {
         switch (tx.nType) {
         case TRANSACTION_ASSET_LOCK:
-            return lock(tx, state);
+            return Lock(tx, state);
         case TRANSACTION_ASSET_UNLOCK:
-            return unlock(tx, state);
+            return Unlock(tx, state);
         default:
             return true;
         }
