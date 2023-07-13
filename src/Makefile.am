@@ -322,6 +322,7 @@ BITCOIN_CORE_H = \
   util/underlying.h \
   util/serfloat.h \
   util/settings.h \
+  util/skip_set.h \
   util/sock.h \
   util/string.h \
   util/time.h \
@@ -735,6 +736,7 @@ libbitcoin_util_a_SOURCES = \
   util/message.cpp \
   util/moneystr.cpp \
   util/settings.cpp \
+  util/skip_set.cpp \
   util/spanparsing.cpp \
   util/strencodings.cpp \
   util/time.cpp \

@@ -10,14 +10,15 @@
 #include <evo/assetlocktx.h>
 #include <evo/evodb.h>
 
+#include <saltedhasher.h>
+#include <serialize.h>
 #include <sync.h>
 #include <threadsafety.h>
+#include <unordered_lru_cache.h>
+#include <util/skip_set.h>
 
 #include <optional>
 #include <unordered_set>
-
-#include <saltedhasher.h>
-#include <unordered_lru_cache.h>
 
 class CBlockIndex;
 class TxValidationState;
@@ -26,43 +27,6 @@ namespace Consensus
 {
     struct Params;
 }
-
-// This datastructure keeps efficiently all indexes and have a strict limit for used memory
-// So far as CCreditPool is built only in direction from parent block to child
-// there's no need to remove elements from CSkipSet ever, only add them
-class CSkipSet {
-private:
-    std::unordered_set<uint64_t> skipped;
-    uint64_t current_max{0};
-    size_t capacity_limit;
-public:
-    explicit CSkipSet(size_t capacity_limit = 10'000) :
-        capacity_limit(capacity_limit)
-    {}
-
-    /**
-     * adding value that already exist in CKipSet will cause `assert`.
-     *
-     */
-    [[nodiscard]] bool add(uint64_t value);
-
-    bool canBeAdded(uint64_t value) const;
-
-    bool contains(uint64_t value) const;
-
-    size_t size() const {
-        return current_max - skipped.size();
-    }
-    size_t capacity() const {
-        return skipped.size();
-    }
-
-    SERIALIZE_METHODS(CSkipSet, obj)
-    {
-        READWRITE(obj.current_max);
-        READWRITE(obj.skipped);
-    }
-};
 
 struct CCreditPool {
     CAmount locked{0};

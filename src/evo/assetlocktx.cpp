@@ -9,6 +9,7 @@
 #include <consensus/params.h>
 
 #include <chainparams.h>
+#include <logging.h>
 #include <validation.h>
 
 #include <llmq/commitment.h>
