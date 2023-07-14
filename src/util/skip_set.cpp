@@ -5,10 +5,13 @@
 #include <util/skip_set.h>
 
 #include <logging.h>
+#include <stdexcept>
 
 bool CSkipSet::Add(uint64_t value)
 {
-    assert(!Contains(value));
+    if (Contains(value)) {
+        throw std::runtime_error(strprintf("%s: trying to add an element that can't be added", __func__));
+    }
 
     if (auto it = skipped.find(value); it != skipped.end()) {
         skipped.erase(it);

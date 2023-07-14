@@ -5,7 +5,7 @@
 #include <serialize.h>
 #include <unordered_set>
 
-// This datastructure keeps efficiently all indexes and have a strict limit for used memory
+// This data structure keeps efficiently all indexes and have a strict limit for used memory
 // So far as CCreditPool is built only in direction from parent block to child
 // there's no need to remove elements from CSkipSet ever, only add them
 class CSkipSet {
@@ -19,8 +19,12 @@ public:
     {}
 
     /**
-     * adding value that already exist in CKipSet will cause `assert`.
+     * `Add` returns true if element has been added correctly and false if
+     * capacity is depleted.
      *
+     * `Add` should not be called if the element has been already added.
+     * Use `Contains` to check if the element is here
+     * Adding existing value will cause an exception
      */
     [[nodiscard]] bool Add(uint64_t value);
 
