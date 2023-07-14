@@ -67,15 +67,16 @@ template <unsigned int BITS>
 base_uint<BITS>& base_uint<BITS>::operator*=(const base_uint& b)
 {
     base_uint<BITS> a;
-    for (int j = 0; j < WIDTH; j++) {
+    for (int i = 0; i < WIDTH; i++) {
+        if (b.pn[i] == 0) continue;
         uint64_t carry = 0;
-        for (int i = 0; i + j < WIDTH; i++) {
+        for (int j = 0; j + i < WIDTH; j++) {
             uint64_t n = carry + a.pn[i + j] + (uint64_t)pn[j] * b.pn[i];
             a.pn[i + j] = n & 0xffffffff;
             carry = n >> 32;
         }
     }
-    *this = a;
+    std::swap(*this, a);
     return *this;
 }
 
@@ -102,6 +103,19 @@ base_uint<BITS>& base_uint<BITS>::operator/=(const base_uint& b)
         shift--;
     }
     // num now contains the remainder of the division.
+    return *this;
+}
+
+template <unsigned int BITS>
+base_uint<BITS>& base_uint<BITS>::operator/=(uint64_t b64)
+{
+    uint64_t next = 0;
+    for (int i = WIDTH - 1; i >= 0; --i) {
+        next = (next << 32) | pn[i];
+        pn[i] = next / b64;
+        next -= pn[i] * b64;
+    }
+    // next now contains the remainder of the division.
     return *this;
 }
 
@@ -188,6 +202,7 @@ template base_uint<256>& base_uint<256>::operator<<=(unsigned int);
 template base_uint<256>& base_uint<256>::operator>>=(unsigned int);
 template base_uint<256>& base_uint<256>::operator*=(uint32_t b32);
 template base_uint<256>& base_uint<256>::operator*=(const base_uint<256>& b);
+template base_uint<256>& base_uint<256>::operator/=(uint64_t b64);
 template base_uint<256>& base_uint<256>::operator/=(const base_uint<256>& b);
 template int base_uint<256>::CompareTo(const base_uint<256>&) const;
 template bool base_uint<256>::EqualTo(uint64_t) const;
