@@ -2,6 +2,9 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#ifndef BITCOIN_UTIL_SKIP_SET_H
+#define BITCOIN_UTIL_SKIP_SET_H
+
 #include <serialize.h>
 #include <unordered_set>
 
@@ -46,3 +49,4 @@ public:
     }
 };
 
+#endif // BITCOIN_UTIL_SKIP_SET_H
