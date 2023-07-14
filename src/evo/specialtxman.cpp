@@ -49,7 +49,7 @@ bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const
         case TRANSACTION_ASSET_LOCK:
         case TRANSACTION_ASSET_UNLOCK:
             if (!llmq::utils::IsV20Active(pindexPrev)) {
-                return state.Invalid(TxValidationResult::TX_CONSENSUS, "v20-not-active");
+                return state.Invalid(TxValidationResult::TX_CONSENSUS, "assetlocks-before-v20");
             }
             return CheckAssetLockUnlockTx(tx, pindexPrev, creditPool, state);
         }

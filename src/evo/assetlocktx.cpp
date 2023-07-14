@@ -19,9 +19,9 @@
 
 #include <algorithm>
 
-/*
-   Common code for Asset Lock and Asset Unlock
-    */
+/**
+ *  Common code for Asset Lock and Asset Unlock
+ */
 bool CheckAssetLockUnlockTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCreditPool& creditPool, TxValidationState& state)
 {
     switch (tx.nType) {
@@ -34,9 +34,9 @@ bool CheckAssetLockUnlockTx(const CTransaction& tx, const CBlockIndex* pindexPre
     }
 }
 
-/*
-   Asset Lock Transaction
-   */
+/**
+ * Asset Lock Transaction
+ */
 bool CheckAssetLockTx(const CTransaction& tx, TxValidationState& state)
 {
     if (tx.nType != TRANSACTION_ASSET_LOCK) {
@@ -101,9 +101,9 @@ std::string CAssetLockPayload::ToString() const
     return strprintf("CAssetLockPayload(nVersion=%d,creditOutputs=%s)", nVersion, outputs.c_str());
 }
 
-/*
-   Asset Unlock Transaction (withdrawals)
-   */
+/**
+ * Asset Unlock Transaction (withdrawals)
+ */
 
 const std::string ASSETUNLOCK_REQUESTID_PREFIX = "plwdtx";
 
