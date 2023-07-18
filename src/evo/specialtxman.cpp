@@ -153,8 +153,6 @@ bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, ll
                 assert(tx_state.GetResult() == TxValidationResult::TX_CONSENSUS || tx_state.GetResult() == TxValidationResult::TX_BAD_SPECIAL);
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, tx_state.GetRejectReason(),
                                  strprintf("Process Special Transaction failed at Credit Pool (tx hash %s) %s", ptr_tx->GetHash().ToString(), tx_state.GetDebugMessage()));
-
-                return false;
             }
         }
         if (creditPoolDiff != std::nullopt) {
