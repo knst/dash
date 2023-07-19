@@ -12,6 +12,7 @@
 #include <masternode/payments.h>
 #include <net.h>
 #include <netbase.h>
+#include <llmq/utils.h>
 #include <rpc/blockchain.h>
 #include <rpc/server.h>
 #include <rpc/util.h>
@@ -135,7 +136,7 @@ static UniValue masternode_count(const JSONRPCRequest& request)
 static UniValue GetNextMasternodeForPayment(int heightShift)
 {
     auto mnList = deterministicMNManager->GetListAtChainTip();
-    auto payees = mnList.GetProjectedMNPayeesAtChainTip(heightShift);
+    auto payees = mnList.GetProjectedMNPayees(heightShift);
     if (payees.empty())
         return "unknown";
     auto payee = payees.back();
@@ -361,7 +362,8 @@ static UniValue masternode_winners(const JSONRPCRequest& request)
         obj.pushKV(strprintf("%d", h), strPayments);
     }
 
-    auto projection = deterministicMNManager->GetListForBlock(pindexTip).GetProjectedMNPayees(pindexTip, 20);
+    bool isV20Active = llmq::utils::IsV20Active(pindexTip);
+    auto projection = deterministicMNManager->GetListForBlock(pindexTip).GetProjectedMNPayees(20, isV20Active);
     for (size_t i = 0; i < projection.size(); i++) {
         int h = nChainTipHeight + 1 + i;
         std::string strPayments = GetRequiredPaymentsString(h, projection[i]);
