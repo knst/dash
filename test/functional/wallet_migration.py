@@ -9,6 +9,8 @@ import random
 import shutil
 from test_framework.descriptors import descsum_create
 from test_framework.test_framework import BitcoinTestFramework
+from test_framework.messages import COIN, CTransaction, CTxOut
+from test_framework.script_util import key_to_p2pkh_script, script_to_p2sh_script
 from test_framework.util import (
     assert_equal,
     assert_raises_rpc_error,
@@ -566,6 +568,44 @@ class WalletMigrationTest(BitcoinTestFramework):
         assert os.path.isdir(wallet_path)
         assert os.path.isfile(wallet_dat_path)
 
+    def test_migrate_raw_p2sh(self):
+        self.log.info("Test migration of watch-only raw p2sh script")
+        df_wallet = self.nodes[0].get_wallet_rpc(self.default_wallet_name)
+        wallet = self.create_legacy_wallet("raw_p2sh")
+
+        def send_to_script(script, amount):
+            tx = CTransaction()
+            tx.vout.append(CTxOut(nValue=amount*COIN, scriptPubKey=script))
+
+            hex_tx = df_wallet.fundrawtransaction(tx.serialize().hex())['hex']
+            signed_tx = df_wallet.signrawtransactionwithwallet(hex_tx)
+            df_wallet.sendrawtransaction(signed_tx['hex'])
+            self.generate(self.nodes[0], 1)
+
+        # Craft sh(pkh(key)) script and send coins to it
+        pubkey = df_wallet.getaddressinfo(df_wallet.getnewaddress())["pubkey"]
+        script_pkh = key_to_p2pkh_script(pubkey)
+        script_sh_pkh = script_to_p2sh_script(script_pkh)
+        send_to_script(script=script_sh_pkh, amount=2)
+
+        # Import script and check balance
+        wallet.rpc.importaddress(address=script_pkh.hex(), label="raw_spk", rescan=True, p2sh=True)
+        assert_equal(wallet.getbalances()['watchonly']['trusted'], 2)
+
+        # Migrate wallet and re-check balance
+        info_migration = wallet.migratewallet()
+        wallet_wo = self.nodes[0].get_wallet_rpc(info_migration["watchonly_name"])
+
+        # Watch-only balance is under "mine".
+        assert_equal(wallet_wo.getbalances()['mine']['trusted'], 2)
+        # The watch-only scripts are no longer part of the main wallet
+        assert_equal(wallet.getbalances()['mine']['trusted'], 0)
+
+        # Just in case, also verify wallet restart
+        self.nodes[0].unloadwallet(info_migration["watchonly_name"])
+        self.nodes[0].loadwallet(info_migration["watchonly_name"])
+        assert_equal(wallet_wo.getbalances()['mine']['trusted'], 2)
+
     def run_test(self):
         self.generate(self.nodes[0], 101)
 
@@ -581,6 +621,7 @@ class WalletMigrationTest(BitcoinTestFramework):
         self.test_wallet_name_with_slashes()
         self.test_default_wallet()
         self.test_direct_file()
+        self.test_migrate_raw_p2sh()
 
 if __name__ == '__main__':
     WalletMigrationTest().main()
