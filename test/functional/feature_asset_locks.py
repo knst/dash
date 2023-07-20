@@ -81,10 +81,11 @@ class AssetLocksTest(DashTestFramework):
         return FromHex(CTransaction(), lock_tx["hex"])
 
 
-    def create_assetunlock(self, index, withdrawal, pubkey=None):
+    def create_assetunlock(self, index, withdrawal, pubkey=None, fee=tiny_amount):
         node_wallet = self.nodes[0]
         mninfo = self.mninfo
-        tx_output = CTxOut(int(withdrawal) - tiny_amount, CScript([pubkey, OP_CHECKSIG]))
+        assert_greater_than(int(withdrawal), fee)
+        tx_output = CTxOut(int(withdrawal) - fee, CScript([pubkey, OP_CHECKSIG]))
 
         # request ID = sha256("plwdtx", index)
         request_id_buf = ser_string(b"plwdtx") + struct.pack("<Q", index)
@@ -95,7 +96,7 @@ class AssetLocksTest(DashTestFramework):
         unlockTx_payload = CAssetUnlockTx(
             version = 1,
             index = index,
-            fee = tiny_amount,
+            fee = fee,
             requestedHeight = height,
             quorumHash = int(quorumHash, 16),
             quorumSig = b'\00' * 96)
@@ -128,11 +129,11 @@ class AssetLocksTest(DashTestFramework):
     def validate_credit_pool_amount(self, expected = None, block_hash = None):
         for node in self.nodes:
             locked = self.get_credit_pool_amount(node=node, block_hash=block_hash)
-            self.log.info(f"validate: {locked}")
             if expected is None:
                 expected = locked
             else:
                 assert_equal(expected, locked)
+        self.log.info(f"Credit pool amount matched with '{expected}'")
         return expected
 
     def check_mempool_size(self):
@@ -274,7 +275,7 @@ class AssetLocksTest(DashTestFramework):
         self.validate_credit_pool_amount(locked_1)
         self.sync_all()
 
-        self.log.info('Mine block with incorrect credit-poool value...')
+        self.log.info('Mine block with incorrect credit-pool value...')
         extra_lock_tx = self.create_assetlock(coin, COIN, pubkey)
         self.create_and_check_block([extra_lock_tx], expected_error = 'bad-cbtx-assetlocked-amount')
 
@@ -297,11 +298,18 @@ class AssetLocksTest(DashTestFramework):
         asset_unlock_tx = self.create_assetunlock(101, COIN, pubkey)
         asset_unlock_tx_late = self.create_assetunlock(102, COIN, pubkey)
         asset_unlock_tx_too_late = self.create_assetunlock(103, COIN, pubkey)
+        asset_unlock_tx_too_big_fee = self.create_assetunlock(104, COIN, pubkey, fee=int(Decimal("0.1") * COIN))
+        asset_unlock_tx_zero_fee = self.create_assetunlock(105, COIN, pubkey, fee=0)
         asset_unlock_tx_duplicate_index = copy.deepcopy(asset_unlock_tx)
         asset_unlock_tx_duplicate_index.vout[0].nValue += COIN
         too_late_height = node.getblock(node.getbestblockhash())["height"] + 48
 
         self.check_mempool_result(tx=asset_unlock_tx, result_expected={'allowed': True})
+        self.check_mempool_result(tx=asset_unlock_tx_too_big_fee,
+                result_expected={'allowed': False, 'reject-reason' : 'absurdly-high-fee'})
+        self.check_mempool_result(tx=asset_unlock_tx_zero_fee,
+                result_expected={'allowed': False, 'reject-reason' : 'bad-txns-assetunlock-fee-outofrange'})
+        # not-verified is a correct faiure from mempool. Mempool knows nothing about CreditPool indexes and he just report that signature is not validated
         self.check_mempool_result(tx=asset_unlock_tx_duplicate_index,
                 result_expected={'allowed': False, 'reject-reason' : 'bad-assetunlock-not-verified'})
 
