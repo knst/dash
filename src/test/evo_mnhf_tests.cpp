@@ -36,7 +36,7 @@ static CMutableTransaction CreateMNHFTx(const uint256& mnhfTxHash, const CBLSSig
 {
     MNHFTxPayload extraPayload;
     extraPayload.nVersion = 1;
-    extraPayload.signal.nVersion = versionBit;
+    extraPayload.signal.versionBit = versionBit;
     extraPayload.signal.quorumHash = mnhfTxHash;
     extraPayload.signal.sig = cblSig;
 

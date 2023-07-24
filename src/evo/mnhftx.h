@@ -19,18 +19,16 @@ extern RecursiveMutex cs_main;
 class MNHFTx
 {
 public:
-    static constexpr uint16_t CURRENT_VERSION = 1;
-
-    uint16_t nVersion{CURRENT_VERSION};
+    uint8_t versionBit{0};
     uint256 quorumHash;
     CBLSSignature sig;
 
     MNHFTx() = default;
-    bool Verify(const CBlockIndex* pQuorumIndex) const;
+    bool Verify(const CBlockIndex* pQuorumIndex, const uint256& msgHash, TxValidationState& state) const;
 
     SERIALIZE_METHODS(MNHFTx, obj)
     {
-        READWRITE(obj.nVersion, obj.quorumHash);
+        READWRITE(obj.versionBit, obj.quorumHash);
         READWRITE(CBLSSignatureVersionWrapper(const_cast<CBLSSignature&>(obj.sig), /* fLegacy= */ false));
     }
 
@@ -40,7 +38,7 @@ public:
     {
         obj.clear();
         obj.setObject();
-        obj.pushKV("version", (int)nVersion);
+        obj.pushKV("versionBit", (int)versionBit);
         obj.pushKV("quorumHash", quorumHash.ToString());
         obj.pushKV("sig", sig.ToString());
     }
@@ -52,13 +50,15 @@ public:
     static constexpr auto SPECIALTX_TYPE = TRANSACTION_MNHF_SIGNAL;
     static constexpr uint16_t CURRENT_VERSION = 1;
 
-    uint16_t nVersion{CURRENT_VERSION};
+    uint8_t nVersion{CURRENT_VERSION};
     MNHFTx signal;
 
     SERIALIZE_METHODS(MNHFTxPayload, obj)
     {
         READWRITE(obj.nVersion, obj.signal);
     }
+
+    std::string ToString() const;
 
     void ToJson(UniValue& obj) const
     {
