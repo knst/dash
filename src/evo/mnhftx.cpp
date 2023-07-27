@@ -37,9 +37,6 @@ bool MNHFTx::Verify(const CBlockIndex* pQuorumIndex, const uint256& msgHash, TxV
 
     const uint256 requestId = ::SerializeHash(std::make_pair(MNEHF_REQUESTID_PREFIX, int64_t{versionBit}));
 
-//    std::cerr << "requestID: " << requestId.ToString() << std::endl;
-//    std::cerr << "height: " << pQuorumIndex->nHeight << std::endl;
-
     if (!llmq::CSigningManager::VerifyRecoveredSig(llmqType, *llmq::quorumManager, pQuorumIndex->nHeight + signOffset, requestId, msgHash, sig)) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-mnhf-invalid");
     }
@@ -196,13 +193,24 @@ bool CMNHFManager::UndoBlock(const CBlock& block, const CBlockIndex* const pinde
     return true;
 }
 
-void CMNHFManager::UpdateChainParams(const CBlockIndex* const pindex)
+void CMNHFManager::UpdateChainParams(const CBlockIndex* const pindex, const CBlockIndex* const pindexOld)
 {
+    Signals signals_old{GetFromCache(pindexOld)};
+    for (const auto& signal: signals_old) {
+        uint8_t versionBit = signal.first;
+        assert(versionBit < VERSIONBITS_NUM_BITS);
+
+        LogPrintf("%s: unload mnft bit=%d block:%s number of known signals:%lld\n", __func__, versionBit, pindex->GetBlockHash().ToString(), signals_old.size());
+
+        bool update_ret = !Params().UpdateMNActivationParam(versionBit, 0, pindex->GetMedianTimePast(), true);
+        assert(update_ret);
+    }
+
     Signals signals{GetFromCache(pindex)};
     for (const auto& signal: signals) {
         uint8_t versionBit = signal.first;
         int value = signal.second;
-        assert(versionBit != 0);
+        assert(versionBit < VERSIONBITS_NUM_BITS);
 
         LogPrintf("%s: load mnft bit=%d block:%s number of known signals:%lld\n", __func__, versionBit, pindex->GetBlockHash().ToString(), signals.size());
 

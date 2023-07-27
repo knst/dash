@@ -100,7 +100,7 @@ public:
 
     bool UndoBlock(const CBlock& block, const CBlockIndex* const pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
-    void UpdateChainParams(const CBlockIndex* const pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+    void UpdateChainParams(const CBlockIndex* const pindex, const CBlockIndex* const pindexOld) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
 private:
     void AddToCache(const Signals& signals, const CBlockIndex* const pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_cache);

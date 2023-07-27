@@ -2988,8 +2988,6 @@ bool CChainState::ConnectTip(BlockValidationState& state, CBlockIndex* pindexNew
         return false;
     }
 
-    //int64_t nTime_;
-    m_mnhfManager.UpdateChainParams(pindexNew);
     int64_t nTime5 = GetTimeMicros(); nTimeChainState += nTime5 - nTime4;
     LogPrint(BCLog::BENCHMARK, "  - Writing chainstate: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime5 - nTime4) * MILLI, nTimeChainState * MICRO, nTimeChainState * MILLI / nBlocksTotal);
     // Remove conflicting transactions from the mempool.;
@@ -3159,6 +3157,7 @@ bool CChainState::ActivateBestChainStep(BlockValidationState& state, CBlockIndex
                     return false;
                 }
             } else {
+                //int64_t nTime_; - do I really need it?
                 PruneBlockIndexCandidates();
                 if (!pindexOldTip || m_chain.Tip()->nChainWork > pindexOldTip->nChainWork) {
                     // We're in a better position than we were. Return temporarily to release the lock.
@@ -4706,6 +4705,8 @@ bool CChainState::LoadBlockIndexDB()
             setBlockIndexCandidates)) {
         return false;
     }
+    // may be here ?
+//    m_mnhfManager.UpdateChainParams(pindex, nullptr);
 
     // Load block file info
     pblocktree->ReadLastBlockFile(nLastBlockFile);
@@ -4793,6 +4794,7 @@ bool CChainState::LoadChainTip()
         return false;
     }
     m_chain.SetTip(pindex);
+//    m_mnhfManager.UpdateChainParams(pindex, nullptr);
     PruneBlockIndexCandidates();
 
     tip = m_chain.Tip();
@@ -5156,6 +5158,7 @@ void UnloadBlockIndex(CTxMemPool* mempool, ChainstateManager& chainman)
     for (int b = 0; b < VERSIONBITS_NUM_BITS; b++) {
         warningcache[b].clear();
     }
+    // TODO unload here ?
     fHavePruned = false;
 }
 
@@ -5828,6 +5831,7 @@ CChainState& ChainstateManager::InitializeChainstate(CTxMemPool* mempool,
     if (is_snapshot || (!is_snapshot && !m_active_chainstate)) {
         LogPrintf("Switching active chainstate to %s\n", to_modify->ToString());
         m_active_chainstate = to_modify.get();
+        mnhfManager.UpdateChainParams(to_modify->m_chain.Tip(), nullptr);
     } else {
         throw std::logic_error("unexpected chainstate activation");
     }
@@ -5893,8 +5897,8 @@ bool ChainstateManager::ActivateSnapshot(
 
     auto snapshot_chainstate = WITH_LOCK(::cs_main, return std::make_unique<CChainState>(
             /* mempool */ nullptr, m_blockman,
-            this->ActiveChainstate().m_evoDb,
             this->ActiveChainstate().m_mnhfManager,
+            this->ActiveChainstate().m_evoDb,
             this->ActiveChainstate().m_clhandler,
             this->ActiveChainstate().m_isman,
             this->ActiveChainstate().m_quorum_block_processor,

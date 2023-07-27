@@ -110,13 +110,13 @@ bool CChainParams::UpdateMNActivationParam(int nBit, int height, int64_t timePas
     for (int index = 0; index < Consensus::MAX_VERSION_BITS_DEPLOYMENTS; ++index) {
         if (consensus.vDeployments[index].bit == nBit) {
             auto& deployment = consensus.vDeployments[index];
-            if (deployment.nMNActivationHeight < 0) {
-                LogPrintf("%s: trying to set MN activation height=%d for non-masternode activation fork bit=%d\n", __func__, height, nBit);
-                return false;
-            }
             if (timePast > deployment.nTimeout) {
                 LogPrintf("%s: activation by bit=%d time-outed at height=%d\n", __func__, nBit, height);
                 continue;
+            }
+            if (deployment.nMNActivationHeight < 0) {
+                LogPrintf("%s: trying to set MnEHF height=%d for non-masternode activation fork bit=%d\n", __func__, height, nBit);
+                return false;
             }
             if (!fJustCheck) {
                 deployment.nMNActivationHeight = height;
@@ -124,7 +124,7 @@ bool CChainParams::UpdateMNActivationParam(int nBit, int height, int64_t timePas
             return true;
         }
     }
-    LogPrintf("%s: not found MN activated fork bit=%d\n", __func__, nBit);
+    LogPrintf("%s: not found MnEHF fork bit=%d\n", __func__, nBit);
     return false;
 }
 

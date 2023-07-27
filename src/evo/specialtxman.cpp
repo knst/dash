@@ -64,10 +64,8 @@ bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const
     return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-tx-type-check");
 }
 
-bool ProcessSpecialTx(const CTransaction& tx, const CBlockIndex* pindex, TxValidationState& state)
+static bool ProcessSpecialTx(const CTransaction& tx, const CBlockIndex* pindex, TxValidationState& state)
 {
-    AssertLockHeld(cs_main);
-
     if (tx.nVersion != 3 || tx.nType == TRANSACTION_NORMAL) {
         return true;
     }
@@ -92,10 +90,8 @@ bool ProcessSpecialTx(const CTransaction& tx, const CBlockIndex* pindex, TxValid
     return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-tx-type-proc");
 }
 
-bool UndoSpecialTx(const CTransaction& tx, const CBlockIndex* pindex)
+static bool UndoSpecialTx(const CTransaction& tx, const CBlockIndex* pindex)
 {
-    AssertLockHeld(cs_main);
-
     if (tx.nVersion != 3 || tx.nType == TRANSACTION_NORMAL) {
         return true;
     }
