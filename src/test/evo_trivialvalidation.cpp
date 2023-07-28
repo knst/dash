@@ -35,8 +35,10 @@ void TestTxHelper(const CMutableTransaction& tx, bool expected_failure, const st
     }
 }
 
-void trivialvalidation_runner(const UniValue& vectors)
+void trivialvalidation_runner(const std::string& json)
 {
+    const UniValue vectors = read_json(json);
+
     for (size_t idx = 1; idx < vectors.size(); idx++) {
         UniValue test = vectors[idx];
         uint256 txHash;
@@ -103,21 +105,18 @@ BOOST_AUTO_TEST_CASE(trivialvalidation_valid)
 {
     //TODO: Provide raw data for basic scheme as well
     bls::bls_legacy_scheme.store(true);
-    const UniValue vectors = read_json(
-        std::string(json_tests::trivially_valid, json_tests::trivially_valid + sizeof(json_tests::trivially_valid))
-    );
-    trivialvalidation_runner(vectors);
+
+    const std::string json(json_tests::trivially_valid, json_tests::trivially_valid + sizeof(json_tests::trivially_valid));
+    trivialvalidation_runner(json);
 }
 
 BOOST_AUTO_TEST_CASE(trivialvalidation_invalid)
 {
     //TODO: Provide raw data for basic scheme as well
     bls::bls_legacy_scheme.store(true);
-    UniValue vectors = read_json(
-        std::string(json_tests::trivially_invalid, json_tests::trivially_invalid + sizeof(json_tests::trivially_invalid))
-    );
 
-    trivialvalidation_runner(vectors);
+    const std::string json(json_tests::trivially_invalid, json_tests::trivially_invalid + sizeof(json_tests::trivially_invalid));
+    trivialvalidation_runner(json);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
