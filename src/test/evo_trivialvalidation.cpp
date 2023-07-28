@@ -37,7 +37,7 @@ void TestTxHelper(const CMutableTransaction& tx, bool expected_failure, const st
 
 void trivialvalidation_runner(const UniValue& vectors)
 {
-    for (uint8_t idx = 1; idx < vectors.size(); idx++) {
+    for (size_t idx = 1; idx < vectors.size(); idx++) {
         UniValue test = vectors[idx];
         uint256 txHash;
         std::string txType;
