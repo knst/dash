@@ -32,14 +32,12 @@ BOOST_AUTO_TEST_CASE(trivialvalidation_valid)
         CMutableTransaction tx;
         try {
             // Additional data
-            int32_t txHeight = test[0].get_int();
-            txHash = uint256S(test[1].get_str());
-            txType = test[2].get_str();
+            txHash = uint256S(test[0].get_str());
+            txType = test[1].get_str();
             // Raw transaction
-            CDataStream stream(ParseHex(test[3].get_str()), SER_NETWORK, PROTOCOL_VERSION);
+            CDataStream stream(ParseHex(test[2].get_str()), SER_NETWORK, PROTOCOL_VERSION);
             stream >> tx;
             // Sanity check
-            BOOST_CHECK(txHeight > 1);
             BOOST_CHECK_EQUAL(tx.nVersion, 3);
             BOOST_CHECK_EQUAL(tx.GetHash(), txHash);
             // Deserialization based on transaction nType
