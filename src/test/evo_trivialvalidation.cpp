@@ -43,38 +43,38 @@ BOOST_AUTO_TEST_CASE(trivialvalidation_valid)
             // Deserialization based on transaction nType
             TxValidationState dummy_state;
             switch (tx.nType) {
-                case TRANSACTION_PROVIDER_REGISTER: {
-                    BOOST_CHECK_EQUAL(txType, "proregtx");
-                    CProRegTx ptx;
-                    BOOST_CHECK(GetTxPayload(tx, ptx, false));
-                    BOOST_CHECK(ptx.IsTriviallyValid(!bls::bls_legacy_scheme.load(), dummy_state));
-                    break;
-                }
-                case TRANSACTION_PROVIDER_UPDATE_SERVICE: {
-                    BOOST_CHECK_EQUAL(txType, "proupservtx");
-                    CProUpServTx ptx;
-                    BOOST_CHECK(GetTxPayload(tx, ptx, false));
-                    BOOST_CHECK(ptx.IsTriviallyValid(!bls::bls_legacy_scheme.load(), dummy_state));
-                    break;
-                }
-                case TRANSACTION_PROVIDER_UPDATE_REGISTRAR: {
-                    BOOST_CHECK_EQUAL(txType, "proupregtx");
-                    CProUpRegTx ptx;
-                    BOOST_CHECK(GetTxPayload(tx, ptx, false));
-                    BOOST_CHECK(ptx.IsTriviallyValid(!bls::bls_legacy_scheme.load(), dummy_state));
-                    break;
-                }
-                case TRANSACTION_PROVIDER_UPDATE_REVOKE: {
-                    BOOST_CHECK_EQUAL(txType, "prouprevtx");
-                    CProUpRevTx ptx;
-                    BOOST_CHECK(GetTxPayload(tx, ptx, false));
-                    BOOST_CHECK(ptx.IsTriviallyValid(!bls::bls_legacy_scheme.load(), dummy_state));
-                    break;
-                }
-                default:
-                    // TRANSACTION_COINBASE and TRANSACTION_NORMAL
-                    // are not subject to trivial validation checks
-                    BOOST_CHECK(false);
+            case TRANSACTION_PROVIDER_REGISTER: {
+                BOOST_CHECK_EQUAL(txType, "proregtx");
+                CProRegTx ptx;
+                BOOST_CHECK(GetTxPayload(tx, ptx, false));
+                BOOST_CHECK(ptx.IsTriviallyValid(!bls::bls_legacy_scheme.load(), dummy_state));
+                break;
+            }
+            case TRANSACTION_PROVIDER_UPDATE_SERVICE: {
+                BOOST_CHECK_EQUAL(txType, "proupservtx");
+                CProUpServTx ptx;
+                BOOST_CHECK(GetTxPayload(tx, ptx, false));
+                BOOST_CHECK(ptx.IsTriviallyValid(!bls::bls_legacy_scheme.load(), dummy_state));
+                break;
+            }
+            case TRANSACTION_PROVIDER_UPDATE_REGISTRAR: {
+                BOOST_CHECK_EQUAL(txType, "proupregtx");
+                CProUpRegTx ptx;
+                BOOST_CHECK(GetTxPayload(tx, ptx, false));
+                BOOST_CHECK(ptx.IsTriviallyValid(!bls::bls_legacy_scheme.load(), dummy_state));
+                break;
+            }
+            case TRANSACTION_PROVIDER_UPDATE_REVOKE: {
+                BOOST_CHECK_EQUAL(txType, "prouprevtx");
+                CProUpRevTx ptx;
+                BOOST_CHECK(GetTxPayload(tx, ptx, false));
+                BOOST_CHECK(ptx.IsTriviallyValid(!bls::bls_legacy_scheme.load(), dummy_state));
+                break;
+            }
+            default:
+                // TRANSACTION_COINBASE and TRANSACTION_NORMAL
+                // are not subject to trivial validation checks
+                BOOST_CHECK(false);
             }
         } catch (...) {
             BOOST_ERROR("Bad test, couldn't deserialize data: " << test.write());
