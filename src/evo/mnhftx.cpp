@@ -125,18 +125,23 @@ bool CMNHFManager::ProcessBlock(const CBlock& block, const CBlockIndex* const pi
             return false;
         }
         if (new_signals.empty()) {
+            if (!fJustCheck) {
+                AddToCache(GetFromCache(pindex->pprev), pindex);
+            }
             return true;
         }
 
-        Signals signals = GetFromCache(pindex);
+        Signals signals = GetFromCache(pindex->pprev);
         int mined_height = pindex->nHeight;
 
         // Extra validation of signals to be sure that it can succeed
         for (const auto& versionBit : new_signals) {
             // CheckMNHFTx() should validate that bit is not zero
+            /*
             assert(versionBit != 0);
+            */
 
-            LogPrintf("%s: add mnft bit=%d block:%s number of known signals:%lld\n", __func__, versionBit, pindex->GetBlockHash().ToString(), signals.size());
+            LogPrintf("%s: add mnhf bit=%d block:%s number of known signals:%lld\n", __func__, versionBit, pindex->GetBlockHash().ToString(), signals.size());
             if (signals.find(versionBit) != signals.end()) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-mnhf-duplicate");
             }
@@ -183,10 +188,10 @@ bool CMNHFManager::UndoBlock(const CBlock& block, const CBlockIndex* const pinde
         // CheckMNHFTx() should validate that bit is not zero
         assert(versionBit != 0);
 
-        LogPrintf("%s: exclude mnft bit=%d block:%s number of known signals:%lld\n", __func__, versionBit, pindex->GetBlockHash().ToString(), signals.size());
+        LogPrintf("%s: exclude mnhf bit=%d block:%s number of known signals:%lld\n", __func__, versionBit, pindex->GetBlockHash().ToString(), signals.size());
         assert(signals.find(versionBit) != signals.end());
 
-        bool update_ret = !Params().UpdateMNActivationParam(versionBit, 0, pindex->GetMedianTimePast(), false /* fJustCheck */);
+        bool update_ret = Params().UpdateMNActivationParam(versionBit, 0, pindex->GetMedianTimePast(), false /* fJustCheck */);
         assert(update_ret);
     }
 
@@ -195,14 +200,15 @@ bool CMNHFManager::UndoBlock(const CBlock& block, const CBlockIndex* const pinde
 
 void CMNHFManager::UpdateChainParams(const CBlockIndex* const pindex, const CBlockIndex* const pindexOld)
 {
+    LogPrintf("%s: update chain params %s -> %s\n", __func__, pindexOld ? pindexOld->GetBlockHash().ToString() : "", pindex ? pindex->GetBlockHash().ToString() : "");
     Signals signals_old{GetFromCache(pindexOld)};
     for (const auto& signal: signals_old) {
         uint8_t versionBit = signal.first;
         assert(versionBit < VERSIONBITS_NUM_BITS);
 
-        LogPrintf("%s: unload mnft bit=%d block:%s number of known signals:%lld\n", __func__, versionBit, pindex->GetBlockHash().ToString(), signals_old.size());
+        LogPrintf("%s: unload mnhf bit=%d block:%s number of known signals:%lld\n", __func__, versionBit, pindex->GetBlockHash().ToString(), signals_old.size());
 
-        bool update_ret = !Params().UpdateMNActivationParam(versionBit, 0, pindex->GetMedianTimePast(), true);
+        bool update_ret = Params().UpdateMNActivationParam(versionBit, 0, pindex->GetMedianTimePast(), true);
         assert(update_ret);
     }
 
@@ -212,9 +218,15 @@ void CMNHFManager::UpdateChainParams(const CBlockIndex* const pindex, const CBlo
         int value = signal.second;
         assert(versionBit < VERSIONBITS_NUM_BITS);
 
-        LogPrintf("%s: load mnft bit=%d block:%s number of known signals:%lld\n", __func__, versionBit, pindex->GetBlockHash().ToString(), signals.size());
+        LogPrintf("%s: load mnhf bit=%d block:%s number of known signals:%lld\n", __func__, versionBit, pindex->GetBlockHash().ToString(), signals.size());
 
-        bool update_ret = !Params().UpdateMNActivationParam(versionBit, value, pindex->GetMedianTimePast(), true);
+        bool update_ret = Params().UpdateMNActivationParam(versionBit, value, pindex->GetMedianTimePast(), true);
+        LogPrintf("%s: check update_ret: %d for bit: %d to %d\n", __func__, update_ret, versionBit, value);
+        LogPrintf("%s: check update_ret: %d for bit: %d to %d\n", __func__, update_ret, versionBit, value);
+        LogPrintf("%s: check update_ret: %d for bit: %d to %d\n", __func__, update_ret, versionBit, value);
+        LogPrintf("%s: check update_ret: %d for bit: %d to %d\n", __func__, update_ret, versionBit, value);
+        LogPrintf("%s: check update_ret: %d for bit: %d to %d\n", __func__, update_ret, versionBit, value);
+        LogPrintf("%s: check update_ret: %d for bit: %d to %d\n", __func__, update_ret, versionBit, value);
         assert(update_ret);
     }
 }
@@ -227,15 +239,20 @@ CMNHFManager::Signals CMNHFManager::GetFromCache(const CBlockIndex* const pindex
     {
         LOCK(cs_cache);
         if (mnhfCache.get(blockHash, signals)) {
+            LogPrintf("%s: mnhf get for block %s from cache: %lld signals", __func__, pindex->GetBlockHash().ToString(), signals.size());
             return signals;
         }
     }
     if (VersionBitsState(pindex->pprev, Params().GetConsensus(), Consensus::DEPLOYMENT_V20, versionbitscache) != ThresholdState::ACTIVE) {
         LOCK(cs_cache);
-        mnhfCache.insert(blockHash, {});
+        mnhfCache.insert(blockHash, signals);
+        LogPrintf("%s: mnhf feature is disabled: return empty for block %s\n", __func__, pindex->GetBlockHash().ToString());
         return signals;
     }
-    m_evoDb.Read(std::make_pair(DB_SIGNALS, blockHash), signals);
+    if (!m_evoDb.Read(std::make_pair(DB_SIGNALS, blockHash), signals)) {
+        LogPrintf("can-read \n");
+    }
+    LogPrintf("%s: mnhf for block %s read from evo: %lld\n", __func__, pindex->GetBlockHash().ToString(), signals.size());
     mnhfCache.insert(blockHash, signals);
     return signals;
 }
@@ -245,6 +262,7 @@ void CMNHFManager::AddToCache(const Signals& signals, const CBlockIndex* const p
     const uint256& blockHash = pindex->GetBlockHash();
     {
         LOCK(cs_cache);
+        LogPrintf("%s: mnhf for block %s add to cache: %lld\n", __func__, pindex->GetBlockHash().ToString(), signals.size());
         mnhfCache.insert(blockHash, signals);
     }
     m_evoDb.Write(std::make_pair(DB_SIGNALS, blockHash), signals);

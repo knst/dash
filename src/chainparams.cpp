@@ -119,6 +119,7 @@ bool CChainParams::UpdateMNActivationParam(int nBit, int height, int64_t timePas
                 return false;
             }
             if (!fJustCheck) {
+                LogPrintf("%s: set MnEHF height=%d for bit=%d successfuly while fJustCheck=%d\n", __func__, height, nBit, fJustCheck);
                 deployment.nMNActivationHeight = height;
             }
             return true;

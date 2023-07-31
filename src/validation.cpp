@@ -5829,13 +5829,13 @@ CChainState& ChainstateManager::InitializeChainstate(CTxMemPool* mempool,
 
     // Snapshot chainstates and initial IBD chaintates always become active.
     if (is_snapshot || (!is_snapshot && !m_active_chainstate)) {
-        LogPrintf("Switching active chainstate to %s\n", to_modify->ToString());
         m_active_chainstate = to_modify.get();
-        mnhfManager.UpdateChainParams(to_modify->m_chain.Tip(), nullptr);
+//        mnhfManager.UpdateChainParams(to_modify->m_chain.Tip(), nullptr);
     } else {
         throw std::logic_error("unexpected chainstate activation");
     }
 
+    LogPrintf("Switching active chainstate to %s\n", to_modify->ToString());
     return *to_modify;
 }
 
