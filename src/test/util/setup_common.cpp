@@ -266,6 +266,8 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     if (!::ChainstateActive().ActivateBestChain(state)) {
         throw std::runtime_error(strprintf("ActivateBestChain failed. (%s)", state.ToString()));
     }
+//    m_node.mnhf_manager->UpdateChainParams(::ChainActive().Tip(), nullptr);
+
 }
 
 TestChainSetup::TestChainSetup(int num_blocks, const std::vector<const char*>& extra_args)

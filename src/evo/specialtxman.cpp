@@ -241,6 +241,7 @@ bool UndoSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CMNHF
     auto bls_legacy_scheme = bls::bls_legacy_scheme.load();
 
     try {
+        LogPrintf("%s: step-1\n", __func__);
         if (Params().GetConsensus().V19Height == pindex->nHeight + 1) {
             // NOTE: The block next to the activation is the one that is using new rules.
             // Removing the activation block here, so we must switch back to the old rules.
@@ -250,19 +251,23 @@ bool UndoSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CMNHF
 
         for (int i = (int)block.vtx.size() - 1; i >= 0; --i) {
             const CTransaction& tx = *block.vtx[i];
+            LogPrintf("%s: step-tx %d\n", __func__, i);
             if (!UndoSpecialTx(tx, pindex)) {
                 return false;
             }
         }
 
+        LogPrintf("%s: step-2\n", __func__);
         if (!mnhfManager.UndoBlock(block, pindex)) {
             return false;
         }
 
+        LogPrintf("%s: step-3\n", __func__);
         if (!deterministicMNManager->UndoBlock(pindex)) {
             return false;
         }
 
+        LogPrintf("%s: step-4\n", __func__);
         if (!quorum_block_processor.UndoBlock(block, pindex)) {
             return false;
         }
@@ -272,5 +277,6 @@ bool UndoSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CMNHF
         return error(strprintf("%s -- failed: %s\n", __func__, e.what()).c_str());
     }
 
+    LogPrintf("%s: step-5\n", __func__);
     return true;
 }

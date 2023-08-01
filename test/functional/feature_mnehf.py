@@ -104,6 +104,10 @@ class MnehfTest(DashTestFramework):
     def run_test(self):
         node = self.nodes[0]
 
+        for node in range(4):
+            self.log.info(f"Restart node {node}")
+            self.restart_node(node, ["-vbparams=testdummy:0:999999999999:12:12:12:5:0"])
+
         self.log.info("Checking that `testdummy` is defined...")
         self.log.info(get_bip9_details(node, 'testdummy'))
         assert_equal(get_bip9_details(node, 'testdummy')['status'], 'defined')
@@ -146,7 +150,7 @@ class MnehfTest(DashTestFramework):
         block = node.getblock(node.getbestblockhash())
         assert tx_sent in block['tx']
 
-        self.log.info(f"MNHF tx: '{tx}' is sent: {tx_sent}")
+        self.log.info(f"MnEhf tx: '{tx}' is sent: {tx_sent}")
         self.log.info(f"mempool: {node.getmempoolinfo()}")
         assert_equal(node.getmempoolinfo()['size'], 0)
 
@@ -157,7 +161,8 @@ class MnehfTest(DashTestFramework):
 
         for node in range(4):
             self.log.info(f"Restart node {node}")
-            self.restart_node(node)
+#            self.restart_node(node, extra_args="-vbparams=testdummy:0:999999999999:12:12:12:5:0")
+            self.restart_node(node, ["-vbparams=testdummy:0:999999999999:12:12:12:5:0"])
 
         for i in range(12):
             self.check_fork('started')
@@ -172,13 +177,14 @@ class MnehfTest(DashTestFramework):
             if i == 7:
                 for node in range(4):
                     self.log.info(f"Restart node {node}")
-                    self.restart_node(node)
+                    #self.restart_node(node)
+                    self.restart_node(node, ["-vbparams=testdummy:0:999999999999:12:12:12:5:0"])
 
 
         self.check_fork('active')
         for node in range(4):
             self.log.info(f"Restart node {node}")
-            self.restart_node(node)
+            self.restart_node(node, ["-vbparams=testdummy:0:999999999999:12:12:12:5:0"])
         self.check_fork('active')
 
 
