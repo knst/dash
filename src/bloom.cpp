@@ -196,28 +196,9 @@ bool CBloomFilter::CheckSpecialTransactionMatchesAndUpdate(const CTransaction &t
         if (GetTxPayload(tx, assetLockTx)) {
             bool fFound = false;
             const auto& extraOuts = assetLockTx.getCreditOutputs();
-
-            // TODO: remove duplicated code with IsRelevantAndUpdate()
             for (unsigned int i = 0; i < extraOuts.size(); ++i)
             {
-                const CTxOut& txout = extraOuts[i];
-                // Match if the filter contains any arbitrary script data element in any scriptPubKey in tx
-                // If this matches, also add the specific output that was matched.
-                // This means clients don't have to update the filter themselves when a new relevant tx
-                // is discovered in order to find spending transactions, which avoids round-tripping and race conditions.
-                if(CheckScript(txout.scriptPubKey)) {
-                    fFound = true;
-                    if ((nFlags & BLOOM_UPDATE_MASK) == BLOOM_UPDATE_ALL)
-                        insert(COutPoint(tx.GetHash(), i));
-                    else if ((nFlags & BLOOM_UPDATE_MASK) == BLOOM_UPDATE_P2PUBKEY_ONLY)
-                    {
-                        std::vector<std::vector<unsigned char> > vSolutions;
-                        TxoutType type = Solver(txout.scriptPubKey, vSolutions);
-                        if (type == TxoutType::PUBKEY || type == TxoutType::MULTISIG) {
-                            insert(COutPoint(tx.GetHash(), i));
-                        }
-                    }
-                }
+                fFound = fFound || ProcessTxOut(extraOuts[i], tx.GetHash(), i);
             }
             if (fFound) return true;
         }
@@ -233,6 +214,29 @@ bool CBloomFilter::CheckSpecialTransactionMatchesAndUpdate(const CTransaction &t
 
     LogPrintf("Unknown special transaction type in Bloom filter check.\n");
     return false;
+}
+
+bool CBloomFilter::ProcessTxOut(const CTxOut& txout, const uint256& hash, unsigned int index)
+{
+    // Match if the filter contains any arbitrary script data element in any scriptPubKey in tx
+    // If this matches, also add the specific output that was matched.
+    // This means clients don't have to update the filter themselves when a new relevant tx
+    // is discovered in order to find spending transactions, which avoids round-tripping and race conditions.
+    bool fFound = false;
+    if(CheckScript(txout.scriptPubKey)) {
+        fFound = true;
+        if ((nFlags & BLOOM_UPDATE_MASK) == BLOOM_UPDATE_ALL)
+            insert(COutPoint(hash, index));
+        else if ((nFlags & BLOOM_UPDATE_MASK) == BLOOM_UPDATE_P2PUBKEY_ONLY)
+        {
+            std::vector<std::vector<unsigned char> > vSolutions;
+            TxoutType type = Solver(txout.scriptPubKey, vSolutions);
+            if (type == TxoutType::PUBKEY || type == TxoutType::MULTISIG) {
+                insert(COutPoint(hash, index));
+            }
+        }
+    }
+    return fFound;
 }
 
 bool CBloomFilter::IsRelevantAndUpdate(const CTransaction& tx)
@@ -251,24 +255,7 @@ bool CBloomFilter::IsRelevantAndUpdate(const CTransaction& tx)
 
     for (unsigned int i = 0; i < tx.vout.size(); i++)
     {
-        const CTxOut& txout = tx.vout[i];
-        // Match if the filter contains any arbitrary script data element in any scriptPubKey in tx
-        // If this matches, also add the specific output that was matched.
-        // This means clients don't have to update the filter themselves when a new relevant tx
-        // is discovered in order to find spending transactions, which avoids round-tripping and race conditions.
-        if(CheckScript(txout.scriptPubKey)) {
-            fFound = true;
-            if ((nFlags & BLOOM_UPDATE_MASK) == BLOOM_UPDATE_ALL)
-                insert(COutPoint(hash, i));
-            else if ((nFlags & BLOOM_UPDATE_MASK) == BLOOM_UPDATE_P2PUBKEY_ONLY)
-            {
-                std::vector<std::vector<unsigned char> > vSolutions;
-                TxoutType type = Solver(txout.scriptPubKey, vSolutions);
-                if (type == TxoutType::PUBKEY || type == TxoutType::MULTISIG) {
-                    insert(COutPoint(hash, i));
-                }
-            }
-        }
+        fFound = fFound || ProcessTxOut(tx.vout[i], hash, i);
     }
 
     if (fFound)
