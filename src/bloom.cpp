@@ -198,7 +198,7 @@ bool CBloomFilter::CheckSpecialTransactionMatchesAndUpdate(const CTransaction &t
             const auto& extraOuts = assetLockTx.getCreditOutputs();
             for (unsigned int i = 0; i < extraOuts.size(); ++i)
             {
-                fFound = fFound || ProcessTxOut(extraOuts[i], tx.GetHash(), i);
+                fFound = ProcessTxOut(extraOuts[i], tx.GetHash(), i) || fFound;
             }
             if (fFound) return true;
         }
@@ -255,7 +255,7 @@ bool CBloomFilter::IsRelevantAndUpdate(const CTransaction& tx)
 
     for (unsigned int i = 0; i < tx.vout.size(); i++)
     {
-        fFound = fFound || ProcessTxOut(tx.vout[i], hash, i);
+        fFound = ProcessTxOut(tx.vout[i], hash, i) || fFound;
     }
 
     if (fFound)
