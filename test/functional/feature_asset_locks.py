@@ -60,13 +60,18 @@ class AssetLocksTest(DashTestFramework):
 
         inputs = [CTxIn(COutPoint(int(coin["txid"], 16), coin["vout"]))]
 
-        credit_outputs = CTxOut(amount, CScript([OP_DUP, OP_HASH160, hash160(pubkey), OP_EQUALVERIFY, OP_CHECKSIG]))
+        credit_outputs = []
+        tmp_amount = amount
+        if tmp_amount > COIN:
+            tmp_amount -= COIN
+            credit_outputs.append(CTxOut(COIN, CScript([OP_DUP, OP_HASH160, hash160(pubkey), OP_EQUALVERIFY, OP_CHECKSIG])))
+        credit_outputs.append(CTxOut(tmp_amount, CScript([OP_DUP, OP_HASH160, hash160(pubkey), OP_EQUALVERIFY, OP_CHECKSIG])))
 
-        lockTx_payload = CAssetLockTx(1, [credit_outputs])
+        lockTx_payload = CAssetLockTx(1, credit_outputs)
 
-        remaining = int(COIN * coin['amount']) - tiny_amount - credit_outputs.nValue
+        remaining = int(COIN * coin['amount']) - tiny_amount - amount
 
-        tx_output_ret = CTxOut(credit_outputs.nValue, CScript([OP_RETURN, b""]))
+        tx_output_ret = CTxOut(amount, CScript([OP_RETURN, b""]))
         tx_output = CTxOut(remaining, CScript([pubkey, OP_CHECKSIG]))
 
         lock_tx = CTransaction()
