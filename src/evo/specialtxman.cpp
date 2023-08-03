@@ -70,7 +70,7 @@ bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const
     return CheckSpecialTxInner(tx, pindexPrev, view, std::nullopt, check_sigs, state);
 }
 
-bool ProcessSpecialTx(const CTransaction& tx, const CBlockIndex* pindex, TxValidationState& state)
+static bool ProcessSpecialTx(const CTransaction& tx, const CBlockIndex* pindex, TxValidationState& state)
 {
     if (tx.nVersion != 3 || tx.nType == TRANSACTION_NORMAL) {
         return true;
@@ -96,7 +96,7 @@ bool ProcessSpecialTx(const CTransaction& tx, const CBlockIndex* pindex, TxValid
     return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-tx-type-proc");
 }
 
-bool UndoSpecialTx(const CTransaction& tx, const CBlockIndex* pindex)
+static bool UndoSpecialTx(const CTransaction& tx, const CBlockIndex* pindex)
 {
     if (tx.nVersion != 3 || tx.nType == TRANSACTION_NORMAL) {
         return true;
