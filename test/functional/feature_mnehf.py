@@ -33,8 +33,8 @@ class MnehfTest(DashTestFramework):
 
     def restart_all_nodes(self):
         for inode in range(self.num_nodes):
-            self.log.info(f"Restart node {inode}")
-            self.restart_node(inode)
+            self.log.info(f"Restart node {inode} with {self.extra_args[inode]}")
+            self.restart_node(inode, self.extra_args[inode])
         for i in range(self.num_nodes - 1):
             self.connect_nodes(i + 1, i)
 
@@ -161,7 +161,7 @@ class MnehfTest(DashTestFramework):
         self.restart_all_nodes()
 
         for i in range(12):
-            self.check_fork('defined')
+            self.check_fork('started')
             node.generate(1)
             self.sync_all()
 
