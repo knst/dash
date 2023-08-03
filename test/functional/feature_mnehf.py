@@ -25,7 +25,7 @@ from test_framework.util import (
 
 class MnehfTest(DashTestFramework):
     def set_test_params(self):
-        extra_args = [["-vbparams=testdummy:0:999999999999:12:12:12:5"] for _ in range(4)]
+        extra_args = [["-vbparams=testdummy:0:999999999999:12:12:12:5:0"] for _ in range(4)]
         self.set_dash_test_params(4, 3, fast_dip3_enforcement=True, extra_args=extra_args)
 
     def skip_test_if_missing_module(self):
@@ -105,25 +105,6 @@ class MnehfTest(DashTestFramework):
         node = self.nodes[0]
 
         self.set_sporks()
-#---
-        self.log.info("Checking that `testdummy` is defined...")
-        self.log.info(get_bip9_details(node, 'testdummy'))
-        assert_equal(get_bip9_details(node, 'testdummy')['status'], 'active')
-
-        for inode in range(4):
-            self.log.info(f"Restart node {inode}")
-            self.log.info(f"args: {self.extra_args[inode]}")
-            self.restart_node(inode, self.extra_args[inode])
-        self.set_sporks()
-
-        self.log.info(f"blockchaininfo: {node.getblockchaininfo()}")
-        self.log.info(f"softforks: {node.getblockchaininfo()['softforks']}")
-        self.log.info(f"testdummy: {node.getblockchaininfo()['softforks']['testdummy']}")
-
-        self.log.info("Checking that `testdummy` is defined...")
-        self.log.info(get_bip9_details(node, 'testdummy'))
-        assert_equal(get_bip9_details(node, 'testdummy')['status'], 'active')
-#--
         self.activate_v19()
         self.log.info(f"After v19 activation should be plenty of blocks: {node.getblockcount()}")
         assert_greater_than(node.getblockcount(), 900)
