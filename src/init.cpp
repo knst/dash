@@ -85,6 +85,7 @@
 
 #include <evo/creditpool.h>
 #include <evo/deterministicmns.h>
+#include <evo/mnhftx.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
 #include <llmq/context.h>
@@ -359,6 +360,7 @@ void PrepareShutdown(NodeContext& node)
         llmq::quorumSnapshotManager.reset();
         deterministicMNManager.reset();
         creditPoolManager.reset();
+        node.mnhf_manager.reset();
         node.evodb.reset();
     }
     for (const auto& client : node.chain_clients) {
@@ -1920,9 +1922,12 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
                 LOCK(cs_main);
                 node.evodb.reset();
                 node.evodb = std::make_unique<CEvoDB>(nEvoDbCache, false, fReset || fReindexChainState);
+                node.mnhf_manager = std::make_unique<CMNHFManager>(*node.evodb);
 
                 chainman.Reset();
-                chainman.InitializeChainstate(Assert(node.mempool.get()), *node.evodb, llmq::chainLocksHandler, llmq::quorumInstantSendManager, llmq::quorumBlockProcessor);
+                chainman.InitializeChainstate(Assert(node.mempool.get()), *node.mnhf_manager, *node.evodb, llmq::chainLocksHandler, llmq::quorumInstantSendManager, llmq::quorumBlockProcessor);
+                LogPrintf("init.cpp: update chain params!\n");
+//                node.mnhf_manager->UpdateChainParams(::ChainActive().Tip(), nullptr);
                 chainman.m_total_coinstip_cache = nCoinCacheUsage;
                 chainman.m_total_coinsdb_cache = nCoinDBCache;
 
@@ -1960,6 +1965,8 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
                     strLoadError = _("Error loading block database");
                     break;
                 }
+                LogPrintf("init.cpp: load block index - update chain params!\n");
+//                node.mnhf_manager->UpdateChainParams(::ChainActive().Tip(), nullptr);
 
                 if (!fDisableGovernance && !args.GetBoolArg("-txindex", DEFAULT_TXINDEX) && chainparams.NetworkIDString() != CBaseChainParams::REGTEST) { // TODO remove this when pruning is fixed. See https://github.com/dashpay/dash/pull/1817 and https://github.com/dashpay/dash/pull/1743
                     return InitError(_("Transaction index can't be disabled with governance validation enabled. Either start with -disablegovernance command line switch or enable transaction index."));
@@ -2010,6 +2017,8 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
                     strLoadError = _("Error initializing block database");
                     break;
                 }
+                LogPrintf("init.cpp: load genesis block - update chain params!\n");
+//                node.mnhf_manager->UpdateChainParams(::ChainActive().Tip(), nullptr);
 
                 // At this point we're either in reindex or we've loaded a useful
                 // block tree into BlockIndex()!
@@ -2108,6 +2117,9 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
                             bls::bls_legacy_scheme.store(false);
                             LogPrintf("%s: bls_legacy_scheme=%d\n", __func__, bls::bls_legacy_scheme.load());
                         }
+
+                        LogPrintf("init.cpp: update chain params after bls!\n");
+                        node.mnhf_manager->UpdateChainParams(::ChainActive().Tip(), nullptr);
 
                         if (!CVerifyDB().VerifyDB(
                                 *chainstate, chainparams, chainstate->CoinsDB(),
