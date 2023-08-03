@@ -1112,9 +1112,6 @@ double ConvertBitsToDouble(unsigned int nBits)
 NOTE:   unlike bitcoin we are using PREVIOUS block height here,
         might be a good idea to change this to use prev bits
         but current height to avoid confusion.
-
-        Due to difference in interface, prefer to use GetBlockSubsidy()
-        that have a check for nullptr for pIndexPrev inside
 */
 CAmount GetBlockSubsidyInner(int nPrevBits, int nPrevHeight, const Consensus::Params& consensusParams, bool fSuperblockPartOnly)
 {

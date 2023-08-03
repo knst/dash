@@ -206,6 +206,13 @@ void StopScriptCheckWorkerThreads();
 CTransactionRef GetTransaction(const CBlockIndex* const block_index, const CTxMemPool* const mempool, const uint256& hash, const Consensus::Params& consensusParams, uint256& hashBlock);
 
 double ConvertBitsToDouble(unsigned int nBits);
+/**
+ * Due to difference in logic, the GetBlockSubsidy() has also different list of
+ * arguments.
+ *
+ * GetBlockSubsidy() uses a pre-calculated value for genesis block.
+ * It happens if pIndex->pprev equals to nullptr
+ */
 CAmount GetBlockSubsidyInner(int nBits, int nHeight, const Consensus::Params& consensusParams, bool fSuperblockPartOnly = false);
 CAmount GetBlockSubsidy(const CBlockIndex* const pindex, const Consensus::Params& consensusParams);
 CAmount GetMasternodePayment(int nHeight, CAmount blockValue, int nReallocActivationHeight = std::numeric_limits<int>::max() /* not activated */);
