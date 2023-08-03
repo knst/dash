@@ -1113,10 +1113,10 @@ NOTE:   unlike bitcoin we are using PREVIOUS block height here,
         might be a good idea to change this to use prev bits
         but current height to avoid confusion.
 
-        Due to difference in interface, prefer to use GetBlockSubsidyPrev()
+        Due to difference in interface, prefer to use GetBlockSubsidy()
         that have a check for nullptr for pIndexPrev inside
 */
-CAmount GetBlockSubsidy(int nPrevBits, int nPrevHeight, const Consensus::Params& consensusParams, bool fSuperblockPartOnly)
+CAmount GetBlockSubsidyInner(int nPrevBits, int nPrevHeight, const Consensus::Params& consensusParams, bool fSuperblockPartOnly)
 {
     double dDiff;
     CAmount nSubsidyBase;
@@ -1166,10 +1166,10 @@ CAmount GetBlockSubsidy(int nPrevBits, int nPrevHeight, const Consensus::Params&
     return fSuperblockPartOnly ? nSuperblockPart : nSubsidy - nSuperblockPart;
 }
 
-CAmount GetBlockSubsidyPrev(const CBlockIndex* const pindexPrev, const Consensus::Params& consensusParams)
+CAmount GetBlockSubsidy(const CBlockIndex* const pindex, const Consensus::Params& consensusParams)
 {
-    if (pindexPrev == nullptr) return Params().GenesisBlock().vtx[0]->GetValueOut();
-    return GetBlockSubsidy(pindexPrev->nBits, pindexPrev->nHeight, consensusParams);
+    if (pindex->pprev == nullptr) return Params().GenesisBlock().vtx[0]->GetValueOut();
+    return GetBlockSubsidyInner(pindex->pprev->nBits, pindex->pprev->nHeight, consensusParams);
 }
 
 CAmount GetMasternodePayment(int nHeight, CAmount blockValue, int nReallocActivationHeight)
@@ -2410,7 +2410,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     // DASH : MODIFIED TO CHECK MASTERNODE PAYMENTS AND SUPERBLOCKS
 
     // TODO: resync data (both ways?) and try to reprocess this block later.
-    CAmount blockReward = nFees + GetBlockSubsidyPrev(pindex->pprev, m_params.GetConsensus());
+    CAmount blockReward = nFees + GetBlockSubsidy(pindex, m_params.GetConsensus());
     std::string strError = "";
 
     int64_t nTime5_2 = GetTimeMicros(); nTimeSubsidy += nTime5_2 - nTime5_1;
