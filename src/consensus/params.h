@@ -39,13 +39,6 @@ struct BIP9Deployment {
     int64_t nThresholdMin{0};
     /** A coefficient which adjusts the speed a required number of signaling blocks is decreasing from nThresholdStart to nThresholdMin at with each period. */
     int64_t nFalloffCoeff{0};
-
-    /** this value is used for forks activated by master nodes.
-      * negative values means it is regular fork, no masternodes confirmation is needed.
-      * 0 means that there's no approval from masternodes yet.
-      * Otherwise it shows minimum height when miner's signals for this block can be assumed
-      */
-    mutable int64_t nMNActivationHeight{-1};
 };
 
 /**

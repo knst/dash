@@ -60,7 +60,6 @@
 #include <evo/creditpool.h>
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
-#include <evo/mnhftx.h>
 #include <evo/specialtx.h>
 
 #include <memory>
@@ -139,7 +138,6 @@ BasicTestingSetup::BasicTestingSetup(const std::string& chainName, const std::ve
     g_wallet_init_interface.Construct(m_node);
     fCheckBlockIndex = true;
     m_node.evodb = std::make_unique<CEvoDB>(1 << 20, true, true);
-    m_node.mnhf_manager = std::make_unique<CMNHFManager>(*m_node.evodb);
     connman = std::make_unique<CConnman>(0x1337, 0x1337, *m_node.addrman);
     deterministicMNManager.reset(new CDeterministicMNManager(*m_node.evodb, *connman));
     llmq::quorumSnapshotManager.reset(new llmq::CQuorumSnapshotManager(*m_node.evodb));
@@ -158,7 +156,6 @@ BasicTestingSetup::~BasicTestingSetup()
     llmq::quorumSnapshotManager.reset();
     deterministicMNManager.reset();
     creditPoolManager.reset();
-    m_node.mnhf_manager.reset();
     m_node.evodb.reset();
 
     LogInstance().DisconnectTestLogger();
@@ -241,7 +238,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     // instead of unit tests, but for now we need these here.
     RegisterAllCoreRPCCommands(tableRPC);
 
-    m_node.chainman->InitializeChainstate(m_node.mempool.get(), *m_node.mnhf_manager, *m_node.evodb, llmq::chainLocksHandler, llmq::quorumInstantSendManager, llmq::quorumBlockProcessor);
+    m_node.chainman->InitializeChainstate(m_node.mempool.get(), *m_node.evodb, llmq::chainLocksHandler, llmq::quorumInstantSendManager, llmq::quorumBlockProcessor);
     ::ChainstateActive().InitCoinsDB(
         /* cache_size_bytes */ 1 << 23, /* in_memory */ true, /* should_wipe */ false);
     assert(!::ChainstateActive().CanFlushToDisk());
@@ -250,8 +247,6 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     if (!::ChainstateActive().LoadGenesisBlock()) {
         throw std::runtime_error("LoadGenesisBlock failed.");
     }
-
-    //m_node.mnhf_manager->UpdateChainParams(m_node.chainman->ActiveTip());
 
     m_node.banman = std::make_unique<BanMan>(GetDataDir() / "banlist.dat", nullptr, DEFAULT_MISBEHAVING_BANTIME);
     m_node.peerman = PeerManager::make(chainparams, *m_node.connman, *m_node.addrman, m_node.banman.get(),
@@ -267,8 +262,6 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     if (!::ChainstateActive().ActivateBestChain(state)) {
         throw std::runtime_error(strprintf("ActivateBestChain failed. (%s)", state.ToString()));
     }
-//    m_node.mnhf_manager->UpdateChainParams(::ChainActive().Tip(), nullptr);
-
 }
 
 TestChainSetup::TestChainSetup(int num_blocks, const std::vector<const char*>& extra_args)

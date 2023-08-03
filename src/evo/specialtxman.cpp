@@ -64,7 +64,7 @@ bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const
     return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-tx-type-check");
 }
 
-static bool ProcessSpecialTx(const CTransaction& tx, const CBlockIndex* pindex, TxValidationState& state)
+bool ProcessSpecialTx(const CTransaction& tx, const CBlockIndex* pindex, TxValidationState& state)
 {
     if (tx.nVersion != 3 || tx.nType == TRANSACTION_NORMAL) {
         return true;
@@ -90,7 +90,7 @@ static bool ProcessSpecialTx(const CTransaction& tx, const CBlockIndex* pindex, 
     return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-tx-type-proc");
 }
 
-static bool UndoSpecialTx(const CTransaction& tx, const CBlockIndex* pindex)
+bool UndoSpecialTx(const CTransaction& tx, const CBlockIndex* pindex)
 {
     if (tx.nVersion != 3 || tx.nType == TRANSACTION_NORMAL) {
         return true;
@@ -116,8 +116,7 @@ static bool UndoSpecialTx(const CTransaction& tx, const CBlockIndex* pindex)
     return false;
 }
 
-bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CMNHFManager& mnhfManager,
-                              llmq::CQuorumBlockProcessor& quorum_block_processor, const llmq::CChainLocksHandler& chainlock_handler,
+bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, llmq::CQuorumBlockProcessor& quorum_block_processor, const llmq::CChainLocksHandler& chainlock_handler,
                               const Consensus::Params& consensusParams, const CCoinsViewCache& view, bool fJustCheck, bool fCheckCbTxMerleRoots,
                               BlockValidationState& state)
 {
@@ -129,7 +128,6 @@ bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CM
         static int64_t nTimeDMN = 0;
         static int64_t nTimeMerkle = 0;
         static int64_t nTimeCbTxCL = 0;
-        static int64_t nTimeMnehf = 0;
 
         int64_t nTime1 = GetTimeMicros();
 
@@ -211,15 +209,6 @@ bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CM
         nTimeCbTxCL += nTime6 - nTime5;
         LogPrint(BCLog::BENCHMARK, "        - CheckCbTxBestChainlock: %.2fms [%.2fs]\n", 0.001 * (nTime6 - nTime5), nTimeCbTxCL * 0.000001);
 
-        if (!mnhfManager.ProcessBlock(block, pindex, fJustCheck, state)) {
-            // pass the state returned by the function above
-            return false;
-        }
-
-        int64_t nTime7 = GetTimeMicros();
-        nTimeMnehf += nTime7 - nTime6;
-        LogPrint(BCLog::BENCHMARK, "        - mnhfManager: %.2fms [%.2fs]\n", 0.001 * (nTime7 - nTime6), nTimeMnehf * 0.000001);
-
         if (Params().GetConsensus().V19Height == pindex->nHeight + 1) {
             // NOTE: The block next to the activation is the one that is using new rules.
             // V19 activated just activated, so we must switch to the new rules here.
@@ -234,14 +223,13 @@ bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CM
     return true;
 }
 
-bool UndoSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CMNHFManager& mnhfManager, llmq::CQuorumBlockProcessor& quorum_block_processor)
+bool UndoSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, llmq::CQuorumBlockProcessor& quorum_block_processor)
 {
     AssertLockHeld(cs_main);
 
     auto bls_legacy_scheme = bls::bls_legacy_scheme.load();
 
     try {
-        LogPrintf("%s: step-1\n", __func__);
         if (Params().GetConsensus().V19Height == pindex->nHeight + 1) {
             // NOTE: The block next to the activation is the one that is using new rules.
             // Removing the activation block here, so we must switch back to the old rules.
@@ -251,33 +239,23 @@ bool UndoSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CMNHF
 
         for (int i = (int)block.vtx.size() - 1; i >= 0; --i) {
             const CTransaction& tx = *block.vtx[i];
-            LogPrintf("%s: step-tx %d\n", __func__, i);
             if (!UndoSpecialTx(tx, pindex)) {
                 return false;
             }
         }
 
-        LogPrintf("%s: step-2\n", __func__);
-        if (!mnhfManager.UndoBlock(block, pindex)) {
-            return false;
-        }
-
-        LogPrintf("%s: step-3\n", __func__);
         if (!deterministicMNManager->UndoBlock(pindex)) {
             return false;
         }
 
-        LogPrintf("%s: step-4\n", __func__);
         if (!quorum_block_processor.UndoBlock(block, pindex)) {
             return false;
         }
-        LogPrintf("%s: step-5\n", __func__);
     } catch (const std::exception& e) {
         bls::bls_legacy_scheme.store(bls_legacy_scheme);
         LogPrintf("%s: bls_legacy_scheme=%d\n", __func__, bls::bls_legacy_scheme.load());
         return error(strprintf("%s -- failed: %s\n", __func__, e.what()).c_str());
     }
 
-    LogPrintf("%s: step-6\n", __func__);
     return true;
 }

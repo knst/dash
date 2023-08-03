@@ -5,33 +5,10 @@
 #include <versionbits.h>
 #include <consensus/params.h>
 
-static int calculateStartHeight(const CBlockIndex* pindexPrev, ThresholdState state, const int nPeriod, const ThresholdConditionCache& cache) {
-    int nStartHeight{std::numeric_limits<int>::max()};
-
-    // we are interested only in state STARTED
-    // For state DEFINED: it is not started yet, nothing to do
-    // For states LOCKED_IN, FAILED, ACTIVE: it is too late, nothing to do
-    while (state == ThresholdState::STARTED) {
-        nStartHeight = std::min(pindexPrev->nHeight + 1, nStartHeight);
-
-        // we can walk back here because the only way for STARTED state to exist
-        // in cache already is to be calculated in previous runs via "walk forward"
-        // loop below starting from DEFINED state.
-        pindexPrev = pindexPrev->GetAncestor(pindexPrev->nHeight - nPeriod);
-        auto cache_it = cache.find(pindexPrev);
-        assert(cache_it != cache.end());
-
-        state = cache_it->second;
-    }
-
-    return nStartHeight;
-}
-
 ThresholdState AbstractThresholdConditionChecker::GetStateFor(const CBlockIndex* pindexPrev, const Consensus::Params& params, ThresholdConditionCache& cache) const
 {
     int nPeriod = Period(params);
     int64_t nTimeStart = BeginTime(params);
-    int masternodeStartHeight = MasternodeBeginHeight(params);
     int64_t nTimeTimeout = EndTime(params);
 
     // A block's state is always the same as that of the first of its period, so it is computed based on a pindexPrev whose height equals a multiple of nPeriod - 1.
@@ -47,7 +24,7 @@ ThresholdState AbstractThresholdConditionChecker::GetStateFor(const CBlockIndex*
             cache[pindexPrev] = ThresholdState::DEFINED;
             break;
         }
-        if (pindexPrev->GetMedianTimePast() < nTimeStart || pindexPrev->nHeight < masternodeStartHeight) {
+        if (pindexPrev->GetMedianTimePast() < nTimeStart) {
             // Optimization: don't recompute down further, as we know every earlier block will be before the start time
             cache[pindexPrev] = ThresholdState::DEFINED;
             break;
@@ -60,7 +37,35 @@ ThresholdState AbstractThresholdConditionChecker::GetStateFor(const CBlockIndex*
     assert(cache.count(pindexPrev));
     ThresholdState state = cache[pindexPrev];
 
-    int nStartHeight = calculateStartHeight(pindexPrev, state, nPeriod, cache);
+    auto pindex_search = pindexPrev;
+    auto state_search = state;
+    bool do_search{true};
+    int nStartHeight{std::numeric_limits<int>::max()};
+    while (do_search) {
+        switch (state_search) {
+            case ThresholdState::DEFINED: {
+                // not started yet, nothinig to do
+                do_search = false;
+                break;
+            }
+            case ThresholdState::STARTED: {
+                nStartHeight = std::min(nStartHeight, pindex_search->nHeight + 1);
+                // we can walk back here because the only way for STARTED state to exist
+                // in cache already is to be calculated in previous runs via "walk forward"
+                // loop below starting from DEFINED state.
+                pindex_search = pindex_search->GetAncestor(pindex_search->nHeight - nPeriod);
+                state_search = cache[pindex_search];
+                break;
+            }
+            case ThresholdState::LOCKED_IN:
+            case ThresholdState::FAILED:
+            case ThresholdState::ACTIVE: {
+                // too late, nothing to do
+                do_search = false;
+                break;
+            }
+        }
+    }
 
     // Now walk forward and compute the state of descendants of pindexPrev
     while (!vToCompute.empty()) {
@@ -72,7 +77,7 @@ ThresholdState AbstractThresholdConditionChecker::GetStateFor(const CBlockIndex*
             case ThresholdState::DEFINED: {
                 if (pindexPrev->GetMedianTimePast() >= nTimeTimeout) {
                     stateNext = ThresholdState::FAILED;
-                } else if (pindexPrev->GetMedianTimePast() >= nTimeStart && pindexPrev->nHeight >= masternodeStartHeight) {
+                } else if (pindexPrev->GetMedianTimePast() >= nTimeStart) {
                     stateNext = ThresholdState::STARTED;
                     nStartHeight = pindexPrev->nHeight + 1;
                 }
@@ -195,16 +200,6 @@ private:
 
 protected:
     int64_t BeginTime(const Consensus::Params& params) const override { return params.vDeployments[id].nStartTime; }
-    int MasternodeBeginHeight(const Consensus::Params& params) const override {
-        const auto& deployment = params.vDeployments[id];
-        if (deployment.nMNActivationHeight == 0) {
-            return std::numeric_limits<int>::max();
-        }
-        if (deployment.nMNActivationHeight < 0) {
-            return 0;
-        }
-        return deployment.nMNActivationHeight;
-    }
     int64_t EndTime(const Consensus::Params& params) const override { return params.vDeployments[id].nTimeout; }
     int Period(const Consensus::Params& params) const override { return params.vDeployments[id].nWindowSize ? params.vDeployments[id].nWindowSize : params.nMinerConfirmationWindow; }
     int Threshold(const Consensus::Params& params, int nAttempt) const override
