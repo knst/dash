@@ -210,10 +210,10 @@ double ConvertBitsToDouble(unsigned int nBits);
  * Due to difference in logic, the GetBlockSubsidy() has also different list of
  * arguments.
  *
- * GetBlockSubsidy() uses a pre-calculated value for genesis block.
- * It happens if pIndex->pprev equals to nullptr
+ * When pindex points to a genesis block GetBlockSubsidy() returns a pre-calculated value.
+ * For other blocks it calls GetBlockSubsidyInner() using nBits and nHeight of a pindex->pprev block.
  */
-CAmount GetBlockSubsidyInner(int nBits, int nHeight, const Consensus::Params& consensusParams, bool fSuperblockPartOnly = false);
+CAmount GetBlockSubsidyInner(int nPrevBits, int nPrevHeight, const Consensus::Params& consensusParams, bool fSuperblockPartOnly = false);
 CAmount GetBlockSubsidy(const CBlockIndex* const pindex, const Consensus::Params& consensusParams);
 CAmount GetMasternodePayment(int nHeight, CAmount blockValue, int nReallocActivationHeight = std::numeric_limits<int>::max() /* not activated */);
 
