@@ -31,6 +31,13 @@ class MnehfTest(DashTestFramework):
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
 
+    def restart_all_nodes(self):
+        for inode in range(self.num_nodes):
+            self.log.info(f"Restart node {inode}")
+            self.restart_node(inode, self.extra_args[inode])
+        for i in range(self.num_nodes - 1):
+            self.connect_nodes(i + 1, i)
+
     def create_mnehf(self, versionBit, pubkey=None):
         # request ID = sha256("mnhf", versionBit)
         request_id_buf = ser_string(b"mnhf") + struct.pack("<Q", versionBit)
@@ -103,16 +110,17 @@ class MnehfTest(DashTestFramework):
 
     def run_test(self):
         node = self.nodes[0]
+        defined = 'active'
 
         self.set_sporks()
         self.activate_v19()
         self.log.info(f"After v19 activation should be plenty of blocks: {node.getblockcount()}")
         assert_greater_than(node.getblockcount(), 900)
-        assert_equal(get_bip9_details(node, 'testdummy')['status'], 'defined')
+        assert_equal(get_bip9_details(node, 'testdummy')['status'], defined)
 
         self.log.info("Mine a quorum...")
         self.mine_quorum()
-        assert_equal(get_bip9_details(node, 'testdummy')['status'], 'defined')
+        assert_equal(get_bip9_details(node, 'testdummy')['status'], defined)
 
         key = ECKey()
         key.generate()
@@ -129,9 +137,9 @@ class MnehfTest(DashTestFramework):
 
         self.send_tx(tx, expected_error='mnhf-before-v20')
 
-        assert_equal(get_bip9_details(node, 'testdummy')['status'], 'defined')
+        assert_equal(get_bip9_details(node, 'testdummy')['status'], defined)
         self.activate_v20()
-        assert_equal(get_bip9_details(node, 'testdummy')['status'], 'defined')
+        assert_equal(get_bip9_details(node, 'testdummy')['status'], defined)
 
         tx_sent = self.send_tx(tx)
         node.generate(1)
@@ -146,16 +154,15 @@ class MnehfTest(DashTestFramework):
         assert_equal(node.getmempoolinfo()['size'], 0)
 
         while (node.getblockcount() + 1) % 12 != 0:
-            self.check_fork('defined')
+            self.check_fork(defined)
             node.generate(1)
             self.sync_all()
 
-        for inode in range(4):
-            self.log.info(f"Restart node {inode}")
-            self.restart_node(inode, self.extra_args[inode])
+
+        self.restart_all_nodes()
 
         for i in range(12):
-            self.check_fork('started')
+            self.check_fork(defined)
             node.generate(1)
             self.sync_all()
 
@@ -165,15 +172,11 @@ class MnehfTest(DashTestFramework):
             node.generate(1)
             self.sync_all()
             if i == 7:
-                for inode in range(4):
-                    self.log.info(f"Restart node {inode}")
-                    self.restart_node(inode, self.extra_args[inode])
+                self.restart_all_nodes()
 
 
         self.check_fork('active')
-        for inode in range(4):
-            self.log.info(f"Restart node {inode}")
-            self.restart_node(inode, self.extra_args[inode])
+        self.restart_all_nodes()
         self.check_fork('active')
 
 
