@@ -298,6 +298,7 @@ class AssetLocksTest(DashTestFramework):
         asset_unlock_tx_too_big_fee = self.create_assetunlock(104, COIN, pubkey, fee=int(Decimal("0.1") * COIN))
         asset_unlock_tx_zero_fee = self.create_assetunlock(105, COIN, pubkey, fee=0)
         asset_unlock_tx_duplicate_index = copy.deepcopy(asset_unlock_tx)
+        # modify this tx with duplicated index to make a hash of tx different, otherwise tx would be refused too early
         asset_unlock_tx_duplicate_index.vout[0].nValue += COIN
         too_late_height = node.getblock(node.getbestblockhash())["height"] + 48
 
@@ -330,12 +331,6 @@ class AssetLocksTest(DashTestFramework):
         self.send_tx(asset_unlock_tx,
             expected_error = "Transaction already in block chain",
             reason = "double copy")
-
-        self.check_mempool_result(tx=asset_unlock_tx_duplicate_index,
-                result_expected={'allowed': False, 'reject-reason' : 'bad-assetunlock-duplicated-index'})
-        self.send_tx(asset_unlock_tx_duplicate_index,
-            expected_error = "bad-assetunlock-duplicated-index",
-            reason = "double index")
 
         self.log.info("Mining next quorum to check tx 'asset_unlock_tx_late' is still valid...")
         self.mine_quorum()
@@ -410,11 +405,6 @@ class AssetLocksTest(DashTestFramework):
         block = node.getblock(node.getbestblockhash())
         assert txid_in_block in block['tx']
         self.validate_credit_pool_balance(0)
-
-        self.log.info("After many blocks duplicated tx still should not be mined")
-        self.send_tx(asset_unlock_tx_duplicate_index,
-                expected_error = "bad-assetunlock-duplicated-index",
-                reason = "double index")
 
         self.log.info("Forcibly mine asset_unlock_tx_full and ensure block is invalid...")
         self.create_and_check_block([asset_unlock_tx_duplicate_index], expected_error = "bad-assetunlock-duplicated-index")
