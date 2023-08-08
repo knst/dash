@@ -1297,6 +1297,12 @@ public:
         LogPrintf(("%s " + fmt).c_str(), GetDisplayName(), parameters...);
     };
 
+    /** Prepends the wallet name in logging output to ease debugging CoinJoin in multi-wallet use cases */
+    template<typename... Params>
+    void CJLogPrint(std::string fmt, Params... parameters) const {
+        LogPrint(BCLog::COINJOIN, ("%s " + fmt).c_str(), GetDisplayName(), parameters...);
+    };
+
     /** Upgrade the wallet */
     bool UpgradeWallet(int version, bilingual_str& error);
 
