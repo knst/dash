@@ -16,6 +16,8 @@ from multiprocessing import Pool
 
 FALSE_POSITIVES = [
     ("src/batchedlogger.h", "strprintf(fmt, args...)"),
+    ("src/coinjoin/client.h", "CJLogPrint(std::string fmt, Params... parameters)"),
+    ("src/coinjoin/client.h", "LogPrint(BCLog::COINJOIN, (\"%s \" + fmt).c_str(), mixingWallet.GetDisplayName(), parameters...)"),
     ("src/dbwrapper.cpp", "vsnprintf(p, limit - p, format, backup_ap)"),
     ("src/index/base.cpp", "FatalError(const char* fmt, const Args&... args)"),
     ("src/index/txindex.cpp", "FatalError(const char* fmt, const Args&... args)"),
@@ -30,6 +32,8 @@ FALSE_POSITIVES = [
     ("src/validationinterface.cpp", "LogPrint(BCLog::VALIDATION, fmt \"\\n\", __VA_ARGS__)"),
     ("src/wallet/wallet.h",  "WalletLogPrintf(std::string fmt, Params... parameters)"),
     ("src/wallet/wallet.h", "LogPrintf((\"%s \" + fmt).c_str(), GetDisplayName(), parameters...)"),
+    ("src/wallet/wallet.h", "CJLogPrint(std::string fmt, Params... parameters)"),
+    ("src/wallet/wallet.h", "LogPrint(BCLog::COINJOIN, (\"%s \" + fmt).c_str(), GetDisplayName(), parameters...)"),
     ("src/wallet/scriptpubkeyman.h",  "WalletLogPrintf(std::string fmt, Params... parameters)"),
     ("src/wallet/scriptpubkeyman.h", "LogPrintf((\"%s \" + fmt).c_str(), m_storage.GetDisplayName(), parameters...)"),
     ("src/logging.h", "LogPrintf(const char* fmt, const Args&... args)"),
