@@ -123,12 +123,6 @@ private:
 
     void SetNull() EXCLUSIVE_LOCKS_REQUIRED(cs_coinjoin);
 
-    /** Prepends the wallet name in logging output to ease debugging CoinJoin in multi-wallet use cases */
-    template<typename... Params>
-    void CJLogPrint(std::string fmt, Params... parameters) const {
-        LogPrint(BCLog::COINJOIN, ("%s " + fmt).c_str(), mixingWallet.GetDisplayName(), parameters...);
-    };
-
 public:
     explicit CCoinJoinClientSession(CWallet& pwallet, const CMasternodeSync& mn_sync) :
         m_mn_sync(mn_sync), mixingWallet(pwallet)
@@ -205,12 +199,6 @@ private:
 
     // Make sure we have enough keys since last backup
     bool CheckAutomaticBackup();
-
-    /** Prepends the wallet name in logging output to ease debugging CoinJoin in multi-wallet use cases */
-    template<typename... Params>
-    void CJLogPrint(std::string fmt, Params... parameters) const {
-        LogPrint(BCLog::COINJOIN, ("%s " + fmt).c_str(), mixingWallet.GetDisplayName(), parameters...);
-    };
 
 public:
     int nCachedNumBlocks{std::numeric_limits<int>::max()};    // used for the overview screen
