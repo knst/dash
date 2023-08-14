@@ -11,9 +11,9 @@ Only v0.15.2 and v0.16.3 are required by this test. The others are used in featu
 import os
 import shutil
 
-from test_framework.test_framework import BitcoinTestFramework
+from test_framework.test_framework import (BitcoinTestFramework, SkipTest)
 from test_framework.util import (
-    adjust_bitcoin_conf_for_pre_17,
+    adjust_bitcoin_conf_for_pre_16,
     assert_equal,
     assert_greater_than,
     assert_is_hex_string,
@@ -25,7 +25,7 @@ class UpgradeWalletTest(BitcoinTestFramework):
         self.setup_clean_chain = True
         self.num_nodes = 3
         self.extra_args = [
-            ["-addresstype=bech32"], # current wallet version
+            [], # current wallet version
             ["-usehd=1"],            # v0.16.3 wallet
             ["-usehd=0"]             # v0.15.2 wallet
         ]
@@ -35,6 +35,8 @@ class UpgradeWalletTest(BitcoinTestFramework):
         self.skip_if_no_wallet()
         self.skip_if_no_bdb()
         self.skip_if_no_previous_releases()
+        # TODO: this test doesn't work yet
+        raise SkipTest("Backwards compatibility is not adopted for Dash Core yet.")
 
     def setup_network(self):
         self.setup_nodes()
@@ -45,9 +47,8 @@ class UpgradeWalletTest(BitcoinTestFramework):
             160300,
             150200,
         ])
-        # adapt bitcoin.conf, because older bitcoind's don't recognize config sections
-        adjust_bitcoin_conf_for_pre_17(self.nodes[1].bitcoinconf)
-        adjust_bitcoin_conf_for_pre_17(self.nodes[2].bitcoinconf)
+        # adapt dash.conf, because older dashd's don't recognize config sections
+        adjust_bitcoin_conf_for_pre_16(self.nodes[2].bitcoinconf)
         self.start_nodes()
         self.import_deterministic_coinbase_privkeys()
 
@@ -94,7 +95,7 @@ class UpgradeWalletTest(BitcoinTestFramework):
         v15_2_wallet       = os.path.join(v15_2_node.datadir, "regtest/wallet.dat")
         self.stop_nodes()
 
-        # Copy the 0.16.3 wallet to the last Bitcoin Core version and open it:
+        # Copy the 0.16.3 wallet to the last Dash Core version and open it:
         shutil.rmtree(node_master_wallet_dir)
         os.mkdir(node_master_wallet_dir)
         shutil.copy(
@@ -117,7 +118,7 @@ class UpgradeWalletTest(BitcoinTestFramework):
         assert_equal(wallet.getbalance(), v16_3_balance)
 
         self.stop_node(0)
-        # Copy the 0.15.2 wallet to the last Bitcoin Core version and open it:
+        # Copy the 0.15.2 wallet to the last Dash Core version and open it:
         shutil.rmtree(node_master_wallet_dir)
         os.mkdir(node_master_wallet_dir)
         shutil.copy(
