@@ -6,11 +6,18 @@
 
 export LC_ALL=C.UTF-8
 
-# The root dir.
+# The source root dir, usually from git, usually read-only.
 # The ci system copies this folder.
-# This is where the depends build is done.
-BASE_ROOT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )"/../../ >/dev/null 2>&1 && pwd )
-export BASE_ROOT_DIR
+BASE_READ_ONLY_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )"/../../ >/dev/null 2>&1 && pwd )
+export BASE_READ_ONLY_DIR
+# The destination root dir inside the container.
+if [ -z "${DANGER_RUN_CI_ON_HOST}" ] ; then
+  # This folder only exists on the ci guest and will be a copy of BASE_READ_ONLY_DIR
+  export BASE_ROOT_DIR="/ci_container_base"
+else
+  # This folder is equal to BASE_READ_ONLY_DIR and is read-write
+  export BASE_ROOT_DIR="${BASE_READ_ONLY_DIR}"
+fi
 
 echo "Setting specific values in env"
 if [ -n "${FILE_ENV}" ]; then

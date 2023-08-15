@@ -10,10 +10,6 @@ if [[ $QEMU_USER_CMD == qemu-s390* ]]; then
   export LC_ALL=C
 fi
 
-# Create folders that are mounted into the docker
-mkdir -p "${CCACHE_DIR}"
-mkdir -p "${PREVIOUS_RELEASES_DIR}"
-
 export ASAN_OPTIONS="detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1"
 export LSAN_OPTIONS="suppressions=${BASE_BUILD_DIR}/test/sanitizer_suppressions/lsan:print_suppressions=0"
 export TSAN_OPTIONS="suppressions=${BASE_BUILD_DIR}/test/sanitizer_suppressions/tsan:halt_on_error=1"
@@ -37,7 +33,7 @@ if [ -z "$DANGER_RUN_CI_ON_HOST" ]; then
 
   # shellcheck disable=SC2086
   DOCKER_ID=$(docker run $DOCKER_ADMIN -idt \
-                  --mount type=bind,src=$BASE_ROOT_DIR,dst=/ro_base,readonly \
+                  --mount type=bind,src=$BASE_READ_ONLY_DIR,dst=/ro_base,readonly \
                   --mount type=bind,src=$CCACHE_DIR,dst=$CCACHE_DIR \
                   --mount type=bind,src=$DEPENDS_DIR,dst=$DEPENDS_DIR \
                   --mount type=bind,src=$PREVIOUS_RELEASES_DIR,dst=$PREVIOUS_RELEASES_DIR \
@@ -60,6 +56,9 @@ if [ -z "$DANGER_RUN_CI_ON_HOST" ]; then
   $DOCKER_CI_CMD_PREFIX_ROOT git config --global --add safe.directory "*"
 else
   echo "Running on host system without docker wrapper"
+  echo "Create missing folders"
+  mkdir -p "${CCACHE_DIR}"
+  mkdir -p "${PREVIOUS_RELEASES_DIR}"
 fi
 
 CI_EXEC () {
