@@ -19,9 +19,6 @@ zmq_packages=zeromq
 upnp_packages=miniupnpc
 natpmp_packages=libnatpmp
 
-multiprocess_packages = libmultiprocess capnp
-multiprocess_native_packages = native_libmultiprocess native_boost native_capnp
-
 darwin_native_packages = native_ds_store native_mac_alias
 
 $(host_arch)_$(host_os)_native_packages += native_b2
