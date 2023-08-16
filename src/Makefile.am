@@ -110,10 +110,6 @@ if BUILD_BITCOIND
   bin_PROGRAMS += dashd
 endif
 
-if BUILD_BITCOIN_NODE
-  bin_PROGRAMS += dash-node
-endif
-
 if BUILD_BITCOIN_CLI
   bin_PROGRAMS += dash-cli
 endif
@@ -773,22 +769,22 @@ libbitcoin_cli_a_SOURCES = \
 nodist_libbitcoin_util_a_SOURCES = $(srcdir)/obj/build.h
 #
 
-# dashd binary & dash-node binaries #
-bitcoin_common_sources = bitcoind.cpp
-bitcoin_common_cppflags = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-bitcoin_common_cxxflags = $(AM_CXXFLAGS) $(PIE_FLAGS)
-bitcoin_common_ldflags = $(LDFLAGS_WRAP_EXCEPTIONS) $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(PTHREAD_FLAGS)
+# dashd binary #
+dashd_SOURCES = bitcoind.cpp
+dashd_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+dashd_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+dashd_LDFLAGS = $(LDFLAGS_WRAP_EXCEPTIONS) $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(PTHREAD_FLAGS)
 
 if TARGET_WINDOWS
-bitcoin_common_sources += dashd-res.rc
+dashd_SOURCES += dashd-res.rc
 endif
 
-bitcoin_common_ldadd = \
+dashd_LDADD = \
   $(LIBBITCOIN_SERVER) \
   $(LIBBITCOIN_WALLET) \
   $(LIBBITCOIN_COMMON) \
-  $(LIBBITCOIN_UTIL) \
   $(LIBUNIVALUE) \
+  $(LIBBITCOIN_UTIL) \
   $(LIBBITCOIN_ZMQ) \
   $(LIBBITCOIN_CONSENSUS) \
   $(LIBBITCOIN_CRYPTO) \
@@ -798,19 +794,7 @@ bitcoin_common_ldadd = \
   $(LIBMEMENV) \
   $(LIBSECP256K1)
 
-bitcoin_common_ldadd += $(BACKTRACE_LIB) $(BOOST_LIBS) $(BDB_LIBS) $(MINIUPNPC_LIBS) $(NATPMP_LIBS) $(SQLITE_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS) $(GMP_LIBS)
-
-dashd_SOURCES = $(bitcoin_common_sources)
-dashd_CPPFLAGS = $(bitcoin_common_cppflags)
-dashd_CXXFLAGS = $(bitcoin_common_cxxflags)
-dashd_LDFLAGS = $(bitcoin_common_ldflags)
-dashd_LDADD = $(bitcoin_common_ldadd)
-
-dash_node_SOURCES = $(bitcoin_common_sources)
-dash_node_CPPFLAGS = $(bitcoin_common_cppflags)
-dash_node_CXXFLAGS = $(bitcoin_common_cxxflags)
-dash_node_LDFLAGS = $(bitcoin_common_ldflags)
-dash_node_LDADD = $(bitcoin_common_ldadd)
+dashd_LDADD += $(BACKTRACE_LIB) $(BOOST_LIBS) $(BDB_LIBS) $(MINIUPNPC_LIBS) $(NATPMP_LIBS) $(SQLITE_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS) $(GMP_LIBS)
 
 # dash-cli binary #
 dash_cli_SOURCES = bitcoin-cli.cpp
@@ -854,19 +838,34 @@ dash_tx_LDADD += $(BACKTRACE_LIB) $(BOOST_LIBS) $(GMP_LIBS)
 
 # dash-wallet binary #
 dash_wallet_SOURCES = bitcoin-wallet.cpp
-dash_wallet_CPPFLAGS = $(bitcoin_common_cppflags)
-dash_wallet_CXXFLAGS = $(bitcoin_common_cxxflags)
-dash_wallet_LDFLAGS = $(bitcoin_common_ldflags)
-# TODO: remove $(LIBBITCOIN_SERVER) from wallet dependencies.
-# Due to incomplete bitcoin/bitcoin#15639 wallet still depends on it
-# should be only this: `dash_wallet_LDADD = $(LIBBITCOIN_WALLET_TOOL) $(bitcoin_common_ldadd)`
-dash_wallet_LDADD = $(LIBBITCOIN_SERVER) \
-  $(LIBBITCOIN_WALLET_TOOL) $(bitcoin_common_ldadd) \
-  $(LIBBITCOIN_SERVER) $(bitcoin_common_ldadd)
+dash_wallet_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+dash_wallet_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+dash_wallet_LDFLAGS = $(LDFLAGS_WRAP_EXCEPTIONS) $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(PTHREAD_FLAGS)
 
 if TARGET_WINDOWS
 dash_wallet_SOURCES += dash-wallet-res.rc
 endif
+
+# Libraries below may be listed more than once to resolve circular dependencies (see
+# https://eli.thegreenplace.net/2013/07/09/library-order-in-static-linking#circular-dependency)
+dash_wallet_LDADD = \
+  $(LIBBITCOIN_WALLET_TOOL) \
+  $(LIBBITCOIN_SERVER) \
+  $(LIBBITCOIN_WALLET) \
+  $(LIBBITCOIN_SERVER) \
+  $(LIBBITCOIN_COMMON) \
+  $(LIBBITCOIN_CONSENSUS) \
+  $(LIBBITCOIN_UTIL) \
+  $(LIBBITCOIN_CRYPTO) \
+  $(LIBBITCOIN_ZMQ) \
+  $(LIBDASHBLS) \
+  $(LIBLEVELDB) \
+  $(LIBLEVELDB_SSE42) \
+  $(LIBMEMENV) \
+  $(LIBSECP256K1) \
+  $(LIBUNIVALUE)
+
+dash_wallet_LDADD += $(BACKTRACE_LIB) $(BOOST_LIBS) $(BDB_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(MINIUPNPC_LIBS) $(NATPMP_LIBS) $(SQLITE_LIBS) $(ZMQ_LIBS) $(GMP_LIBS)
 #
 
 # dashconsensus library #
