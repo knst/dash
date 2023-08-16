@@ -7,8 +7,8 @@
 #include <base58.h>
 #include <core_io.h>
 #include <psbt.h>
-#include <util/string.h>
 #include <util/strencodings.h>
+#include <util/string.h>
 
 #include <cassert>
 #include <cstdint>

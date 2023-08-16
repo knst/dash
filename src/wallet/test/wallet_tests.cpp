@@ -4,8 +4,8 @@
 
 #include <wallet/wallet.h>
 
-#include <iostream>
 #include <future>
+#include <iostream>
 #include <memory>
 #include <stdint.h>
 #include <vector>
@@ -14,8 +14,8 @@
 #include <key_io.h>
 #include <node/context.h>
 #include <policy/policy.h>
-#include <rpc/server.h>
 #include <rpc/rawtransaction_util.h>
+#include <rpc/server.h>
 #include <test/util/logging.h>
 #include <test/util/setup_common.h>
 #include <util/translation.h>

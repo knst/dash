@@ -11,9 +11,9 @@
 #include <primitives/block.h>
 #include <serialize.h>
 #include <streams.h>
+#include <test/util/setup_common.h>
 #include <uint256.h>
 #include <util/strencodings.h>
-#include <test/util/setup_common.h>
 
 #include <vector>
 

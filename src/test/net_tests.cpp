@@ -6,17 +6,17 @@
 
 #include <addrdb.h>
 #include <addrman.h>
+#include <chainparams.h>
 #include <clientversion.h>
+#include <net.h>
 #include <netaddress.h>
+#include <netbase.h>
 #include <serialize.h>
 #include <span.h>
 #include <streams.h>
-#include <net.h>
-#include <netbase.h>
-#include <chainparams.h>
-#include <util/system.h>
-#include <util/string.h>
 #include <util/strencodings.h>
+#include <util/string.h>
+#include <util/system.h>
 #include <version.h>
 
 #include <cstdint>

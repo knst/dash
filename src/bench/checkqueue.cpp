@@ -3,12 +3,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/bench.h>
-#include <util/system.h>
 #include <checkqueue.h>
 #include <key.h>
 #include <prevector.h>
 #include <pubkey.h>
 #include <random.h>
+#include <util/system.h>
 
 #include <vector>
 

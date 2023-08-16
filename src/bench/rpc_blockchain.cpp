@@ -5,12 +5,12 @@
 #include <bench/bench.h>
 #include <bench/data.h>
 
-#include <validation.h>
-#include <streams.h>
 #include <consensus/validation.h>
 #include <llmq/chainlocks.h>
 #include <llmq/instantsend.h>
 #include <rpc/blockchain.h>
+#include <streams.h>
+#include <validation.h>
 
 #include <univalue.h>
 

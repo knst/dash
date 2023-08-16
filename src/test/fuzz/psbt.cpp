@@ -11,8 +11,8 @@
 #include <version.h>
 
 #include <cstdint>
-#include <string>
 #include <optional>
+#include <string>
 #include <vector>
 
 void initialize_psbt()

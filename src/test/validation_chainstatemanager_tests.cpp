@@ -4,12 +4,12 @@
 //
 #include <chainparams.h>
 #include <consensus/validation.h>
+#include <evo/evodb.h>
 #include <index/txindex.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
 #include <llmq/instantsend.h>
 #include <node/utxo_snapshot.h>
-#include <evo/evodb.h>
 #include <random.h>
 #include <rpc/blockchain.h>
 #include <sync.h>

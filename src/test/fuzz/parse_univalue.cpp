@@ -7,8 +7,8 @@
 #include <key.h>
 #include <rpc/client.h>
 #include <rpc/util.h>
-#include <test/fuzz/fuzz.h>
 #include <script/sign.h>
+#include <test/fuzz/fuzz.h>
 
 #include <limits>
 #include <string>

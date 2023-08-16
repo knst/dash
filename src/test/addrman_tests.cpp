@@ -3,13 +3,13 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <addrman.h>
-#include <i2p.h>
 #include <hash.h>
+#include <i2p.h>
 #include <netbase.h>
 #include <random.h>
-#include <util/string.h>
 #include <test/data/asmap.raw.h>
 #include <test/util/setup_common.h>
+#include <util/string.h>
 
 #include <optional>
 #include <string>

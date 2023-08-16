@@ -13,7 +13,6 @@
 #include <validation.h>
 
 
-
 static void DuplicateInputs(benchmark::Bench& bench)
 {
     RegTestingSetup test_setup;
