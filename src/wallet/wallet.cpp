@@ -3464,14 +3464,20 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CTransac
                 //  rediscover unknown transactions that were written with keys of ours to recover
                 //  post-backup change.
 
-                // Reserve a new key pair from key pool. If it fails, provide a dummy
-                // destination in case we don't need change.
-                CTxDestination dest;
-                if (!reservedest.GetReservedDestination(dest, true)) {
-                    error = _("Transaction needs a change address, but we can't generate it. Please call keypoolrefill first.");
+                // Reserve a new key pair from key pool
+                if (!CanGetAddresses(true)) {
+                    error = _("Can't generate a change-address key. No keys in the internal keypool and can't generate any keys.");
+                    return false;
                 }
+                CTxDestination dest;
+                bool ret = reservedest.GetReservedDestination(dest, true);
+                if (!ret)
+                {
+                    error = _("Keypool ran out, please call keypoolrefill first");
+                    return false;
+                }
+
                 scriptChange = GetScriptForDestination(dest);
-                assert(!dest.empty() || scriptChange.empty());
             }
 
             nFeeRet = 0;
@@ -3719,11 +3725,6 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CTransac
 
             if (nMaxTries == 0) {
                 error = _("Exceeded max tries.");
-                return false;
-            }
-
-            // Give up if change keypool ran out and we failed to find a solution without change:
-            if (scriptChange.empty() && nChangePosInOut != -1) {
                 return false;
             }
         }
@@ -4030,7 +4031,7 @@ bool CWallet::GetNewChangeDestination(CTxDestination& dest, std::string& error)
 
     ReserveDestination reservedest(this);
     if (!reservedest.GetReservedDestination(dest, true)) {
-        error = _("Error: Keypool ran out, please call keypoolrefill first").translated;
+        error = "Error: Keypool ran out, please call keypoolrefill first";
         return false;
     }
 
