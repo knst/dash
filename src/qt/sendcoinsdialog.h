@@ -66,7 +66,7 @@ private:
     std::unique_ptr<CCoinControl> m_coin_control;
     std::unique_ptr<WalletModelTransaction> m_current_transaction;
     bool fNewRecipientAllowed;
-    void send(QList<SendCoinsRecipient> recipients);
+    void send(QList<SendCoinsRecipient> recipients, QString& question_string, QString& informative_text, QString& detailed_text);
     bool fFeeMinimized;
     bool fKeepChangeAddress;
 

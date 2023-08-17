@@ -292,17 +292,18 @@ bool SendCoinsDialog::PrepareSendText(QString& question_string, QString& informa
             fNewRecipientAllowed = true;
             return false;
         }
-        send(recipients);
+        send(recipients, question_string, informative_text, detailed_text);
         return false;
     }
     // already unlocked or not encrypted at all
-    send(recipients);
+    send(recipients, question_string, informative_text, detailed_text);
+    return true;
 }
 
-void SendCoinsDialog::send(QList<SendCoinsRecipient> recipients)
+void SendCoinsDialog::send(QList<SendCoinsRecipient> recipients, QString& question_string, QString& informative_text, QString& detailed_text)
 {
     // prepare transaction for getting txFee earlier
-    m_current_transaction = MakeUnique<WalletModelTransaction>(recipients);
+    m_current_transaction = std::make_unique<WalletModelTransaction>(recipients);
     WalletModel::SendCoinsReturn prepareStatus;
 
     updateCoinControlState(*m_coin_control);
@@ -315,7 +316,7 @@ void SendCoinsDialog::send(QList<SendCoinsRecipient> recipients)
 
     if(prepareStatus.status != WalletModel::OK) {
         fNewRecipientAllowed = true;
-        return false;
+          return ; // KNST
     }
 
     QStringList formatted;
@@ -384,7 +385,7 @@ void SendCoinsDialog::send(QList<SendCoinsRecipient> recipients)
         question_string.append("</span>");
     }
 
-    CAmount txFee = currentTransaction.getTransactionFee();
+    CAmount txFee = m_current_transaction->getTransactionFee();
 
     if(txFee > 0)
     {
@@ -447,7 +448,7 @@ void SendCoinsDialog::send(QList<SendCoinsRecipient> recipients)
         detailed_text = formatted.join("\n\n");
     }
 
-    return true;
+    // return true; // KNST
 }
 
 void SendCoinsDialog::on_sendButton_clicked()
