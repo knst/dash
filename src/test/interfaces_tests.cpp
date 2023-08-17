@@ -13,7 +13,7 @@
 #include <interfaces/node.h>
 #include <llmq/commitment.h>
 #include <llmq/context.h>
-#include <script/standard.h>
+#include <script/solver.h>
 #include <spork.h>
 #include <streams.h>
 #include <test/util/llmq_tests.h>

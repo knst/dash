@@ -5,8 +5,8 @@
 #ifndef BITCOIN_WALLET_PLATFORMTYPES_H
 #define BITCOIN_WALLET_PLATFORMTYPES_H
 
+#include <addresstype.h>
 #include <pubkey.h>
-#include <script/standard.h>
 #include <support/allocators/secure.h>
 #include <uint256.h>
 
