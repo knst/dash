@@ -1379,7 +1379,7 @@ void EraseOrphansFor(NodeId peer)
 }
 
 
-unsigned int LimitOrphanTxSize(unsigned int nMaxOrphansSize)
+unsigned int LimitOrphanTxSize(size_t nMaxOrphansSize)
 {
     LOCK(g_cs_orphans);
 
@@ -3596,7 +3596,7 @@ void PeerManagerImpl::ProcessMessage(
                 AddOrphanTx(ptx, pfrom.GetId());
 
                 // DoS prevention: do not allow mapOrphanTransactions to grow unbounded (see CVE-2012-3789)
-                unsigned int nMaxOrphanTxSize = (unsigned int)std::max((int64_t)0, gArgs.GetArg("-maxorphantxsize", DEFAULT_MAX_ORPHAN_TRANSACTIONS_SIZE)) * 1000000;
+                size_t nMaxOrphanTxSize = std::max(int64_t{0}, gArgs.GetArg("-maxorphantxsize", DEFAULT_MAX_ORPHAN_TRANSACTIONS_SIZE)) * 1000'000;
                 unsigned int nEvicted = LimitOrphanTxSize(nMaxOrphanTxSize);
                 if (nEvicted > 0) {
                     LogPrint(BCLog::MEMPOOL, "mapOrphan overflow, removed %u tx\n", nEvicted);
