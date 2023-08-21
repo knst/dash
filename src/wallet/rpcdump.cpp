@@ -909,7 +909,7 @@ UniValue dumpwallet(const JSONRPCRequest& request)
     }.Check(request);
 
     std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
-    if (!wallet) return NullUniValue;
+    if (!pwallet) return NullUniValue;
 
     CWallet& wallet = *pwallet;
     LegacyScriptPubKeyMan& spk_man = EnsureLegacyScriptPubKeyMan(wallet);
