@@ -210,7 +210,7 @@ public:
 
     virtual uint256 GetID() const { return uint256(); }
 
-    virtual void SetType(bool internal) {}
+    virtual void SetType(OutputType type, bool internal) {}
 
     /** Prepends the wallet name in logging output to ease debugging in multi-wallet use cases */
     template<typename... Params>
@@ -355,7 +355,7 @@ public:
 
     uint256 GetID() const override;
 
-    void SetType(bool internal) override;
+    void SetType(OutputType type, bool internal) override;
 
     // Map from Key ID to key metadata.
     std::map<CKeyID, CKeyMetadata> mapKeyMetadata GUARDED_BY(cs_KeyStore);
@@ -515,6 +515,7 @@ private:
     PubKeyMap m_map_pubkeys GUARDED_BY(cs_desc_man);
     int32_t m_max_cached_index = -1;
 
+    OutputType m_address_type;
     bool m_internal;
 
     KeyMap m_map_keys GUARDED_BY(cs_desc_man);
@@ -541,20 +542,20 @@ public:
         :   ScriptPubKeyMan(storage),
             m_wallet_descriptor(descriptor)
         {}
-    DescriptorScriptPubKeyMan(WalletStorage& storage, bool internal)
+    DescriptorScriptPubKeyMan(WalletStorage& storage, OutputType address_type, bool internal)
         :   ScriptPubKeyMan(storage),
-            m_internal(internal)
+            m_address_type(address_type), m_internal(internal)
         {}
 
     mutable RecursiveMutex cs_desc_man;
 
-    bool GetNewDestination(CTxDestination& dest, std::string& error) override;
+    bool GetNewDestination(const OutputType type, CTxDestination& dest, std::string& error) override;
     isminetype IsMine(const CScript& script) const override;
 
     bool CheckDecryptionKey(const CKeyingMaterial& master_key, bool accept_no_keys = false) override;
     bool Encrypt(const CKeyingMaterial& master_key, WalletBatch* batch) override;
 
-    bool GetReservedDestination(bool internal, CTxDestination& address, int64_t& index, CKeyPool& keypool) override;
+    bool GetReservedDestination(const OutputType type, bool internal, CTxDestination& address, int64_t& index, CKeyPool& keypool) override;
     void ReturnDestination(int64_t index, bool internal, const CTxDestination& addr) override;
 
     // Tops up the descriptor cache and m_map_script_pub_keys. The cache is stored in the wallet file
@@ -592,7 +593,7 @@ public:
 
     uint256 GetID() const override;
 
-    void SetType(bool internal) override;
+    void SetType(OutputType type, bool internal) override;
 
     void SetCache(const DescriptorCache& cache);
 
