@@ -1766,9 +1766,9 @@ bool LegacyScriptPubKeyMan::GetHDChain(CHDChain& hdChainRet) const
     return !hdChain.IsNull();
 }
 
-void LegacyScriptPubKeyMan::SetType(OutputType type, bool internal) {}
+void LegacyScriptPubKeyMan::SetType(bool internal) {}
 
-bool DescriptorScriptPubKeyMan::GetNewDestination(const OutputType type, CTxDestination& dest, std::string& error)
+bool DescriptorScriptPubKeyMan::GetNewDestination(CTxDestination& dest, std::string& error)
 {
     // Returns true if this descriptor supports getting new addresses. Conditions where we may be unable to fetch them (e.g. locked) are caught later
     if (!CanGetAddresses(m_internal)) {
@@ -1778,9 +1778,6 @@ bool DescriptorScriptPubKeyMan::GetNewDestination(const OutputType type, CTxDest
     {
         LOCK(cs_desc_man);
         assert(m_wallet_descriptor.descriptor->IsSingleType()); // This is a combo descriptor which should not be an active descriptor
-        if (type != m_address_type) {
-            throw std::runtime_error(std::string(__func__) + ": Types are inconsistent");
-        }
 
         TopUp();
 
@@ -1799,7 +1796,8 @@ bool DescriptorScriptPubKeyMan::GetNewDestination(const OutputType type, CTxDest
         }
 
         Optional<OutputType> out_script_type = m_wallet_descriptor.descriptor->GetOutputType();
-        if (out_script_type && out_script_type == type) {
+        // TODO knst unknown or remove this check?
+        if (out_script_type && out_script_type != OutputType::UNKNOWN) {
             ExtractDestination(scripts_temp[0], dest);
         } else {
             throw std::runtime_error(std::string(__func__) + ": Types are inconsistent. Stored type does not match type of newly generated address");
@@ -2061,24 +2059,8 @@ bool DescriptorScriptPubKeyMan::SetupDescriptorGeneration(const CExtKey& master_
     std::string xpub = EncodeExtPubKey(master_key.Neuter());
 
     // Build descriptor string
-    std::string desc_prefix;
+    std::string desc_prefix = "pkh(" + xpub + "/44'";
     std::string desc_suffix = "/*)";
-    switch (m_address_type) {
-    case OutputType::LEGACY: {
-        desc_prefix = "pkh(" + xpub + "/44'";
-        break;
-    }
-    case OutputType::P2SH_SEGWIT: {
-        desc_prefix = "sh(wpkh(" + xpub + "/49'";
-        desc_suffix += ")";
-        break;
-    }
-    case OutputType::BECH32: {
-        desc_prefix = "wpkh(" + xpub + "/84'";
-        break;
-    }
-    default: assert(false);
-    }
 
     // Mainnet derives at 0', testnet and regtest derive at 1'
     if (Params().IsTestChain()) {
@@ -2343,9 +2325,8 @@ uint256 DescriptorScriptPubKeyMan::GetID() const
     return id;
 }
 
-void DescriptorScriptPubKeyMan::SetType(OutputType type, bool internal)
+void DescriptorScriptPubKeyMan::SetType(bool internal)
 {
-    this->m_address_type = type;
     this->m_internal = internal;
 }
 
