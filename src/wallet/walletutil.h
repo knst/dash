@@ -68,27 +68,23 @@ public:
     int32_t next_index; // Position of the next item to generate
     DescriptorCache cache;
 
-    ADD_SERIALIZE_METHODS;
-
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        if (ser_action.ForRead()) {
-            std::string desc;
-            std::string error;
-            READWRITE(desc);
-            FlatSigningProvider keys;
-            descriptor = Parse(desc, keys, error, true);
-            if (!descriptor) {
-                throw std::ios_base::failure("Invalid descriptor: " + error);
-            }
-        } else {
-            READWRITE(descriptor->ToString());
-        }
-        READWRITE(creation_time);
-        READWRITE(next_index);
-        READWRITE(range_start);
-        READWRITE(range_end);
+    void DeserializeDescriptor(const std::string& str)
+    {
+        std::string error;
+        FlatSigningProvider keys;
+        descriptor = Parse(str, keys, error, true);
+        if (!descriptor) {
+            throw std::ios_base::failure("Invalid descriptor: " + error);
+         }
     }
+
+    SERIALIZE_METHODS(WalletDescriptor, obj)
+    {
+        std::string descriptor_str;
+        SER_WRITE(obj, descriptor_str = obj.descriptor->ToString());
+        READWRITE(descriptor_str, obj.creation_time, obj.next_index, obj.range_start, obj.range_end);
+        SER_READ(obj, obj.DeserializeDescriptor(descriptor_str));
+     }
 
     WalletDescriptor() {}
     WalletDescriptor(std::shared_ptr<Descriptor> descriptor, uint64_t creation_time, int32_t range_start, int32_t range_end, int32_t next_index) : descriptor(descriptor), creation_time(creation_time), range_start(range_start), range_end(range_end), next_index(next_index) {}
