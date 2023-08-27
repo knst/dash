@@ -428,6 +428,33 @@
         </widget>
        </item>
        <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QLabel" name="lblCoinJoinSessionsText">
+           <property name="text">
+            <string>Parallel sessions</string>
+           </property>
+           <property name="toolTip">
+            <string>Use this many separate masternodes in parallel to mix funds.&lt;br/&gt;Note: You must use this feature carefully.&lt;br/&gt;Make sure you always have recent wallet (auto)backup in a safe place!</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="coinJoinSessions">
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>10</number>
+           </property>
+           <property name="value">
+            <number>4</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
         <layout class="QHBoxLayout" name="horizontalLayout_4_Wallet">
          <item>
           <widget class="QLabel" name="lblCoinJoinRoundsText">
@@ -491,6 +518,88 @@
            </property>
            <property name="value">
             <number>1000</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QLabel" name="lblCoinJoinDenoms">
+           <property name="text">
+            <string>Same denominated amount</string>
+           </property>
+           <property name="toolTip">
+            <string>How many inputs of each denominated amount are created.&lt;br/&gt;Lower these numbers if you want less smaller denoms.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel">
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lblCoinJoinDenomsTarget">
+           <property name="text">
+            <string>Target</string>
+           </property>
+           <property name="toolTip">
+            <string>Try to create at least this many inputs of each denominated amount.&lt;br/&gt;Lower this number if you want less smaller denoms.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lblCoinJoinDenomsMaximum">
+           <property name="text">
+            <string>Maximum</string>
+           </property>
+           <property name="toolTip">
+            <string>Create up to this many inputs of each denominated amount.&lt;br/&gt;Lower this number if you want less smaller denoms.</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QLabel">
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel">
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="coinJoinDenomsGoal">
+           <property name="minimum">
+            <number>10</number>
+           </property>
+           <property name="maximum">
+            <number>100000</number>
+           </property>
+           <property name="singleStep">
+            <number>10</number>
+           </property>
+           <property name="value">
+            <number>50</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="coinJoinDenomsHardCap">
+           <property name="minimum">
+            <number>10</number>
+           </property>
+           <property name="maximum">
+            <number>100000</number>
+           </property>
+           <property name="singleStep">
+            <number>10</number>
+           </property>
+           <property name="value">
+            <number>300</number>
            </property>
           </widget>
          </item>
