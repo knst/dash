@@ -4040,6 +4040,16 @@ bool CWallet::GetNewChangeDestination(CTxDestination& dest, std::string& error)
     return true;
 }
 
+int64_t CWallet::GetOldestKeyPoolTime() const
+{
+    LOCK(cs_wallet);
+    int64_t oldestKey = std::numeric_limits<int64_t>::max();
+    if (auto spk_man = m_spk_man.get()) {
+        oldestKey = spk_man->GetOldestKeyPoolTime();
+    }
+    return oldestKey;
+}
+
 void CWallet::MarkDestinationsDirty(const std::set<CTxDestination>& destinations) {
     for (auto& entry : mapWallet) {
         CWalletTx& wtx = entry.second;
