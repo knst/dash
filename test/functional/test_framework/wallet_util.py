@@ -62,12 +62,7 @@ def get_generate_key():
     return Key(privkey=privkey,
                pubkey=pubkey,
                p2pkh_script=CScript([OP_DUP, OP_HASH160, pkh, OP_EQUALVERIFY, OP_CHECKSIG]).hex(),
-               p2pkh_addr=key_to_p2pkh(pubkey),
-               p2wpkh_script=CScript([OP_0, pkh]).hex(),
-               p2wpkh_addr=key_to_p2wpkh(pubkey),
-               p2sh_p2wpkh_script=CScript([OP_HASH160, hash160(CScript([OP_0, pkh])), OP_EQUAL]).hex(),
-               p2sh_p2wpkh_redeem_script=CScript([OP_0, pkh]).hex(),
-               p2sh_p2wpkh_addr=key_to_p2sh_p2wpkh(pubkey))
+               p2pkh_addr=key_to_p2pkh(pubkey))
 
 def get_multisig(node):
     """Generate a fresh 2-of-3 multisig on node
