@@ -30,8 +30,8 @@ from test_framework.wallet_util import (
 class ImportDescriptorsTest(BitcoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 2
-        self.extra_args = [["-addresstype=legacy"],
-                           ["-addresstype=bech32", "-keypool=5"]
+        self.extra_args = [[],
+                           ["-keypool=5"]
                           ]
         self.setup_clean_chain = True
 
