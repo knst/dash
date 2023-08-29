@@ -8,6 +8,8 @@ keys, and is trivially vulnerable to side channel attacks. Do not use for
 anything but tests."""
 import random
 
+from .address import byte_to_base58
+
 from .util import modinv
 
 def jacobi_symbol(n, k):
