@@ -4550,15 +4550,17 @@ std::shared_ptr<CWallet> CWallet::Create(interfaces::Chain& chain, const std::st
                 gArgs.ForceRemoveArg("mnemonic");
                 gArgs.ForceRemoveArg("mnemonicpassphrase");
             }
+            LOCK(walletInstance->cs_wallet);
+            if (walletInstance->IsWalletFlagSet(WALLET_FLAG_DESCRIPTORS)) {
+                walletInstance->SetupDescriptorScriptPubKeyMans();
+                // SetupDescriptorScriptPubKeyMans already calls SetupGeneration for us so we don't need to call SetupGeneration separately
+            }
         } // Otherwise, do not create a new HD chain
 
         // Top up the keypool
         {
             LOCK(walletInstance->cs_wallet);
-            if (walletInstance->IsWalletFlagSet(WALLET_FLAG_DESCRIPTORS)) {
-                walletInstance->SetupDescriptorScriptPubKeyMans();
-                // SetupDescriptorScriptPubKeyMans already calls SetupGeneration for us so we don't need to call SetupGeneration separately
-            } else {
+            if (!walletInstance->IsWalletFlagSet(WALLET_FLAG_DESCRIPTORS)) {
                 // Legacy wallets need SetupGeneration here.
                 if (auto spk_man = walletInstance->GetLegacyScriptPubKeyMan()) {
                     if (spk_man->CanGenerateKeys() && !spk_man->TopUp()) {
