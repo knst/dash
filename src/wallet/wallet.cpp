@@ -4044,9 +4044,10 @@ int64_t CWallet::GetOldestKeyPoolTime() const
 {
     LOCK(cs_wallet);
     int64_t oldestKey = std::numeric_limits<int64_t>::max();
-    if (auto spk_man = m_spk_man.get()) {
-        oldestKey = spk_man->GetOldestKeyPoolTime();
+    for (const auto& spk_man_pair : m_spk_managers) {
+        oldestKey = std::min(oldestKey, spk_man_pair.second->GetOldestKeyPoolTime());
     }
+
     return oldestKey;
 }
 
