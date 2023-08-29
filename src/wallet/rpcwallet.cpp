@@ -2541,7 +2541,6 @@ static UniValue getwalletinfo(const JSONRPCRequest& request)
     UniValue obj(UniValue::VOBJ);
 
     const auto bal = pwallet->GetBalance();
-    // TODO knst why pwallet? we use here spk_man - maybe a bug
     int64_t kp_oldest = pwallet->GetOldestKeyPoolTime();
     obj.pushKV("walletname", pwallet->GetName());
     obj.pushKV("walletversion", pwallet->GetVersion());
@@ -2550,15 +2549,16 @@ static UniValue getwalletinfo(const JSONRPCRequest& request)
     obj.pushKV("unconfirmed_balance", ValueFromAmount(bal.m_mine_untrusted_pending));
     obj.pushKV("immature_balance", ValueFromAmount(bal.m_mine_immature));
     obj.pushKV("txcount",       (int)pwallet->mapWallet.size());
+    // TODO:  these values can be misused in backports from bitcoin, such as #
+    // because they use pwallet directly instead spk_man as here
     if (spk_man) {
         obj.pushKV("timefirstkey", spk_man->GetTimeFirstKey());
         if (kp_oldest > 0) {
             obj.pushKV("keypoololdest", kp_oldest);
         }
-        obj.pushKV("keypoololdest", spk_man->GetOldestKeyPoolTime());
-        obj.pushKV("keypoolsize",   (int64_t)spk_man->KeypoolCountExternalKeys());
         obj.pushKV("keypoolsize_hd_internal",   (int64_t)(spk_man->KeypoolCountInternalKeys()));
     }
+    obj.pushKV("keypoolsize",   (int64_t)pwallet->KeypoolCountExternalKeys());
     obj.pushKV("keys_left",     pwallet->nKeysLeftSinceAutoBackup);
     if (pwallet->IsCrypted())
         obj.pushKV("unlocked_until", pwallet->nRelockTime);
