@@ -1734,7 +1734,7 @@ static UniValue ProcessDescriptorImport(CWallet * const pwallet, const UniValue&
             if (!w_desc.descriptor->GetOutputType()) {
                 warnings.push_back("Unknown output type, cannot set descriptor to active.");
             } else {
-                pwallet->SetActiveScriptPubKeyMan(spk_manager->GetID(), *w_desc.descriptor->GetOutputType(), internal);
+                pwallet->SetActiveScriptPubKeyMan(spk_manager->GetID(), internal);
             }
         }
 
@@ -1752,13 +1752,6 @@ static UniValue ProcessDescriptorImport(CWallet * const pwallet, const UniValue&
 }
 
 UniValue importdescriptors(const JSONRPCRequest& main_request) {
-    // Acquire the wallet
-    std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(main_request);
-    CWallet* const pwallet = wallet.get();
-    if (!EnsureWalletIsAvailable(pwallet, main_request.fHelp)) {
-        return NullUniValue;
-    }
-
             RPCHelpMan{"importdescriptors",
                 "\nImport descriptors. This will trigger a rescan of the blockchain based on the earliest timestamp of all descriptors being imported. Requires a new wallet backup.\n"
             "\nNote: This call can take over an hour to complete if using an early timestamp; during that time, other rpc calls\n"
@@ -1810,6 +1803,12 @@ UniValue importdescriptors(const JSONRPCRequest& main_request) {
                 },
             }.Check(main_request);
 
+    // Acquire the wallet
+    std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(main_request);
+    if (!wallet) return NullUniValue;
+
+    CWallet* const pwallet = wallet.get();
+
     //  Make sure wallet is a descriptor wallet
     if (!pwallet->IsWalletFlagSet(WALLET_FLAG_DESCRIPTORS)) {
         throw JSONRPCError(RPC_WALLET_ERROR, "importdescriptors is not available for non-descriptor wallets");
@@ -1829,7 +1828,6 @@ UniValue importdescriptors(const JSONRPCRequest& main_request) {
     bool rescan = false;
     UniValue response(UniValue::VARR);
     {
-        auto locked_chain = pwallet->chain().lock();
         LOCK(pwallet->cs_wallet);
         EnsureWalletIsUnlocked(pwallet);
 
@@ -1858,7 +1856,6 @@ UniValue importdescriptors(const JSONRPCRequest& main_request) {
     if (rescan) {
         int64_t scanned_time = pwallet->RescanFromTime(lowest_timestamp, reserver, true /* update */);
         {
-            auto locked_chain = pwallet->chain().lock();
             LOCK(pwallet->cs_wallet);
             pwallet->ReacceptWalletTransactions();
         }

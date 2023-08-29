@@ -5502,7 +5502,7 @@ void CWallet::SetupDescriptorScriptPubKeyMans()
 
 void CWallet::SetActiveScriptPubKeyMan(uint256 id, bool internal, bool memonly)
 {
-    WalletLogPrintf("Setting spkMan to active: id = %s, type = %d, internal = %d\n", id.ToString(), static_cast<int>(type), static_cast<int>(internal));
+    WalletLogPrintf("Setting spkMan to active: id = %s, type = %d, internal = %d\n", id.ToString(), static_cast<int>(OutputType::LEGACY), static_cast<int>(internal));
     auto& spk_mans = internal ? m_internal_spk_managers : m_external_spk_managers;
     auto spk_man = m_spk_managers.at(id).get();
     spk_man->SetType(internal);
@@ -5561,13 +5561,13 @@ ScriptPubKeyMan* CWallet::AddWalletDescriptor(WalletDescriptor& desc, const Flat
         // Remove from maps of active spkMans
         auto old_spk_man_id = old_spk_man->GetID();
         for (bool internal : {false, true}) {
-            for (OutputType t : OUTPUT_TYPES) {
-                auto active_spk_man = GetScriptPubKeyMan(t, internal);
+            { // only one OutputType - LEGACY
+                auto active_spk_man = GetScriptPubKeyMan(internal);
                 if (active_spk_man && active_spk_man->GetID() == old_spk_man_id) {
                     if (internal) {
-                        m_internal_spk_managers.erase(t);
+                        m_internal_spk_managers = nullptr;
                     } else {
-                        m_external_spk_managers.erase(t);
+                        m_external_spk_managers = nullptr;
                     }
                     break;
                 }
