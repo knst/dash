@@ -39,6 +39,7 @@
 #include <stdexcept>
 #include <stdint.h>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
