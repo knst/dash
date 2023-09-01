@@ -17,6 +17,7 @@
 #include <util/translation.h>
 #include <version.h>
 
+#include <optional>
 #include <utility>
 
 class CCoinJoin;
