@@ -16,6 +16,8 @@
 
 #include <evo/evodb.h>
 
+#include <atomic>
+
 class CBlockIndex;
 class CChainState;
 class CConnman;
