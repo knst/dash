@@ -31,7 +31,6 @@
 
 #include <algorithm>
 #include <atomic>
-#include <deque>
 #include <map>
 #include <memory>
 #include <optional>
