@@ -10,6 +10,7 @@
 #include <net.h>
 
 #include <atomic>
+#include <map>
 #include <optional>
 
 class CBlockIndex;

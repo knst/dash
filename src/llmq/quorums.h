@@ -17,6 +17,7 @@
 #include <evo/evodb.h>
 
 #include <atomic>
+#include <map>
 
 class CBlockIndex;
 class CChainState;
