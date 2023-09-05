@@ -2556,9 +2556,9 @@ static UniValue getwalletinfo(const JSONRPCRequest& request)
         if (kp_oldest > 0) {
             obj.pushKV("keypoololdest", kp_oldest);
         }
-        obj.pushKV("keypoolsize_hd_internal",   (int64_t)(spk_man->KeypoolCountInternalKeys()));
     }
     obj.pushKV("keypoolsize",   (int64_t)pwallet->KeypoolCountExternalKeys());
+    obj.pushKV("keypoolsize_hd_internal",   (int64_t)(pwallet->KeypoolCountInternalKeys()));
     obj.pushKV("keys_left",     pwallet->nKeysLeftSinceAutoBackup);
     if (pwallet->IsCrypted())
         obj.pushKV("unlocked_until", pwallet->nRelockTime);
