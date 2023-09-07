@@ -1,8 +1,4 @@
 Coinbase Changes
 ------------------------
 
-Once `mn_rr` activates some funds in coinbase would be moved into the Asset lock Pool (on platform)
-
-Beside that, Evo nodes will receive reward only once - not quad reward (4 time continuously) as in v19/v20.
-
-This is to incentivize Evo nodes to upgrade to platform, because only nodes running platform will get these migrated rewards
+Once the `mn_rr` hard fork activates, some coinbase funds will be moved into the Asset lock Pool (on Platform). Evonodes will then receive a single reward per payment cycle on the Core chain - not quad rewards (4 sequential blocks) as in v19/v20. The remainder of evonode payments will be distributed by Platform from the asset lock pool. This is to incentivize evonodes to upgrade to platform, because only nodes running platform will get these migrated rewards.
