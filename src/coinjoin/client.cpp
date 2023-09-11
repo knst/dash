@@ -1050,14 +1050,13 @@ static int WinnersToSkip()
 bool CCoinJoinClientSession::JoinExistingQueue(CAmount nBalanceNeedsAnonymized, CConnman& connman)
 {
     if (!CCoinJoinClientOptions::IsEnabled()) return false;
-    if (m_queueman == nullptr) return false;
 
     const auto mnList = deterministicMNManager->GetListAtChainTip();
     const int nWeightedMnCount = mnList.GetValidWeightedMNsCount();
 
     // Look through the queues and see if anything matches
     CCoinJoinQueue dsq;
-    while (m_queueman->GetQueueItemAndTry(dsq)) {
+    while (m_queueman.GetQueueItemAndTry(dsq)) {
         auto dmn = mnList.GetValidMNByCollateral(dsq.masternodeOutpoint);
 
         if (!dmn) {
