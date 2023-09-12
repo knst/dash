@@ -73,7 +73,7 @@ public:
 class CJClientManager {
 public:
     CJClientManager(CConnman& connman, CTxMemPool& mempool, const CMasternodeSync& mn_sync,
-                    CCoinJoinClientQueueManager& queueman)
+                    const std::unique_ptr<CCoinJoinClientQueueManager>& queueman)
         : m_connman(connman), m_mempool(mempool), m_mn_sync(mn_sync), m_queueman(queueman) {}
     ~CJClientManager() {
         for (auto& pair : m_wallet_manager_map) {
@@ -101,7 +101,7 @@ private:
     CTxMemPool& m_mempool;
 
     const CMasternodeSync& m_mn_sync;
-    CCoinJoinClientQueueManager& m_queueman;
+    const std::unique_ptr<CCoinJoinClientQueueManager>& m_queueman;
 
     std::map<const std::string, std::unique_ptr<CCoinJoinClientManager>> m_wallet_manager_map;
 };
@@ -110,10 +110,11 @@ class CCoinJoinClientSession : public CCoinJoinBaseSession
 {
 private:
     CWallet& m_wallet;
+    CJClientManager& m_clientman;
     CCoinJoinClientManager& m_manager;
 
     const CMasternodeSync& m_mn_sync;
-    CCoinJoinClientQueueManager& m_queueman;
+    const std::unique_ptr<CCoinJoinClientQueueManager>& m_queueman;
 
     std::vector<COutPoint> vecOutPointLocked;
 
@@ -162,8 +163,8 @@ private:
 
 public:
     explicit CCoinJoinClientSession(CWallet& pwallet, CJClientManager& clientman, const CMasternodeSync& mn_sync,
-                                    CCoinJoinClientQueueManager& queueman) :
-        m_wallet(pwallet), m_manager(*Assert(clientman.Get(pwallet))), m_mn_sync(mn_sync), m_queueman(queueman) {}
+                                    const std::unique_ptr<CCoinJoinClientQueueManager>& queueman) :
+        m_wallet(pwallet), m_clientman(clientman), m_manager(*Assert(clientman.Get(pwallet))), m_mn_sync(mn_sync), m_queueman(queueman) {}
 
     void ProcessMessage(CNode& peer, PeerManager& peerman, CConnman& connman, const CTxMemPool& mempool, std::string_view msg_type, CDataStream& vRecv);
 
@@ -216,7 +217,7 @@ private:
     CJClientManager& m_clientman;
 
     const CMasternodeSync& m_mn_sync;
-    CCoinJoinClientQueueManager& m_queueman;
+    const std::unique_ptr<CCoinJoinClientQueueManager>& m_queueman;
 
     // Keep track of the used Masternodes
     std::vector<COutPoint> vecMasternodesUsed;
@@ -248,7 +249,7 @@ public:
     CCoinJoinClientManager& operator=(CCoinJoinClientManager const&) = delete;
 
     explicit CCoinJoinClientManager(CWallet& wallet, CJClientManager& clientman, const CMasternodeSync& mn_sync,
-                                    CCoinJoinClientQueueManager& queueman) :
+                                    const std::unique_ptr<CCoinJoinClientQueueManager>& queueman) :
         m_wallet(wallet), m_clientman(clientman), m_mn_sync(mn_sync), m_queueman(queueman) {}
 
     void ProcessMessage(CNode& peer, PeerManager& peerman, CConnman& connman, const CTxMemPool& mempool, std::string_view msg_type, CDataStream& vRecv) LOCKS_EXCLUDED(cs_deqsessions);

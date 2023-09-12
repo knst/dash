@@ -18,7 +18,7 @@ CJContext::CJContext(CChainState& chainstate, CConnman& connman, CTxMemPool& mem
     clientman {
         [&]() -> CJClientManager* const {
             assert(::coinJoinClientManagers == nullptr);
-            ::coinJoinClientManagers = std::make_unique<CJClientManager>(connman, mempool, mn_sync, *queueman);
+            ::coinJoinClientManagers = std::make_unique<CJClientManager>(connman, mempool, mn_sync, queueman);
             return ::coinJoinClientManagers.get();
         }()
     },
