@@ -30,7 +30,7 @@ struct CJContext {
     ~CJContext();
 
 #ifdef ENABLE_WALLET
-    CJClientManager* const clientman;
+    CJClientManager& clientman;
     const std::unique_ptr<CCoinJoinClientQueueManager> queueman;
 #endif // ENABLE_WALLET
     const std::unique_ptr<CCoinJoinServer> server;
