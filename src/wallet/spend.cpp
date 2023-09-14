@@ -159,6 +159,7 @@ util::Result<PreSelectedInputs> FetchSelectedInputs(const CWallet& wallet, const
 {
     PreSelectedInputs result;
     const bool can_grind_r = wallet.CanGrindR();
+    std::map<COutPoint, CAmount> map_of_bump_fees = wallet.chain().CalculateIndividualBumpFees(coin_control.ListSelected(), coin_selection_params.m_effective_feerate);
     for (const COutPoint& outpoint : coin_control.ListSelected()) {
         int input_bytes = -1;
         CTxOut txout;
@@ -198,6 +199,7 @@ util::Result<PreSelectedInputs> FetchSelectedInputs(const CWallet& wallet, const
 
         /* Set some defaults for depth, spendable, solvable, safe, time, and from_me as these don't matter for preset inputs since no selection is being done. */
         COutput output(outpoint, txout, /*depth=*/ 0, input_bytes, /*spendable=*/ true, /*solvable=*/ true, /*safe=*/ true, /*time=*/ 0, /*from_me=*/ false, coin_selection_params.m_effective_feerate);
+        output.ApplyBumpFee(map_of_bump_fees.at(output.outpoint));
         result.Insert(output, coin_selection_params.m_subtract_fee_outputs);
     }
     return result;
@@ -220,6 +222,7 @@ CoinsResult AvailableCoins(const CWallet& wallet,
     const int max_depth = {coinControl ? coinControl->m_max_depth : DEFAULT_MAX_DEPTH};
     const bool only_safe = {coinControl ? !coinControl->m_include_unsafe_inputs : true};
     const bool can_grind_r = wallet.CanGrindR();
+    std::vector<COutPoint> outpoints;
 
     std::set<uint256> trusted_parents;
     for (const auto* pwtx : wallet.GetSpendableTXs()) {
@@ -337,6 +340,8 @@ CoinsResult AvailableCoins(const CWallet& wallet,
 
             result.Add(GetOutputType(type, is_from_p2sh), coin);
 
+            outpoints.push_back(outpoint);
+
             // Checks the sum amount of all UTXO's.
             if (params.min_sum_amount != MAX_MONEY) {
                 if (result.GetTotalAmount() >= params.min_sum_amount) {
@@ -347,6 +352,16 @@ CoinsResult AvailableCoins(const CWallet& wallet,
             // Checks the maximum number of UTXO's.
             if (params.max_count > 0 && result.Size() >= params.max_count) {
                 return result;
+            }
+        }
+    }
+
+    if (feerate.has_value()) {
+        std::map<COutPoint, CAmount> map_of_bump_fees = wallet.chain().CalculateIndividualBumpFees(outpoints, feerate.value());
+
+        for (auto& [_, outputs] : result.coins) {
+            for (auto& output : outputs) {
+                output.ApplyBumpFee(map_of_bump_fees.at(output.outpoint));
             }
         }
     }
@@ -610,6 +625,27 @@ util::Result<SelectionResult> ChooseSelectionResult(const CWallet& wallet, const
         // No solution found, retrieve the first explicit error (if any).
         // future: add 'severity level' to errors so the worst one can be retrieved instead of the first one.
         return errors.empty() ? util::Error() : errors.front();
+    }
+
+    // If the chosen input set has unconfirmed inputs, check for synergies from overlapping ancestry
+    for (auto& result : results) {
+        std::vector<COutPoint> outpoints;
+        std::set<std::shared_ptr<COutput>> coins = result.GetInputSet();
+        CAmount summed_bump_fees = 0;
+        for (auto& coin : coins) {
+            if (coin->depth > 0) continue; // Bump fees only exist for unconfirmed inputs
+            outpoints.push_back(coin->outpoint);
+            summed_bump_fees += coin->ancestor_bump_fees;
+        }
+        std::optional<CAmount> combined_bump_fee = chain.CalculateCombinedBumpFee(outpoints, coin_selection_params.m_effective_feerate);
+        if (!combined_bump_fee.has_value()) {
+            return util::Error{_("Failed to calculate bump fees, because unconfirmed UTXOs depend on enormous cluster of unconfirmed transactions.")};
+        }
+        CAmount bump_fee_overestimate = summed_bump_fees - combined_bump_fee.value();
+        if (bump_fee_overestimate) {
+            result.SetBumpFeeDiscount(bump_fee_overestimate);
+        }
+        result.ComputeAndSetWaste(coin_selection_params.min_viable_change, coin_selection_params.m_cost_of_change, coin_selection_params.m_change_fee);
     }
 
     // Choose the result with the least waste
