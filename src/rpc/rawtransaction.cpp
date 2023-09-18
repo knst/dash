@@ -38,6 +38,7 @@
 #include <util/string.h>
 #include <validation.h>
 #include <validationinterface.h>
+#include <util/irange.h>
 
 #include <evo/specialtx.h>
 
@@ -300,7 +301,7 @@ static UniValue getttxchainlocks(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Up to 100 txids only");
     }
 
-    for (size_t idx = 0; idx < txids.size(); ++idx) {
+    for (auto idx : irange::range(txids.size())) {
         UniValue result(UniValue::VOBJ);
         uint256 txid(ParseHashV(txids[idx], "txid"));
         if (txid == Params().GenesisBlock().hashMerkleRoot) {
@@ -309,14 +310,14 @@ static UniValue getttxchainlocks(const JSONRPCRequest& request)
         }
 
         uint256 hash_block;
-        int height = -1;
-        bool chainLock = false;
+        int height{-1};
+        bool chainLock{false};
 
         GetTransaction(nullptr, nullptr, txid, Params().GetConsensus(), hash_block);
 
         if (!hash_block.IsNull()) {
             LOCK(cs_main);
-            CBlockIndex* pindex = active_chainstate.m_blockman.LookupBlockIndex(hash_block);
+            const CBlockIndex* pindex = active_chainstate.m_blockman.LookupBlockIndex(hash_block);
             if (pindex && active_chainstate.m_chain.Contains(pindex)) {
                 height = pindex->nHeight;
                 chainLock = llmq_ctx.clhandler->HasChainLock(pindex->nHeight, pindex->GetBlockHash());
