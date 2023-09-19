@@ -301,6 +301,10 @@ static UniValue gettxchainlocks(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Up to 100 txids only");
     }
 
+    if (g_txindex) {
+        g_txindex->BlockUntilSyncedToCurrentChain();
+    }
+
     for (const auto idx : irange::range(txids.size())) {
         UniValue result(UniValue::VOBJ);
         const uint256 txid(ParseHashV(txids[idx], "txid"));
