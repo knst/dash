@@ -320,8 +320,10 @@ static UniValue gettxchainlocks(const JSONRPCRequest& request)
             const CBlockIndex* pindex = active_chainstate.m_blockman.LookupBlockIndex(hash_block);
             if (pindex && active_chainstate.m_chain.Contains(pindex)) {
                 height = pindex->nHeight;
-                chainLock = llmq_ctx.clhandler->HasChainLock(pindex->nHeight, pindex->GetBlockHash());
             }
+        }
+        if (height != -1) {
+            chainLock = llmq_ctx.clhandler->HasChainLock(height, hash_block);
         }
         result.pushKV("height", height);
         result.pushKV("chainlock", chainLock);
