@@ -89,12 +89,14 @@ BASE_SCRIPTS = [
     'wallet_hd.py',
     'wallet_hd.py --descriptors',
     'wallet_backup.py',
+    'wallet_backup.py --descriptors',
     # vv Tests less than 5m vv
     'mining_getblocktemplate_longpoll.py', # FIXME: "socket.error: [Errno 54] Connection reset by peer" on my Mac, same as https://github.com/bitcoin/bitcoin/issues/6651
     'feature_maxuploadtarget.py',
     'feature_block.py', # NOTE: needs dash_hash to pass
     'rpc_fundrawtransaction.py',
     'rpc_fundrawtransaction.py --usehd',
+    'wallet_multiwallet.py --descriptors',
     'wallet_multiwallet.py --usecli',
     'p2p_quorum_data.py',
     # vv Tests less than 2m vv
