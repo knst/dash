@@ -301,9 +301,9 @@ static UniValue gettxchainlocks(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Up to 100 txids only");
     }
 
-    for (auto idx : irange::range(txids.size())) {
+    for (const auto idx : irange::range(txids.size())) {
         UniValue result(UniValue::VOBJ);
-        uint256 txid(ParseHashV(txids[idx], "txid"));
+        const uint256 txid(ParseHashV(txids[idx], "txid"));
         if (txid == Params().GenesisBlock().hashMerkleRoot) {
             // Special exception for the genesis block coinbase transaction
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "The genesis block coinbase is not considered an ordinary transaction and cannot be retrieved");
