@@ -23,8 +23,6 @@ from test_framework.util import (
 )
 
 got_loading_error = False
-
-
 def test_load_unload(node, name):
     global got_loading_error
     while True:
@@ -37,6 +35,7 @@ def test_load_unload(node, name):
             if e.error['code'] == -4 and 'Wallet already loading' in e.error['message']:
                 got_loading_error = True
                 return
+
 
 class MultiWalletTest(BitcoinTestFramework):
     def set_test_params(self):
@@ -98,32 +97,23 @@ class MultiWalletTest(BitcoinTestFramework):
         #   sub/w5     - to verify relative wallet path is created correctly
         #   extern/w6  - to verify absolute wallet path is created correctly
         #   w7_symlink - to verify symlinked wallet path is initialized correctly
-        #   w8         - to verify existing wallet file is loaded correctly. Not tested for SQLite wallets as this is a deprecated BDB behavior.
+        #   w8         - to verify existing wallet file is loaded correctly
         #   ''         - to verify default wallet file is created correctly
-        to_create = ['w1', 'w2', 'w3', 'w', 'sub/w5', 'w7_symlink']
-        in_wallet_dir = to_create.copy() # Wallets in the wallet dir
-        in_wallet_dir.append('w7') # w7 is not loaded or created, but will be listed by listwalletdir because w7_symlink
-        to_create.append(os.path.join(self.options.tmpdir, 'extern/w6')) # External, not in the wallet dir, so we need to avoid adding it to in_wallet_dir
-        to_load = [self.default_wallet_name]
-        if not self.options.is_sqlite_only:
-            to_load.append('w8')
-        wallet_names = to_create + to_load # Wallet names loaded in the wallet
-        in_wallet_dir += to_load # The loaded wallets are also in the wallet dir
+        wallet_names = ['w1', 'w2', 'w3', 'w', 'sub/w5', os.path.join(self.options.tmpdir, 'extern/w6'), 'w7_symlink', 'w8', self.default_wallet_name]
         if os.name == 'nt':
             wallet_names.remove('w7_symlink')
         self.start_node(0)
 
-        for wallet_name in to_create:
+        for wallet_name in wallet_names[:-2]:
             self.nodes[0].createwallet(wallet_name)
-        for wallet_name in to_load:
+        for wallet_name in wallet_names[-2:]:
             self.nodes[0].loadwallet(wallet_name)
-        assert_equal(sorted(map(lambda w: w['name'], self.nodes[0].listwalletdir()['wallets'])), sorted(in_wallet_dir))
+        assert_equal(sorted(map(lambda w: w['name'], self.nodes[0].listwalletdir()['wallets'])), [self.default_wallet_name, os.path.join('sub', 'w5'), 'w', 'w1', 'w2', 'w3', 'w7', 'w7_symlink', 'w8'])
 
         assert_equal(set(node.listwallets()), set(wallet_names))
 
         # should raise rpc error if wallet path can't be created
-        err_code = -4 if self.options.is_sqlite_only else -1
-        assert_raises_rpc_error(err_code, "boost::filesystem::create_directory:", self.nodes[0].createwallet, "w8/bad")
+        assert_raises_rpc_error(-1, "boost::filesystem::create_directory:", self.nodes[0].createwallet, "w8/bad")
 
         # check that all requested wallets were created
         self.stop_node(0)
@@ -137,13 +127,10 @@ class MultiWalletTest(BitcoinTestFramework):
         self.start_node(0, ['-wallet=w1', '-wallet=w1'])
         self.stop_node(0, 'Warning: Ignoring duplicate -wallet w1.')
 
-        if not self.options.is_sqlite_only:
-            # Only BDB doesn't open duplicate wallet files. SQLite does not have this limitation. While this may be desired in the future, it is not necessary
-            # should not initialize if one wallet is a copy of another
-            shutil.copyfile(wallet_dir('w8'), wallet_dir('w8_copy'))
-            in_wallet_dir.append('w8_copy')
-            exp_stderr = r"Can't open database w8_copy \(duplicates fileid \w+ from w8\)"
-            self.nodes[0].assert_start_raises_init_error(['-wallet=w8', '-wallet=w8_copy'], exp_stderr, match=ErrorMatch.PARTIAL_REGEX)
+        # should not initialize if one wallet is a copy of another
+        shutil.copyfile(wallet_dir('w8'), wallet_dir('w8_copy'))
+        exp_stderr = r"Can't open database w8_copy \(duplicates fileid \w+ from w8\)"
+        self.nodes[0].assert_start_raises_init_error(['-wallet=w8', '-wallet=w8_copy'], exp_stderr, match=ErrorMatch.PARTIAL_REGEX)
 
         # should not initialize if wallet file is a symlink
         if os.name != 'nt':
@@ -181,17 +168,14 @@ class MultiWalletTest(BitcoinTestFramework):
         os.mkdir(competing_wallet_dir)
         self.restart_node(0, ['-nowallet', '-walletdir=' + competing_wallet_dir])
         self.nodes[0].createwallet(self.default_wallet_name)
-        if self.options.is_sqlite_only:
-            exp_stderr = r"Error: SQLiteDatabase: Unable to obtain an exclusive lock on the database, is it being used by another dashd?"
-        else:
-            exp_stderr = r"Error: Error initializing wallet database environment \"\S+competing_walletdir\S*\"!"
+        exp_stderr = r"Error: Error initializing wallet database environment \"\S+competing_walletdir\"!"
         self.nodes[1].assert_start_raises_init_error(['-walletdir=' + competing_wallet_dir], exp_stderr, match=ErrorMatch.PARTIAL_REGEX)
 
         self.restart_node(0)
         for wallet_name in wallet_names:
             self.nodes[0].loadwallet(wallet_name)
 
-        assert_equal(sorted(map(lambda w: w['name'], self.nodes[0].listwalletdir()['wallets'])), sorted(in_wallet_dir))
+        assert_equal(sorted(map(lambda w: w['name'], self.nodes[0].listwalletdir()['wallets'])), [self.default_wallet_name, os.path.join('sub', 'w5'), 'w', 'w1', 'w2', 'w3', 'w7', 'w7_symlink', 'w8', 'w8_copy'])
 
         wallets = [wallet(w) for w in wallet_names]
         wallet_bad = wallet("bad")
@@ -282,22 +266,18 @@ class MultiWalletTest(BitcoinTestFramework):
 
         # Fail to load duplicate wallets
         path = os.path.join(self.options.tmpdir, "node0", self.chain, "wallets", "w1", self.wallet_data_filename)
-        if self.options.is_sqlite_only:
-            assert_raises_rpc_error(-4, "Wallet file verification failed. SQLiteDatabase: Unable to obtain an exclusive lock on the database, is it being used by another dashd?", self.nodes[0].loadwallet, wallet_names[0])
-        else:
-            assert_raises_rpc_error(-35, "Wallet file verification failed. Refusing to load database. Data file '{}' is already loaded.".format(path), self.nodes[0].loadwallet, wallet_names[0])
+        assert_raises_rpc_error(-35, "Wallet file verification failed. Refusing to load database. Data file '{}' is already loaded.".format(path), self.nodes[0].loadwallet, wallet_names[0])
 
-            # This tests the default wallet that BDB makes, so SQLite wallet doesn't need to test this
-            # Fail to load duplicate wallets by different ways (directory and filepath)
-            path = os.path.join(self.options.tmpdir, "node0", self.chain, "wallets", self.wallet_data_filename)
-            assert_raises_rpc_error(-35, "Wallet file verification failed. Refusing to load database. Data file '{}' is already loaded.".format(path), self.nodes[0].loadwallet, self.wallet_data_filename)
+        # Fail to load duplicate wallets by different ways (directory and filepath)
+        path = os.path.join(self.options.tmpdir, "node0", self.chain, "wallets", self.wallet_data_filename)
+        assert_raises_rpc_error(-35, "Wallet file verification failed. Refusing to load database. Data file '{}' is already loaded.".format(path), self.nodes[0].loadwallet, self.wallet_data_filename)
 
-            # Only BDB doesn't open duplicate wallet files. SQLite does not have this limitation. While this may be desired in the future, it is not necessary
-            # Fail to load if one wallet is a copy of another
-            assert_raises_rpc_error(-4, "BerkeleyDatabase: Can't open database w8_copy (duplicates fileid", self.nodes[0].loadwallet, 'w8_copy')
+        # Fail to load if one wallet is a copy of another
+        assert_raises_rpc_error(-4, "BerkeleyDatabase: Can't open database w8_copy (duplicates fileid", self.nodes[0].loadwallet, 'w8_copy')
 
-            # Fail to load if one wallet is a copy of another, test this twice to make sure that we don't re-introduce #14304
-            assert_raises_rpc_error(-4, "BerkeleyDatabase: Can't open database w8_copy (duplicates fileid", self.nodes[0].loadwallet, 'w8_copy')
+        # Fail to load if one wallet is a copy of another, test this twice to make sure that we don't re-introduce #14304
+        assert_raises_rpc_error(-4, "BerkeleyDatabase: Can't open database w8_copy (duplicates fileid", self.nodes[0].loadwallet, 'w8_copy')
+
 
         # Fail to load if wallet file is a symlink
         if os.name != 'nt':
@@ -311,7 +291,6 @@ class MultiWalletTest(BitcoinTestFramework):
 
         # Successfully create a wallet with a new name
         loadwallet_name = self.nodes[0].createwallet('w9')
-        in_wallet_dir.append('w9')
         assert_equal(loadwallet_name['name'], 'w9')
         w9 = node.get_wallet_rpc('w9')
         assert_equal(w9.getwalletinfo()['walletname'], 'w9')
@@ -370,7 +349,7 @@ class MultiWalletTest(BitcoinTestFramework):
         assert_equal(self.nodes[0].listwallets(), ['w1'])
         assert_equal(w1.getwalletinfo()['walletname'], 'w1')
 
-        assert_equal(sorted(map(lambda w: w['name'], self.nodes[0].listwalletdir()['wallets'])), sorted(in_wallet_dir))
+        assert_equal(sorted(map(lambda w: w['name'], self.nodes[0].listwalletdir()['wallets'])), [self.default_wallet_name, os.path.join('sub', 'w5'), 'w', 'w1', 'w2', 'w3', 'w7', 'w7_symlink', 'w8', 'w8_copy', 'w9'])
 
         # Test backing up and restoring wallets
         self.log.info("Test wallet backup")
@@ -395,11 +374,7 @@ class MultiWalletTest(BitcoinTestFramework):
         self.start_node(1)
         wallet = os.path.join(self.options.tmpdir, 'my_wallet')
         self.nodes[0].createwallet(wallet)
-        if self.options.is_sqlite_only:
-            exp_stderr = "SQLiteDatabase: Unable to obtain an exclusive lock on the database, is it being used by another dashd?"
-        else:
-            exp_stderr = "Error initializing wallet database environment"
-        assert_raises_rpc_error(-4, exp_stderr, self.nodes[1].loadwallet, wallet)
+        assert_raises_rpc_error(-4, "Error initializing wallet database environment", self.nodes[1].loadwallet, wallet)
         self.nodes[0].unloadwallet(wallet)
         self.nodes[1].loadwallet(wallet)
 
