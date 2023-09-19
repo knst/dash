@@ -70,11 +70,8 @@ class ToolWalletTest(BitcoinTestFramework):
         self.assert_raises_tool_error('Error: two methods provided (info and create). Only one method should be provided.', 'info', 'create')
         self.assert_raises_tool_error('Error parsing command line arguments: Invalid parameter -foo', '-foo')
         locked_dir = os.path.join(self.options.tmpdir, "node0", self.chain, "wallets")
-        error = "SQLiteDatabase: Unable to obtain an exclusive lock on the database, is it being used by another dashd?"
-        if self.is_bdb_compiled():
-            error = 'Error initializing wallet database environment "{}"!'.format(locked_dir)
         self.assert_raises_tool_error(
-            error,
+            'Error initializing wallet database environment "{}"!'.format(locked_dir),
             '-wallet=' + self.default_wallet_name,
             'info',
         )
