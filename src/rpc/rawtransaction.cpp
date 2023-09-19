@@ -262,11 +262,11 @@ static UniValue getrawtransaction(const JSONRPCRequest& request)
     return result;
 }
 
-static UniValue getttxchainlocks(const JSONRPCRequest& request)
+static UniValue gettxchainlocks(const JSONRPCRequest& request)
 {
     RPCHelpMan{
-        "getttxchainlocks",
-        "\nReturns a block height each transaction was mined at and whether it is chainlocked or not.\n",
+        "gettxchainlocks",
+        "\nReturns the block height each transaction was mined at and whether it is chainlocked or not.\n",
         {
             {"txids", RPCArg::Type::ARR, RPCArg::Optional::NO, "The transaction ids (no more than 100)",
                 {
@@ -285,8 +285,8 @@ static UniValue getttxchainlocks(const JSONRPCRequest& request)
             }
         },
         RPCExamples{
-            HelpExampleCli("getttxchainlocks", "'[\"mytxid\",...]'")
-        + HelpExampleRpc("getttxchainlocks", "[\"mytxid\",...]")
+            HelpExampleCli("gettxchainlocks", "'[\"mytxid\",...]'")
+        + HelpExampleRpc("gettxchainlocks", "[\"mytxid\",...]")
         },
     }.Check(request);
 
@@ -1752,7 +1752,7 @@ static const CRPCCommand commands[] =
 { //  category              name                            actor (function)            argNames
   //  --------------------- ------------------------        -----------------------     ----------
     { "rawtransactions",    "getrawtransaction",            &getrawtransaction,         {"txid","verbose","blockhash"} },
-    { "rawtransactions",    "getttxchainlocks",             &getttxchainlocks,          {"txids"} },
+    { "rawtransactions",    "gettxchainlocks",              &gettxchainlocks,           {"txids"} },
     { "rawtransactions",    "createrawtransaction",         &createrawtransaction,      {"inputs","outputs","locktime"} },
     { "rawtransactions",    "decoderawtransaction",         &decoderawtransaction,      {"hexstring"} },
     { "rawtransactions",    "decodescript",                 &decodescript,              {"hexstring"} },
