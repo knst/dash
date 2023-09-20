@@ -6,6 +6,7 @@
 
 import struct
 from io import BytesIO
+import time
 
 from test_framework.authproxy import JSONRPCException
 from test_framework.key import ECKey
@@ -32,9 +33,10 @@ class MnehfTest(DashTestFramework):
         self.skip_if_no_wallet()
 
     def restart_all_nodes(self):
-        for inode in range(self.num_nodes):
-            #self.log.info(f"Restart node {inode} with {self.extra_args[inode]}")
-            self.restart_node(inode)
+        self.restart_node(0)
+        for mn in self.mninfo:
+            self.stop_node(mn.node.index)
+            self.start_masternode(mn)
         for i in range(len(self.nodes)):
                 self.log.info(f"connect {i} {0}...")
                 self.connect_nodes(i, 0)
@@ -58,20 +60,32 @@ class MnehfTest(DashTestFramework):
         self.activate_v19()
         self.log.info(f"After v19 activation should be plenty of blocks: {node.getblockcount()}")
 
+        self.bump_mocktime(1)
+        node.generate(1)
+        self.sync_all()
+
+        for node in self.nodes:
+            self.log.info(f"test-before-first: {node.getpeerinfo()}")
         self.log.info("Mine a quorum...")
         self.mine_quorum()
 
-        self.bump_mocktime(1)
-        node.generate(1)
-        self.sync_all()
+        for node in self.nodes:
+            self.log.info(f"test-after-first: {node.getpeerinfo()}")
 
-        self.log.info("Mine more  quorum...")
-        self.mine_quorum()
         self.restart_all_nodes()
 
+        for node in self.nodes:
+            self.log.info(f"test-after-restart: {node.getpeerinfo()}")
+
         self.bump_mocktime(1)
         node.generate(1)
         self.sync_all()
+        time.sleep(10)
+
+        for node in self.nodes:
+            self.log.info(f"test-after-restart+10: {node.getpeerinfo()}")
+
+        self.log.info("Mine non-expected failing quorum...")
         self.mine_quorum()
 
 
