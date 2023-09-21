@@ -114,6 +114,11 @@ public:
 
 private:
     void AddToCache(const Signals& signals, const CBlockIndex* const pindex);
+
+    /**
+     * it returns list of signals available on previous block.
+     * note, that some signals can be out-dated for next block
+     */
     Signals GetFromCache(const CBlockIndex* const pindex);
 };
 

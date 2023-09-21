@@ -205,6 +205,10 @@ void CMNHFManager::UpdateChainParams(const CBlockIndex* const pindex, const CBlo
     Signals signals_old{GetFromCache(pindexOld)};
     for (const auto& signal: signals_old) {
         uint8_t versionBit = signal.first;
+        if (pindexOld.nHeight > signal.second + Params().nExpreEHF) {
+            LogPrintf("%s: ignore mnhf bit=%d block:%s height:%d/%d\n", poindexOld.nHeight, signal.second);
+            continue;
+        }
         assert(versionBit < VERSIONBITS_NUM_BITS);
 
         LogPrintf("%s: unload mnhf bit=%d block:%s number of known signals:%lld\n", __func__, versionBit, pindex->GetBlockHash().ToString(), signals_old.size());
@@ -217,6 +221,12 @@ void CMNHFManager::UpdateChainParams(const CBlockIndex* const pindex, const CBlo
     for (const auto& signal: signals) {
         uint8_t versionBit = signal.first;
         int value = signal.second;
+
+        if (pindex.nHeight > signal.second + Params().nExpreEHF) {
+            LogPrintf("%s: ignore mnhf bit=%d block:%s height:%d/%d\n", poindexOld.nHeight, signal.second);
+            continue;
+        }
+
         assert(versionBit < VERSIONBITS_NUM_BITS);
 
         LogPrintf("%s: load mnhf bit=%d block:%s number of known signals:%lld\n", __func__, versionBit, pindex->GetBlockHash().ToString(), signals.size());
@@ -240,9 +250,9 @@ CMNHFManager::Signals CMNHFManager::GetFromCache(const CBlockIndex* const pindex
     }
     if (VersionBitsState(pindex->pprev, Params().GetConsensus(), Consensus::DEPLOYMENT_V20, versionbitscache) != ThresholdState::ACTIVE) {
         LOCK(cs_cache);
-        mnhfCache.insert(blockHash, signals);
+        mnhfCache.insert(blockHash, {});
         LogPrintf("CMNHFManager::GetFromCache: mnhf feature is disabled: return empty for block %s\n", pindex->GetBlockHash().ToString());
-        return signals;
+        return {};
     }
     if (!m_evoDb.Read(std::make_pair(DB_SIGNALS, blockHash), signals)) {
         LogPrintf("CMNHFManager::GetFromCache: failure: can't read MnEHF signals from db for %s\n", pindex->GetBlockHash().ToString());
