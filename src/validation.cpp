@@ -634,6 +634,8 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
     const CTransaction& tx = *ws.m_ptx;
     const uint256& hash = ws.m_hash;
 
+    LogPrintf("knst mempool %s pre-checks\n", tx.GetHash().ToString());
+
     // Copy/alias what we need out of args
     const CChainParams& chainparams = args.m_chainparams;
     TxValidationState &state = args.m_state;
@@ -828,6 +830,7 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
         }
     }
 
+    LogPrintf("knst mempool %s pre-checks check special\n", tx.GetHash().ToString());
     // check special TXs after all the other checks. If we'd do this before the other checks, we might end up
     // DoS scoring a node for non-critical errors, e.g. duplicate keys because a TX is received that was already
     // mined
@@ -835,10 +838,12 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
     if (!CheckSpecialTx(tx, m_active_chainstate.m_chain.Tip(), m_active_chainstate.CoinsTip(), true, state))
         return false;
 
+    LogPrintf("knst mempool %s pre-checks check special-2\n", tx.GetHash().ToString());
     if (m_pool.existsProviderTxConflict(tx)) {
         return state.Invalid(TxValidationResult::TX_CONFLICT, "protx-dup");
     }
 
+    LogPrintf("knst mempool %s pre-checks check special-3\n", tx.GetHash().ToString());
     return true;
 }
 

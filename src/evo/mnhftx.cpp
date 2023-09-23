@@ -28,7 +28,7 @@ CMNHFManager::Signals CMNHFManager::GetSignalsStage(const CBlockIndex* const pin
     const int height = pindexPrev->nHeight + 1;
     for (auto it = signals.begin(); it != signals.end(); ) {
          if (height > it->second + Params().GetConsensus().nExpireEHF) {
-            LogPrintf("CMNHFManager::FilterSignals: mnhf signal bit=%d height:%d is expired at height=%d/%d\n", it->first, it->second, height);
+            LogPrintf("CMNHFManager::FilterSignals: mnhf signal bit=%d height:%d is expired at height=%d\n", it->first, it->second, height);
             it = signals.erase(it);
          } else {
              ++it;
@@ -105,6 +105,7 @@ bool CheckMNHFTx(const CTransaction& tx, const CBlockIndex* pindexPrev, TxValida
 
 std::optional<uint8_t> extractEHFSignal(const CTransaction& tx)
 {
+    LogPrintf("knst debug extract %s\n", tx.GetHash().ToString());
     if (tx.nVersion != 3 || tx.nType != TRANSACTION_MNHF_SIGNAL) {
         // only interested in special TXs 'TRANSACTION_MNHF_SIGNAL'
         return std::nullopt;
@@ -114,6 +115,7 @@ std::optional<uint8_t> extractEHFSignal(const CTransaction& tx)
     if (!GetTxPayload(tx, mnhfTx)) {
         return std::nullopt;
     }
+    LogPrintf("knst debug  extractEHFSignal extracted!: %d\n", mnhfTx.signal.versionBit);
     return mnhfTx.signal.versionBit;
 }
 

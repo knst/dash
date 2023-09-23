@@ -43,7 +43,7 @@ class MnehfTest(DashTestFramework):
             index = mn.node.index
             self.stop_node(index)
             self.start_masternode(mn)
-        for i in range(len(self.nodes)):
+        for i in range(1, self.num_nodes):
                 self.connect_nodes(i, 0)
 
     def slowly_generate_batch(self, amount):
@@ -78,7 +78,7 @@ class MnehfTest(DashTestFramework):
         mnehf_tx.calc_sha256()
         msgHash = format(mnehf_tx.sha256, '064x')
 
-        self.log.info(f"Signing request_id: {request_id} msgHash: {msgHash}")
+        self.log.info(f"Signing request_id: {request_id} msgHash: {msgHash} quorum: {quorumHash}")
         recsig = self.get_recovered_sig(request_id, msgHash)
 
         mnehf_payload.quorumSig = bytearray.fromhex(recsig["sig"])
@@ -103,10 +103,11 @@ class MnehfTest(DashTestFramework):
 
     def ensure_tx_is_not_mined(self, tx_id):
         try:
-            self.nodes[0].gettransaction(tx_id)
+            assert_equal(self.nodes[0].getrawtransaction(tx_id, 1)['height'], -1);
             raise AssertionError("Transaction should not be mined")
-        except JSONRPCException as e:
-            assert "Invalid or non-wallet transaction id" in e.error['message']
+        except KeyError as e:
+            # KeyError is expected
+            pass
 
     def send_tx(self, tx, expected_error = None, reason = None):
         try:
@@ -247,23 +248,28 @@ class MnehfTest(DashTestFramework):
         ehf_tx_second = self.create_mnehf(28, pubkey)
         assert_equal(get_bip9_details(node, 'testdummy')['status'], 'defined')
 
-        self.log.info("Ehf with same bit signal should fail after 575 blocks but be accepted after 576 on regnet...")
-        self.slowly_generate_batch(576 - (node.getblockcount() - ehf_height) - 1)
-        ehf_tx_sent = self.send_tx(ehf_tx)
+        self.log.info("Ehf with same bit signal should fail after 575 blocks but be accepted after 576 on regnet.")
+        self.log.info(f"Current progress is from {ehf_height} to {node.getblockcount()}")
+        self.slowly_generate_batch(576 - (node.getblockcount() - ehf_height))
+        ehf_tx_sent = self.send_tx(ehf_tx_second)
+        self.log.info(f"ehf tx sent: {ehf_tx_sent}")
+        self.log.info(f"block: {node.getblock(node.getbestblockhash())}")
+        self.ensure_tx_is_not_mined(ehf_tx_sent)
         node.generate(1)
         self.sync_all()
-        ensure_tx_is_not_mined(ehf_tx_sent)
-        node.generate(1)
-        self.sync_all()
-        node.gettransaction(tx_id)
+        self.log.info(f"block: {node.getblock(node.getbestblockhash())}")
+        block = node.getblock(node.getbestblockhash())
+        assert ehf_tx_sent in block['tx']
 
         self.check_fork('defined')
         for i in range(10):
             self.log.info(f"Generating {i} ...")
-            self.bump_mocktime(next)
-            node.generate(next)
+            self.bump_mocktime(10)
+            node.generate(10)
             self.sync_all()
-        self.check_fork('started')
+            status = get_bip9_details(self.nodes[0], 'testdummy')['status']
+            self.log.info(f"height: {self.nodes[0].getblockcount()} status: {status}")
+        self.check_fork('active')
 
 
 
