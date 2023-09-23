@@ -46,6 +46,15 @@ class MnehfTest(DashTestFramework):
         for i in range(len(self.nodes)):
                 self.connect_nodes(i, 0)
 
+    def slowly_generate_batch(self, amount):
+        self.log.info(f"Slowly generate {amount} blocks")
+        while amount > 0:
+            self.log.info(f"Generating batch of blocks {amount} left")
+            next = min(10, amount)
+            amount -= next
+            self.bump_mocktime(next)
+            self.nodes[1].generate(next)
+            self.sync_all()
 
     def create_mnehf(self, versionBit, pubkey=None):
         # request ID = sha256("mnhf", versionBit)
@@ -155,6 +164,7 @@ class MnehfTest(DashTestFramework):
         ehf_unknown_tx_sent = self.send_tx(ehf_unknown_tx)
         self.send_tx(ehf_invalid_tx, expected_error='bad-mnhf-non-ehf')
         node.generate(1)
+        ehf_height = node.getblockcount()
         self.sync_all()
 
         ehf_block = node.getbestblockhash()
@@ -236,9 +246,16 @@ class MnehfTest(DashTestFramework):
 
         ehf_tx_second = self.create_mnehf(28, pubkey)
         assert_equal(get_bip9_details(node, 'testdummy')['status'], 'defined')
-        ehf_tx_sent = self.send_tx(ehf_tx_second)
+
+        self.log.info("Ehf with same bit signal should fail after 575 blocks but be accepted after 576 on regnet...")
+        self.slowly_generate_batch(576 - (node.getblockcount() - ehf_height) - 1)
+        ehf_tx_sent = self.send_tx(ehf_tx)
         node.generate(1)
         self.sync_all()
+        ensure_tx_is_not_mined(ehf_tx_sent)
+        node.generate(1)
+        self.sync_all()
+        node.gettransaction(tx_id)
 
         self.check_fork('defined')
         for i in range(10):
