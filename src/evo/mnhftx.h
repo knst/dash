@@ -114,7 +114,8 @@ public:
     void UpdateChainParams(const CBlockIndex* const pindex, const CBlockIndex* const pindexOld) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
     /**
-     * This function filters out signals expired at specified height
+     * This function prepares signals for new block.
+     * This data is filterd expired signals from previous blocks.
      * This member function is not const because it calls non-const GetFromCache()
      */
     Signals GetSignalsStage(const CBlockIndex* const pindexPrev);

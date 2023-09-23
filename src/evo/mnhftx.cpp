@@ -28,7 +28,7 @@ CMNHFManager::Signals CMNHFManager::GetSignalsStage(const CBlockIndex* const pin
     const int height = pindexPrev->nHeight + 1;
     for (auto it = signals.begin(); it != signals.end(); ) {
          if (height > it->second + Params().GetConsensus().nExpireEHF) {
-            LogPrintf("CMNHFManager::FilterSignals: mnhf signal bit=%d height:%d is expired at height=%d\n", it->first, it->second, height);
+            LogPrintf("CMNHFManager::GetSignalsStage: mnhf signal bit=%d height:%d is expired at height=%d\n", it->first, it->second, height);
             it = signals.erase(it);
          } else {
              ++it;
@@ -96,7 +96,7 @@ bool CheckMNHFTx(const CTransaction& tx, const CBlockIndex* pindexPrev, TxValida
         return false;
     }
 
-    if (!Params().UpdateMNActivationParam(mnhfTx.signal.versionBit, pindexPrev->nHeight, pindexPrev->GetMedianTimePast(), true /* fJustCheck */)) {
+    if (!Params().UpdateMNActivationParam(mnhfTx.signal.versionBit, pindexPrev->nHeight, pindexPrev->GetMedianTimePast(), /* fJustCheck= */ true )) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-mnhf-non-ehf");
     }
 
@@ -240,7 +240,7 @@ void CMNHFManager::UpdateChainParams(const CBlockIndex* const pindex, const CBlo
 
         LogPrintf("%s: unload mnhf bit=%d block:%s number of known signals:%lld\n", __func__, versionBit, pindex->GetBlockHash().ToString(), signals_old.size());
 
-        bool update_ret = Params().UpdateMNActivationParam(versionBit, 0, pindex->GetMedianTimePast(), false);
+        bool update_ret = Params().UpdateMNActivationParam(versionBit, 0, pindex->GetMedianTimePast(), /* fJustCheck= */ false);
         assert(update_ret);
     }
 
@@ -253,7 +253,7 @@ void CMNHFManager::UpdateChainParams(const CBlockIndex* const pindex, const CBlo
 
         LogPrintf("%s: load mnhf bit=%d block:%s number of known signals:%lld\n", __func__, versionBit, pindex->GetBlockHash().ToString(), signals.size());
 
-        bool update_ret = Params().UpdateMNActivationParam(versionBit, value, pindex->GetMedianTimePast(), false);
+        bool update_ret = Params().UpdateMNActivationParam(versionBit, value, pindex->GetMedianTimePast(), /* fJustCheck= */ false);
         assert(update_ret);
     }
 }
