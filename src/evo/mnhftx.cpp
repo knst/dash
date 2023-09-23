@@ -105,7 +105,6 @@ bool CheckMNHFTx(const CTransaction& tx, const CBlockIndex* pindexPrev, TxValida
 
 std::optional<uint8_t> extractEHFSignal(const CTransaction& tx)
 {
-    LogPrintf("knst debug extract %s\n", tx.GetHash().ToString());
     if (tx.nVersion != 3 || tx.nType != TRANSACTION_MNHF_SIGNAL) {
         // only interested in special TXs 'TRANSACTION_MNHF_SIGNAL'
         return std::nullopt;
@@ -115,7 +114,6 @@ std::optional<uint8_t> extractEHFSignal(const CTransaction& tx)
     if (!GetTxPayload(tx, mnhfTx)) {
         return std::nullopt;
     }
-    LogPrintf("knst debug  extractEHFSignal extracted!: %d\n", mnhfTx.signal.versionBit);
     return mnhfTx.signal.versionBit;
 }
 
@@ -236,7 +234,7 @@ void CMNHFManager::UpdateChainParams(const CBlockIndex* const pindex, const CBlo
     LogPrintf("%s: update chain params %s -> %s\n", __func__, pindexOld ? pindexOld->GetBlockHash().ToString() : "", pindex ? pindex->GetBlockHash().ToString() : "");
     Signals signals_old{GetFromCache(pindexOld)};
     for (const auto& signal: signals_old) {
-        uint8_t versionBit = signal.first;
+        const uint8_t versionBit = signal.first;
 
         assert(versionBit < VERSIONBITS_NUM_BITS);
 
@@ -248,8 +246,8 @@ void CMNHFManager::UpdateChainParams(const CBlockIndex* const pindex, const CBlo
 
     Signals signals{GetFromCache(pindex)};
     for (const auto& signal: signals) {
-        uint8_t versionBit = signal.first;
-        int value = signal.second;
+        const uint8_t versionBit = signal.first;
+        const int value = signal.second;
 
         assert(versionBit < VERSIONBITS_NUM_BITS);
 
@@ -292,7 +290,7 @@ void CMNHFManager::AddToCache(const Signals& signals, const CBlockIndex* const p
     const uint256& blockHash = pindex->GetBlockHash();
     {
         LOCK(cs_cache);
-        LogPrintf("%s: mnhf for block %s add to cache: %lld\n", __func__, pindex->GetBlockHash().ToString(), signals.size());
+        LogPrintf("CMNHFManager::AddToCache: mnhf for block %s add to cache: %lld\n", pindex->GetBlockHash().ToString(), signals.size());
         mnhfCache.insert(blockHash, signals);
     }
     m_evoDb.Write(std::make_pair(DB_SIGNALS, blockHash), signals);

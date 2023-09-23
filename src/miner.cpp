@@ -475,16 +475,13 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
                 continue;
             }
         }
-        {
-            std::optional<uint8_t> signal = extractEHFSignal(iter->GetTx());
-            if (signal != std::nullopt) {
-                if (signals.find(*signal) != signals.end()) {
-                    LogPrintf("%s: ehf signal tx %s skipped due to duplicate %d\n",
-                              __func__, iter->GetTx().GetHash().ToString(), *signal);
-                    continue;
-                }
-                signals.insert({*signal, 0});
+        if (std::optional<uint8_t> signal = extractEHFSignal(iter->GetTx()); signal != std::nullopt) {
+            if (signals.find(*signal) != signals.end()) {
+                LogPrintf("%s: ehf signal tx %s skipped due to duplicate %d\n",
+                          __func__, iter->GetTx().GetHash().ToString(), *signal);
+                continue;
             }
+            signals.insert({*signal, 0});
         }
 
         // We skip mapTx entries that are inBlock, and mapModifiedTx shouldn't

@@ -262,13 +262,7 @@ class MnehfTest(DashTestFramework):
         assert ehf_tx_sent in block['tx']
 
         self.check_fork('defined')
-        for i in range(10):
-            self.log.info(f"Generating {i} ...")
-            self.bump_mocktime(10)
-            node.generate(10)
-            self.sync_all()
-            status = get_bip9_details(self.nodes[0], 'testdummy')['status']
-            self.log.info(f"height: {self.nodes[0].getblockcount()} status: {status}")
+        self.slowly_generate_batch(12 * 4)
         self.check_fork('active')
 
 
