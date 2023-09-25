@@ -8,23 +8,24 @@
 #ifndef BITCOIN_ADDRESSINDEX_H
 #define BITCOIN_ADDRESSINDEX_H
 
-#include <uint256.h>
 #include <amount.h>
+#include <serialize.h>
+#include <uint256.h>
+#include <util/underlying.h>
 
 #include <chrono>
 #include <tuple>
 
 class CScript;
 
-namespace AddressType {
-enum AddressType {
+enum class AddressType : uint8_t {
     P2PK = 1,
     P2PKH = 1,
     P2SH = 2,
 
     UNKNOWN = 0
 };
-}; /* namespace AddressType */
+template<> struct is_serializable_enum<AddressType> : std::true_type {};
 
 struct CMempoolAddressDelta
 {
@@ -45,21 +46,21 @@ public:
 struct CMempoolAddressDeltaKey
 {
 public:
-    uint8_t m_address_type{AddressType::UNKNOWN};
+    AddressType m_address_type{AddressType::UNKNOWN};
     uint160 m_address_bytes;
     uint256 m_tx_hash;
     uint32_t m_tx_index{0};
     bool m_tx_spent{false};
 
 public:
-    CMempoolAddressDeltaKey(uint8_t address_type, uint160 address_bytes, uint256 tx_hash, uint32_t tx_index, bool tx_spent) :
+    CMempoolAddressDeltaKey(AddressType address_type, uint160 address_bytes, uint256 tx_hash, uint32_t tx_index, bool tx_spent) :
         m_address_type{address_type},
         m_address_bytes{address_bytes},
         m_tx_hash{tx_hash},
         m_tx_index{tx_index},
         m_tx_spent{tx_spent} {};
 
-    CMempoolAddressDeltaKey(uint8_t address_type, uint160 address_bytes) :
+    CMempoolAddressDeltaKey(AddressType address_type, uint160 address_bytes) :
         m_address_type{address_type},
         m_address_bytes{address_bytes} {};
 };
@@ -76,7 +77,7 @@ struct CMempoolAddressDeltaKeyCompare
 
 struct CAddressIndexKey {
 public:
-    uint8_t m_address_type{AddressType::UNKNOWN};
+    AddressType m_address_type{AddressType::UNKNOWN};
     uint160 m_address_bytes;
     int32_t m_block_height{0};
     uint32_t m_block_tx_pos{0};
@@ -89,7 +90,7 @@ public:
         SetNull();
     }
 
-    CAddressIndexKey(uint8_t address_type, uint160 address_bytes, int32_t block_height, uint32_t block_tx_pos, uint256 tx_hash,
+    CAddressIndexKey(AddressType address_type, uint160 address_bytes, int32_t block_height, uint32_t block_tx_pos, uint256 tx_hash,
                      uint32_t tx_index, bool tx_spent) :
         m_address_type{address_type},
         m_address_bytes{address_bytes},
@@ -116,7 +117,7 @@ public:
 
     template<typename Stream>
     void Serialize(Stream& s) const {
-        ser_writedata8(s, m_address_type);
+        ser_writedata8(s, ToUnderlying(m_address_type));
         m_address_bytes.Serialize(s);
         // Heights are stored big-endian for key sorting in LevelDB
         ser_writedata32be(s, m_block_height);
@@ -129,7 +130,7 @@ public:
 
     template<typename Stream>
     void Unserialize(Stream& s) {
-        m_address_type = ser_readdata8(s);
+        m_address_type = static_cast<AddressType>(ser_readdata8(s));
         m_address_bytes.Unserialize(s);
         m_block_height = ser_readdata32be(s);
         m_block_tx_pos = ser_readdata32be(s);
@@ -142,7 +143,7 @@ public:
 
 struct CAddressIndexIteratorKey {
 public:
-    uint8_t m_address_type{AddressType::UNKNOWN};
+    AddressType m_address_type{AddressType::UNKNOWN};
     uint160 m_address_bytes;
 
 public:
@@ -150,7 +151,7 @@ public:
         SetNull();
     }
 
-    CAddressIndexIteratorKey(uint8_t address_type, uint160 address_bytes) :
+    CAddressIndexIteratorKey(AddressType address_type, uint160 address_bytes) :
         m_address_type{address_type}, m_address_bytes{address_bytes} {};
 
     void SetNull() {
@@ -165,20 +166,20 @@ public:
 
     template<typename Stream>
     void Serialize(Stream& s) const {
-        ser_writedata8(s, m_address_type);
+        ser_writedata8(s, ToUnderlying(m_address_type));
         m_address_bytes.Serialize(s);
     }
 
     template<typename Stream>
     void Unserialize(Stream& s) {
-        m_address_type = ser_readdata8(s);
+        m_address_type = static_cast<AddressType>(ser_readdata8(s));
         m_address_bytes.Unserialize(s);
     }
 };
 
 struct CAddressIndexIteratorHeightKey {
 public:
-    uint8_t m_address_type{AddressType::UNKNOWN};
+    AddressType m_address_type{AddressType::UNKNOWN};
     uint160 m_address_bytes;
     int32_t m_block_height{0};
 
@@ -187,7 +188,7 @@ public:
         SetNull();
     }
 
-    CAddressIndexIteratorHeightKey(uint8_t address_type, uint160 address_bytes, int32_t block_height) :
+    CAddressIndexIteratorHeightKey(AddressType address_type, uint160 address_bytes, int32_t block_height) :
         m_address_type{address_type}, m_address_bytes{address_bytes}, m_block_height{block_height} {};
 
     void SetNull() {
@@ -203,19 +204,19 @@ public:
 
     template<typename Stream>
     void Serialize(Stream& s) const {
-        ser_writedata8(s, m_address_type);
+        ser_writedata8(s, ToUnderlying(m_address_type));
         m_address_bytes.Serialize(s);
         ser_writedata32be(s, m_block_height);
     }
 
     template<typename Stream>
     void Unserialize(Stream& s) {
-        m_address_type = ser_readdata8(s);
+        m_address_type = static_cast<AddressType>(ser_readdata8(s));
         m_address_bytes.Unserialize(s);
         m_block_height = ser_readdata32be(s);
     }
 };
 
-bool AddressBytesFromScript(const CScript& script, uint8_t& address_type, uint160& address_bytes);
+bool AddressBytesFromScript(const CScript& script, AddressType& address_type, uint160& address_bytes);
 
 #endif // BITCOIN_ADDRESSINDEX_H
