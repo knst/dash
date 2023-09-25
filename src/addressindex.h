@@ -12,6 +12,7 @@
 #include <amount.h>
 
 #include <chrono>
+#include <tuple>
 
 class CScript;
 
@@ -66,12 +67,8 @@ public:
 struct CMempoolAddressDeltaKeyCompare
 {
     bool operator()(const CMempoolAddressDeltaKey& a, const CMempoolAddressDeltaKey& b) const {
-        if (a.m_address_type != b.m_address_type) return a.m_address_type < b.m_address_type;
-        if (a.m_address_bytes != b.m_address_bytes) return a.m_address_bytes < b.m_address_bytes;
-        if (a.m_tx_hash  != b.m_tx_hash)  return a.m_tx_hash  < b.m_tx_hash;
-        if (a.m_tx_index != b.m_tx_index) return a.m_tx_index < b.m_tx_index;
-
-        return (a.m_tx_spent < b.m_tx_spent);
+        return std::tie(a.m_address_type, a.m_address_bytes, a.m_tx_hash, a.m_tx_index, a.m_tx_spent) <
+               std::tie(b.m_address_type, b.m_address_bytes, b.m_tx_hash, b.m_tx_index, b.m_tx_spent);
     }
 };
 
