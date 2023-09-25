@@ -67,8 +67,10 @@ public:
 struct CMempoolAddressDeltaKeyCompare
 {
     bool operator()(const CMempoolAddressDeltaKey& a, const CMempoolAddressDeltaKey& b) const {
-        return std::tie(a.m_address_type, a.m_address_bytes, a.m_tx_hash, a.m_tx_index, a.m_tx_spent) <
-               std::tie(b.m_address_type, b.m_address_bytes, b.m_tx_hash, b.m_tx_index, b.m_tx_spent);
+        auto to_tuple = [](const CMempoolAddressDeltaKey& obj) {
+            return std::tie(obj.m_address_type, obj.m_address_bytes, obj.m_tx_hash, obj.m_tx_index, obj.m_tx_spent);
+        };
+        return to_tuple(a) < to_tuple(b);
     }
 };
 
