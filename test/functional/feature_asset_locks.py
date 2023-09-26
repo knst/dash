@@ -5,6 +5,7 @@
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 import copy
+import time
 import struct
 from decimal import Decimal
 from io import BytesIO
@@ -41,6 +42,7 @@ from test_framework.util import (
     assert_equal,
     assert_greater_than,
     assert_greater_than_or_equal,
+    get_bip9_details,
     hex_str_to_bytes,
 )
 
@@ -83,7 +85,6 @@ class AssetLocksTest(DashTestFramework):
         lock_tx.vExtraPayload = lockTx_payload.serialize()
 
         lock_tx = node_wallet.signrawtransactionwithwallet(lock_tx.serialize().hex())
-        self.log.info(f"next tx: {lock_tx} payload: {lockTx_payload}")
         return FromHex(CTransaction(), lock_tx["hex"])
 
 
@@ -295,8 +296,16 @@ class AssetLocksTest(DashTestFramework):
 
         self.log.info("Mine a quorum...")
         self.mine_quorum()
-        self.validate_credit_pool_balance(locked_1)
+        self.log.info("Quorum is mined, need to wait until EHF MN RR will be mined to avoid influence to mempool")
+        mn_rr_status = 0
+        while mn_rr_status == 0:
+            time.sleep(1)
+            mn_rr_status = get_bip9_details(node, 'mn_rr')['EHF']
+            self.log.info(f"BIP9 MN_RR status: {mn_rr_status}")
+            node.generate(1)
+            self.sync_all()
 
+        self.validate_credit_pool_balance(locked_1)
 
         self.log.info("Testing asset unlock...")
 
@@ -455,6 +464,7 @@ class AssetLocksTest(DashTestFramework):
         self.sync_mempools()
         node.generate(1)
         self.sync_all()
+        self.log.info(f"MN RR status: {get_bip9_details(node, 'mn_rr')}")
 
         new_total = self.get_credit_pool_balance()
         amount_actually_withdrawn = total - new_total

@@ -23,6 +23,8 @@ class CEvoDB;
 class TxValidationState;
 extern RecursiveMutex cs_main;
 
+extern const std::string MNEHF_REQUESTID_PREFIX;
+
 // mnhf signal special transaction
 class MNHFTx
 {
@@ -32,7 +34,7 @@ public:
     CBLSSignature sig{};
 
     MNHFTx() = default;
-    bool Verify(const uint256& quorumHash, const uint256& msgHash, TxValidationState& state) const;
+    bool Verify(const uint256& quorumHash, const uint256& requestId, const uint256& msgHash, TxValidationState& state) const;
 
     SERIALIZE_METHODS(MNHFTx, obj)
     {
@@ -62,6 +64,17 @@ public:
 
     uint8_t nVersion{CURRENT_VERSION};
     MNHFTx signal;
+
+public:
+    /**
+     * helper function to calculare Request ID used for signing
+     */
+    uint256 GetRequestId() const;
+
+    /**
+     * helper function to prepare special transaction for signing
+     */
+    CMutableTransaction PrepareTx() const;
 
     SERIALIZE_METHODS(MNHFTxPayload, obj)
     {
@@ -120,6 +133,7 @@ public:
      * This member function is not const because it calls non-const GetFromCache()
      */
     Signals GetSignalsStage(const CBlockIndex* const pindexPrev);
+
 private:
     void AddToCache(const Signals& signals, const CBlockIndex* const pindex);
 
@@ -129,7 +143,6 @@ private:
      * validate them by
      */
     Signals GetFromCache(const CBlockIndex* const pindex);
-
 };
 
 std::optional<uint8_t> extractEHFSignal(const CTransaction& tx);
