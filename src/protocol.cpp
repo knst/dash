@@ -84,7 +84,6 @@ MAKE_MSG(QDATA, "qdata");
 MAKE_MSG(CLSIG, "clsig");
 MAKE_MSG(ISLOCK, "islock");
 MAKE_MSG(ISDLOCK, "isdlock");
-MAKE_MSG(EHFSIGNAL, "ehfsignal");
 MAKE_MSG(MNAUTH, "mnauth");
 MAKE_MSG(GETHEADERS2, "getheaders2");
 MAKE_MSG(SENDHEADERS2, "sendheaders2");
@@ -166,7 +165,6 @@ const static std::string allNetMessageTypes[] = {
     NetMsgType::CLSIG,
     NetMsgType::ISLOCK,
     NetMsgType::ISDLOCK,
-    NetMsgType::EHFSIGNAL,
     NetMsgType::MNAUTH,
     NetMsgType::GETHEADERS2,
     NetMsgType::SENDHEADERS2,
@@ -327,7 +325,6 @@ const char* CInv::GetCommandInternal() const
         case MSG_CLSIG:                         return NetMsgType::CLSIG;
         case MSG_ISLOCK:                        return NetMsgType::ISLOCK;
         case MSG_ISDLOCK:                       return NetMsgType::ISDLOCK;
-        case MSG_EHF_SIGNAL:                    return NetMsgType::EHFSIGNAL;
         default:
             return nullptr;
     }

@@ -294,7 +294,6 @@ extern const char *SENDHEADERS2;
 extern const char *HEADERS2;
 extern const char *GETQUORUMROTATIONINFO;
 extern const char *QUORUMROTATIONINFO;
-extern const char *EHF_SIGNAL;
 };
 
 /* Get a vector of all valid message types (see above) */
@@ -467,7 +466,6 @@ enum GetDataMsg {
     MSG_CLSIG = 29,
     MSG_ISLOCK = 30,
     MSG_ISDLOCK = 31,
-    MSG_EHF_SIGNAL = 32,
 };
 
 /** inv message data */
