@@ -52,7 +52,9 @@ class NotificationsTest(DashTestFramework):
         # -chainlocknotify on node0, -instantsendnotify on node1
         self.extra_args[0].append("-chainlocknotify=echo > {}".format(os.path.join(self.chainlocknotify_dir, '%s')))
         self.extra_args[1].append("-instantsendnotify=echo > {}".format(os.path.join(self.instantsendnotify_dir, notify_outputname('%w', '%s'))))
-
+        
+        # TODO knst MISSING 
+        #self.wallet_names = [self.default_wallet_name, self.wallet]
         super().setup_network()
 
     def run_test(self):

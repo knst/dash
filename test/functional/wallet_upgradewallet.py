@@ -30,6 +30,8 @@ class UpgradeWalletTest(BitcoinTestFramework):
             ["-usehd=1"],            # v0.16.3 wallet
             ["-usehd=0"]             # v0.15.2 wallet
         ]
+        # TODO knst None, None ??? why not
+        # self.wallet_names = [self.default_wallet_name, None, None]
         self.wallet_names = [self.default_wallet_name]
 
     def skip_test_if_missing_module(self):
