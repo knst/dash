@@ -97,10 +97,6 @@ class ToolWalletTest(BitcoinTestFramework):
         out = textwrap.dedent('''\
             Wallet info
             ===========
-            Name: \
-
-            Format: bdb
-            Descriptors: no
             Encrypted: no
             HD (hd seed available): no
             Keypool Size: 1
@@ -155,10 +151,6 @@ class ToolWalletTest(BitcoinTestFramework):
         out = textwrap.dedent('''\
             Wallet info
             ===========
-            Name: \
-
-            Format: bdb
-            Descriptors: no
             Encrypted: no
             HD (hd seed available): yes
             Keypool Size: 2
@@ -186,9 +178,6 @@ class ToolWalletTest(BitcoinTestFramework):
             Topping up keypool...
             Wallet info
             ===========
-            Name: foo
-            Format: bdb
-            Descriptors: no
             Encrypted: no
             HD (hd seed available): no
             Keypool Size: 1000
