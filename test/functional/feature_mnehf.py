@@ -162,9 +162,13 @@ class MnehfTest(DashTestFramework):
         assert_equal(get_bip9_details(node, 'testdummy')['status'], 'defined')
 
         ehf_tx_sent = self.send_tx(ehf_tx)
+        self.log.info(f"ehf tx: {ehf_tx_sent}")
         ehf_unknown_tx_sent = self.send_tx(ehf_unknown_tx)
+        self.log.info(f"unknown ehf tx: {ehf_unknown_tx_sent}")
         self.send_tx(ehf_invalid_tx, expected_error='bad-mnhf-non-ehf')
-        ehf_blockhash = node.generate(1)[0]
+        self.sync_all()
+        ehf_blockhash = self.nodes[1].generate(1)[0]
+        self.sync_blocks()
         self.sync_all()
 
         self.log.info(f"Check MnEhfTx {ehf_tx_sent} was mined in {ehf_blockhash}")
@@ -198,6 +202,7 @@ class MnehfTest(DashTestFramework):
                 self.restart_all_nodes()
 
         self.check_fork('active')
+        assert_equal('active', get_bip9_details(node, 'mn_rr')['status'])
 
         fork_active_blockhash = node.getbestblockhash()
         self.log.info(f"Invalidate block: {ehf_blockhash} with tip {fork_active_blockhash}")
