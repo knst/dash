@@ -17,19 +17,21 @@ class CSigSharesManager;
 class CEHFSignalsHandler : public CRecoveredSigsListener
 {
 private:
+    CSigningManager& sigman;
+    CSigSharesManager& shareman;
     CMNHFManager& mnhfManager;
 
 /*    std::unique_ptr<CScheduler> scheduler;
     std::unique_ptr<std::thread> scheduler_thread;
     */
 public:
-    explicit CEHFSignalsHandler(CMNHFManager& mnhfManager);
+    explicit CEHFSignalsHandler(CSigningManager& sigman, CSigSharesManager& shareman, CMNHFManager& mnhfManager);
     ~CEHFSignalsHandler();
 
     void Start();
     void Stop();
 
-    void UpdatedBlockTip();
+    void UpdatedBlockTip(const CBlockIndex* const pindexNew);
 
     /*
     void BlockConnected(const std::shared_ptr<const CBlock>& pblock, const CBlockIndex* pindex) LOCKS_EXCLUDED(cs);

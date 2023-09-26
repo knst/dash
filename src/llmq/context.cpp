@@ -46,7 +46,7 @@ LLMQContext::LLMQContext(CChainState& chainstate, CConnman& connman, CEvoDB& evo
         llmq::quorumInstantSendManager = std::make_unique<llmq::CInstantSendManager>(*llmq::chainLocksHandler, chainstate, connman, *llmq::quorumManager, *sigman, *shareman, sporkman, mempool, *::masternodeSync, peerman, unit_tests, wipe);
         return llmq::quorumInstantSendManager.get();
     }()},
-    ehfSignalsHandler{std::make_unique<llmq:CEHFSignalsHandler>(mnhfman)}
+    ehfSignalsHandler{std::make_unique<llmq:CEHFSignalsHandler>(*sigman, *shareman, mnhfman)}
 {
     // NOTE: we use this only to wipe the old db, do NOT use it for anything else
     // TODO: remove it in some future version

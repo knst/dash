@@ -6,12 +6,15 @@
 
 //#include <scheduler.h>
 
-namespace llmq;
+namespace llmq {
 
 
 //std::unique_ptr<CEHFSignalsHandler> ehfSignalsHandler;
 
-CEHFSignalsHandler::CEHFSignalsHandler(CMNHFManager& mnhfManager) :
+CEHFSignalsHandler::CEHFSignalsHandler(CSigningManager& sigman, CSigSharesManager& shareman,
+                                       CMNHFManager& mnhfManager) :
+    sigman(sigman),
+    shareman(shareman),
     mnhfManager(mnhfManager)
     /*,
     scheduler(std::make_unique<CScheduler>()),
@@ -47,19 +50,47 @@ void CEHFSignalsHandler::Stop()
     sigman.UnregisterRecoveredSigsListener(this);
 }
 
-void CEHFSignalsHandler::UpdatedBlockTip()
+void CEHFSignalsHandler::UpdatedBlockTip(const CBlockIndex* const pindexNew)
 {
-    // don't call TrySignChainTip directly but instead let the scheduler call it. This way we ensure that cs_main is
-    // never locked and TrySignChainTip is not called twice in parallel. Also avoids recursive calls due to
-    // EnforceBestChainLock switching chains.
-    // atomic[If tryLockChainTipScheduled is false, do (set it to true] and schedule signing).
-    if (bool expected = false; tryLockChainTipScheduled.compare_exchange_strong(expected, true)) {
-        scheduler->scheduleFromNow([&]() {
-            CheckActiveState();
-            EnforceBestChainLock();
-            TrySignChainTip();
-            tryLockChainTipScheduled = false;
-        }, std::chrono::seconds{0});
+/*
+    scheduler->scheduleFromNow([&]() {
+        CheckActiveState();
+        EnforceBestChainLock();
+        TrySignChainTip();
+        tryLockChainTipScheduled = false;
+    }, std::chrono::seconds{0});
+    */
+    if (IsV20Active(pindexNew)) {
+        trySignEHFSignal(bit MN reward);
     }
+}
+
+void CEHFSignalsHandler::trySignEHFSignal(int bit)
+{
+    if (!fMasternodeMode) {
+        return;
+    }
+
+    if (!m_mn_sync.IsBlockchainSynced()) {
+        return;
+    }
+
+    uint256 requestId = ::SerializeHash(std::make_pair(MNHF_REQUESTID_PREFIX, pindex->nHeight));
+    /*
+    uint256 msgHash = pindex->GetBlockHash();
+
+    {
+        LOCK(cs);
+        if (bestChainLock.getHeight() >= pindex->nHeight) {
+            // might have happened while we didn't hold cs
+            return;
+        }
+        lastSignedHeight = pindex->nHeight;
+        lastSignedRequestId = requestId;
+        lastSignedMsgHash = msgHash;
+    }
+    */
+
+    sigman.AsyncSignIfMember(Params().GetConsensus().llmqTypeMNHF, shareman, requestId, msgHash);
 }
 

@@ -207,6 +207,7 @@ void CChainLocksHandler::UpdatedBlockTip()
     // EnforceBestChainLock switching chains.
     // atomic[If tryLockChainTipScheduled is false, do (set it to true] and schedule signing).
     if (bool expected = false; tryLockChainTipScheduled.compare_exchange_strong(expected, true)) {
+        // TODO: use here pindexRev instead m_chainstate.m_chain.Tip()
         scheduler->scheduleFromNow([&]() {
             CheckActiveState();
             EnforceBestChainLock();
