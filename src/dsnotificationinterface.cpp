@@ -74,10 +74,12 @@ void CDSNotificationInterface::UpdatedBlockTip(const CBlockIndex *pindexNew, con
 #endif // ENABLE_WALLET
 
     llmq_ctx->isman->UpdatedBlockTip(pindexNew);
+    // TODO - pass tip pindexNew ??
     llmq_ctx->clhandler->UpdatedBlockTip();
 
     llmq_ctx->qman->UpdatedBlockTip(pindexNew, fInitialDownload);
     llmq_ctx->qdkgsman->UpdatedBlockTip(pindexNew, fInitialDownload);
+    llmq_ctx->ehfSignalsHandler->UpdatedBlockTip(pindexNew);
 
     if (!fDisableGovernance) govman.UpdatedBlockTip(pindexNew, connman);
 }
