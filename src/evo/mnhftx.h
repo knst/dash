@@ -23,6 +23,8 @@ class CEvoDB;
 class TxValidationState;
 extern RecursiveMutex cs_main;
 
+extern const std::string MNEHF_REQUESTID_PREFIX;
+
 // mnhf signal special transaction
 class MNHFTx
 {
@@ -33,6 +35,8 @@ public:
 
     MNHFTx() = default;
     bool Verify(const uint256& quorumHash, const uint256& msgHash, TxValidationState& state) const;
+
+    const uint256 GetRequestId() const;
 
     SERIALIZE_METHODS(MNHFTx, obj)
     {
@@ -119,6 +123,7 @@ public:
      * This member function is not const because it calls non-const GetFromCache()
      */
     Signals GetSignalsStage(const CBlockIndex* const pindexPrev);
+
 private:
     void AddToCache(const Signals& signals, const CBlockIndex* const pindex);
 
@@ -128,7 +133,6 @@ private:
      * validate them by
      */
     Signals GetFromCache(const CBlockIndex* const pindex);
-
 };
 
 std::optional<uint8_t> extractEHFSignal(const CTransaction& tx);

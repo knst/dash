@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-extern const std::string MNEHF_REQUESTID_PREFIX = "mnhf";
+const std::string MNEHF_REQUESTID_PREFIX = "mnhf";
 static const std::string DB_SIGNALS = "mnhf_s";
 
 CMNHFManager::Signals CMNHFManager::GetSignalsStage(const CBlockIndex* const pindexPrev)
@@ -53,6 +53,11 @@ CMNHFManager::Signals CMNHFManager::GetSignalsStage(const CBlockIndex* const pin
     return signals;
 }
 
+const uint256 MNHFTx::GetRequestId() const
+{
+    return ::SerializeHash(std::make_pair(MNEHF_REQUESTID_PREFIX, int64_t{versionBit}));
+}
+
 bool MNHFTx::Verify(const uint256& quorumHash, const uint256& msgHash, TxValidationState& state) const
 {
     if (versionBit >= VERSIONBITS_NUM_BITS) {
@@ -62,8 +67,7 @@ bool MNHFTx::Verify(const uint256& quorumHash, const uint256& msgHash, TxValidat
     const Consensus::LLMQType& llmqType = Params().GetConsensus().llmqTypeMnhf;
     const auto quorum = llmq::quorumManager->GetQuorum(llmqType, quorumHash);
 
-    const uint256 requestId = ::SerializeHash(std::make_pair(MNEHF_REQUESTID_PREFIX, int64_t{versionBit}));
-    const uint256 signHash = llmq::utils::BuildSignHash(llmqType, quorum->qc->quorumHash, requestId, msgHash);
+    const uint256 signHash = llmq::utils::BuildSignHash(llmqType, quorum->qc->quorumHash, GetRequestId(), msgHash);
     if (!sig.VerifyInsecure(quorum->qc->quorumPublicKey, signHash)) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-mnhf-invalid");
     }

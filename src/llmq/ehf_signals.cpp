@@ -3,7 +3,14 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <llmq/ehf_signals.h>
+#include <llmq/utils.h>
+#include <llmq/quorums.h>
+#include <llmq/signing_shares.h>
+#include <llmq/commitment.h>
 
+#include <evo/specialtx.h>
+
+#include <index/txindex.h> // g_txindex
 //#include <scheduler.h>
 
 namespace llmq {
@@ -12,7 +19,9 @@ namespace llmq {
 //std::unique_ptr<CEHFSignalsHandler> ehfSignalsHandler;
 
 CEHFSignalsHandler::CEHFSignalsHandler(CSigningManager& sigman, CSigSharesManager& shareman,
+                                       CQuorumManager& qman,
                                        CMNHFManager& mnhfManager) :
+    qman(qman),
     sigman(sigman),
     shareman(shareman),
     mnhfManager(mnhfManager)
@@ -24,7 +33,7 @@ CEHFSignalsHandler::CEHFSignalsHandler(CSigningManager& sigman, CSigSharesManage
 }
 
 
-~CEHFSignalsHandler::CEHFSignalsHandler()
+CEHFSignalsHandler::~CEHFSignalsHandler()
 {
     /*
     scheduler->stop();
@@ -60,37 +69,56 @@ void CEHFSignalsHandler::UpdatedBlockTip(const CBlockIndex* const pindexNew)
         tryLockChainTipScheduled = false;
     }, std::chrono::seconds{0});
     */
-    if (IsV20Active(pindexNew)) {
-        trySignEHFSignal(bit MN reward);
+    if (llmq::utils::IsV20Active(pindexNew)) {
+        trySignEHFSignal(Consensus::Params().vDeployments[Consensus::DEPLOYMENT_MN_RR].bit, pindexNew);
     }
 }
 
-void CEHFSignalsHandler::trySignEHFSignal(int bit)
+void CEHFSignalsHandler::trySignEHFSignal(int bit, const CBlockIndex* const pindex)
 {
     if (!fMasternodeMode) {
+        LogPrintf("try sign - not masternode\n");
         return;
     }
 
+    /*
     if (!m_mn_sync.IsBlockchainSynced()) {
         return;
     }
-
-    uint256 requestId = ::SerializeHash(std::make_pair(MNHF_REQUESTID_PREFIX, pindex->nHeight));
-    /*
-    uint256 msgHash = pindex->GetBlockHash();
-
-    {
-        LOCK(cs);
-        if (bestChainLock.getHeight() >= pindex->nHeight) {
-            // might have happened while we didn't hold cs
-            return;
-        }
-        lastSignedHeight = pindex->nHeight;
-        lastSignedRequestId = requestId;
-        lastSignedMsgHash = msgHash;
-    }
     */
 
-    sigman.AsyncSignIfMember(Params().GetConsensus().llmqTypeMNHF, shareman, requestId, msgHash);
+    const uint256 requestId = ::SerializeHash(std::make_pair(MNEHF_REQUESTID_PREFIX, pindex->nHeight));
+
+    const Consensus::LLMQType& llmqType = Params().GetConsensus().llmqTypeMnhf;
+    const auto& llmq_params_opt = llmq::GetLLMQParams(llmqType);
+    if (!llmq_params_opt.has_value()) {
+        LogPrintf("try sign - llmq params doesn't exist\n");
+        return;
+    }
+    auto quorum = sigman.SelectQuorumForSigning(llmq_params_opt.value(), qman, requestId);
+    if (!quorum) {
+        LogPrintf("EHF - No active quorum\n");
+    }
+
+    MNHFTxPayload mnhfPayload;
+    mnhfPayload.signal.versionBit = 17;
+    mnhfPayload.signal.quorumHash = quorum->qc->quorumHash;
+
+    CMutableTransaction tx;
+    SetTxPayload(tx, mnhfPayload);
+    const uint256 msgHash = tx.GetHash();
+
+    sigman.AsyncSignIfMember(llmqType, shareman, requestId, msgHash);
 }
 
+void CEHFSignalsHandler::HandleNewRecoveredSig(const CRecoveredSig& recoveredSig)
+{
+    if (g_txindex) {
+        g_txindex->BlockUntilSyncedToCurrentChain();
+    }
+    // TODO knst do nothing
+
+
+
+}
+} // namespace llmq

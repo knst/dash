@@ -11,21 +11,23 @@
 #include <llmq/signing.h>
 namespace llmq
 {
-class CSigningManager;
+class CQuorumManager;
 class CSigSharesManager;
+class CSigningManager;
 
 class CEHFSignalsHandler : public CRecoveredSigsListener
 {
 private:
     CSigningManager& sigman;
     CSigSharesManager& shareman;
+    CQuorumManager& qman;
     CMNHFManager& mnhfManager;
 
 /*    std::unique_ptr<CScheduler> scheduler;
     std::unique_ptr<std::thread> scheduler_thread;
     */
 public:
-    explicit CEHFSignalsHandler(CSigningManager& sigman, CSigSharesManager& shareman, CMNHFManager& mnhfManager);
+    explicit CEHFSignalsHandler(CSigningManager& sigman, CSigSharesManager& shareman, CQuorumManager& qman, CMNHFManager& mnhfManager);
     ~CEHFSignalsHandler();
 
     void Start();
@@ -39,6 +41,9 @@ public:
     void CheckActiveState() LOCKS_EXCLUDED(cs);
 */
     void HandleNewRecoveredSig(const CRecoveredSig& recoveredSig) override LOCKS_EXCLUDED(cs);
+
+private:
+    void trySignEHFSignal(int bit, const CBlockIndex* const pindex);
 };
 
 //extern std::unique_ptr<CEHFSignalsHandler> ehfSignalsHandler;
