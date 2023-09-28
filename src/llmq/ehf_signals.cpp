@@ -76,6 +76,7 @@ void CEHFSignalsHandler::UpdatedBlockTip(const CBlockIndex* const pindexNew)
 
 void CEHFSignalsHandler::trySignEHFSignal(int bit, const CBlockIndex* const pindex)
 {
+    LogPrintf("trySign ehf: %d at height=%d\n", bit, pindex->nHeight);
     if (!fMasternodeMode) {
         LogPrintf("try sign - not masternode\n");
         return;
@@ -87,8 +88,9 @@ void CEHFSignalsHandler::trySignEHFSignal(int bit, const CBlockIndex* const pind
     }
     */
 
-    const uint256 requestId = ::SerializeHash(std::make_pair(MNEHF_REQUESTID_PREFIX, pindex->nHeight));
+    const uint256 requestId = ::SerializeHash(std::make_pair(MNEHF_REQUESTID_PREFIX, int64_t{bit}));
 
+    LogPrintf("request: %s bit=%d\n", requestId.ToString(), bit);
     const Consensus::LLMQType& llmqType = Params().GetConsensus().llmqTypeMnhf;
     const auto& llmq_params_opt = llmq::GetLLMQParams(llmqType);
     if (!llmq_params_opt.has_value()) {
@@ -100,8 +102,12 @@ void CEHFSignalsHandler::trySignEHFSignal(int bit, const CBlockIndex* const pind
         LogPrintf("EHF - No active quorum\n");
     }
 
+
+    LogPrintf("quorum: %lld\n", quorum.get());
+    LogPrintf("quorum->qc: %lld\n", quorum-qc.get());
+    LogPrintf("quorum hash: %s\n", quorum->qc->quorumHash);
     MNHFTxPayload mnhfPayload;
-    mnhfPayload.signal.versionBit = 17;
+    mnhfPayload.signal.versionBit = bit;
     mnhfPayload.signal.quorumHash = quorum->qc->quorumHash;
 
     CMutableTransaction tx;
