@@ -213,7 +213,12 @@ CDeterministicMNCPtr CDeterministicMNList::GetMNPayee(const CBlockIndex* pIndex)
 
 std::vector<CDeterministicMNCPtr> CDeterministicMNList::GetProjectedMNPayeesAtChainTip(int nCount) const
 {
-    return GetProjectedMNPayees(::ChainActive()[nHeight], nCount);
+    const CBlockIndex* const pindex = ::ChainActive()[nHeight];
+    if (pindex == nullptr) {
+        LogPrintf("GetProjectedMNPayeesAtChainTip WARNING pindex is nullptr due to height=%lld chain height=%lld\n", nHeight, ::ChainActive().Tip()->nHeight);
+        return {};
+    }
+    return GetProjectedMNPayees(pindex, nCount);
 }
 
 std::vector<CDeterministicMNCPtr> CDeterministicMNList::GetProjectedMNPayees(const CBlockIndex* const pindex, int nCount) const
