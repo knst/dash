@@ -34,6 +34,13 @@ CreateWalletDialog::CreateWalletDialog(QWidget* parent) :
             ui->disable_privkeys_checkbox->setChecked(false);
         }
     });
+
+#ifndef USE_SQLITE
+    ui->descriptor_checkbox->setToolTip(tr("Compiled without sqlite support (required for descriptor wallets)"));
+    ui->descriptor_checkbox->setEnabled(false);
+MarcoFalke marked this conversation as resolved.
+    ui->descriptor_checkbox->setChecked(false);
+#endif
 }
 
 CreateWalletDialog::~CreateWalletDialog()
