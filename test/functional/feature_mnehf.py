@@ -158,7 +158,9 @@ class MnehfTest(DashTestFramework):
         self.send_tx(ehf_tx, expected_error='mnhf-before-v20')
 
         assert_equal(get_bip9_details(node, 'testdummy')['status'], 'defined')
+        self.log.info(f"mn_rr status-1: {get_bip9_details(node, 'mn_rr')}")
         self.activate_v20()
+        self.log.info(f"mn_rr status-2: {get_bip9_details(node, 'mn_rr')}")
         assert_equal(get_bip9_details(node, 'testdummy')['status'], 'defined')
 
         ehf_tx_sent = self.send_tx(ehf_tx)
@@ -166,6 +168,7 @@ class MnehfTest(DashTestFramework):
         self.send_tx(ehf_invalid_tx, expected_error='bad-mnhf-non-ehf')
         ehf_blockhash = node.generate(1)[0]
         self.sync_all()
+        self.log.info(f"mn_rr status-3: {get_bip9_details(node, 'mn_rr')}")
 
         self.log.info(f"Check MnEhfTx {ehf_tx_sent} was mined in {ehf_blockhash}")
         assert ehf_tx_sent in node.getblock(ehf_blockhash)['tx']
@@ -182,7 +185,9 @@ class MnehfTest(DashTestFramework):
             self.sync_all()
 
 
+        self.log.info(f"mn_rr status-4: {get_bip9_details(node, 'mn_rr')}")
         self.restart_all_nodes()
+        self.log.info(f"mn_rr status-5: {get_bip9_details(node, 'mn_rr')}")
 
         for i in range(12):
             self.check_fork('started')
@@ -198,6 +203,7 @@ class MnehfTest(DashTestFramework):
                 self.restart_all_nodes()
 
         self.check_fork('active')
+        self.log.info(f"mn_rr status-6: {get_bip9_details(node, 'mn_rr')}")
 
         fork_active_blockhash = node.getbestblockhash()
         self.log.info(f"Invalidate block: {ehf_blockhash} with tip {fork_active_blockhash}")
