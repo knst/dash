@@ -102,10 +102,21 @@ void CEHFSignalsHandler::trySignEHFSignal(int bit, const CBlockIndex* const pind
         LogPrintf("EHF - No active quorum\n");
     }
 
-
+/*
+    LogPrintf("quorum: %lld\n", quorum.get());
+    LogPrintf("quorum: %lld\n", quorum.get());
+    LogPrintf("quorum: %lld\n", quorum.get());
+    LogPrintf("quorum: %lld\n", quorum.get());
     LogPrintf("quorum: %lld\n", quorum.get());
     LogPrintf("quorum->qc: %lld\n", quorum->qc.get());
+    LogPrintf("quorum->qc: %lld\n", quorum->qc.get());
+    LogPrintf("quorum->qc: %lld\n", quorum->qc.get());
+    LogPrintf("quorum->qc: %lld\n", quorum->qc.get());
+    LogPrintf("quorum->qc: %lld\n", quorum->qc.get());
+    LogPrintf("quorum->qc: %lld\n", quorum->qc.get());
+    LogPrintf("quorum->qc: %lld\n", quorum->qc.get());
     LogPrintf("quorum hash: %s\n", quorum->qc->quorumHash.ToString());
+    */
     MNHFTxPayload mnhfPayload;
     mnhfPayload.signal.versionBit = bit;
     mnhfPayload.signal.quorumHash = quorum->qc->quorumHash;
