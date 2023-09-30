@@ -262,12 +262,14 @@ bool CheckCreditPoolDiffForBlock(const CBlock& block, const CBlockIndex* pindex,
         LogPrintf("%s: CCreditPool is %s\n", __func__, creditPool.ToString());
         CCreditPoolDiff creditPoolDiff(creditPool, pindex->pprev, consensusParams);
 
-        for (const auto& ptr_tx : block.vtx) {
+        creditPoolDiff.ProcessCbTx(*block.vtx[0], blockReward);
+
+        for (size_t i = 1; i < block.vtx.size(); ++i) {
             TxValidationState tx_state;
-            if (!creditPoolDiff.ProcessTransaction(*ptr_tx, blockReward, tx_state)) {
+            if (!creditPoolDiff.ProcessTransaction(*block.vtx[i], tx_state)) {
                 assert(tx_state.GetResult() == TxValidationResult::TX_CONSENSUS || tx_state.GetResult() == TxValidationResult::TX_BAD_SPECIAL);
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, tx_state.GetRejectReason(),
-                                 strprintf("Process Special Transaction failed at Credit Pool (tx hash %s) %s", ptr_tx->GetHash().ToString(), tx_state.GetDebugMessage()));
+                                 strprintf("Process Special Transaction failed at Credit Pool (tx hash %s) %s", block.vtx[i]->GetHash().ToString(), tx_state.GetDebugMessage()));
             }
         }
         CAmount locked_proposed{0};

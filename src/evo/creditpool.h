@@ -78,11 +78,18 @@ public:
     explicit CCreditPoolDiff(CCreditPool starter, const CBlockIndex *pindex, const Consensus::Params& consensusParams);
 
     /**
+     * This function should be called for each block's CbTx
+     * to change amount of credit pool
+     * CbTx's Payload must be valid if nVersion of CbTx equals 3
+     */
+    void ProcessCbTx(const CTransaction cbTx, const CAmount blockReward);
+
+    /**
      * This function should be called for each Asset Lock/Unlock tx
      * to change amount of credit pool
      * @return true if transaction can be included in this block
      */
-    bool ProcessTransaction(const CTransaction& tx, std::optional<CAmount> blockReward, TxValidationState& state);
+    bool ProcessTransaction(const CTransaction& tx, TxValidationState& state);
 
     /**
      * This function should be called by miner for initialization of MasterNode reward
@@ -102,7 +109,7 @@ public:
     }
 
 private:
-    bool SetTarget(const CTransaction& tx, const CAmount blockReward, TxValidationState& state);
+    void SetTarget(const CTransaction& tx, const CAmount blockReward);
     bool Lock(const CTransaction& tx, TxValidationState& state);
     bool Unlock(const CTransaction& tx, TxValidationState& state);
 };

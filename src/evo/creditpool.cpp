@@ -228,23 +228,20 @@ void CCreditPoolDiff::AddRewardRealloced(const CAmount reward) {
     platformReward += reward;
 }
 
-bool CCreditPoolDiff::SetTarget(const CTransaction& tx, const CAmount blockReward, TxValidationState& state)
+void CCreditPoolDiff::SetTarget(const CTransaction& tx, const CAmount blockReward)
 {
     CCbTx cbTx;
-    if (!GetTxPayload(tx, cbTx)) {
-        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-cbtx-payload");
-    }
+    bool ret = GetTxPayload(tx, cbTx);
+    assert(ret);
 
-    if (cbTx.nVersion != 3) return true;
+    if (cbTx.nVersion != 3) return;
 
     targetBalance = cbTx.creditPoolBalance;
 
-    if (!llmq::utils::IsMNRewardReallocationActive(pindex)) return true;
+    if (!llmq::utils::IsMNRewardReallocationActive(pindex)) return;
 
     platformReward = MasternodePayments::PlatformShare(GetMasternodePayment(cbTx.nHeight, blockReward, params.BRRHeight));
     LogPrintf("CreditPool: set target to %lld with MN reward %lld\n", *targetBalance, platformReward);
-
-    return true;
 }
 
 bool CCreditPoolDiff::Lock(const CTransaction& tx, TxValidationState& state)
@@ -287,15 +284,19 @@ bool CCreditPoolDiff::Unlock(const CTransaction& tx, TxValidationState& state)
     return true;
 }
 
-bool CCreditPoolDiff::ProcessTransaction(const CTransaction& tx, const std::optional<CAmount> blockReward, TxValidationState& state)
+
+void CCreditPoolDiff::ProcessCbTx(const CTransaction cbTx, const CAmount blockReward)
+{
+    if (cbTx.nVersion != 3) return;
+
+    assert(cbTx.nType == TRANSACTION_COINBASE);
+
+    SetTarget(cbTx, blockReward);
+}
+
+bool CCreditPoolDiff::ProcessTransaction(const CTransaction& tx, TxValidationState& state)
 {
     if (tx.nVersion != 3) return true;
-
-    if (tx.nType == TRANSACTION_COINBASE) {
-        assert(blockReward.has_value());
-        return SetTarget(tx, blockReward.value(), state);
-    }
-
     if (tx.nType != TRANSACTION_ASSET_LOCK && tx.nType != TRANSACTION_ASSET_UNLOCK) return true;
 
     if (!CheckAssetLockUnlockTx(tx, pindex, pool.indexes, state)) {
