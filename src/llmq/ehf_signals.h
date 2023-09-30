@@ -9,6 +9,9 @@
 
 #include <crypto/common.h>
 #include <llmq/signing.h>
+
+class CTxMemPool;
+
 namespace llmq
 {
 class CQuorumManager;
@@ -22,12 +25,12 @@ private:
     CSigSharesManager& shareman;
     CQuorumManager& qman;
     CMNHFManager& mnhfManager;
-
+    CTxMemPool& mempool;
 /*    std::unique_ptr<CScheduler> scheduler;
     std::unique_ptr<std::thread> scheduler_thread;
     */
 public:
-    explicit CEHFSignalsHandler(CSigningManager& sigman, CSigSharesManager& shareman, CQuorumManager& qman, CMNHFManager& mnhfManager);
+    explicit CEHFSignalsHandler(CSigningManager& sigman, CSigSharesManager& shareman, CQuorumManager& qman, CTxMemPool& mempool, CMNHFManager& mnhfManager);
     ~CEHFSignalsHandler();
 
     void Start();

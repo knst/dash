@@ -13,17 +13,21 @@
 #include <index/txindex.h> // g_txindex
 //#include <scheduler.h>
 
+#include <validation.h>
+#include <txmempool.h>
+
 namespace llmq {
 
 
 //std::unique_ptr<CEHFSignalsHandler> ehfSignalsHandler;
 
 CEHFSignalsHandler::CEHFSignalsHandler(CSigningManager& sigman, CSigSharesManager& shareman,
-                                       CQuorumManager& qman,
+                                       CQuorumManager& qman, CTxMemPool& mempool,
                                        CMNHFManager& mnhfManager) :
     qman(qman),
     sigman(sigman),
     shareman(shareman),
+    mempool(mempool),
     mnhfManager(mnhfManager)
     /*,
     scheduler(std::make_unique<CScheduler>()),
@@ -135,7 +139,27 @@ void CEHFSignalsHandler::HandleNewRecoveredSig(const CRecoveredSig& recoveredSig
     }
     // TODO knst do nothing
 
+    LogPrintf("Handle new recovered sig: %s!\n", recoveredSig.ToJson().write());
 
 
+    int bit = Consensus::Params().vDeployments[Consensus::DEPLOYMENT_MN_RR].bit;
+    const uint256 requestId = ::SerializeHash(std::make_pair(MNEHF_REQUESTID_PREFIX, int64_t{bit}));
+
+    LogPrintf("while expecting: request: %s bit=%d\n", requestId.ToString(), bit);
+    if (requestId != recoveredSig.getId()) return;
+
+    MNHFTxPayload mnhfPayload;
+    mnhfPayload.signal.versionBit = bit;
+    mnhfPayload.signal.quorumHash = recoveredSig.getQuorumHash();
+    mnhfPayload.signal.sig = recoveredSig.sig.Get();
+
+    CMutableTransaction tx;
+    SetTxPayload(tx, mnhfPayload);
+//    const uint256 msgHash = tx.GetHash();
+//    tx.
+    TxValidationState state;
+    LogPrintf("send tx: %s\n", tx.GetHash().ToString());
+    AcceptToMemoryPool(::ChainstateActive(), mempool, state, MakeTransactionRef(std::move(tx)),
+                        false, 10);
 }
 } // namespace llmq
