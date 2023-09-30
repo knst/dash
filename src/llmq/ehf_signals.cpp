@@ -73,8 +73,11 @@ void CEHFSignalsHandler::UpdatedBlockTip(const CBlockIndex* const pindexNew)
         tryLockChainTipScheduled = false;
     }, std::chrono::seconds{0});
     */
+    LogPrintf("bits: %d %d %d\n", Params().GetConsensus().vDeployments[Consensus::DEPLOYMENT_MN_RR].bit,
+Params().GetConsensus().vDeployments[Consensus::DEPLOYMENT_V20].bit,
+Params().GetConsensus().vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit);
     if (llmq::utils::IsV20Active(pindexNew)) {
-        trySignEHFSignal(Consensus::Params().vDeployments[Consensus::DEPLOYMENT_MN_RR].bit, pindexNew);
+        trySignEHFSignal(Params().GetConsensus().vDeployments[Consensus::DEPLOYMENT_MN_RR].bit, pindexNew);
     }
 }
 
@@ -106,6 +109,9 @@ void CEHFSignalsHandler::trySignEHFSignal(int bit, const CBlockIndex* const pind
         LogPrintf("EHF - No active quorum\n");
     }
 
+    LogPrintf("quorum: %lld\n", quorum.get());
+    LogPrintf("quorum->qc: %lld\n", quorum->qc.get());
+    LogPrintf("quorum hash: %s\n", quorum->qc->quorumHash.ToString());
 /*
     LogPrintf("quorum: %lld\n", quorum.get());
     LogPrintf("quorum: %lld\n", quorum.get());
