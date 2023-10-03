@@ -43,8 +43,6 @@ static inline bool IsSelectableSocket(const SOCKET& s, bool is_select)
 #endif
 }
 
-Sock::Sock() : m_socket(INVALID_SOCKET) {}
-
 Sock::Sock(SOCKET s) : m_socket(s) {}
 
 Sock::Sock(Sock&& other)
@@ -568,6 +566,11 @@ void Sock::Close()
     }
     m_socket = INVALID_SOCKET;
 }
+
+bool Sock::operator==(SOCKET s) const
+{
+    return m_socket == s;
+};
 
 std::string NetworkErrorString(int err)
 {
