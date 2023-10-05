@@ -265,6 +265,9 @@ BOOST_FIXTURE_TEST_CASE(block_reward_reallocation, TestChainBRRBeforeActivationS
     }
     BOOST_CHECK(!llmq::utils::IsMNRewardReallocationActive(m_node.chainman->ActiveChain().Tip()));
 
+    // Activate EHF "MN_RR"
+    Params().UpdateMNActivationParam(Params().GetConsensus().vDeployments[Consensus::DEPLOYMENT_MN_RR].bit, ::ChainActive().Height(), ::ChainActive().Tip()->GetMedianTimePast(), /*fJustCheck=*/ false);
+
     // Reward split should stay ~60/40 after reallocation is done,
     // check 10 next superblocks
     for ([[maybe_unused]] auto i : irange::range(10)) {

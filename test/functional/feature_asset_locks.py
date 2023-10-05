@@ -5,7 +5,6 @@
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 import copy
-import time
 import struct
 from decimal import Decimal
 from io import BytesIO
@@ -296,14 +295,6 @@ class AssetLocksTest(DashTestFramework):
 
         self.log.info("Mine a quorum...")
         self.mine_quorum()
-        self.log.info("Quorum is mined, need to wait until EHF MN RR will be mined to avoid influence to mempool")
-        mn_rr_status = 0
-        while mn_rr_status == 0:
-            time.sleep(1)
-            mn_rr_status = get_bip9_details(node, 'mn_rr')['EHF']
-            self.log.info(f"BIP9 MN_RR status: {mn_rr_status}")
-            node.generate(1)
-            self.sync_all()
 
         self.validate_credit_pool_balance(locked_1)
 
@@ -437,8 +428,8 @@ class AssetLocksTest(DashTestFramework):
             self.log.info(f"Collecting coins in pool... Collected {total}/{10_900 * COIN}")
             coin = coins.pop()
             to_lock = int(coin['amount'] * COIN) - tiny_amount
-            if to_lock > 50 * COIN:
-                to_lock = 50 * COIN
+            if to_lock > 99 * COIN:
+                to_lock = 99 * COIN
             total += to_lock
             tx = self.create_assetlock(coin, to_lock, pubkey)
             self.send_tx_simple(tx)
@@ -509,13 +500,14 @@ class AssetLocksTest(DashTestFramework):
         node.generate(1)
         self.sync_all()
 
-        self.log.info("generate many blocks to be sure that mempool is empty afterwards...")
+        self.log.info("generate many blocks to be sure that mempool is empty after expiring txes...")
         self.slowly_generate_batch(60)
         self.log.info("Checking that credit pool is not changed...")
         assert_equal(new_total, self.get_credit_pool_balance())
         self.check_mempool_size()
 
-        self.activate_mn_rr(expected_activation_height=3090)
+        # activate MN_RR reallocation
+        self.activate_mn_rr()
         self.log.info(f'height: {node.getblockcount()} credit: {self.get_credit_pool_balance()}')
         bt = node.getblocktemplate()
         platform_reward = bt['masternode'][0]['amount']
@@ -525,7 +517,7 @@ class AssetLocksTest(DashTestFramework):
         all_mn_rewards = platform_reward + owner_reward + operator_reward
         assert_equal(all_mn_rewards, bt['coinbasevalue'] * 3 // 4)  # 75/25 mn/miner reward split
         assert_equal(platform_reward, all_mn_rewards * 375 // 1000)  # 0.375 platform share
-        assert_equal(platform_reward, 25553999)
+        assert_equal(platform_reward, 29636590)
         assert_equal(new_total, self.get_credit_pool_balance())
         node.generate(1)
         self.sync_all()
