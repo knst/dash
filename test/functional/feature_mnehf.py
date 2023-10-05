@@ -160,6 +160,7 @@ class MnehfTest(DashTestFramework):
         assert_equal(get_bip9_details(node, 'testdummy')['status'], 'defined')
         self.activate_v20()
         assert_equal(get_bip9_details(node, 'testdummy')['status'], 'defined')
+        assert_equal(get_bip9_details(node, 'mn_rr')['status'], 'defined')
 
         ehf_tx_sent = self.send_tx(ehf_tx)
         self.log.info(f"ehf tx: {ehf_tx_sent}")
@@ -202,8 +203,6 @@ class MnehfTest(DashTestFramework):
                 self.restart_all_nodes()
 
         self.check_fork('active')
-        assert_equal('active', get_bip9_details(node, 'mn_rr')['status'])
-
         fork_active_blockhash = node.getbestblockhash()
         self.log.info(f"Invalidate block: {ehf_blockhash} with tip {fork_active_blockhash}")
         for inode in self.nodes:
@@ -256,6 +255,12 @@ class MnehfTest(DashTestFramework):
         self.mine_quorum()
 
         ehf_tx_new_start = self.create_mnehf(28, pubkey)
+
+        self.log.info("activate MN_RR also by enabling spork 24")
+        assert_equal(get_bip9_details(node, 'mn_rr')['status'], 'defined')
+        self.nodes[0].sporkupdate("SPORK_24_MN_RR_READY", 0)
+        self.wait_for_sporks_same()
+
         self.check_fork('defined')
 
         self.log.info("Mine one block and ensure EHF tx for the new deployment is mined")
@@ -268,6 +273,8 @@ class MnehfTest(DashTestFramework):
         self.check_fork('defined')
         self.slowly_generate_batch(12 * 4)
         self.check_fork('active')
+        self.log.info(f"bip9: {get_bip9_details(node, 'mn_rr')}")
+        assert_equal(get_bip9_details(node, 'mn_rr')['status'], 'active')
 
 
 if __name__ == '__main__':

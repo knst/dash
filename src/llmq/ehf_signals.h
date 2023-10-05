@@ -14,6 +14,7 @@
 
 class CChainState;
 class CConnman;
+class CSporkManager;
 class CTxMemPool;
 
 namespace llmq
@@ -29,6 +30,7 @@ private:
     CConnman& connman;
     CSigningManager& sigman;
     CSigSharesManager& shareman;
+    CSporkManager& sporkman;
     CQuorumManager& qman;
     CTxMemPool& mempool;
     CMNHFManager& mnhfManager;
@@ -37,7 +39,7 @@ private:
 public:
     explicit CEHFSignalsHandler(CChainState& chainstate, CConnman& connman,
                                 CSigningManager& sigman, CSigSharesManager& shareman,
-                                CQuorumManager& qman, CTxMemPool& mempool,
+                                CSporkManager& sporkman, CQuorumManager& qman, CTxMemPool& mempool,
                                 CMNHFManager& mnhfManager);
     ~CEHFSignalsHandler();
 

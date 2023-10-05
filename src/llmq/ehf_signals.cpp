@@ -12,21 +12,23 @@
 
 #include <index/txindex.h> // g_txindex
 
-#include <validation.h>
-#include <txmempool.h>
 #include <primitives/transaction.h>
+#include <spork.h>
+#include <txmempool.h>
+#include <validation.h>
 
 namespace llmq {
 
 
 CEHFSignalsHandler::CEHFSignalsHandler(CChainState& chainstate, CConnman& connman,
                                        CSigningManager& sigman, CSigSharesManager& shareman,
-                                       CQuorumManager& qman, CTxMemPool& mempool,
+                                       CSporkManager& sporkman, CQuorumManager& qman, CTxMemPool& mempool,
                                        CMNHFManager& mnhfManager) :
     chainstate(chainstate),
     connman(connman),
     sigman(sigman),
     shareman(shareman),
+    sporkman(sporkman),
     qman(qman),
     mempool(mempool),
     mnhfManager(mnhfManager)
@@ -54,8 +56,9 @@ void CEHFSignalsHandler::UpdatedBlockTip(const CBlockIndex* const pindexNew)
         return;
     }
 
-
-    trySignEHFSignal(Params().GetConsensus().vDeployments[Consensus::DEPLOYMENT_MN_RR].bit, pindexNew);
+    if (sporkman.IsSporkActive(SPORK_24_MN_RR_READY)) {
+        trySignEHFSignal(Params().GetConsensus().vDeployments[Consensus::DEPLOYMENT_MN_RR].bit, pindexNew);
+    }
 }
 
 void CEHFSignalsHandler::trySignEHFSignal(int bit, const CBlockIndex* const pindex)
