@@ -44,13 +44,13 @@ from test_framework.util import (
     hex_str_to_bytes,
 )
 
-llmq_type_test = 100
+llmq_type_test = 106 # LLMQType::LLMQ_TEST_PLATFORM
 tiny_amount = int(Decimal("0.0007") * COIN)
 blocks_in_one_day = 576
 
 class AssetLocksTest(DashTestFramework):
     def set_test_params(self):
-        self.set_dash_test_params(5, 3)
+        self.set_dash_test_params(2, 0, evo_count=3)
 
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
@@ -186,10 +186,11 @@ class AssetLocksTest(DashTestFramework):
         spork_enabled = 0
         spork_disabled = 4070908800
 
-        self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", spork_enabled)
-        self.nodes[0].sporkupdate("SPORK_19_CHAINLOCKS_ENABLED", spork_disabled)
-        self.nodes[0].sporkupdate("SPORK_3_INSTANTSEND_BLOCK_FILTERING", spork_disabled)
-        self.nodes[0].sporkupdate("SPORK_2_INSTANTSEND_ENABLED", spork_disabled)
+        self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
+#        self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", spork_enabled)
+#        self.nodes[0].sporkupdate("SPORK_19_CHAINLOCKS_ENABLED", spork_disabled)
+#        self.nodes[0].sporkupdate("SPORK_3_INSTANTSEND_BLOCK_FILTERING", spork_disabled)
+#        self.nodes[0].sporkupdate("SPORK_2_INSTANTSEND_ENABLED", spork_disabled)
         self.wait_for_sporks_same()
 
     def ensure_tx_is_not_mined(self, tx_id):
@@ -237,6 +238,11 @@ class AssetLocksTest(DashTestFramework):
         self.set_sporks()
         self.activate_v20()
 
+        self.log.info(f"mn counts:  {self.nodes[0].masternode('count')}")
+        for i in range(3):
+            evo_info = self.dynamically_add_masternode(evo=True)
+            self.log.info(f"evo info: {evo_info}")
+        self.log.info(f"mn counts:  {self.nodes[0].masternode('count')}")
         self.mempool_size = 0
 
         key = ECKey()
@@ -294,7 +300,7 @@ class AssetLocksTest(DashTestFramework):
         self.create_and_check_block([extra_lock_tx], expected_error = 'bad-cbtx-assetlocked-amount')
 
         self.log.info("Mine a quorum...")
-        self.mine_quorum()
+        self.mine_quorum(llmq_type_name='llmq_test_platform', llmq_type=106, expected_connections=2, expected_members=3, expected_contributions=3, expected_complaints=0, expected_justifications=0, expected_commitments=3 )
         self.validate_credit_pool_balance(locked_1)
 
 
@@ -343,7 +349,7 @@ class AssetLocksTest(DashTestFramework):
             reason = "double copy")
 
         self.log.info("Mining next quorum to check tx 'asset_unlock_tx_late' is still valid...")
-        self.mine_quorum()
+        self.mine_quorum(llmq_type_name="llmq_test_platform", llmq_type=106)
         self.log.info("Checking credit pool amount is same...")
         self.validate_credit_pool_balance(locked_1 - 1 * COIN)
         self.check_mempool_result(tx=asset_unlock_tx_late, result_expected={'allowed': True})
@@ -363,7 +369,7 @@ class AssetLocksTest(DashTestFramework):
                 result_expected={'allowed': False, 'reject-reason' : 'bad-assetunlock-too-late'})
 
         self.log.info("Checking that two quorums later it is too late because quorum is not active...")
-        self.mine_quorum()
+        self.mine_quorum(llmq_type_name="llmq_test_platform", llmq_type=106)
         self.log.info("Expecting new reject-reason...")
         self.check_mempool_result(tx=asset_unlock_tx_too_late,
                 result_expected={'allowed': False, 'reject-reason' : 'bad-assetunlock-not-active-quorum'})
@@ -421,7 +427,7 @@ class AssetLocksTest(DashTestFramework):
 
         self.log.info("Fast forward to the next day to reset all current unlock limits...")
         self.slowly_generate_batch(blocks_in_one_day  + 1)
-        self.mine_quorum()
+        self.mine_quorum(llmq_type_name="llmq_test_platform", llmq_type=106)
 
         total = self.get_credit_pool_balance()
         while total <= 10_900 * COIN:
