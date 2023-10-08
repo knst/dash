@@ -23,8 +23,6 @@ class CEvoDB;
 class TxValidationState;
 extern RecursiveMutex cs_main;
 
-extern const std::string MNEHF_REQUESTID_PREFIX;
-
 // mnhf signal special transaction
 class MNHFTx
 {
