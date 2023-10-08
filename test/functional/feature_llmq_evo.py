@@ -114,7 +114,8 @@ class LLMQEvoNodesTest(DashTestFramework):
         self.log.info("Test that EvoNodes are paid 4x blocks in a row")
         self.test_evo_payments(window_analysis=256)
 
-        self.mine_quorum()
+        self.activate_v20()
+        self.mine_quorum(llmq_type_name='llmq_test', llmq_type=100)
         self.activate_mn_rr()
         self.log.info("Activated MN RewardReallocation at height:" + str(self.nodes[0].getblockcount()))
 
