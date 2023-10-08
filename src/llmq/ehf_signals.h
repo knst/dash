@@ -5,15 +5,14 @@
 #ifndef BITCOIN_LLMQ_EHF_SIGNALS_H
 #define BITCOIN_LLMQ_EHF_SIGNALS_H
 
-#include <evo/mnhftx.h>
-
-#include <crypto/common.h>
 #include <llmq/signing.h>
 
 #include <set>
 
+class CBlockIndex;
 class CChainState;
 class CConnman;
+class CMNHFManager;
 class CSporkManager;
 class CTxMemPool;
 
@@ -35,6 +34,9 @@ private:
     CTxMemPool& mempool;
     CMNHFManager& mnhfManager;
 
+    /**
+     * keep freshly generated IDs for easier filter sigs in HandleNewRecoveredSig
+     */
     std::set<uint256> ids;
 public:
     explicit CEHFSignalsHandler(CChainState& chainstate, CConnman& connman,
@@ -49,11 +51,6 @@ public:
      */
     void UpdatedBlockTip(const CBlockIndex* const pindexNew);
 
-    /*
-    void BlockConnected(const std::shared_ptr<const CBlock>& pblock, const CBlockIndex* pindex) LOCKS_EXCLUDED(cs);
-    void BlockDisconnected(const std::shared_ptr<const CBlock>& pblock, const CBlockIndex* pindexDisconnected) LOCKS_EXCLUDED(cs);
-    void CheckActiveState() LOCKS_EXCLUDED(cs);
-*/
     void HandleNewRecoveredSig(const CRecoveredSig& recoveredSig) override LOCKS_EXCLUDED(cs);
 
 private:

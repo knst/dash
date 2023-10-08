@@ -8,6 +8,8 @@
 #include <llmq/signing_shares.h>
 #include <llmq/commitment.h>
 
+
+#include <evo/mnhftx.h>
 #include <evo/specialtx.h>
 
 #include <index/txindex.h> // g_txindex
@@ -40,10 +42,6 @@ CEHFSignalsHandler::CEHFSignalsHandler(CChainState& chainstate, CConnman& connma
 CEHFSignalsHandler::~CEHFSignalsHandler()
 {
     sigman.UnregisterRecoveredSigsListener(this);
-    /*
-    scheduler->stop();
-    scheduler_thread->join();
-    */
 }
 
 void CEHFSignalsHandler::UpdatedBlockTip(const CBlockIndex* const pindexNew)
@@ -83,7 +81,9 @@ void CEHFSignalsHandler::trySignEHFSignal(int bit, const CBlockIndex* const pind
         return;
     }
     if (sigman.HasRecoveredSigForId(llmqType, requestId)) {
-        // do nothing, someone already signed a message
+        ids.insert(requestId);
+
+        // no need to sign one more
         return;
     }
 
@@ -110,15 +110,19 @@ void CEHFSignalsHandler::HandleNewRecoveredSig(const CRecoveredSig& recoveredSig
         g_txindex->BlockUntilSyncedToCurrentChain();
     }
 
-    LogPrintf("knst Handle new recovered sig: %s!\n", recoveredSig.ToJson().write());
+    if (ids.find(recoveredSig.getId()) == ids.end()) {
+        // Do nothing, it's not for this handler
+        return;
+    }
 
     MNHFTxPayload mnhfPayload;
     mnhfPayload.signal.versionBit = Params().GetConsensus().vDeployments[Consensus::DEPLOYMENT_MN_RR].bit;
 
-    LogPrintf("knst looking id %s while ids: %lld\n", recoveredSig.getId().ToString(), ids.size());
+    const uint256 expectedId = mnhfPayload.GetRequestId();
+    LogPrintf("CEHFSignalsHandler::HandleNewRecoveredSig expecting ID=%s received=%s\n", expectedId().ToString(), recoveredSig.getId().ToString());
     if (recoveredSig.getId() != mnhfPayload.GetRequestId()) {
         // there's nothing interesting for CEHFSignalsHandler
-        LogPrintf("ids no matched: %s vs %s\n", recoveredSig.getId().ToString(), mnhfPayload.GetRequestId().ToString());
+        LogPrintf("CEHFSignalsHandler::HandleNewRecoveredSig checking if it is MN_RR release. Expected: %s\n", mnhfPayload.GetRequestId().ToString());
         return;
     }
 
@@ -129,13 +133,13 @@ void CEHFSignalsHandler::HandleNewRecoveredSig(const CRecoveredSig& recoveredSig
 
     {
         CTransactionRef tx_to_sent = MakeTransactionRef(std::move(tx));
-        LogPrintf("Special EHF TX is going to sent hash=%s\n", tx_to_sent->GetHash().ToString());
+        LogPrintf("CEHFSignalsHandler::HandleNewRecoveredSig Special EHF TX is going to sent hash=%s\n", tx_to_sent->GetHash().ToString());
         LOCK(cs_main);
         TxValidationState state;
         if (AcceptToMemoryPool(chainstate, mempool, state, tx_to_sent, /* bypass_limits=*/ false, /* nAbsurdFee=*/ 0)) {
             connman.RelayTransaction(*tx_to_sent);
         } else {
-            LogPrintf("%s -- AcceptToMemoryPool failed: %s\n", __func__, state.ToString());
+            LogPrintf("CEHFSignalsHandler::HandleNewRecoveredSig -- AcceptToMemoryPool failed: %s\n", state.ToString());
         }
     }
 }
