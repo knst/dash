@@ -73,6 +73,7 @@ void CEHFSignalsHandler::trySignEHFSignal(int bit, const CBlockIndex* const pind
         return;
     }
     if (sigman.HasRecoveredSigForId(llmqType, requestId)) {
+        LOCK(cs);
         ids.insert(requestId);
 
         // no need to sign same message one more time
@@ -88,7 +89,10 @@ void CEHFSignalsHandler::trySignEHFSignal(int bit, const CBlockIndex* const pind
     mnhfPayload.signal.quorumHash = quorum->qc->quorumHash;
     const uint256 msgHash = mnhfPayload.PrepareTx().GetHash();
 
-    ids.insert(requestId);
+    {
+        LOCK(cs);
+        ids.insert(requestId);
+    }
     sigman.AsyncSignIfMember(llmqType, shareman, requestId, msgHash);
 }
 
@@ -98,7 +102,7 @@ void CEHFSignalsHandler::HandleNewRecoveredSig(const CRecoveredSig& recoveredSig
         g_txindex->BlockUntilSyncedToCurrentChain();
     }
 
-    if (ids.find(recoveredSig.getId()) == ids.end()) {
+    if (WITH_LOCK(cs, return ids.find(recoveredSig.getId()) == ids.end())) {
         // Do nothing, it's not for this handler
         return;
     }

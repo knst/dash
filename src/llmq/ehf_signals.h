@@ -38,6 +38,7 @@ private:
      * keep freshly generated IDs for easier filter sigs in HandleNewRecoveredSig
      */
     std::set<uint256> ids;
+    mutable Mutex cs;
 public:
     explicit CEHFSignalsHandler(CChainState& chainstate, CConnman& connman,
                                 CSigningManager& sigman, CSigSharesManager& shareman,
