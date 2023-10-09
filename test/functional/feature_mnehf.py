@@ -203,6 +203,7 @@ class MnehfTest(DashTestFramework):
                 self.restart_all_nodes()
 
         self.check_fork('active')
+
         fork_active_blockhash = node.getbestblockhash()
         self.log.info(f"Invalidate block: {ehf_blockhash} with tip {fork_active_blockhash}")
         for inode in self.nodes:
@@ -258,7 +259,7 @@ class MnehfTest(DashTestFramework):
 
         self.log.info("activate MN_RR also by enabling spork 24")
         assert_equal(get_bip9_details(node, 'mn_rr')['status'], 'defined')
-        self.nodes[0].sporkupdate("SPORK_24_MN_RR_READY", 0)
+        self.nodes[0].sporkupdate("SPORK_24_EHF", 0)
         self.wait_for_sporks_same()
 
         self.check_fork('defined')

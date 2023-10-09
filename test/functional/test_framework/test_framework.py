@@ -1071,6 +1071,7 @@ class DashTestFramework(BitcoinTestFramework):
         self.sync_blocks()
 
     def activate_by_name(self, name, expected_activation_height=None):
+        assert not softfork_active(self.nodes[0], name)
         self.log.info("Wait for " + name + " activation")
 
         # disable spork17 while mining blocks to activate "name" to prevent accidental quorum formation
@@ -1083,6 +1084,7 @@ class DashTestFramework(BitcoinTestFramework):
         batch_size = 10
         if expected_activation_height is not None:
             height = self.nodes[0].getblockcount()
+            assert height < expected_activation_height
             # NOTE: getblockchaininfo shows softforks active at block (window * 3 - 1)
             # since it's returning whether a softwork is active for the _next_ block.
             # Hence the last block prior to the activation is (expected_activation_height - 2).
@@ -1122,20 +1124,16 @@ class DashTestFramework(BitcoinTestFramework):
     def activate_v20(self, expected_activation_height=None):
         self.activate_by_name('v20', expected_activation_height)
 
-    def activate_mn_rr(self):
-        self.nodes[0].sporkupdate("SPORK_24_MN_RR_READY", 0)
+    def activate_mn_rr(self, expected_activation_height=None):
+        self.nodes[0].sporkupdate("SPORK_24_EHF", 0)
         self.wait_for_sporks_same()
-
         mn_rr_status = 0
         while mn_rr_status == 0:
             time.sleep(1)
-            mn_rr_status = get_bip9_details(self.nodes[0], 'mn_rr')['EHF']
+            mn_rr_status = get_bip9_details(self.nodes[0], 'mn_rr')['ehf']
             self.nodes[0].generate(1)
             self.sync_all()
-        # only couple extra blocks are needed, so, helper `activate_by_name` is not needed
-        while get_bip9_details(self.nodes[0], 'mn_rr')['status'] != 'active':
-            self.nodes[0].generate(1)
-            self.sync_all()
+        self.activate_by_name('mn_rr', expected_activation_height)
 
     def set_dash_llmq_test_params(self, llmq_size, llmq_threshold):
         self.llmq_size = llmq_size

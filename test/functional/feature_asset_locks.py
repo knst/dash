@@ -455,7 +455,7 @@ class AssetLocksTest(DashTestFramework):
         self.sync_mempools()
         node.generate(1)
         self.sync_all()
-        self.log.info(f"MN RR status: {get_bip9_details(node, 'mn_rr')}")
+        self.log.info(f"MN_RR status: {get_bip9_details(node, 'mn_rr')}")
 
         new_total = self.get_credit_pool_balance()
         amount_actually_withdrawn = total - new_total
@@ -507,8 +507,10 @@ class AssetLocksTest(DashTestFramework):
         self.check_mempool_size()
 
         # activate MN_RR reallocation
-        self.activate_mn_rr()
+        self.activate_mn_rr(expected_activation_height=node.getblockcount() + 12 * 3)
         self.log.info(f'height: {node.getblockcount()} credit: {self.get_credit_pool_balance()}')
+        assert_equal(new_total, self.get_credit_pool_balance())
+
         bt = node.getblocktemplate()
         platform_reward = bt['masternode'][0]['amount']
         assert_equal(bt['masternode'][0]['script'], '6a')  # empty OP_RETURN

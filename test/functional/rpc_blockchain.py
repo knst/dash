@@ -147,7 +147,7 @@ class BlockchainTest(BitcoinTestFramework):
                     'start_time': 0,
                     'timeout': 9223372036854775807,
                     'since': 0,
-                    'EHF': -1,
+                    'ehf': -1,
                 }, 'active': False},
             'mn_rr': {
                 'type': 'bip9',
@@ -156,7 +156,7 @@ class BlockchainTest(BitcoinTestFramework):
                     'start_time': 0,
                     'timeout': 9223372036854775807,
                     'since': 0,
-                    'EHF': 0,
+                    'ehf': 0,
                 },
                 'active': False},
             'testdummy': {
@@ -174,7 +174,7 @@ class BlockchainTest(BitcoinTestFramework):
                         'count': 57,
                         'possible': True,
                     },
-                    'EHF': -1,
+                    'ehf': -1,
                 },
                 'active': False},
         })

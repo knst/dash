@@ -46,17 +46,12 @@ CEHFSignalsHandler::~CEHFSignalsHandler()
 
 void CEHFSignalsHandler::UpdatedBlockTip(const CBlockIndex* const pindexNew)
 {
-    if (!fMasternodeMode) {
+    if (!fMasternodeMode || !llmq::utils::IsV20Active(pindexNew) || !sporkman.IsSporkActive(SPORK_24_EHF)) {
         return;
     }
 
-    if (!llmq::utils::IsV20Active(pindexNew)) {
-        return;
-    }
-
-    if (sporkman.IsSporkActive(SPORK_24_MN_RR_READY)) {
-        trySignEHFSignal(Params().GetConsensus().vDeployments[Consensus::DEPLOYMENT_MN_RR].bit, pindexNew);
-    }
+    // TODO: should do this for all not-yet-signied bits
+    trySignEHFSignal(Params().GetConsensus().vDeployments[Consensus::DEPLOYMENT_MN_RR].bit, pindexNew);
 }
 
 void CEHFSignalsHandler::trySignEHFSignal(int bit, const CBlockIndex* const pindex)
@@ -108,6 +103,7 @@ void CEHFSignalsHandler::HandleNewRecoveredSig(const CRecoveredSig& recoveredSig
     }
 
     MNHFTxPayload mnhfPayload;
+    // TODO: should do this for all not-yet-signied bits
     mnhfPayload.signal.versionBit = Params().GetConsensus().vDeployments[Consensus::DEPLOYMENT_MN_RR].bit;
 
     const uint256 expectedId = mnhfPayload.GetRequestId();
