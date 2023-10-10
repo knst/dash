@@ -55,7 +55,7 @@ public:
     void HandleNewRecoveredSig(const CRecoveredSig& recoveredSig) override LOCKS_EXCLUDED(cs);
 
 private:
-    void trySignEHFSignal(int bit, const CBlockIndex* const pindex);
+    void trySignEHFSignal(int bit, const CBlockIndex* const pindex) LOCKS_EXCLUDED(cs);
 
 };
 
