@@ -7,7 +7,9 @@
 import os
 import random
 import shutil
+from test_framework.address import key_to_p2pkh
 from test_framework.descriptors import descsum_create
+from test_framework.key import ECPubKey
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.messages import COIN, CTransaction, CTxOut
 from test_framework.script_util import key_to_p2pkh_script, script_to_p2sh_script
@@ -606,6 +608,48 @@ class WalletMigrationTest(BitcoinTestFramework):
         self.nodes[0].loadwallet(info_migration["watchonly_name"])
         assert_equal(wallet_wo.getbalances()['mine']['trusted'], 2)
 
+    def test_hybrid_pubkey(self):
+        self.log.info("Test migration when wallet contains a hybrid pubkey")
+
+        wallet = self.create_legacy_wallet("hybrid_keys")
+
+        # Get the hybrid pubkey for one of the keys in the wallet
+        normal_pubkey = wallet.getaddressinfo(wallet.getnewaddress())["pubkey"]
+        first_byte = bytes.fromhex(normal_pubkey)[0] + 4 # Get the hybrid pubkey first byte
+        parsed_pubkey = ECPubKey()
+        parsed_pubkey.set(bytes.fromhex(normal_pubkey))
+        parsed_pubkey.compressed = False
+        hybrid_pubkey_bytes = bytearray(parsed_pubkey.get_bytes())
+        hybrid_pubkey_bytes[0] = first_byte # Make it hybrid
+        hybrid_pubkey = hybrid_pubkey_bytes.hex()
+
+        # Import the hybrid pubkey
+        wallet.importpubkey(hybrid_pubkey)
+        p2pkh_addr = key_to_p2pkh(hybrid_pubkey)
+        p2pkh_addr_info = wallet.getaddressinfo(p2pkh_addr)
+        assert_equal(p2pkh_addr_info["iswatchonly"], True)
+        assert_equal(p2pkh_addr_info["ismine"], False) # Things involving hybrid pubkeys are not spendable
+
+        migrate_info = wallet.migratewallet()
+
+        # The address should only appear in the watchonly wallet
+        p2pkh_addr_info = wallet.getaddressinfo(p2pkh_addr)
+        assert_equal(p2pkh_addr_info["iswatchonly"], False)
+        assert_equal(p2pkh_addr_info["ismine"], False)
+
+        watchonly_wallet = self.nodes[0].get_wallet_rpc(migrate_info["watchonly_name"])
+        watchonly_p2pkh_addr_info = watchonly_wallet.getaddressinfo(p2pkh_addr)
+        assert_equal(watchonly_p2pkh_addr_info["iswatchonly"], False)
+        assert_equal(watchonly_p2pkh_addr_info["ismine"], True)
+
+        # There should only be raw or addr descriptors
+        for desc in watchonly_wallet.listdescriptors()["descriptors"]:
+            if desc["desc"].startswith("raw(") or desc["desc"].startswith("addr("):
+                continue
+            assert False, "Hybrid pubkey watchonly wallet has more than just raw() and addr()"
+
+        wallet.unloadwallet()
+
     def run_test(self):
         self.generate(self.nodes[0], 101)
 
@@ -622,6 +666,7 @@ class WalletMigrationTest(BitcoinTestFramework):
         self.test_default_wallet()
         self.test_direct_file()
         self.test_migrate_raw_p2sh()
+        self.test_hybrid_pubkey()
 
 if __name__ == '__main__':
     WalletMigrationTest().main()
