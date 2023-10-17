@@ -495,6 +495,7 @@ CAmount CSuperblock::GetPaymentsLimit(int nBlockHeight)
     }
 
     const CBlockIndex* tipIndex = ::ChainActive().Tip();
+    bool fV20Active = llmq::utils::IsV20Active(tipIndex);
     bool fMNRewardReallocated = llmq::utils::IsMNRewardReallocationActive(tipIndex);
     if (!fMNRewardReallocated && nBlockHeight > tipIndex->nHeight) {
         // If fMNRewardReallocated isn't active yet and nBlockHeight refers to a future SuperBlock
@@ -508,7 +509,7 @@ CAmount CSuperblock::GetPaymentsLimit(int nBlockHeight)
     // min subsidy for high diff networks and vice versa
     int nBits = consensusParams.fPowAllowMinDifficultyBlocks ? UintToArith256(consensusParams.powLimit).GetCompact() : 1;
     // some part of all blocks issued during the cycle goes to superblock, see GetBlockSubsidy
-    CAmount nSuperblockPartOfSubsidy = GetSuperblockSubsidyInner(nBits, nBlockHeight - 1, consensusParams, fMNRewardReallocated);
+    CAmount nSuperblockPartOfSubsidy = GetSuperblockSubsidyInner(nBits, nBlockHeight - 1, consensusParams, fV20Active, fMNRewardReallocated);
     CAmount nPaymentsLimit = nSuperblockPartOfSubsidy * consensusParams.nSuperblockCycle;
     LogPrint(BCLog::GOBJECT, "CSuperblock::GetPaymentsLimit -- Valid superblock height %d, payments max %lld\n", nBlockHeight, nPaymentsLimit);
 
