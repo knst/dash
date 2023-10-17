@@ -51,27 +51,6 @@ llmq_type_test = 106 # LLMQType::LLMQ_TEST_PLATFORM
 tiny_amount = int(Decimal("0.0007") * COIN)
 blocks_in_one_day = 576
 
-from test_framework.mininode import P2PInterface
-class TestP2PConn(P2PInterface):
-    def __init__(self):
-        super().__init__()
-        self.last_mnlistdiff = None
-
-    def on_mnlistdiff(self, message):
-        self.last_mnlistdiff = message
-
-    def wait_for_mnlistdiff(self, timeout=30):
-        def received_mnlistdiff():
-            return self.last_mnlistdiff is not None
-        return wait_until(received_mnlistdiff, timeout=timeout)
-
-    def getmnlistdiff(self, baseBlockHash, blockHash):
-        msg = msg_getmnlistd(baseBlockHash, blockHash)
-        self.last_mnlistdiff = None
-        self.send_message(msg)
-        self.wait_for_mnlistdiff()
-        return self.last_mnlistdiff
-
 def extract_quorum_members(quorum_info):
     return [d['proTxHash'] for d in quorum_info["members"]]
 
@@ -178,6 +157,7 @@ class AssetLocksTest(DashTestFramework):
         if block_hash is None:
             block_hash = node.getbestblockhash()
         block = node.getblock(block_hash)
+        self.log.info(f"block: {block}")
         return int(COIN * block['cbTx']['creditPoolBalance'])
 
     def validate_credit_pool_balance(self, expected = None, block_hash = None):
@@ -284,7 +264,6 @@ class AssetLocksTest(DashTestFramework):
         # Otherwise only masternode connections will be established between nodes, which won't propagate TXs/blocks
         # Usually node0 is the one that does this, but in this test we isolate it multiple times
 
-        self.test_node = self.nodes[0].add_p2p_connection(TestP2PConn())
         null_hash = format(0, "064x")
 
         for i in range(len(self.nodes)):
@@ -358,6 +337,10 @@ class AssetLocksTest(DashTestFramework):
         while coin is None or COIN * coin['amount'] < locked_2:
             coin = coins.pop()
         asset_lock_tx = self.create_assetlock(coin, locked_1, pubkey)
+
+
+        node.generate(1)
+        self.sync_all()
 
         self.check_mempool_result(tx=asset_lock_tx, result_expected={'allowed': True})
         self.validate_credit_pool_balance(0)
