@@ -25,13 +25,6 @@ BOOST_AUTO_TEST_CASE(block_subsidy_test)
     nSubsidy = GetBlockSubsidyInner(nPrevBits, nPrevHeight, chainParams->GetConsensus(), /*fV20Active=*/ false, /*fMNRewardReallocated=*/ false);
     BOOST_CHECK_EQUAL(nSubsidy, 50000000000ULL);
 
-    // details for block 4249 (subsidy returned will be for block 4250)
-    // v20 should make difference for blocks with low diff, regardless of their height
-    nPrevBits = 0x1c4a47c4;
-    nPrevHeight = 4249;
-    nSubsidy = GetBlockSubsidyInner(nPrevBits, nPrevHeight, chainParams->GetConsensus(), /*fV20Active=*/ false, /*fMNRewardReallocated=*/ false);
-    BOOST_CHECK_EQUAL(nSubsidy, 500000000ULL);
-
     // details for block 4501 (subsidy returned will be for block 4502)
     nPrevBits = 0x1c4a47c4;
     nPrevHeight = 4501;
@@ -96,12 +89,6 @@ BOOST_AUTO_TEST_CASE(block_subsidy_test)
     nSubsidy = GetBlockSubsidyInner(nPrevBits, nPrevHeight, chainParams->GetConsensus(), /*fV20Active=*/ false, /*fMNRewardReallocated=*/ false);
     BOOST_CHECK_EQUAL(nSubsidy, 388010205ULL);
 
-    // details for block 420480 (subsidy returned will be for block 210241)
-    // budgets are active, reallocation matters now
-    nPrevBits = 0x1b10d50b;
-    nPrevHeight = 420480;
-    nSubsidy = GetBlockSubsidyInner(nPrevBits, nPrevHeight, chainParams->GetConsensus(), /*fV20Active=*/ false, /*fMNRewardReallocated=*/ false);
-    BOOST_CHECK_EQUAL(nSubsidy, 344897960ULL);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

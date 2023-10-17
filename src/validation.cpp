@@ -1132,13 +1132,13 @@ static std::pair<CAmount, CAmount> GetBlockSubsidyHelper(int nPrevBits, int nPre
     }
 
     // TODO remove "not testnet" condition when we re-organize testnet
-    if (fV20Active && Params().NetworkIDString() != CBaseChainParams::TESTNET) {
+/*    if (fV20Active && Params().NetworkIDString() != CBaseChainParams::TESTNET) {
         // Starting from V20 Activation, subsidybase should be stable.
         // Currently, nSubsidyBase calculate relies on difficulty.
         // Once Platform is live, it must constantly get blocks difficulty in order to calculate platformReward.
         // This can not be continued so we set the nSubsidyBase to a fixed value.
         nSubsidyBase = 5;
-    } else if (nPrevHeight < 5465) {
+    } else */if (nPrevHeight < 5465) {
         // Early ages...
         // 1111/((x+1)^2)
         nSubsidyBase = (1111.0 / (pow((dDiff+1.0),2.0)));
