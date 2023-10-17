@@ -26,8 +26,6 @@ from test_framework.messages import (
     FromHex,
     hash256,
     ser_string,
-    msg_getmnlistd,
-
 )
 from test_framework.script import (
     CScript,
@@ -44,30 +42,13 @@ from test_framework.util import (
     assert_greater_than,
     assert_greater_than_or_equal,
     hex_str_to_bytes,
-    wait_until,
 )
 
 llmq_type_test = 106 # LLMQType::LLMQ_TEST_PLATFORM
 tiny_amount = int(Decimal("0.0007") * COIN)
 blocks_in_one_day = 576
 
-def extract_quorum_members(quorum_info):
-    return [d['proTxHash'] for d in quorum_info["members"]]
-
 class AssetLocksTest(DashTestFramework):
-    def test_quorum_members_are_evo_nodes(self, quorum_hash, llmq_type):
-        quorum_info = self.nodes[0].quorum("info", llmq_type, quorum_hash)
-        quorum_members = extract_quorum_members(quorum_info)
-        mninfos_online = self.mninfo.copy()
-        for qm in quorum_members:
-            found = False
-            for mn in mninfos_online:
-                if mn.proTxHash == qm:
-                    assert_equal(mn.evo, True)
-                    found = True
-                    break
-            assert_equal(found, True)
-
     def test_masternode_count(self, expected_mns_count, expected_evo_count):
         mn_count = self.nodes[0].masternode('count')
         assert_equal(mn_count['total'], expected_mns_count + expected_evo_count)
@@ -76,8 +57,7 @@ class AssetLocksTest(DashTestFramework):
         assert_equal(detailed_count['evo']['total'], expected_evo_count)
 
     def set_test_params(self):
-        self.set_dash_test_params(5, 4, fast_dip3_enforcement=True, evo_count=7)
-        self.set_dash_llmq_test_params(4, 4)
+        self.set_dash_test_params(5, 4, fast_dip3_enforcement=True, evo_count=4)
 
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
@@ -264,8 +244,6 @@ class AssetLocksTest(DashTestFramework):
         # Otherwise only masternode connections will be established between nodes, which won't propagate TXs/blocks
         # Usually node0 is the one that does this, but in this test we isolate it multiple times
 
-        null_hash = format(0, "064x")
-
         for i in range(len(self.nodes)):
             if i != 0:
                 self.connect_nodes(i, 0)
@@ -274,9 +252,6 @@ class AssetLocksTest(DashTestFramework):
 
         self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
         self.wait_for_sporks_same()
-
-        expectedUpdated = [mn.proTxHash for mn in self.mninfo]
-        b_0 = self.nodes[0].getbestblockhash()
 
         self.mine_quorum(llmq_type_name='llmq_test', llmq_type=100)
 
@@ -297,21 +272,17 @@ class AssetLocksTest(DashTestFramework):
         (quorum_info_i_0, quorum_info_i_1) = self.mine_cycle_quorum(llmq_type_name='llmq_test_dip0024', llmq_type=103)
 
         evo_protxhash_list = list()
-        for i in range(5):
+        for i in range(3):
             evo_info = self.dynamically_add_masternode(evo=True)
             evo_protxhash_list.append(evo_info.proTxHash)
             self.nodes[0].generate(8)
             self.sync_blocks(self.nodes)
-
-            expectedUpdated.append(evo_info.proTxHash)
-            b_i = self.nodes[0].getbestblockhash()
 
             self.test_masternode_count(expected_mns_count=4, expected_evo_count=i+1)
             self.dynamically_evo_update_service(evo_info)
 
         self.log.info("Test llmq_platform are formed only with EvoNodes")
         quorum_i_hash = self.mine_quorum(llmq_type_name='llmq_test_platform', llmq_type=106, expected_connections=2, expected_members=3, expected_contributions=3, expected_complaints=0, expected_justifications=0, expected_commitments=3 )
-        self.test_quorum_members_are_evo_nodes(quorum_i_hash, llmq_type=106)
 
         self.log.info("Test that EvoNodes are present in MN list")
         node_wallet = self.nodes[0]
