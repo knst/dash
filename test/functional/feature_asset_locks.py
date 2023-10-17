@@ -57,7 +57,7 @@ class AssetLocksTest(DashTestFramework):
         assert_equal(detailed_count['evo']['total'], expected_evo_count)
 
     def set_test_params(self):
-        self.set_dash_test_params(5, 4, fast_dip3_enforcement=True, evo_count=4)
+        self.set_dash_test_params(5, 3, fast_dip3_enforcement=True, evo_count=3)
 
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
@@ -257,7 +257,7 @@ class AssetLocksTest(DashTestFramework):
 
         self.log.info("Test that EvoNodes registration is rejected before v19")
 
-        self.test_masternode_count(expected_mns_count=4, expected_evo_count=0)
+        self.test_masternode_count(expected_mns_count=3, expected_evo_count=0)
 
         self.activate_v19(expected_activation_height=900)
         self.log.info("Activated v19 at height:" + str(self.nodes[0].getblockcount()))
@@ -278,7 +278,7 @@ class AssetLocksTest(DashTestFramework):
             self.nodes[0].generate(8)
             self.sync_blocks(self.nodes)
 
-            self.test_masternode_count(expected_mns_count=4, expected_evo_count=i+1)
+            self.test_masternode_count(expected_mns_count=3, expected_evo_count=i+1)
             self.dynamically_evo_update_service(evo_info)
 
         self.log.info("Test llmq_platform are formed only with EvoNodes")
@@ -290,6 +290,9 @@ class AssetLocksTest(DashTestFramework):
 
 #        self.set_sporks()
         self.activate_v20()
+
+        node.generate(1)
+        self.sync_all()
 
         self.mempool_size = 0
 
@@ -309,9 +312,6 @@ class AssetLocksTest(DashTestFramework):
             coin = coins.pop()
         asset_lock_tx = self.create_assetlock(coin, locked_1, pubkey)
 
-
-        node.generate(1)
-        self.sync_all()
 
         self.check_mempool_result(tx=asset_lock_tx, result_expected={'allowed': True})
         self.validate_credit_pool_balance(0)
