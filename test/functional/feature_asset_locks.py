@@ -26,13 +26,7 @@ from test_framework.messages import (
     FromHex,
     hash256,
     ser_string,
-    CBlockHeader,
     msg_getmnlistd,
-    CMerkleBlock, 
-    CCbTx,
-    QuorumId,
-    ser_uint256,
-    CBlock,
 
 )
 from test_framework.script import (
@@ -110,57 +104,6 @@ class AssetLocksTest(DashTestFramework):
         detailed_count = mn_count['detailed']
         assert_equal(detailed_count['regular']['total'], expected_mns_count)
         assert_equal(detailed_count['evo']['total'], expected_evo_count)
-
-    def test_getmnlistdiff_base(self, baseBlockHash, blockHash):
-        hexstr = self.nodes[0].getblockheader(blockHash, False)
-        header = FromHex(CBlockHeader(), hexstr)
-
-        d = self.test_node.getmnlistdiff(int(baseBlockHash, 16), int(blockHash, 16))
-        assert_equal(d.baseBlockHash, int(baseBlockHash, 16))
-        assert_equal(d.blockHash, int(blockHash, 16))
-
-        # Check that the merkle proof is valid
-        proof = CMerkleBlock(header, d.merkleProof)
-        proof = proof.serialize().hex()
-        assert_equal(self.nodes[0].verifytxoutproof(proof), [d.cbTx.hash])
-
-        # Check if P2P messages match with RPCs
-        d2 = self.nodes[0].protx("diff", baseBlockHash, blockHash)
-        assert_equal(d2["baseBlockHash"], baseBlockHash)
-        assert_equal(d2["blockHash"], blockHash)
-        assert_equal(d2["cbTxMerkleTree"], d.merkleProof.serialize().hex())
-        assert_equal(d2["cbTx"], d.cbTx.serialize().hex())
-        assert_equal(set([int(e, 16) for e in d2["deletedMNs"]]), set(d.deletedMNs))
-        assert_equal(set([int(e["proRegTxHash"], 16) for e in d2["mnList"]]), set([e.proRegTxHash for e in d.mnList]))
-        assert_equal(set([QuorumId(e["llmqType"], int(e["quorumHash"], 16)) for e in d2["deletedQuorums"]]), set(d.deletedQuorums))
-        assert_equal(set([QuorumId(e["llmqType"], int(e["quorumHash"], 16)) for e in d2["newQuorums"]]), set([QuorumId(e.llmqType, e.quorumHash) for e in d.newQuorums]))
-
-        return d
-    def test_getmnlistdiff(self, baseBlockHash, blockHash, baseMNList, expectedDeleted, expectedUpdated):
-        d = self.test_getmnlistdiff_base(baseBlockHash, blockHash)
-
-        # Assert that the deletedMNs and mnList fields are what we expected
-        assert_equal(set(d.deletedMNs), set([int(e, 16) for e in expectedDeleted]))
-        assert_equal(set([e.proRegTxHash for e in d.mnList]), set(int(e, 16) for e in expectedUpdated))
-
-        # Build a new list based on the old list and the info from the diff
-        newMNList = baseMNList.copy()
-        for e in d.deletedMNs:
-            newMNList.pop(format(e, '064x'))
-        for e in d.mnList:
-            newMNList[format(e.proRegTxHash, '064x')] = e
-
-        cbtx = CCbTx()
-        cbtx.deserialize(BytesIO(d.cbTx.vExtraPayload))
-
-        # Verify that the merkle root matches what we locally calculate
-        hashes = []
-        for mn in sorted(newMNList.values(), key=lambda mn: ser_uint256(mn.proRegTxHash)):
-            hashes.append(hash256(mn.serialize(with_version = False)))
-        merkleRoot = CBlock.get_merkle_root(hashes)
-        assert_equal(merkleRoot, cbtx.merkleRootMNList)
-
-        return newMNList
 
     def set_test_params(self):
         self.set_dash_test_params(5, 4, fast_dip3_enforcement=True, evo_count=7)
@@ -364,7 +307,6 @@ class AssetLocksTest(DashTestFramework):
 
         expectedUpdated = [mn.proTxHash for mn in self.mninfo]
         b_0 = self.nodes[0].getbestblockhash()
-#        self.test_getmnlistdiff(null_hash, b_0, {}, [], expectedUpdated)
 
         self.mine_quorum(llmq_type_name='llmq_test', llmq_type=100)
 
@@ -394,7 +336,6 @@ class AssetLocksTest(DashTestFramework):
 
             expectedUpdated.append(evo_info.proTxHash)
             b_i = self.nodes[0].getbestblockhash()
-#            self.test_getmnlistdiff(null_hash, b_i, {}, [], expectedUpdated)
 
             self.test_masternode_count(expected_mns_count=4, expected_evo_count=i+1)
             self.dynamically_evo_update_service(evo_info)
