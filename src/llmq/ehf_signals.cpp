@@ -24,16 +24,14 @@ namespace llmq {
 
 CEHFSignalsHandler::CEHFSignalsHandler(CChainState& chainstate, CConnman& connman,
                                        CSigningManager& sigman, CSigSharesManager& shareman,
-                                       CSporkManager& sporkman, CQuorumManager& qman, CTxMemPool& mempool,
-                                       CMNHFManager& mnhfManager) :
+                                       const CSporkManager& sporkman, const CQuorumManager& qman, CTxMemPool& mempool) :
     chainstate(chainstate),
     connman(connman),
     sigman(sigman),
     shareman(shareman),
     sporkman(sporkman),
     qman(qman),
-    mempool(mempool),
-    mnhfManager(mnhfManager)
+    mempool(mempool)
 {
     sigman.RegisterRecoveredSigsListener(this);
 }

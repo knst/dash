@@ -12,7 +12,6 @@
 class CBlockIndex;
 class CChainState;
 class CConnman;
-class CMNHFManager;
 class CSporkManager;
 class CTxMemPool;
 
@@ -29,10 +28,9 @@ private:
     CConnman& connman;
     CSigningManager& sigman;
     CSigSharesManager& shareman;
-    CSporkManager& sporkman;
-    CQuorumManager& qman;
+    const CSporkManager& sporkman;
+    const CQuorumManager& qman;
     CTxMemPool& mempool;
-    CMNHFManager& mnhfManager;
 
     /**
      * keep freshly generated IDs for easier filter sigs in HandleNewRecoveredSig
@@ -42,8 +40,7 @@ private:
 public:
     explicit CEHFSignalsHandler(CChainState& chainstate, CConnman& connman,
                                 CSigningManager& sigman, CSigSharesManager& shareman,
-                                CSporkManager& sporkman, CQuorumManager& qman, CTxMemPool& mempool,
-                                CMNHFManager& mnhfManager);
+                                const CSporkManager& sporkman, const CQuorumManager& qman, CTxMemPool& mempool);
     ~CEHFSignalsHandler();
 
 
