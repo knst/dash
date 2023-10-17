@@ -65,7 +65,7 @@ public:
 
 public:
     /**
-     * helper function to calculare Request ID used for signing
+     * helper function to calculate Request ID used for signing
      */
     uint256 GetRequestId() const;
 
