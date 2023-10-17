@@ -26,6 +26,14 @@ from test_framework.messages import (
     FromHex,
     hash256,
     ser_string,
+    CBlockHeader,
+    msg_getmnlistd,
+    CMerkleBlock, 
+    CCbTx,
+    QuorumId,
+    ser_uint256,
+    CBlock,
+
 )
 from test_framework.script import (
     CScript,
@@ -42,15 +50,121 @@ from test_framework.util import (
     assert_greater_than,
     assert_greater_than_or_equal,
     hex_str_to_bytes,
+    wait_until,
 )
 
 llmq_type_test = 106 # LLMQType::LLMQ_TEST_PLATFORM
 tiny_amount = int(Decimal("0.0007") * COIN)
 blocks_in_one_day = 576
 
+from test_framework.mininode import P2PInterface
+class TestP2PConn(P2PInterface):
+    def __init__(self):
+        super().__init__()
+        self.last_mnlistdiff = None
+
+    def on_mnlistdiff(self, message):
+        self.last_mnlistdiff = message
+
+    def wait_for_mnlistdiff(self, timeout=30):
+        def received_mnlistdiff():
+            return self.last_mnlistdiff is not None
+        return wait_until(received_mnlistdiff, timeout=timeout)
+
+    def getmnlistdiff(self, baseBlockHash, blockHash):
+        msg = msg_getmnlistd(baseBlockHash, blockHash)
+        self.last_mnlistdiff = None
+        self.send_message(msg)
+        self.wait_for_mnlistdiff()
+        return self.last_mnlistdiff
+
+def extract_quorum_members(quorum_info):
+    return [d['proTxHash'] for d in quorum_info["members"]]
+
 class AssetLocksTest(DashTestFramework):
+    def test_evo_protx_are_in_mnlist(self, evo_protx_list):
+        mn_list = self.nodes[0].masternodelist()
+        for evo_protx in evo_protx_list:
+            found = False
+            for mn in mn_list:
+                if mn_list.get(mn)['proTxHash'] == evo_protx:
+                    found = True
+                    assert_equal(mn_list.get(mn)['type'], "Evo")
+            assert_equal(found, True)
+    def test_quorum_members_are_evo_nodes(self, quorum_hash, llmq_type):
+        quorum_info = self.nodes[0].quorum("info", llmq_type, quorum_hash)
+        quorum_members = extract_quorum_members(quorum_info)
+        mninfos_online = self.mninfo.copy()
+        for qm in quorum_members:
+            found = False
+            for mn in mninfos_online:
+                if mn.proTxHash == qm:
+                    assert_equal(mn.evo, True)
+                    found = True
+                    break
+            assert_equal(found, True)
+
+    def test_masternode_count(self, expected_mns_count, expected_evo_count):
+        mn_count = self.nodes[0].masternode('count')
+        assert_equal(mn_count['total'], expected_mns_count + expected_evo_count)
+        detailed_count = mn_count['detailed']
+        assert_equal(detailed_count['regular']['total'], expected_mns_count)
+        assert_equal(detailed_count['evo']['total'], expected_evo_count)
+
+    def test_getmnlistdiff_base(self, baseBlockHash, blockHash):
+        hexstr = self.nodes[0].getblockheader(blockHash, False)
+        header = FromHex(CBlockHeader(), hexstr)
+
+        d = self.test_node.getmnlistdiff(int(baseBlockHash, 16), int(blockHash, 16))
+        assert_equal(d.baseBlockHash, int(baseBlockHash, 16))
+        assert_equal(d.blockHash, int(blockHash, 16))
+
+        # Check that the merkle proof is valid
+        proof = CMerkleBlock(header, d.merkleProof)
+        proof = proof.serialize().hex()
+        assert_equal(self.nodes[0].verifytxoutproof(proof), [d.cbTx.hash])
+
+        # Check if P2P messages match with RPCs
+        d2 = self.nodes[0].protx("diff", baseBlockHash, blockHash)
+        assert_equal(d2["baseBlockHash"], baseBlockHash)
+        assert_equal(d2["blockHash"], blockHash)
+        assert_equal(d2["cbTxMerkleTree"], d.merkleProof.serialize().hex())
+        assert_equal(d2["cbTx"], d.cbTx.serialize().hex())
+        assert_equal(set([int(e, 16) for e in d2["deletedMNs"]]), set(d.deletedMNs))
+        assert_equal(set([int(e["proRegTxHash"], 16) for e in d2["mnList"]]), set([e.proRegTxHash for e in d.mnList]))
+        assert_equal(set([QuorumId(e["llmqType"], int(e["quorumHash"], 16)) for e in d2["deletedQuorums"]]), set(d.deletedQuorums))
+        assert_equal(set([QuorumId(e["llmqType"], int(e["quorumHash"], 16)) for e in d2["newQuorums"]]), set([QuorumId(e.llmqType, e.quorumHash) for e in d.newQuorums]))
+
+        return d
+    def test_getmnlistdiff(self, baseBlockHash, blockHash, baseMNList, expectedDeleted, expectedUpdated):
+        d = self.test_getmnlistdiff_base(baseBlockHash, blockHash)
+
+        # Assert that the deletedMNs and mnList fields are what we expected
+        assert_equal(set(d.deletedMNs), set([int(e, 16) for e in expectedDeleted]))
+        assert_equal(set([e.proRegTxHash for e in d.mnList]), set(int(e, 16) for e in expectedUpdated))
+
+        # Build a new list based on the old list and the info from the diff
+        newMNList = baseMNList.copy()
+        for e in d.deletedMNs:
+            newMNList.pop(format(e, '064x'))
+        for e in d.mnList:
+            newMNList[format(e.proRegTxHash, '064x')] = e
+
+        cbtx = CCbTx()
+        cbtx.deserialize(BytesIO(d.cbTx.vExtraPayload))
+
+        # Verify that the merkle root matches what we locally calculate
+        hashes = []
+        for mn in sorted(newMNList.values(), key=lambda mn: ser_uint256(mn.proRegTxHash)):
+            hashes.append(hash256(mn.serialize(with_version = False)))
+        merkleRoot = CBlock.get_merkle_root(hashes)
+        assert_equal(merkleRoot, cbtx.merkleRootMNList)
+
+        return newMNList
+
     def set_test_params(self):
-        self.set_dash_test_params(2, 0, evo_count=3)
+        self.set_dash_test_params(5, 4, fast_dip3_enforcement=True, evo_count=7)
+        self.set_dash_llmq_test_params(4, 4)
 
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
@@ -232,17 +346,77 @@ class AssetLocksTest(DashTestFramework):
             self.sync_all()
 
     def run_test(self):
+        # Connect all nodes to node1 so that we always have the whole network connected
+        # Otherwise only masternode connections will be established between nodes, which won't propagate TXs/blocks
+        # Usually node0 is the one that does this, but in this test we isolate it multiple times
+
+        self.test_node = self.nodes[0].add_p2p_connection(TestP2PConn())
+        null_hash = format(0, "064x")
+
+        for i in range(len(self.nodes)):
+            if i != 0:
+                self.connect_nodes(i, 0)
+
+        self.activate_dip8()
+
+        self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
+        self.wait_for_sporks_same()
+
+        expectedUpdated = [mn.proTxHash for mn in self.mninfo]
+        b_0 = self.nodes[0].getbestblockhash()
+        self.test_getmnlistdiff(null_hash, b_0, {}, [], expectedUpdated)
+
+        self.mine_quorum(llmq_type_name='llmq_test', llmq_type=100)
+
+        self.log.info("Test that EvoNodes registration is rejected before v19")
+#        self.test_evo_is_rejected_before_v19()
+
+        self.test_masternode_count(expected_mns_count=4, expected_evo_count=0)
+
+        self.activate_v19(expected_activation_height=900)
+        self.log.info("Activated v19 at height:" + str(self.nodes[0].getblockcount()))
+
+        self.move_to_next_cycle()
+        self.log.info("Cycle H height:" + str(self.nodes[0].getblockcount()))
+        self.move_to_next_cycle()
+        self.log.info("Cycle H+C height:" + str(self.nodes[0].getblockcount()))
+        self.move_to_next_cycle()
+        self.log.info("Cycle H+2C height:" + str(self.nodes[0].getblockcount()))
+
+        (quorum_info_i_0, quorum_info_i_1) = self.mine_cycle_quorum(llmq_type_name='llmq_test_dip0024', llmq_type=103)
+
+        evo_protxhash_list = list()
+        for i in range(5):
+            evo_info = self.dynamically_add_masternode(evo=True)
+            evo_protxhash_list.append(evo_info.proTxHash)
+            self.nodes[0].generate(8)
+            self.sync_blocks(self.nodes)
+
+            expectedUpdated.append(evo_info.proTxHash)
+            b_i = self.nodes[0].getbestblockhash()
+            self.test_getmnlistdiff(null_hash, b_i, {}, [], expectedUpdated)
+
+            self.test_masternode_count(expected_mns_count=4, expected_evo_count=i+1)
+            self.dynamically_evo_update_service(evo_info)
+
+        self.log.info("Test llmq_platform are formed only with EvoNodes")
+        for i in range(3):
+            quorum_i_hash = self.mine_quorum(llmq_type_name='llmq_test_platform', llmq_type=106, expected_connections=2, expected_members=3, expected_contributions=3, expected_complaints=0, expected_justifications=0, expected_commitments=3 )
+            self.test_quorum_members_are_evo_nodes(quorum_i_hash, llmq_type=106)
+
+        self.log.info("Test that EvoNodes are present in MN list")
+        self.test_evo_protx_are_in_mnlist(evo_protxhash_list)
         node_wallet = self.nodes[0]
         node = self.nodes[1]
 
-        self.set_sporks()
+#        self.set_sporks()
         self.activate_v20()
 
-        self.log.info(f"mn counts:  {self.nodes[0].masternode('count')}")
-        for i in range(3):
-            evo_info = self.dynamically_add_masternode(evo=True)
-            self.log.info(f"evo info: {evo_info}")
-        self.log.info(f"mn counts:  {self.nodes[0].masternode('count')}")
+#        self.log.info(f"mn counts:  {self.nodes[0].masternode('count')}")
+#        for i in range(3):
+#            evo_info = self.dynamically_add_masternode(evo=True)
+#            self.log.info(f"evo info: {evo_info}")
+#        self.log.info(f"mn counts:  {self.nodes[0].masternode('count')}")
         self.mempool_size = 0
 
         key = ECKey()
@@ -252,6 +426,8 @@ class AssetLocksTest(DashTestFramework):
         self.log.info("Testing asset lock...")
         locked_1 = 10 * COIN + 141421
         locked_2 = 10 * COIN + 314159
+
+        asset_unlock_tx = self.create_assetunlock(101, COIN, pubkey)
 
         coins = node_wallet.listunspent()
         coin = None
