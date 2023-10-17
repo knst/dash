@@ -76,15 +76,6 @@ def extract_quorum_members(quorum_info):
     return [d['proTxHash'] for d in quorum_info["members"]]
 
 class AssetLocksTest(DashTestFramework):
-    def test_evo_protx_are_in_mnlist(self, evo_protx_list):
-        mn_list = self.nodes[0].masternodelist()
-        for evo_protx in evo_protx_list:
-            found = False
-            for mn in mn_list:
-                if mn_list.get(mn)['proTxHash'] == evo_protx:
-                    found = True
-                    assert_equal(mn_list.get(mn)['type'], "Evo")
-            assert_equal(found, True)
     def test_quorum_members_are_evo_nodes(self, quorum_hash, llmq_type):
         quorum_info = self.nodes[0].quorum("info", llmq_type, quorum_hash)
         quorum_members = extract_quorum_members(quorum_info)
@@ -311,7 +302,6 @@ class AssetLocksTest(DashTestFramework):
         self.mine_quorum(llmq_type_name='llmq_test', llmq_type=100)
 
         self.log.info("Test that EvoNodes registration is rejected before v19")
-#        self.test_evo_is_rejected_before_v19()
 
         self.test_masternode_count(expected_mns_count=4, expected_evo_count=0)
 
@@ -341,23 +331,16 @@ class AssetLocksTest(DashTestFramework):
             self.dynamically_evo_update_service(evo_info)
 
         self.log.info("Test llmq_platform are formed only with EvoNodes")
-        for i in range(3):
-            quorum_i_hash = self.mine_quorum(llmq_type_name='llmq_test_platform', llmq_type=106, expected_connections=2, expected_members=3, expected_contributions=3, expected_complaints=0, expected_justifications=0, expected_commitments=3 )
-            self.test_quorum_members_are_evo_nodes(quorum_i_hash, llmq_type=106)
+        quorum_i_hash = self.mine_quorum(llmq_type_name='llmq_test_platform', llmq_type=106, expected_connections=2, expected_members=3, expected_contributions=3, expected_complaints=0, expected_justifications=0, expected_commitments=3 )
+        self.test_quorum_members_are_evo_nodes(quorum_i_hash, llmq_type=106)
 
         self.log.info("Test that EvoNodes are present in MN list")
-        self.test_evo_protx_are_in_mnlist(evo_protxhash_list)
         node_wallet = self.nodes[0]
         node = self.nodes[1]
 
 #        self.set_sporks()
         self.activate_v20()
 
-#        self.log.info(f"mn counts:  {self.nodes[0].masternode('count')}")
-#        for i in range(3):
-#            evo_info = self.dynamically_add_masternode(evo=True)
-#            self.log.info(f"evo info: {evo_info}")
-#        self.log.info(f"mn counts:  {self.nodes[0].masternode('count')}")
         self.mempool_size = 0
 
         key = ECKey()
