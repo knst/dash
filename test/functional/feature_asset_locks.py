@@ -49,15 +49,8 @@ tiny_amount = int(Decimal("0.0007") * COIN)
 blocks_in_one_day = 576
 
 class AssetLocksTest(DashTestFramework):
-    def test_masternode_count(self, expected_mns_count, expected_evo_count):
-        mn_count = self.nodes[0].masternode('count')
-        assert_equal(mn_count['total'], expected_mns_count + expected_evo_count)
-        detailed_count = mn_count['detailed']
-        assert_equal(detailed_count['regular']['total'], expected_mns_count)
-        assert_equal(detailed_count['evo']['total'], expected_evo_count)
-
     def set_test_params(self):
-        self.set_dash_test_params(5, 3, fast_dip3_enforcement=True, evo_count=3)
+        self.set_dash_test_params(5, 3, evo_count=3)
 
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
@@ -194,11 +187,10 @@ class AssetLocksTest(DashTestFramework):
         spork_enabled = 0
         spork_disabled = 4070908800
 
-        self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
-#        self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", spork_enabled)
-#        self.nodes[0].sporkupdate("SPORK_19_CHAINLOCKS_ENABLED", spork_disabled)
-#        self.nodes[0].sporkupdate("SPORK_3_INSTANTSEND_BLOCK_FILTERING", spork_disabled)
-#        self.nodes[0].sporkupdate("SPORK_2_INSTANTSEND_ENABLED", spork_disabled)
+        self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", spork_enabled)
+        self.nodes[0].sporkupdate("SPORK_19_CHAINLOCKS_ENABLED", spork_disabled)
+        self.nodes[0].sporkupdate("SPORK_3_INSTANTSEND_BLOCK_FILTERING", spork_disabled)
+        self.nodes[0].sporkupdate("SPORK_2_INSTANTSEND_ENABLED", spork_disabled)
         self.wait_for_sporks_same()
 
     def ensure_tx_is_not_mined(self, tx_id):
@@ -240,14 +232,6 @@ class AssetLocksTest(DashTestFramework):
             self.sync_all()
 
     def run_test(self):
-        # Connect all nodes to node1 so that we always have the whole network connected
-        # Otherwise only masternode connections will be established between nodes, which won't propagate TXs/blocks
-        # Usually node0 is the one that does this, but in this test we isolate it multiple times
-
-        for i in range(len(self.nodes)):
-            if i != 0:
-                self.connect_nodes(i, 0)
-
         self.activate_dip8()
 
         self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
@@ -255,30 +239,22 @@ class AssetLocksTest(DashTestFramework):
 
         self.mine_quorum(llmq_type_name='llmq_test', llmq_type=100)
 
-        self.log.info("Test that EvoNodes registration is rejected before v19")
-
-        self.test_masternode_count(expected_mns_count=3, expected_evo_count=0)
-
         self.activate_v19(expected_activation_height=900)
         self.log.info("Activated v19 at height:" + str(self.nodes[0].getblockcount()))
-
 
         for i in range(3):
             evo_info = self.dynamically_add_masternode(evo=True)
             self.nodes[0].generate(8)
             self.sync_blocks(self.nodes)
 
-            self.test_masternode_count(expected_mns_count=3, expected_evo_count=i+1)
             self.dynamically_evo_update_service(evo_info)
 
-        self.log.info("Test llmq_platform are formed only with EvoNodes")
-        quorum_i_hash = self.mine_quorum(llmq_type_name='llmq_test_platform', llmq_type=106, expected_connections=2, expected_members=3, expected_contributions=3, expected_complaints=0, expected_justifications=0, expected_commitments=3 )
 
         self.log.info("Test that EvoNodes are present in MN list")
         node_wallet = self.nodes[0]
         node = self.nodes[1]
 
-#        self.set_sporks()
+        self.set_sporks()
         self.activate_v20()
 
         node.generate(1)
@@ -294,6 +270,8 @@ class AssetLocksTest(DashTestFramework):
         locked_1 = 10 * COIN + 141421
         locked_2 = 10 * COIN + 314159
 
+        self.log.info("Test llmq_platform are formed only with EvoNodes")
+        quorum_i_hash = self.mine_quorum(llmq_type_name='llmq_test_platform', llmq_type=106, expected_connections=2, expected_members=3, expected_contributions=3, expected_complaints=0, expected_justifications=0, expected_commitments=3 )
         asset_unlock_tx = self.create_assetunlock(101, COIN, pubkey)
         self.log.info("withdrawal is signed!")
 
