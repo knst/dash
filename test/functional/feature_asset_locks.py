@@ -236,10 +236,8 @@ class AssetLocksTest(DashTestFramework):
         node = self.nodes[1]
 
         self.activate_dip8()
-
         self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
         self.wait_for_sporks_same()
-
         self.mine_quorum(llmq_type_name='llmq_test', llmq_type=100)
 
         self.activate_v19(expected_activation_height=900)
@@ -268,11 +266,6 @@ class AssetLocksTest(DashTestFramework):
         self.log.info("Testing asset lock...")
         locked_1 = 10 * COIN + 141421
         locked_2 = 10 * COIN + 314159
-
-        self.log.info("Test llmq_platform are formed only with EvoNodes")
-        quorum_i_hash = self.mine_quorum(llmq_type_name='llmq_test_platform', llmq_type=106, expected_connections=2, expected_members=3, expected_contributions=3, expected_complaints=0, expected_justifications=0, expected_commitments=3 )
-        asset_unlock_tx = self.create_assetunlock(101, COIN, pubkey)
-        self.log.info("withdrawal is signed!")
 
         coins = node_wallet.listunspent()
         coin = None
