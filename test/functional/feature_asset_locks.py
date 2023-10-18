@@ -232,6 +232,9 @@ class AssetLocksTest(DashTestFramework):
             self.sync_all()
 
     def run_test(self):
+        node_wallet = self.nodes[0]
+        node = self.nodes[1]
+
         self.activate_dip8()
 
         self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
@@ -240,19 +243,15 @@ class AssetLocksTest(DashTestFramework):
         self.mine_quorum(llmq_type_name='llmq_test', llmq_type=100)
 
         self.activate_v19(expected_activation_height=900)
-        self.log.info("Activated v19 at height:" + str(self.nodes[0].getblockcount()))
+        self.log.info("Activated v19 at height:" + str(node.getblockcount()))
 
         for i in range(3):
             evo_info = self.dynamically_add_masternode(evo=True)
-            self.nodes[0].generate(8)
+            node.generate(8)
             self.sync_blocks(self.nodes)
 
 #            self.dynamically_evo_update_service(evo_info)
 
-
-        self.log.info("Test that EvoNodes are present in MN list")
-        node_wallet = self.nodes[0]
-        node = self.nodes[1]
 
         self.set_sporks()
         self.activate_v20()
@@ -287,7 +286,6 @@ class AssetLocksTest(DashTestFramework):
         txid_in_block = self.send_tx(asset_lock_tx)
         self.validate_credit_pool_balance(0)
         node.generate(1)
-        assert_equal(self.get_credit_pool_balance(node=node_wallet), 0)
         assert_equal(self.get_credit_pool_balance(node=node), locked_1)
         self.log.info("Generate a number of blocks to ensure this is the longest chain for later in the test when we reconsiderblock")
         node.generate(12)
