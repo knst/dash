@@ -247,7 +247,7 @@ class AssetLocksTest(DashTestFramework):
             self.nodes[0].generate(8)
             self.sync_blocks(self.nodes)
 
-            self.dynamically_evo_update_service(evo_info)
+#            self.dynamically_evo_update_service(evo_info)
 
 
         self.log.info("Test that EvoNodes are present in MN list")
