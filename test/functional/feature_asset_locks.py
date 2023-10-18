@@ -262,19 +262,9 @@ class AssetLocksTest(DashTestFramework):
         self.activate_v19(expected_activation_height=900)
         self.log.info("Activated v19 at height:" + str(self.nodes[0].getblockcount()))
 
-        self.move_to_next_cycle()
-        self.log.info("Cycle H height:" + str(self.nodes[0].getblockcount()))
-        self.move_to_next_cycle()
-        self.log.info("Cycle H+C height:" + str(self.nodes[0].getblockcount()))
-        self.move_to_next_cycle()
-        self.log.info("Cycle H+2C height:" + str(self.nodes[0].getblockcount()))
 
-        (quorum_info_i_0, quorum_info_i_1) = self.mine_cycle_quorum(llmq_type_name='llmq_test_dip0024', llmq_type=103)
-
-        evo_protxhash_list = list()
         for i in range(3):
             evo_info = self.dynamically_add_masternode(evo=True)
-            evo_protxhash_list.append(evo_info.proTxHash)
             self.nodes[0].generate(8)
             self.sync_blocks(self.nodes)
 
@@ -305,6 +295,7 @@ class AssetLocksTest(DashTestFramework):
         locked_2 = 10 * COIN + 314159
 
         asset_unlock_tx = self.create_assetunlock(101, COIN, pubkey)
+        self.log.info("withdrawal is signed!")
 
         coins = node_wallet.listunspent()
         coin = None
