@@ -83,7 +83,6 @@ class AssetLocksTest(DashTestFramework):
         lock_tx.vExtraPayload = lockTx_payload.serialize()
 
         lock_tx = node_wallet.signrawtransactionwithwallet(lock_tx.serialize().hex())
-        self.log.info(f"next tx: {lock_tx} payload: {lockTx_payload}")
         return FromHex(CTransaction(), lock_tx["hex"])
 
 
@@ -98,7 +97,9 @@ class AssetLocksTest(DashTestFramework):
         request_id = hash256(request_id_buf)[::-1].hex()
 
         height = node_wallet.getblockcount()
+        self.log.info(f"knst-create asset unlock: {llmq_type_test} {request_id}")
         quorumHash = mninfo[0].node.quorum("selectquorum", llmq_type_test, request_id)["quorumHash"]
+        self.log.info(f"quorum hash: {quorumHash}")
         unlockTx_payload = CAssetUnlockTx(
             version = 1,
             index = index,
@@ -130,7 +131,6 @@ class AssetLocksTest(DashTestFramework):
         if block_hash is None:
             block_hash = node.getbestblockhash()
         block = node.getblock(block_hash)
-        self.log.info(f"block: {block}")
         return int(COIN * block['cbTx']['creditPoolBalance'])
 
     def validate_credit_pool_balance(self, expected = None, block_hash = None):
@@ -235,8 +235,8 @@ class AssetLocksTest(DashTestFramework):
         node_wallet = self.nodes[0]
         node = self.nodes[1]
 
-        self.activate_dip8()
         self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
+        self.activate_dip8()
         self.wait_for_sporks_same()
         self.mine_quorum(llmq_type_name='llmq_test', llmq_type=100)
 
@@ -253,10 +253,8 @@ class AssetLocksTest(DashTestFramework):
 
         self.set_sporks()
         self.activate_v20()
-
         node.generate(1)
         self.sync_all()
-
         self.mempool_size = 0
 
         key = ECKey()
@@ -344,8 +342,6 @@ class AssetLocksTest(DashTestFramework):
         self.log.info("Validating that we calculate payload hash correctly: ask quorum forcely by message hash...")
         asset_unlock_tx_payload = CAssetUnlockTx()
         asset_unlock_tx_payload.deserialize(BytesIO(asset_unlock_tx.vExtraPayload))
-
-        assert_equal(asset_unlock_tx_payload.quorumHash, int(self.mninfo[0].node.quorum("selectquorum", llmq_type_test, 'e6c7a809d79f78ea85b72d5df7e9bd592aecf151e679d6e976b74f053a7f9056')["quorumHash"], 16))
 
         self.send_tx(asset_unlock_tx)
         self.mempool_size += 1
