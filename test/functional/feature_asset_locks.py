@@ -235,10 +235,11 @@ class AssetLocksTest(DashTestFramework):
         node_wallet = self.nodes[0]
         node = self.nodes[1]
 
-        self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
-        self.activate_dip8()
-        self.wait_for_sporks_same()
-        self.mine_quorum(llmq_type_name='llmq_test', llmq_type=100)
+        self.set_sporks()
+#        self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
+#        self.activate_dip8()
+#        self.wait_for_sporks_same()
+#        self.mine_quorum(llmq_type_name='llmq_test', llmq_type=100)
 
         self.activate_v19(expected_activation_height=900)
         self.log.info("Activated v19 at height:" + str(node.getblockcount()))
