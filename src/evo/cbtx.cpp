@@ -111,7 +111,7 @@ bool CheckCbTxMerkleRoots(const CBlock& block, const CBlockIndex* pindex, const 
 
 bool CalcCbTxMerkleRootMNList(const CBlock& block, const CBlockIndex* pindexPrev, uint256& merkleRootRet, BlockValidationState& state, const CCoinsViewCache& view)
 {
-    LOCK(deterministicMNManager->cs);
+    LOCK(deterministicMNManager->cs); // second!
 
     try {
         static int64_t nTimeDMN = 0;
@@ -121,7 +121,7 @@ bool CalcCbTxMerkleRootMNList(const CBlock& block, const CBlockIndex* pindexPrev
         int64_t nTime1 = GetTimeMicros();
 
         CDeterministicMNList tmpMNList;
-        if (!deterministicMNManager->BuildNewListFromBlock(block, pindexPrev, state, view, tmpMNList, false)) {
+        if (!deterministicMNManager->BuildNewListFromBlock(block, pindexPrev, state, view, tmpMNList, false)) { // step-0
             // pass the state returned by the function above
             return false;
         }

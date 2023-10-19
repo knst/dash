@@ -996,9 +996,10 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, const C
 
 void CDeterministicMNManager::HandleQuorumCommitment(const llmq::CFinalCommitment& qc, const CBlockIndex* pQuorumBaseBlockIndex, CDeterministicMNList& mnList, bool debugLogs)
 {
+    AssertLockHeld(cs);
     // The commitment has already been validated at this point, so it's safe to use members of it
 
-    auto members = GetAllQuorumMembers(qc.llmqType, pQuorumBaseBlockIndex, /*reset_cache=*/ false); /// step-2
+    auto members = GetAllQuorumMembersInternal(qc.llmqType, pQuorumBaseBlockIndex, /*reset_cache=*/ false); /// step-2
 
     for (size_t i = 0; i < members.size(); i++) {
         if (!mnList.HasMN(members[i]->proTxHash)) {
@@ -1556,7 +1557,7 @@ std::vector<CDeterministicMNCPtr> CDeterministicMNManager::GetAllQuorumMembers(C
             return quorumMembers;
         }
 
-        auto q = ComputeQuorumMembersByQuarterRotation(llmq_params, pCycleQuorumBaseBlockIndex); // step-3
+        auto q = ComputeQuorumMembersByQuarterRotation(llmq_params, pCycleQuorumBaseBlockIndex);
         LOCK(cs_indexed_members);
         for (const size_t i : irange::range(q.size())) {
             mapIndexedQuorumMembers[llmqType].insert(std::make_pair(pCycleQuorumBaseBlockIndex->GetBlockHash(), i), q[i]);

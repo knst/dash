@@ -594,7 +594,6 @@ template void InitQuorumsCache<std::map<Consensus::LLMQType, unordered_lru_cache
 
 std::vector<CDeterministicMNCPtr> GetAllQuorumMembers(Consensus::LLMQType llmqType, const CBlockIndex* pQuorumBaseBlockIndex, bool reset_cache)
 {
-    LOCK(deterministicMNManager->cs); // second!
     return deterministicMNManager->GetAllQuorumMembers(llmqType,  pQuorumBaseBlockIndex, reset_cache);
 }
 } // namespace utils

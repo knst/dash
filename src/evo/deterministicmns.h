@@ -616,7 +616,7 @@ public:
     std::vector<CDeterministicMNCPtr> ComputeQuorumMembers(Consensus::LLMQType llmqType, const CBlockIndex* pQuorumBaseBlockIndex) EXCLUSIVE_LOCKS_REQUIRED(cs);
 
     // includes members which failed DKG
-    std::vector<CDeterministicMNCPtr> GetAllQuorumMembers(Consensus::LLMQType llmqType, const CBlockIndex* pQuorumBaseBlockIndex, bool reset_cache) EXCLUSIVE_LOCKS_REQUIRED(cs);
+    std::vector<CDeterministicMNCPtr> GetAllQuorumMembers(Consensus::LLMQType llmqType, const CBlockIndex* pQuorumBaseBlockIndex, bool reset_cache);
 
     CDeterministicMNList GetListForBlock(const CBlockIndex* pindex) LOCKS_EXCLUDED(cs) {
         LOCK(cs); /// first lock - last step
@@ -645,7 +645,7 @@ PreviousQuorumQuarters GetPreviousQuorumQuarterMembers(const Consensus::LLMQPara
                                                                                 const CBlockIndex* pBlockHMinusCIndex,
                                                                                 const CBlockIndex* pBlockHMinus2CIndex,
                                                                                 const CBlockIndex* pBlockHMinus3CIndex,
-                                                                                int nHeight) EXCLUSIVE_LOCKS_REQUIRED(cs);
+                                                                                int nHeight) LOCKS_EXCLUDED(cs);
 
     std::pair<CDeterministicMNList, CDeterministicMNList> GetMNUsageBySnapshot(const Consensus::LLMQParams& llmqParams,
                                                                                        const CBlockIndex* pCycleQuorumBaseBlockIndex,
@@ -654,12 +654,12 @@ PreviousQuorumQuarters GetPreviousQuorumQuarterMembers(const Consensus::LLMQPara
     std::vector<std::vector<CDeterministicMNCPtr>> GetQuorumQuarterMembersBySnapshot(const Consensus::LLMQParams& llmqParams,
             const CBlockIndex* pCycleQuorumBaseBlockIndex,
             const llmq::CQuorumSnapshot& snapshot,
-            int nHeight) EXCLUSIVE_LOCKS_REQUIRED(cs);
-    std::vector<std::vector<CDeterministicMNCPtr>> ComputeQuorumMembersByQuarterRotation(const Consensus::LLMQParams& llmqParams, const CBlockIndex* pCycleQuorumBaseBlockIndex) EXCLUSIVE_LOCKS_REQUIRED(cs);
-    void HandleQuorumCommitment(const llmq::CFinalCommitment& qc, const CBlockIndex* pQuorumBaseBlockIndex, CDeterministicMNList& mnList, bool debugLogs) EXCLUSIVE_LOCKS_REQUIRED(cs);
+            int nHeight) LOCKS_EXCLUDED(cs);
+    std::vector<std::vector<CDeterministicMNCPtr>> ComputeQuorumMembersByQuarterRotation(const Consensus::LLMQParams& llmqParams, const CBlockIndex* pCycleQuorumBaseBlockIndex) LOCKS_EXCLUDED(cs);
+    void HandleQuorumCommitment(const llmq::CFinalCommitment& qc, const CBlockIndex* pQuorumBaseBlockIndex, CDeterministicMNList& mnList, bool debugLogs) LOCKS_EXCLUDED(cs);
     std::vector<std::vector<CDeterministicMNCPtr>> BuildNewQuorumQuarterMembers(const Consensus::LLMQParams& llmqParams,
                                                                                 const CBlockIndex* pCycleQuorumBaseBlockIndex,
-                                                                                const PreviousQuorumQuarters& previousQuarters) EXCLUSIVE_LOCKS_REQUIRED(cs);
+                                                                                const PreviousQuorumQuarters& previousQuarters) LOCKS_EXCLUDED(cs);
     static void DecreasePoSePenalties(CDeterministicMNList& mnList);
 
 
