@@ -30,13 +30,17 @@ class CBlockIndex;
 class CChainState;
 class CConnman;
 class TxValidationState;
+// TODO: hide PreviousQuorumQuaters in implementation
+struct PreviousQuorumQuarters;
 
 extern RecursiveMutex cs_main;
 
 namespace llmq
 {
     class CFinalCommitment;
+    class CQuorumSnapshot;
 } // namespace llmq
+
 
 class CDeterministicMN
 {
@@ -575,7 +579,7 @@ class CDeterministicMNManager
     static constexpr int LIST_DIFFS_CACHE_SIZE = DISK_SNAPSHOT_PERIOD * DISK_SNAPSHOTS;
 
 public:
-    Mutex cs;
+    Mutex cs; // mutex
 
 private:
     Mutex cs_cleanup;
@@ -608,11 +612,14 @@ public:
     // the returned list will not contain the correct block hash (we can't know it yet as the coinbase TX is not updated yet)
     bool BuildNewListFromBlock(const CBlock& block, const CBlockIndex* pindexPrev, BlockValidationState& state, const CCoinsViewCache& view,
                                CDeterministicMNList& mnListRet, bool debugLogs) EXCLUSIVE_LOCKS_REQUIRED(cs);
-    static void HandleQuorumCommitment(const llmq::CFinalCommitment& qc, const CBlockIndex* pQuorumBaseBlockIndex, CDeterministicMNList& mnList, bool debugLogs);
-    static void DecreasePoSePenalties(CDeterministicMNList& mnList);
+
+    std::vector<CDeterministicMNCPtr> ComputeQuorumMembers(Consensus::LLMQType llmqType, const CBlockIndex* pQuorumBaseBlockIndex) EXCLUSIVE_LOCKS_REQUIRED(cs);
+
+    // includes members which failed DKG
+    std::vector<CDeterministicMNCPtr> GetAllQuorumMembers(Consensus::LLMQType llmqType, const CBlockIndex* pQuorumBaseBlockIndex, bool reset_cache) EXCLUSIVE_LOCKS_REQUIRED(cs);
 
     CDeterministicMNList GetListForBlock(const CBlockIndex* pindex) LOCKS_EXCLUDED(cs) {
-        LOCK(cs);
+        LOCK(cs); /// first lock - last step
         return GetListForBlockInternal(pindex);
     };
     CDeterministicMNList GetListAtChainTip() LOCKS_EXCLUDED(cs);
@@ -630,6 +637,32 @@ public:
 private:
     void CleanupCache(int nHeight) EXCLUSIVE_LOCKS_REQUIRED(cs);
     CDeterministicMNList GetListForBlockInternal(const CBlockIndex* pindex) EXCLUSIVE_LOCKS_REQUIRED(cs);
+
+//    void BuildQuorumSnapshot(const Consensus::LLMQParams& llmqParams, const CDeterministicMNList& allMns,
+ //                            const CDeterministicMNList& mnUsedAtH, std::vector<CDeterministicMNCPtr>& sortedCombinedMns,
+  //                           llmq::CQuorumSnapshot& quorumSnapshot, int nHeight, std::vector<int>& skipList, const CBlockIndex* pCycleQuorumBaseBlockIndex) EXCLUSIVE_LOCKS_REQUIRED(cs);
+PreviousQuorumQuarters GetPreviousQuorumQuarterMembers(const Consensus::LLMQParams& llmqParams,
+                                                                                const CBlockIndex* pBlockHMinusCIndex,
+                                                                                const CBlockIndex* pBlockHMinus2CIndex,
+                                                                                const CBlockIndex* pBlockHMinus3CIndex,
+                                                                                int nHeight) EXCLUSIVE_LOCKS_REQUIRED(cs);
+
+    std::pair<CDeterministicMNList, CDeterministicMNList> GetMNUsageBySnapshot(const Consensus::LLMQParams& llmqParams,
+                                                                                       const CBlockIndex* pCycleQuorumBaseBlockIndex,
+                                                                                       const llmq::CQuorumSnapshot& snapshot,
+                                                                                       int nHeight) EXCLUSIVE_LOCKS_REQUIRED(cs);
+    std::vector<std::vector<CDeterministicMNCPtr>> GetQuorumQuarterMembersBySnapshot(const Consensus::LLMQParams& llmqParams,
+            const CBlockIndex* pCycleQuorumBaseBlockIndex,
+            const llmq::CQuorumSnapshot& snapshot,
+            int nHeight) EXCLUSIVE_LOCKS_REQUIRED(cs);
+    std::vector<std::vector<CDeterministicMNCPtr>> ComputeQuorumMembersByQuarterRotation(const Consensus::LLMQParams& llmqParams, const CBlockIndex* pCycleQuorumBaseBlockIndex) EXCLUSIVE_LOCKS_REQUIRED(cs);
+    void HandleQuorumCommitment(const llmq::CFinalCommitment& qc, const CBlockIndex* pQuorumBaseBlockIndex, CDeterministicMNList& mnList, bool debugLogs) EXCLUSIVE_LOCKS_REQUIRED(cs);
+    std::vector<std::vector<CDeterministicMNCPtr>> BuildNewQuorumQuarterMembers(const Consensus::LLMQParams& llmqParams,
+                                                                                const CBlockIndex* pCycleQuorumBaseBlockIndex,
+                                                                                const PreviousQuorumQuarters& previousQuarters) EXCLUSIVE_LOCKS_REQUIRED(cs);
+    static void DecreasePoSePenalties(CDeterministicMNList& mnList);
+
+
 };
 
 bool CheckProRegTx(const CTransaction& tx, const CBlockIndex* pindexPrev, TxValidationState& state, const CCoinsViewCache& view, bool check_sigs);
