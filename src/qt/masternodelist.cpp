@@ -167,6 +167,14 @@ void MasternodeList::updateDIP3List()
     }
 
     auto mnList = clientModel->getMasternodeList();
+    auto projectedPayees = mnList.GetProjectedMNPayeesAtChainTip();
+
+    if (projectedPayees.empty() && mnList.GetValidMNsCount() > 0) {
+        // GetProjectedMNPayees failed to provide results for a list with valid mns.
+        // Keep current list and let it try again later.
+        return;
+    }
+
     std::map<uint256, CTxDestination> mapCollateralDests;
 
     {
@@ -191,7 +199,6 @@ void MasternodeList::updateDIP3List()
 
     nTimeUpdatedDIP3 = GetTime();
 
-    auto projectedPayees = mnList.GetProjectedMNPayeesAtChainTip();
     std::map<uint256, int> nextPayments;
     for (size_t i = 0; i < projectedPayees.size(); i++) {
         const auto& dmn = projectedPayees[i];
