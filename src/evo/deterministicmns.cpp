@@ -925,7 +925,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, const C
                     return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-qc-quorum-hash");
                 }
 
-                HandleQuorumCommitment(qc.commitment, pQuorumBaseBlockIndex, newList, debugLogs); /// step-1
+                HandleQuorumCommitment(qc.commitment, pQuorumBaseBlockIndex, newList, debugLogs);
             }
         }
     }
@@ -994,10 +994,9 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, const C
 
 void CDeterministicMNManager::HandleQuorumCommitment(const llmq::CFinalCommitment& qc, const CBlockIndex* pQuorumBaseBlockIndex, CDeterministicMNList& mnList, bool debugLogs)
 {
-    AssertLockHeld(cs);
     // The commitment has already been validated at this point, so it's safe to use members of it
 
-    auto members = GetAllQuorumMembersInternal(qc.llmqType, pQuorumBaseBlockIndex, /*reset_cache=*/ false); /// step-2
+    auto members = GetAllQuorumMembers(qc.llmqType, pQuorumBaseBlockIndex, /*reset_cache=*/ false);
 
     for (size_t i = 0; i < members.size(); i++) {
         if (!mnList.HasMN(members[i]->proTxHash)) {
@@ -1085,7 +1084,7 @@ std::vector<std::vector<CDeterministicMNCPtr>> CDeterministicMNManager::BuildNew
     const CBlockIndex* pWorkBlockIndex = pCycleQuorumBaseBlockIndex->GetAncestor(pCycleQuorumBaseBlockIndex->nHeight - 8);
     const auto modifier = llmq::utils::GetHashModifier(llmqParams, pCycleQuorumBaseBlockIndex);
 
-    auto allMns = GetListForBlockInternal(pWorkBlockIndex);
+    auto allMns = GetListForBlock(pWorkBlockIndex);
 
     if (allMns.GetValidMNsCount() < quarterSize) {
         return quarterQuorumMembers;
@@ -1244,7 +1243,7 @@ std::pair<CDeterministicMNList, CDeterministicMNList> CDeterministicMNManager::G
     const CBlockIndex* pWorkBlockIndex = pCycleQuorumBaseBlockIndex->GetAncestor(pCycleQuorumBaseBlockIndex->nHeight - 8);
     const auto modifier = llmq::utils::GetHashModifier(llmqParams, pCycleQuorumBaseBlockIndex);
 
-    auto allMns = GetListForBlockInternal(pWorkBlockIndex);
+    auto allMns = GetListForBlock(pWorkBlockIndex);
     auto sortedAllMns = allMns.CalculateQuorum(allMns.GetAllMNsCount(), modifier);
 
     size_t i{0};
@@ -1410,7 +1409,7 @@ std::vector<std::vector<CDeterministicMNCPtr>> CDeterministicMNManager::ComputeQ
     const CBlockIndex* pBlockHMinus2CIndex = pCycleQuorumBaseBlockIndex->GetAncestor(pCycleQuorumBaseBlockIndex->nHeight - 2 * cycleLength);
     const CBlockIndex* pBlockHMinus3CIndex = pCycleQuorumBaseBlockIndex->GetAncestor(pCycleQuorumBaseBlockIndex->nHeight - 3 * cycleLength);
     const CBlockIndex* pWorkBlockIndex = pCycleQuorumBaseBlockIndex->GetAncestor(pCycleQuorumBaseBlockIndex->nHeight - 8);
-    auto allMns = GetListForBlockInternal(pWorkBlockIndex); // step-4
+    auto allMns = GetListForBlock(pWorkBlockIndex);
     LogPrint(BCLog::LLMQ, "ComputeQuorumMembersByQuarterRotation llmqType[%d] nHeight[%d] allMns[%d]\n", ToUnderlying(llmqType), pCycleQuorumBaseBlockIndex->nHeight, allMns.GetValidMNsCount());
 
     PreviousQuorumQuarters previousQuarters = GetPreviousQuorumQuarterMembers(llmqParams, pBlockHMinusCIndex, pBlockHMinus2CIndex, pBlockHMinus3CIndex, pCycleQuorumBaseBlockIndex->nHeight);
@@ -1491,7 +1490,7 @@ std::vector<CDeterministicMNCPtr> CDeterministicMNManager::ComputeQuorumMembers(
             pQuorumBaseBlockIndex->GetAncestor(pQuorumBaseBlockIndex->nHeight - 8) :
             pQuorumBaseBlockIndex;
     const auto modifier = llmq::utils::GetHashModifier(llmq_params_opt.value(), pQuorumBaseBlockIndex);
-    auto allMns = GetListForBlockInternal(pWorkBlockIndex);
+    auto allMns = GetListForBlock(pWorkBlockIndex);
     return allMns.CalculateQuorum(llmq_params_opt->size, modifier, EvoOnly);
 }
 
