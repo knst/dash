@@ -111,8 +111,6 @@ bool CheckCbTxMerkleRoots(const CBlock& block, const CBlockIndex* pindex, const 
 
 bool CalcCbTxMerkleRootMNList(const CBlock& block, const CBlockIndex* pindexPrev, uint256& merkleRootRet, BlockValidationState& state, const CCoinsViewCache& view)
 {
-    LOCK(deterministicMNManager->cs);
-
     try {
         static int64_t nTimeDMN = 0;
         static int64_t nTimeSMNL = 0;
