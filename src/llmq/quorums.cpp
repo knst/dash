@@ -9,7 +9,6 @@
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/utils.h>
 
-#include <evo/specialtx.h>
 #include <evo/deterministicmns.h>
 
 #include <chainparams.h>
