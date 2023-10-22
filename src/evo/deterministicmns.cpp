@@ -1098,31 +1098,6 @@ CDeterministicMNList CDeterministicMNManager::GetListAtChainTip()
     return GetListForBlockInternal(tipIndex);
 }
 
-bool CDeterministicMNManager::IsProTxWithCollateral(const CTransactionRef& tx, uint32_t n)
-{
-    if (tx->nVersion != 3 || tx->nType != TRANSACTION_PROVIDER_REGISTER) {
-        return false;
-    }
-    CProRegTx proTx;
-    if (!GetTxPayload(*tx, proTx)) {
-        return false;
-    }
-
-    if (!proTx.collateralOutpoint.hash.IsNull()) {
-        return false;
-    }
-    if (proTx.collateralOutpoint.n >= tx->vout.size() || proTx.collateralOutpoint.n != n) {
-        return false;
-    }
-
-    const CAmount expectedCollateral = GetMnType(proTx.nType).collat_amount;
-
-    if (tx->vout[n].nValue != expectedCollateral) {
-        return false;
-    }
-    return true;
-}
-
 bool CDeterministicMNManager::IsDIP3Enforced(int nHeight)
 {
     if (nHeight == -1) {

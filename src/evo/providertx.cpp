@@ -160,3 +160,28 @@ std::string CProUpRevTx::ToString() const
     return strprintf("CProUpRevTx(nVersion=%d, proTxHash=%s, nReason=%d)",
         nVersion, proTxHash.ToString(), nReason);
 }
+
+bool IsProTxWithCollateral(const CTransactionRef& tx, uint32_t n)
+{
+    if (tx->nVersion != 3 || tx->nType != TRANSACTION_PROVIDER_REGISTER) {
+        return false;
+    }
+    CProRegTx proTx;
+    if (!GetTxPayload(*tx, proTx)) {
+        return false;
+    }
+
+    if (!proTx.collateralOutpoint.hash.IsNull()) {
+        return false;
+    }
+    if (proTx.collateralOutpoint.n >= tx->vout.size() || proTx.collateralOutpoint.n != n) {
+        return false;
+    }
+
+    const CAmount expectedCollateral = GetMnType(proTx.nType).collat_amount;
+
+    if (tx->vout[n].nValue != expectedCollateral) {
+        return false;
+    }
+    return true;
+}

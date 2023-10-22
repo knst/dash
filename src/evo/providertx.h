@@ -339,5 +339,8 @@ static bool CheckInputsHash(const CTransaction& tx, const ProTx& proTx, TxValida
     return true;
 }
 
+// Test if given TX is a ProRegTx which also contains the collateral at index n
+bool IsProTxWithCollateral(const CTransactionRef& tx, uint32_t n);
+
 
 #endif // BITCOIN_EVO_PROVIDERTX_H
