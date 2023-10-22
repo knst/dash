@@ -10,7 +10,6 @@
 #include <llmq/commitment.h>
 #include <llmq/utils.h>
 
-#include <base58.h>
 #include <chainparams.h>
 #include <consensus/validation.h>
 #include <script/standard.h>
