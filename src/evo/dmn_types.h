@@ -8,7 +8,6 @@
 #include <amount.h>
 #include <serialize.h>
 
-#include <cassert>
 #include <string_view>
 
 enum class MnType : uint16_t {
