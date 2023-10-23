@@ -464,6 +464,6 @@ CBlock getBlock13b8a()
 
 TestChainV19BeforeActivationSetup::TestChainV19BeforeActivationSetup() : TestChainSetup(894)
 {
-    bool v19_active = chainparams.GetConsensus().IsV19Active(m_node.chainman->ActiveChain().Tip());
+    bool v19_active = Params().GetConsensus().IsV19Active(m_node.chainman->ActiveChain().Tip());
     assert(!v19_active);
 }

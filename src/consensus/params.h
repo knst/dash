@@ -139,6 +139,10 @@ struct Params {
     int nHighSubsidyBlocks{0};
     int nHighSubsidyFactor{1};
 
+    // Helpers for various BIP9 releases
+    bool IsDIP0024Active(const CBlockIndex* pindex) const;
+    bool IsV19Active(const CBlockIndex* pindex) const;
+
     std::vector<LLMQParams> llmqs;
     LLMQType llmqTypeChainLocks;
     LLMQType llmqTypeInstantSend{LLMQType::LLMQ_NONE};
