@@ -12,8 +12,10 @@
 
 #include <evo/deterministicmns.h>
 
+#include <masternode/meta.h>
 #include <masternode/node.h>
 #include <chainparams.h>
+#include <net.h>
 #include <net_processing.h>
 #include <validation.h>
 #include <util/thread.h>
@@ -480,6 +482,47 @@ bool ProcessPendingMessageBatch(CDKGSession& session, PeerManager& peerman, CDKG
     return true;
 }
 
+static void AddQuorumProbeConnections(const Consensus::LLMQParams& llmqParams, const CBlockIndex *pQuorumBaseBlockIndex,
+                               CConnman& connman, const uint256 &myProTxHash)
+{
+    if (!llmq::utils::IsQuorumPoseEnabled(llmqParams.type)) {
+        return;
+    }
+
+    auto members = llmq::utils::GetAllQuorumMembers(llmqParams.type, pQuorumBaseBlockIndex);
+    auto curTime = GetAdjustedTime();
+
+    std::set<uint256> probeConnections;
+    for (const auto& dmn : members) {
+        if (dmn->proTxHash == myProTxHash) {
+            continue;
+        }
+        auto lastOutbound = mmetaman->GetMetaInfo(dmn->proTxHash)->GetLastOutboundSuccess();
+        if (curTime - lastOutbound < 10 * 60) {
+            // avoid re-probing nodes too often
+            continue;
+        }
+        probeConnections.emplace(dmn->proTxHash);
+    }
+
+    if (!probeConnections.empty()) {
+        if (LogAcceptCategory(BCLog::LLMQ)) {
+            auto mnList = deterministicMNManager->GetListAtChainTip();
+            std::string debugMsg = strprintf("%s -- adding masternodes probes for quorum %s:\n", __func__, pQuorumBaseBlockIndex->GetBlockHash().ToString());
+            for (const auto& c : probeConnections) {
+                auto dmn = mnList.GetValidMN(c);
+                if (!dmn) {
+                    debugMsg += strprintf("  %s (not in valid MN set anymore)\n", c.ToString());
+                } else {
+                    debugMsg += strprintf("  %s (%s)\n", c.ToString(), dmn->pdmnState->addr.ToString(false));
+                }
+            }
+            LogPrint(BCLog::NET_NETCONN, debugMsg.c_str()); /* Continued */
+        }
+        connman.AddPendingProbeConnections(probeConnections);
+    }
+}
+
 void CDKGSessionHandler::HandleDKGRound()
 {
     uint256 curQuorumHash;
@@ -511,7 +554,7 @@ void CDKGSessionHandler::HandleDKGRound()
 
     utils::EnsureQuorumConnections(params, pQuorumBaseBlockIndex, connman, curSession->myProTxHash);
     if (curSession->AreWeMember()) {
-        utils::AddQuorumProbeConnections(params, pQuorumBaseBlockIndex, connman, curSession->myProTxHash);
+        AddQuorumProbeConnections(params, pQuorumBaseBlockIndex, connman, curSession->myProTxHash);
     }
 
     WaitForNextPhase(QuorumPhase::Initialized, QuorumPhase::Contribute, curQuorumHash);

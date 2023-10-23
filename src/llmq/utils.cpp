@@ -11,7 +11,6 @@
 #include <chainparams.h>
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
-#include <masternode/meta.h>
 #include <net.h>
 #include <random.h>
 #include <spork.h>
@@ -929,47 +928,6 @@ bool EnsureQuorumConnections(const Consensus::LLMQParams& llmqParams, const CBlo
         connman.SetMasternodeQuorumRelayMembers(llmqParams.type, pQuorumBaseBlockIndex->GetBlockHash(), relayMembers);
     }
     return true;
-}
-
-void AddQuorumProbeConnections(const Consensus::LLMQParams& llmqParams, const CBlockIndex *pQuorumBaseBlockIndex,
-                               CConnman& connman, const uint256 &myProTxHash)
-{
-    if (!IsQuorumPoseEnabled(llmqParams.type)) {
-        return;
-    }
-
-    auto members = GetAllQuorumMembers(llmqParams.type, pQuorumBaseBlockIndex);
-    auto curTime = GetAdjustedTime();
-
-    std::set<uint256> probeConnections;
-    for (const auto& dmn : members) {
-        if (dmn->proTxHash == myProTxHash) {
-            continue;
-        }
-        auto lastOutbound = mmetaman->GetMetaInfo(dmn->proTxHash)->GetLastOutboundSuccess();
-        if (curTime - lastOutbound < 10 * 60) {
-            // avoid re-probing nodes too often
-            continue;
-        }
-        probeConnections.emplace(dmn->proTxHash);
-    }
-
-    if (!probeConnections.empty()) {
-        if (LogAcceptCategory(BCLog::LLMQ)) {
-            auto mnList = deterministicMNManager->GetListAtChainTip();
-            std::string debugMsg = strprintf("%s -- adding masternodes probes for quorum %s:\n", __func__, pQuorumBaseBlockIndex->GetBlockHash().ToString());
-            for (const auto& c : probeConnections) {
-                auto dmn = mnList.GetValidMN(c);
-                if (!dmn) {
-                    debugMsg += strprintf("  %s (not in valid MN set anymore)\n", c.ToString());
-                } else {
-                    debugMsg += strprintf("  %s (%s)\n", c.ToString(), dmn->pdmnState->addr.ToString(false));
-                }
-            }
-            LogPrint(BCLog::NET_NETCONN, debugMsg.c_str()); /* Continued */
-        }
-        connman.AddPendingProbeConnections(probeConnections);
-    }
 }
 
 bool IsQuorumActive(Consensus::LLMQType llmqType, const CQuorumManager& qman, const uint256& quorumHash)
