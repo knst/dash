@@ -60,6 +60,7 @@
 #include <llmq/signing.h>
 #include <llmq/signing_shares.h>
 #include <llmq/snapshot.h>
+#include <llmq/utils.h>
 
 #include <statsd_client.h>
 

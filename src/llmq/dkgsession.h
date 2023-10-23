@@ -6,29 +6,32 @@
 #define BITCOIN_LLMQ_DKGSESSION_H
 
 #include <batchedlogger.h>
+#include <dbwrapper.h>
 
 #include <bls/bls.h>
 #include <bls/bls_ies.h>
 #include <bls/bls_worker.h>
 
 #include <llmq/commitment.h>
-#include <llmq/utils.h>
 #include <util/underlying.h>
+
+#include <sync.h>
 
 #include <optional>
 
 class UniValue;
 class CInv;
 class CConnman;
-
+class CDeterministicMN;
+using CDeterministicMNCPtr = std::shared_ptr<const CDeterministicMN>;
 namespace llmq
 {
 
-class CFinalCommitment;
 class CDKGDebugManager;
+class CDKGPendingMessages;
 class CDKGSession;
 class CDKGSessionManager;
-class CDKGPendingMessages;
+class CFinalCommitment;
 
 class CDKGContribution
 {
@@ -184,10 +187,7 @@ public:
                 );
     }
 
-    [[nodiscard]] uint256 GetSignHash() const
-    {
-        return utils::BuildCommitmentHash(llmqType, quorumHash, validMembers, quorumPublicKey, quorumVvecHash);
-    }
+    [[nodiscard]] uint256 GetSignHash() const;
 };
 
 class CDKGMember
@@ -368,8 +368,8 @@ private:
 class CDKGLogger : public CBatchedLogger
 {
 public:
-    CDKGLogger(const CDKGSession& _quorumDkg, std::string_view _func) :
-        CDKGLogger(_quorumDkg.params.name, _quorumDkg.quorumIndex, _quorumDkg.m_quorum_base_block_index->GetBlockHash(), _quorumDkg.m_quorum_base_block_index->nHeight, _quorumDkg.AreWeMember(), _func){};
+    CDKGLogger(const CDKGSession& _quorumDkg, std::string_view _func);
+
     CDKGLogger(std::string_view _llmqTypeName, int _quorumIndex, const uint256& _quorumHash, int _height, bool _areWeMember, std::string_view _func) :
         CBatchedLogger(BCLog::LLMQ_DKG, strprintf("QuorumDKG(type=%s, quorumIndex=%d, height=%d, member=%d, func=%s)", _llmqTypeName, _quorumIndex, _height, _areWeMember, _func)){};
 };

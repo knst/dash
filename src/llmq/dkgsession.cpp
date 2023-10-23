@@ -7,6 +7,7 @@
 #include <llmq/commitment.h>
 #include <llmq/debug.h>
 #include <llmq/dkgsessionmgr.h>
+#include <llmq/utils.h>
 
 #include <evo/deterministicmns.h>
 #include <evo/specialtx.h>
@@ -47,6 +48,11 @@ bool CDKGSession::ShouldSimulateError(DKGError::type type) const
     }
     double rate = GetSimulatedErrorRate(type);
     return GetRandBool(rate);
+}
+
+[[nodiscard]] uint256 CDKGPrematureCommitment::GetSignHash() const
+{
+    return utils::BuildCommitmentHash(llmqType, quorumHash, validMembers, quorumPublicKey, quorumVvecHash);
 }
 
 CDKGMember::CDKGMember(const CDeterministicMNCPtr& _dmn, size_t _idx) :
@@ -1332,4 +1338,6 @@ void CDKGSession::RelayInvToParticipants(const CInv& inv) const
     logger.Flush();
 }
 
+CDKGLogger::CDKGLogger(const CDKGSession& _quorumDkg, std::string_view _func) :
+        CDKGLogger(_quorumDkg.params.name, _quorumDkg.quorumIndex, _quorumDkg.m_quorum_base_block_index->GetBlockHash(), _quorumDkg.m_quorum_base_block_index->nHeight, _quorumDkg.AreWeMember(), _func){};
 } // namespace llmq
