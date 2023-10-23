@@ -88,4 +88,11 @@ BIP9Stats VersionBitsStatistics(const CBlockIndex* pindexPrev, const Consensus::
 int VersionBitsStateSinceHeight(const CBlockIndex* pindexPrev, const Consensus::Params& params, Consensus::DeploymentPos pos, VersionBitsCache& cache);
 uint32_t VersionBitsMask(const Consensus::Params& params, Consensus::DeploymentPos pos);
 
+
+namespace BIP9Helpers
+{
+bool IsDIP0024Active(const CBlockIndex* pindex);
+bool IsV19Active(const CBlockIndex* pindex);
+} // namespace BIP9Helpers
+
 #endif // BITCOIN_VERSIONBITS_H

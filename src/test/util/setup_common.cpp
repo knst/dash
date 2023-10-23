@@ -27,7 +27,6 @@
 #include <llmq/signing.h>
 #include <llmq/signing_shares.h>
 #include <llmq/snapshot.h>
-#include <llmq/utils.h>
 #include <masternode/sync.h>
 #include <miner.h>
 #include <net.h>
@@ -55,6 +54,7 @@
 #include <validation.h>
 #include <validationinterface.h>
 #include <walletinitinterface.h>
+#include <versionbits.h>
 
 #include <bls/bls.h>
 #ifdef ENABLE_WALLET
@@ -464,6 +464,6 @@ CBlock getBlock13b8a()
 
 TestChainV19BeforeActivationSetup::TestChainV19BeforeActivationSetup() : TestChainSetup(894)
 {
-    bool v19_active = llmq::utils::IsV19Active(::ChainActive().Tip());
+    bool v19_active = chainparams.GetConsensus().IsV19Active(m_node.chainman->ActiveChain().Tip());
     assert(!v19_active);
 }

@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 
+class CBlockIndex;
 typedef std::map<int, uint256> MapCheckpoints;
 
 struct CCheckpointData {
@@ -151,6 +152,9 @@ public:
     int MinSporkKeys() const { return nMinSporkKeys; }
     std::optional<Consensus::LLMQParams> GetLLMQ(Consensus::LLMQType llmqType) const;
 
+    // Helpers for various BIP9 releases
+    bool IsDIP0024Active(const CBlockIndex* pindex) const;
+    bool IsV19Active(const CBlockIndex* pindex) const;
 protected:
     CChainParams() {}
 

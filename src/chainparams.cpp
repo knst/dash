@@ -6,13 +6,13 @@
 
 #include <chainparams.h>
 
+#include <chain.h>
 #include <chainparamsseeds.h>
 #include <consensus/merkle.h>
 #include <llmq/params.h>
 #include <util/ranges.h>
 #include <util/system.h>
 #include <util/underlying.h>
-#include <versionbits.h>
 #include <versionbitsinfo.h>
 
 #include <arith_uint256.h>
@@ -1417,4 +1417,17 @@ void SelectParams(const std::string& network)
 {
     SelectBaseParams(network);
     globalChainParams = CreateChainParams(network);
+}
+
+bool CChainParams::IsDIP0024Active(const CBlockIndex* pindex) const
+{
+    assert(pindex);
+
+    return pindex->nHeight + 1 >= DIP0024Height;
+}
+
+bool CChainParams::IsV19Active(const CBlockIndex* pindex) const
+{
+    assert(pindex);
+    return pindex->nHeight + 1 >= V19Height;
 }

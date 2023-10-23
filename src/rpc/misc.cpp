@@ -15,7 +15,6 @@
 #include <init.h>
 #include <interfaces/chain.h>
 #include <key_io.h>
-#include <llmq/utils.h>
 #include <net.h>
 #include <node/context.h>
 #include <rpc/blockchain.h>
@@ -578,7 +577,7 @@ static UniValue mnauth(const JSONRPCRequest& request)
     ChainstateManager& chainman = EnsureAnyChainman(request.context);
 
     CBLSPublicKey publicKey;
-    bool bls_legacy_scheme = !llmq::utils::IsV19Active(chainman.ActiveChain().Tip());
+    bool bls_legacy_scheme = !Params().GetConsensus().IsV19Active(chainman.ActiveChain().Tip());
     publicKey.SetHexStr(request.params[2].get_str(), bls_legacy_scheme);
     if (!publicKey.IsValid()) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "publicKey invalid");

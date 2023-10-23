@@ -164,7 +164,7 @@ std::vector<CDeterministicMNCPtr> GetAllQuorumMembers(Consensus::LLMQType llmqTy
 
 std::vector<CDeterministicMNCPtr> ComputeQuorumMembers(Consensus::LLMQType llmqType, const CBlockIndex* pQuorumBaseBlockIndex)
 {
-    bool EvoOnly = (Params().GetConsensus().llmqTypePlatform == llmqType) && IsV19Active(pQuorumBaseBlockIndex);
+    bool EvoOnly = (Params().GetConsensus().llmqTypePlatform == llmqType) && BIP9Helpers::IsV19Active(pQuorumBaseBlockIndex);
     const auto& llmq_params_opt = GetLLMQParams(llmqType);
     assert(llmq_params_opt.has_value());
     if (llmq_params_opt->useRotation || pQuorumBaseBlockIndex->nHeight % llmq_params_opt->dkgInterval != 0) {
@@ -321,7 +321,7 @@ std::vector<std::vector<CDeterministicMNCPtr>> BuildNewQuorumQuarterMembers(cons
     auto MnsNotUsedAtH = CDeterministicMNList();
     std::vector<CDeterministicMNList> MnsUsedAtHIndexed{nQuorums};
 
-    bool skipRemovedMNs = IsV19Active(pCycleQuorumBaseBlockIndex) || (Params().NetworkIDString() == CBaseChainParams::TESTNET);
+    bool skipRemovedMNs = BIP9Helpers::IsV19Active(pCycleQuorumBaseBlockIndex) || (Params().NetworkIDString() == CBaseChainParams::TESTNET);
 
     for (const size_t i : irange::range(nQuorums)) {
         for (const auto& mn : previousQuarters.quarterHMinusC[i]) {
@@ -681,12 +681,12 @@ bool IsQuorumRotationEnabled(const Consensus::LLMQParams& llmqParams, const CBlo
         return false;
     }
     // It should activate at least 1 block prior to the cycle start
-    return IsDIP0024Active(pindex->GetAncestor(cycleQuorumBaseHeight - 1));
+    return BIP9Helpers::IsDIP0024Active(pindex->GetAncestor(cycleQuorumBaseHeight - 1));
 }
 
 Consensus::LLMQType GetInstantSendLLMQType(const CQuorumManager& qman, const CBlockIndex* pindex)
 {
-    if (IsDIP0024Active(pindex) && !qman.ScanQuorums(Params().GetConsensus().llmqTypeDIP0024InstantSend, pindex, 1).empty()) {
+    if (BIP9Helpers::IsDIP0024Active(pindex) && !qman.ScanQuorums(Params().GetConsensus().llmqTypeDIP0024InstantSend, pindex, 1).empty()) {
         return Params().GetConsensus().llmqTypeDIP0024InstantSend;
     }
     return Params().GetConsensus().llmqTypeInstantSend;
@@ -695,19 +695,6 @@ Consensus::LLMQType GetInstantSendLLMQType(const CQuorumManager& qman, const CBl
 Consensus::LLMQType GetInstantSendLLMQType(bool deterministic)
 {
     return deterministic ? Params().GetConsensus().llmqTypeDIP0024InstantSend : Params().GetConsensus().llmqTypeInstantSend;
-}
-
-bool IsDIP0024Active(const CBlockIndex* pindex)
-{
-    assert(pindex);
-
-    return pindex->nHeight + 1 >= Params().GetConsensus().DIP0024Height;
-}
-
-bool IsV19Active(const CBlockIndex* pindex)
-{
-    assert(pindex);
-    return pindex->nHeight + 1 >= Params().GetConsensus().V19Height;
 }
 
 bool IsV20Active(const CBlockIndex* pindex)
@@ -958,7 +945,7 @@ bool IsQuorumTypeEnabledInternal(Consensus::LLMQType llmqType, const CQuorumMana
         case Consensus::LLMQType::LLMQ_50_60: {
             if (IsInstantSendLLMQTypeShared()) return true;
 
-            bool fDIP0024IsActive = optDIP0024IsActive.has_value() ? *optDIP0024IsActive : IsDIP0024Active(pindex);
+            bool fDIP0024IsActive = optDIP0024IsActive.has_value() ? *optDIP0024IsActive : BIP9Helpers::IsDIP0024Active(pindex);
             if (!fDIP0024IsActive) return true;
 
             bool fHaveDIP0024Quorums = optHaveDIP0024Quorums.has_value() ? *optHaveDIP0024Quorums
@@ -983,7 +970,7 @@ bool IsQuorumTypeEnabledInternal(Consensus::LLMQType llmqType, const CQuorumMana
         case Consensus::LLMQType::LLMQ_60_75:
         case Consensus::LLMQType::LLMQ_DEVNET_DIP0024:
         case Consensus::LLMQType::LLMQ_TEST_DIP0024: {
-            bool fDIP0024IsActive = optDIP0024IsActive.has_value() ? *optDIP0024IsActive : IsDIP0024Active(pindex);
+            bool fDIP0024IsActive = optDIP0024IsActive.has_value() ? *optDIP0024IsActive : BIP9Helpers::IsDIP0024Active(pindex);
             return fDIP0024IsActive;
         }
         case Consensus::LLMQType::LLMQ_25_67:

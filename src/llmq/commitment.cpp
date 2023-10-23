@@ -43,10 +43,10 @@ bool CFinalCommitment::Verify(gsl::not_null<const CBlockIndex*> pQuorumBaseBlock
 
     uint16_t expected_nversion{CFinalCommitment::LEGACY_BLS_NON_INDEXED_QUORUM_VERSION};
     if (utils::IsQuorumRotationEnabled(llmq_params, pQuorumBaseBlockIndex)) {
-        expected_nversion = utils::IsV19Active(pQuorumBaseBlockIndex) ? CFinalCommitment::BASIC_BLS_INDEXED_QUORUM_VERSION : CFinalCommitment::LEGACY_BLS_INDEXED_QUORUM_VERSION;
+        expected_nversion = Params().GetConsensus().IsV19Active(pQuorumBaseBlockIndex) ? CFinalCommitment::BASIC_BLS_INDEXED_QUORUM_VERSION : CFinalCommitment::LEGACY_BLS_INDEXED_QUORUM_VERSION;
     }
     else {
-        expected_nversion = utils::IsV19Active(pQuorumBaseBlockIndex) ? CFinalCommitment::BASIC_BLS_NON_INDEXED_QUORUM_VERSION : CFinalCommitment::LEGACY_BLS_NON_INDEXED_QUORUM_VERSION;
+        expected_nversion = Params().GetConsensus().IsV19Active(pQuorumBaseBlockIndex) ? CFinalCommitment::BASIC_BLS_NON_INDEXED_QUORUM_VERSION : CFinalCommitment::LEGACY_BLS_NON_INDEXED_QUORUM_VERSION;
     }
     if (nVersion == 0 || nVersion != expected_nversion) {
         LogPrintfFinalCommitment("q[%s] invalid nVersion=%d expectednVersion\n", quorumHash.ToString(), nVersion, expected_nversion);

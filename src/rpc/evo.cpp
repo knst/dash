@@ -16,7 +16,6 @@
 #include <index/txindex.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/context.h>
-#include <llmq/utils.h>
 #include <masternode/meta.h>
 #include <messagesigner.h>
 #include <netbase.h>
@@ -611,7 +610,7 @@ static UniValue protx_register_common_wrapper(const JSONRPCRequest& request,
         EnsureWalletIsUnlocked(wallet.get());
     }
 
-    bool isV19active = llmq::utils::IsV19Active(WITH_LOCK(cs_main, return chainman.ActiveChain().Tip();));
+    bool isV19active = Params().GetConsensus().IsV19Active(WITH_LOCK(cs_main, return chainman.ActiveChain().Tip();));
     if (isEvoRequested && !isV19active) {
         throw JSONRPCError(RPC_INVALID_REQUEST, "EvoNodes aren't allowed yet");
     }
@@ -915,7 +914,7 @@ static UniValue protx_update_service_common_wrapper(const JSONRPCRequest& reques
 
     EnsureWalletIsUnlocked(wallet.get());
 
-    const bool isV19active = llmq::utils::IsV19Active(WITH_LOCK(cs_main, return chainman.ActiveChain().Tip();));
+    const bool isV19active = Params().GetConsensus().IsV19Active(WITH_LOCK(cs_main, return chainman.ActiveChain().Tip();));
     const bool is_bls_legacy = !isV19active;
     if (isEvoRequested && !isV19active) {
         throw JSONRPCError(RPC_INVALID_REQUEST, "EvoNodes aren't allowed yet");
@@ -1056,7 +1055,7 @@ static UniValue protx_update_registrar_wrapper(const JSONRPCRequest& request, co
     ptx.keyIDVoting = dmn->pdmnState->keyIDVoting;
     ptx.scriptPayout = dmn->pdmnState->scriptPayout;
 
-    const bool use_legacy = llmq::utils::IsV19Active(chainman.ActiveChain().Tip()) ? specific_legacy_bls_scheme : true;
+    const bool use_legacy = Params().GetConsensus().IsV19Active(chainman.ActiveChain().Tip()) ? specific_legacy_bls_scheme : true;
 
     if (request.params[1].get_str() != "") {
         // new pubkey
@@ -1156,7 +1155,7 @@ static UniValue protx_revoke(const JSONRPCRequest& request, const ChainstateMana
 
     EnsureWalletIsUnlocked(wallet.get());
 
-    const bool isV19active = llmq::utils::IsV19Active(WITH_LOCK(cs_main, return chainman.ActiveChain().Tip();));
+    const bool isV19active = Params().GetConsensus().IsV19Active(WITH_LOCK(cs_main, return chainman.ActiveChain().Tip();));
     const bool is_bls_legacy = !isV19active;
     CProUpRevTx ptx;
     ptx.nVersion = CProUpRevTx::GetVersion(isV19active);
@@ -1678,7 +1677,7 @@ static UniValue bls_generate(const JSONRPCRequest& request, const ChainstateMana
 
     CBLSSecretKey sk;
     sk.MakeNewKey();
-    bool bls_legacy_scheme = !llmq::utils::IsV19Active(chainman.ActiveChain().Tip());
+    bool bls_legacy_scheme = !Params().GetConsensus().IsV19Active(chainman.ActiveChain().Tip());
     if (!request.params[0].isNull()) {
         bls_legacy_scheme = ParseBoolV(request.params[0], "bls_legacy_scheme");
     }
@@ -1715,7 +1714,7 @@ static UniValue bls_fromsecret(const JSONRPCRequest& request, const ChainstateMa
 {
     bls_fromsecret_help(request);
 
-    bool bls_legacy_scheme = !llmq::utils::IsV19Active(chainman.ActiveChain().Tip());
+    bool bls_legacy_scheme = !Params().GetConsensus().IsV19Active(chainman.ActiveChain().Tip());
     if (!request.params[1].isNull()) {
         bls_legacy_scheme = ParseBoolV(request.params[1], "bls_legacy_scheme");
     }

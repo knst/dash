@@ -183,7 +183,7 @@ CDeterministicMNCPtr CDeterministicMNList::GetMNPayee(const CBlockIndex* pIndex)
         return nullptr;
     }
 
-    bool isv19Active = llmq::utils::IsV19Active(pIndex);
+    bool isv19Active = Params().GetConsensus().IsV19Active(pIndex);
     bool isMNRewardReallocation = llmq::utils::IsMNRewardReallocationActive(pIndex);
     // Starting from v19 and until MNRewardReallocation (Platform release), EvoNodes will be rewarded 4 blocks in a row
     CDeterministicMNCPtr best = nullptr;
@@ -755,7 +755,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, const C
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-protx-payload");
             }
 
-            if (proTx.nType == MnType::Evo && !llmq::utils::IsV19Active(pindexPrev)) {
+            if (proTx.nType == MnType::Evo && !Consensus().Params().IsV19Active(pindexPrev)) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-protx-payload");
             }
 
@@ -818,7 +818,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, const C
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-protx-payload");
             }
 
-            if (proTx.nType == MnType::Evo && !llmq::utils::IsV19Active(pindexPrev)) {
+            if (proTx.nType == MnType::Evo && !Consensus().Params():IsV19Active(pindexPrev)) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-protx-payload");
             }
 
@@ -1214,7 +1214,7 @@ bool CDeterministicMNManager::MigrateDBIfNeeded()
         return true;
     }
 
-    if (m_chainstate.m_chain.Tip()->pprev != nullptr && llmq::utils::IsV19Active(m_chainstate.m_chain.Tip()->pprev)) {
+    if (m_chainstate.m_chain.Tip()->pprev != nullptr && Params().GetConsensus().IsV19Active(m_chainstate.m_chain.Tip()->pprev)) {
         // too late
         LogPrintf("CDeterministicMNManager::%s -- migration is not possible\n", __func__);
         return false;
@@ -1324,7 +1324,7 @@ bool CDeterministicMNManager::MigrateDBIfNeeded2()
         return true;
     }
 
-    if (m_chainstate.m_chain.Tip()->pprev != nullptr && llmq::utils::IsV19Active(m_chainstate.m_chain.Tip()->pprev)) {
+    if (m_chainstate.m_chain.Tip()->pprev != nullptr && Params().GetConsensus().IsV19Active(m_chainstate.m_chain.Tip()->pprev)) {
         // too late
         LogPrintf("CDeterministicMNManager::%s -- migration is not possible\n", __func__);
         return false;
@@ -1505,7 +1505,7 @@ bool CheckProRegTx(const CTransaction& tx, const CBlockIndex* pindexPrev, TxVali
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-payload");
     }
 
-    if (!ptx.IsTriviallyValid(llmq::utils::IsV19Active(pindexPrev), state)) {
+    if (!ptx.IsTriviallyValid(Params().GetConsensus().IsV19Active(pindexPrev), state)) {
         // pass the state returned by the function above
         return false;
     }
@@ -1627,7 +1627,7 @@ bool CheckProUpServTx(const CTransaction& tx, const CBlockIndex* pindexPrev, TxV
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-payload");
     }
 
-    if (!ptx.IsTriviallyValid(llmq::utils::IsV19Active(pindexPrev), state)) {
+    if (!ptx.IsTriviallyValid(Params().GetConsensus().IsV19Active(pindexPrev), state)) {
         // pass the state returned by the function above
         return false;
     }
@@ -1697,7 +1697,7 @@ bool CheckProUpRegTx(const CTransaction& tx, const CBlockIndex* pindexPrev, TxVa
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-payload");
     }
 
-    if (!ptx.IsTriviallyValid(llmq::utils::IsV19Active(pindexPrev), state)) {
+    if (!ptx.IsTriviallyValid(Params().GetConsensus().IsV19Active(pindexPrev), state)) {
         // pass the state returned by the function above
         return false;
     }
@@ -1772,7 +1772,7 @@ bool CheckProUpRevTx(const CTransaction& tx, const CBlockIndex* pindexPrev, TxVa
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-payload");
     }
 
-    if (!ptx.IsTriviallyValid(llmq::utils::IsV19Active(pindexPrev), state)) {
+    if (!ptx.IsTriviallyValid(Params().GetConsensus().IsV19Active(pindexPrev), state)) {
         // pass the state returned by the function above
         return false;
     }

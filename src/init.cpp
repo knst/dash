@@ -2101,8 +2101,8 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
                             break;
                         }
 
-                        bool v19active = llmq::utils::IsV19Active(tip);
-                        if (llmq::utils::IsV19Active(tip)) {
+                        bool v19active = chainparams.GetConsensus()::IsV19Active(tip);
+                        if (v19active) {
                             bls::bls_legacy_scheme.store(false);
                             LogPrintf("%s: bls_legacy_scheme=%d\n", __func__, bls::bls_legacy_scheme.load());
                         }

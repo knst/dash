@@ -892,7 +892,7 @@ static UniValue verifychainlock(const JSONRPCRequest& request)
 
     CBLSSignature sig;
     if (pIndex) {
-        bool use_legacy_signature = !llmq::utils::IsV19Active(pIndex);
+        bool use_legacy_signature = !Params().GetConsensus().IsV19Active(pIndex);
         if (!sig.SetHexStr(request.params[1].get_str(), use_legacy_signature)) {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "invalid signature format");
         }
@@ -972,7 +972,7 @@ static UniValue verifyislock(const JSONRPCRequest& request)
     CHECK_NONFATAL(pBlockIndex != nullptr);
 
     CBLSSignature sig;
-    const bool use_bls_legacy = !llmq::utils::IsV19Active(pBlockIndex);
+    const bool use_bls_legacy = !Params().GetConsensus().IsV19Active(pBlockIndex);
     if (!sig.SetHexStr(request.params[2].get_str(), use_bls_legacy)) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "invalid signature format");
     }

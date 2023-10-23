@@ -39,7 +39,7 @@ void CMNAuth::PushMNAUTH(CNode& peer, CConnman& connman, const CBlockIndex* tip)
     if (Params().NetworkIDString() != CBaseChainParams::MAIN && gArgs.IsArgSet("-pushversion")) {
         nOurNodeVersion = gArgs.GetArg("-pushversion", PROTOCOL_VERSION);
     }
-    bool isV19active = llmq::utils::IsV19Active(tip);
+    bool isV19active = Params().GetConsensus().IsV19Active(tip);
     const CBLSPublicKeyVersionWrapper pubKey(*activeMasternodeInfo.blsPubKeyOperator, !isV19active);
     if (peer.nVersion < MNAUTH_NODE_VER_VERSION || nOurNodeVersion < MNAUTH_NODE_VER_VERSION) {
         signHash = ::SerializeHash(std::make_tuple(pubKey, receivedMNAuthChallenge, peer.fInbound));
@@ -105,7 +105,7 @@ void CMNAuth::ProcessMessage(CNode& peer, PeerManager& peerman, CConnman& connma
         nOurNodeVersion = gArgs.GetArg("-pushversion", PROTOCOL_VERSION);
     }
     const CBlockIndex* tip = ::ChainActive().Tip();
-    bool isV19active = llmq::utils::IsV19Active(tip);
+    bool isV19active = Params().GetConsensus().IsV19Active(tip);
     ConstCBLSPublicKeyVersionWrapper pubKey(dmn->pdmnState->pubKeyOperator.Get(), !isV19active);
     // See comment in PushMNAUTH (fInbound is negated here as we're on the other side of the connection)
     if (peer.nVersion < MNAUTH_NODE_VER_VERSION || nOurNodeVersion < MNAUTH_NODE_VER_VERSION) {

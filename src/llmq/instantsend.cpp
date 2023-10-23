@@ -787,7 +787,7 @@ void CInstantSendManager::ProcessMessageInstantSendLock(const CNode& pfrom, cons
     {
         LOCK(cs_main);
         EraseObjectRequest(pfrom.GetId(), CInv(islock->IsDeterministic() ? MSG_ISDLOCK : MSG_ISLOCK, hash));
-        fDIP0024IsActive = utils::IsDIP0024Active(m_chainstate.m_chain.Tip());
+        fDIP0024IsActive = Params().GetConsensus().IsDIP0024Active(m_chainstate.m_chain.Tip());
     }
 
     if (!islock->TriviallyValid()) {
@@ -815,7 +815,7 @@ void CInstantSendManager::ProcessMessageInstantSendLock(const CNode& pfrom, cons
     }
 
     // WE MUST STILL PROCESS OLD ISLOCKS?
-//    else if (utils::IsDIP0024Active(WITH_LOCK(cs_main, return m_chainstate.m_chain.Tip()))) {
+//    else if (Params().GetConsensus().IsDIP0024Active(WITH_LOCK(cs_main, return m_chainstate.m_chain.Tip()))) {
 //        // Ignore non-deterministic islocks once rotation is active
 //        return;
 //    }
