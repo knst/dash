@@ -169,11 +169,12 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     int nPackagesSelected = 0;
     int nDescendantsUpdated = 0;
 
+    CAmount blockSubsidy = GetBlockSubsidyInner(pindexPrev->nBits, pindexPrev->nHeight, Params().GetConsensus(), fV20Active_context);
     std::optional<CCreditPoolDiff> creditPoolDiff;
     if (fV20Active_context) {
         CCreditPool creditPool = creditPoolManager->GetCreditPool(pindexPrev, chainparams.GetConsensus());
         LogPrintf("%s: CCreditPool is %s\n", __func__, creditPool.ToString());
-        creditPoolDiff.emplace(std::move(creditPool), pindexPrev, chainparams.GetConsensus());
+        creditPoolDiff.emplace(std::move(creditPool), pindexPrev, chainparams.GetConsensus(), blockSubsidy);
     }
     std::unordered_map<uint8_t, int> signals = m_chainstate.GetMNHFSignalsStage();
     addPackageTxs(nPackagesSelected, nDescendantsUpdated, creditPoolDiff, signals);
@@ -192,8 +193,6 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
 
     // NOTE: unlike in bitcoin, we need to pass PREVIOUS block height here
-    bool fMNRewardReallocated = llmq::utils::IsMNRewardReallocationActive(pindexPrev);
-    CAmount blockSubsidy = GetBlockSubsidyInner(pindexPrev->nBits, pindexPrev->nHeight, Params().GetConsensus(), fV20Active_context);
     CAmount blockReward = blockSubsidy + nFees;
 
     // Compute regular coinbase transaction.
@@ -235,13 +234,6 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     LogPrintf("CreateNewBlock() h[%d] CbTx failed to find best CL. Inserting null CL\n", nHeight);
                 }
                 assert(creditPoolDiff != std::nullopt);
-
-                if (fMNRewardReallocated) {
-                    const CAmount masternodeReward = GetMasternodePayment(nHeight, blockSubsidy, fV20Active_context);
-                    const CAmount reallocedReward = MasternodePayments::PlatformShare(masternodeReward);
-                    LogPrint(BCLog::MNPAYMENTS, "%s: add MN reward %lld (%lld) to credit pool\n", __func__, masternodeReward, reallocedReward);
-                    creditPoolDiff->AddRewardRealloced(reallocedReward);
-                }
                 cbTx.creditPoolBalance = creditPoolDiff->GetTotalLocked();
             }
         }
