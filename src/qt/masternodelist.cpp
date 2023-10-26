@@ -166,8 +166,8 @@ void MasternodeList::updateDIP3List()
         return;
     }
 
-    auto mnList = clientModel->getMasternodeList();
-    auto projectedPayees = mnList.GetProjectedMNPayeesAtChainTip();
+    auto [mnList, pindex] = clientModel->getMasternodeList();
+    auto projectedPayees = mnList.GetProjectedMNPayees(pindex);
 
     if (projectedPayees.empty() && mnList.GetValidMNsCount() > 0) {
         // GetProjectedMNPayees failed to provide results for a list with valid mns.
@@ -356,8 +356,7 @@ CDeterministicMNCPtr MasternodeList::GetSelectedDIP3MN()
     uint256 proTxHash;
     proTxHash.SetHex(strProTxHash);
 
-    auto mnList = clientModel->getMasternodeList();
-    return mnList.GetMN(proTxHash);
+    return clientModel->getMasternodeList().first.GetMN(proTxHash);;
 }
 
 void MasternodeList::extraInfoDIP3_clicked()

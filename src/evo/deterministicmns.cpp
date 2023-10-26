@@ -211,16 +211,6 @@ CDeterministicMNCPtr CDeterministicMNList::GetMNPayee(const CBlockIndex* pIndex)
     return best;
 }
 
-std::vector<CDeterministicMNCPtr> CDeterministicMNList::GetProjectedMNPayeesAtChainTip(int nCount) const
-{
-    const CBlockIndex* const pindex = WITH_LOCK(::cs_main, return g_chainman.m_blockman.LookupBlockIndex(blockHash));
-    if (pindex == nullptr) {
-        LogPrintf("GetProjectedMNPayeesAtChainTip WARNING pindex is nullptr on height=%lld blockhash=%s tip height=%lld tip hash=%s\n", nHeight, blockHash.ToString(), ::ChainActive().Tip()->nHeight, ::ChainActive().Tip()->GetBlockHash().ToString());
-        return {};
-    }
-    return GetProjectedMNPayees(pindex, nCount);
-}
-
 std::vector<CDeterministicMNCPtr> CDeterministicMNList::GetProjectedMNPayees(const CBlockIndex* const pindex, int nCount) const
 {
     if (nCount < 0 ) {
@@ -637,7 +627,7 @@ bool CDeterministicMNManager::ProcessBlock(const CBlock& block, const CBlockInde
     // Don't hold cs while calling signals
     if (diff.HasChanges()) {
         GetMainSignals().NotifyMasternodeListChanged(false, oldList, diff, connman);
-        uiInterface.NotifyMasternodeListChanged(newList);
+        uiInterface.NotifyMasternodeListChanged(newList, pindex);
     }
 
     if (nHeight == consensusParams.DIP0003EnforcementHeight) {
@@ -678,7 +668,7 @@ bool CDeterministicMNManager::UndoBlock(const CBlockIndex* pindex)
     if (diff.HasChanges()) {
         auto inversedDiff = curList.BuildDiff(prevList);
         GetMainSignals().NotifyMasternodeListChanged(true, curList, inversedDiff, connman);
-        uiInterface.NotifyMasternodeListChanged(prevList);
+        uiInterface.NotifyMasternodeListChanged(prevList, pindex->pprev);
     }
 
     const auto& consensusParams = Params().GetConsensus();
