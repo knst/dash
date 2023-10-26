@@ -281,7 +281,7 @@ bool CTransactionBuilder::Commit(bilingual_str& strResult)
         LOCK(cs_outputs);
         vecSend.reserve(vecOutputs.size());
         for (const auto& out : vecOutputs) {
-            vecSend.push_back((CRecipient){out->GetScript(), out->GetAmount(), false});
+            vecSend.push_back((CRecipient){CNoDestination{out->GetScript()}, out->GetAmount(), false});
         }
     }
 

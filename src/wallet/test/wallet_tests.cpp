@@ -674,7 +674,7 @@ BOOST_FIXTURE_TEST_CASE(ListCoinsTest, ListCoinsTestingSetup)
     // returns the coin associated with the change address underneath the
     // coinbaseKey pubkey, even though the change address has a different
     // pubkey.
-    AddTx(CRecipient{GetScriptForRawPubKey({}), 1 * COIN, /*subtract_fee=*/false});
+    AddTx(CRecipient{PubKeyDestination{{}}, 1 * COIN, /*subtract_fee=*/false});
     {
         LOCK(wallet->cs_wallet);
         list = ListCoins(*wallet);
@@ -823,7 +823,7 @@ BOOST_FIXTURE_TEST_CASE(create_asset_lock_transaction, AssetLockTestingSetup)
     // Platform recipients without a version selection still get the current
     // payload version, which the standard mempool refuses to relay.
     const auto default_version{CreateTransaction(*wallet,
-                                                 {CRecipient{GetScriptForDestination(PKHash{registration_pubkey.value}), credit_amount,
+                                                 {CRecipient{PKHash{registration_pubkey.value}, credit_amount,
                                                              /*fSubtractFeeFromAmount=*/false, /*fPlatformTransfer=*/true}},
                                                  RANDOM_CHANGE_POSITION, CCoinControl{}, /*sign=*/true)};
     BOOST_REQUIRE(!default_version);
@@ -1333,7 +1333,7 @@ public:
         for (auto entry : vecEntries) {
             JSONRPCRequest request;
             request.context = context;
-            vecRecipients.push_back({GetScriptForDestination(DecodeDestination(wallet::getnewaddress().HandleRequest(request).get_str())), entry.first, entry.second});
+            vecRecipients.push_back({DecodeDestination(wallet::getnewaddress().HandleRequest(request).get_str()), entry.first, entry.second});
         }
         return vecRecipients;
     }
@@ -1678,11 +1678,11 @@ BOOST_FIXTURE_TEST_CASE(select_coins_grouped_by_addresses, ListCoinsTestingSetup
 
     // Create two conflicting transactions, add one to the wallet and mine the other one.
     CCoinControl dummy;
-    auto ret1 = CreateTransaction(*wallet, {CRecipient{GetScriptForRawPubKey({}), 2 * COIN, true /* subtract fee */}},
+    auto ret1 = CreateTransaction(*wallet, {CRecipient{PubKeyDestination{{}}, 2 * COIN, true /* subtract fee */}},
                                   RANDOM_CHANGE_POSITION, dummy);
     BOOST_CHECK(ret1);
     const auto& txr1 = ret1->tx;
-    auto ret2 = CreateTransaction(*wallet, {CRecipient{GetScriptForRawPubKey({}), 1 * COIN, true /* subtract fee */}},
+    auto ret2 = CreateTransaction(*wallet, {CRecipient{PubKeyDestination{{}}, 1 * COIN, true /* subtract fee */}},
                                   RANDOM_CHANGE_POSITION, dummy);
     BOOST_CHECK(ret2);
     const auto& txr2 = ret2->tx;
@@ -1766,7 +1766,7 @@ BOOST_FIXTURE_TEST_CASE(MempoolRemovalInvalidatesAnonymizableTally, ListCoinsTes
 
     // A wallet transaction in the mempool is trusted at depth zero, so its outputs count
     // towards the anonymizable tally and that tally is cacheable.
-    auto created{CreateTransaction(*wallet, {CRecipient{GetScriptForDestination(*dest), 1 * COIN,
+    auto created{CreateTransaction(*wallet, {CRecipient{*dest, 1 * COIN,
                                                         /*fSubtractFeeFromAmount=*/false}},
                                    RANDOM_CHANGE_POSITION, CCoinControl{})};
     BOOST_REQUIRE(created);

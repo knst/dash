@@ -491,7 +491,7 @@ public:
         CCoinControl version_1_control{coin_control};
         version_1_control.m_asset_lock_version = CAssetLockPayload::INITIAL_VERSION;
         auto res{CreateTransaction(*m_wallet,
-                                   {CRecipient{GetScriptForDestination(PKHash{funding_pubkey.value}), credit_amount,
+                                   {CRecipient{PKHash{funding_pubkey.value}, credit_amount,
                                                /*fSubtractFeeFromAmount=*/false, /*fPlatformTransfer=*/true}},
                                    RANDOM_CHANGE_POSITION, version_1_control, /*sign=*/true)};
         if (!res) return util::Error{util::ErrorString(res)};
@@ -518,7 +518,7 @@ public:
         std::vector<CRecipient> recipients;
         recipients.reserve(tx.vout.size());
         for (const auto& output : tx.vout) {
-            recipients.push_back({output.scriptPubKey, output.nValue, /*fSubtractFeeFromAmount=*/false});
+            recipients.push_back({CNoDestination{output.scriptPubKey}, output.nValue, /*fSubtractFeeFromAmount=*/false});
         }
 
         CCoinControl coin_control;

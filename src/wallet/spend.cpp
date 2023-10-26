@@ -1421,7 +1421,7 @@ bool FundTransaction(CWallet& wallet, CMutableTransaction& tx, CAmount& nFeeRet,
 bool GenBudgetSystemCollateralTx(CWallet& wallet, CTransactionRef& tx, uint256 hash, CAmount amount, const COutPoint& outpoint)
 {
     const CScript scriptChange{CScript() << OP_RETURN << ToByteVector(hash)};
-    const std::vector<CRecipient> vecSend{{scriptChange, amount, false}};
+    const std::vector<CRecipient> vecSend{{CNoDestination{scriptChange}, amount, false}};
 
     CCoinControl coinControl;
     if (!outpoint.IsNull()) {
