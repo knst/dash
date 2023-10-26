@@ -3422,7 +3422,7 @@ bool PeerManagerImpl::ProcessOrphanTx(NodeId node_id)
     while (CTransactionRef porphanTx = m_orphanage.GetTxToReconsider(node_id)) {
         const MempoolAcceptResult result = m_chainman.ProcessTransaction(porphanTx);
         const TxValidationState& state = result.m_state;
-        const uint256& orphanHash = porphanTx->GetHash();
+        const Txid& orphanHash = porphanTx->GetHash();
 
         if (result.m_result_type == MempoolAcceptResult::ResultType::VALID) {
             LogPrint(BCLog::TXPACKAGES, "   accepted orphan tx %s\n", orphanHash.ToString());
