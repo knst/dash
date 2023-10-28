@@ -28,8 +28,6 @@ namespace Consensus
     struct Params;
 }
 
-extern RecursiveMutex cs_main;
-
 struct CCreditPool {
     CAmount locked{0};
 
@@ -136,7 +134,7 @@ private:
 };
 
 std::optional<CCreditPoolDiff> GetCreditPoolDiffForBlock(const CBlock& block, const CBlockIndex* pindexPrev, const Consensus::Params& consensusParams,
-                                                         const CAmount blockSubsidy, BlockValidationState& state) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+                                                         const CAmount blockSubsidy, BlockValidationState& state);
 
 extern std::unique_ptr<CCreditPoolManager> creditPoolManager;
 

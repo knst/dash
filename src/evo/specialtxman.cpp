@@ -275,8 +275,6 @@ bool UndoSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CMNHF
 bool CheckCreditPoolDiffForBlock(const CBlock& block, const CBlockIndex* pindex, const Consensus::Params& consensusParams,
                                 const CAmount blockSubsidy, BlockValidationState& state)
 {
-    AssertLockHeld(cs_main);
-
     try {
         if (!llmq::utils::IsV20Active(pindex)) return true;
 

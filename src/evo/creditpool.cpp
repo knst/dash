@@ -297,8 +297,6 @@ bool CCreditPoolDiff::ProcessLockUnlockTransaction(const CTransaction& tx, TxVal
 std::optional<CCreditPoolDiff> GetCreditPoolDiffForBlock(const CBlock& block, const CBlockIndex* pindexPrev, const Consensus::Params& consensusParams,
                                                          const CAmount blockSubsidy, BlockValidationState& state)
 {
-    AssertLockHeld(cs_main);
-
     try {
         const CCreditPool creditPool = creditPoolManager->GetCreditPool(pindexPrev, consensusParams);
         LogPrintf("%s: CCreditPool is %s\n", __func__, creditPool.ToString());
