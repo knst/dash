@@ -224,7 +224,7 @@ CCreditPoolDiff::CCreditPoolDiff(CCreditPool starter, const CBlockIndex *pindex,
 
     if (llmq::utils::IsMNRewardReallocationActive(pindex)) {
         // We consider V20 active if mn_rr is active
-        platformReward = MasternodePayments::PlatformShare(GetMasternodePayment(pindex->nHeight, blockSubsidy, /*v20_active=*/ true));
+        platformReward = MasternodePayments::PlatformShare(GetMasternodePayment(pindex->nHeight, blockSubsidy, /*fV20Active=*/ true));
     }
 }
 
