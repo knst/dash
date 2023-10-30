@@ -401,8 +401,7 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
     // This credit pool is used only to check withdrawal limits and to find
     // duplicates of indexes. There's used `BlockSubsidy` equaled to 0
     std::optional<CCreditPoolDiff> creditPoolDiff;
-    bool fV20Active_context = llmq::utils::IsV20Active(pindexPrev);
-    if (fV20Active_context) {
+    if (llmq::utils::IsV20Active(pindexPrev)) {
         CCreditPool creditPool = creditPoolManager->GetCreditPool(pindexPrev, chainparams.GetConsensus());
         LogPrintf("%s: CCreditPool is %s\n", __func__, creditPool.ToString());
         creditPoolDiff.emplace(std::move(creditPool), pindexPrev, chainparams.GetConsensus(), 0);
