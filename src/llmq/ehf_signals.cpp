@@ -62,8 +62,6 @@ void CEHFSignalsHandler::trySignEHFSignal(int bit, const CBlockIndex* const pind
     mnhfPayload.signal.versionBit = bit;
     const uint256 requestId = mnhfPayload.GetRequestId();
 
-    LogPrintf("CEHFSignalsHandler::trySignEHFSignal: bit=%d at height=%d id=%s\n", bit, pindex->nHeight, requestId.ToString());
-
     const Consensus::LLMQType& llmqType = Params().GetConsensus().llmqTypeMnhf;
     const auto& llmq_params_opt = llmq::GetLLMQParams(llmqType);
     if (!llmq_params_opt.has_value()) {
@@ -83,6 +81,7 @@ void CEHFSignalsHandler::trySignEHFSignal(int bit, const CBlockIndex* const pind
         return;
     }
 
+    LogPrintf("CEHFSignalsHandler::trySignEHFSignal: bit=%d at height=%d id=%s\n", bit, pindex->nHeight, requestId.ToString());
     mnhfPayload.signal.quorumHash = quorum->qc->quorumHash;
     const uint256 msgHash = mnhfPayload.PrepareTx().GetHash();
 
