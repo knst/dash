@@ -189,6 +189,7 @@ bool CMNHFManager::ProcessBlock(const CBlock& block, const CBlockIndex* const pi
             if (!fJustCheck) {
                 AddToCache(signals, pindex);
             }
+            LogPrint(BCLog::EHF, "CMNHFManager::ProcessBlock: no new signals; number of known signals: %d\n", signals.size());
             return true;
         }
 
@@ -232,7 +233,7 @@ bool CMNHFManager::UndoBlock(const CBlock& block, const CBlockIndex* const pinde
     std::vector<uint8_t> excluded_signals;
     BlockValidationState state;
     if (!extractSignals(block, pindex, excluded_signals, state)) {
-        LogPrintf("CMNHFManager::ProcessBlock: failed to extract signals\n");
+        LogPrintf("CMNHFManager::%s: failed to extract signals\n", __func__);
         return false;
     }
     if (excluded_signals.empty()) {
