@@ -417,6 +417,7 @@ CTxMemPool::CTxMemPool(const Options& opts)
       m_require_standard{opts.require_standard},
       m_address_index_enabled{opts.address_index_enabled},
       m_spent_index_enabled{opts.spent_index_enabled},
+      m_persist_v1_dat{opts.persist_v1_dat},
       m_limits{opts.limits}
 {
 }

@@ -463,6 +463,7 @@ public:
     const bool m_require_standard;
     const bool m_address_index_enabled;
     const bool m_spent_index_enabled;
+    const bool m_persist_v1_dat;
 
     const Limits m_limits;
 

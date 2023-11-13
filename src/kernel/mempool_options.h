@@ -26,6 +26,8 @@ static constexpr unsigned int DEFAULT_MAX_MEMPOOL_SIZE_MB{300};
 static constexpr unsigned int DEFAULT_BLOCKSONLY_MAX_MEMPOOL_SIZE_MB{5};
 /** Default for -mempoolexpiry, expiration time for mempool transactions in hours */
 static constexpr unsigned int DEFAULT_MEMPOOL_EXPIRY_HOURS{336};
+/** Whether to fall back to legacy V1 serialization when writing mempool.dat */
+static constexpr bool DEFAULT_PERSIST_V1_DAT{false};
 /** Default for -acceptnonstdtxn */
 static constexpr bool DEFAULT_ACCEPT_NON_STD_TXN{false};
 
@@ -64,6 +66,7 @@ struct MemPoolOptions {
     bool require_standard{true};
     bool address_index_enabled{false};
     bool spent_index_enabled{false};
+    bool persist_v1_dat{DEFAULT_PERSIST_V1_DAT};
     MemPoolLimits limits{};
 };
 } // namespace kernel

@@ -93,6 +93,8 @@ std::optional<bilingual_str> ApplyArgsManOptions(const ArgsManager& argsman, con
         return strprintf(Untranslated("acceptnonstdtxn is not currently supported for %s chain"), chainparams.GetChainTypeString());
     }
 
+    mempool_opts.persist_v1_dat = argsman.GetBoolArg("-persistmempoolv1", mempool_opts.persist_v1_dat);
+
     ApplyArgsManOptions(argsman, mempool_opts.limits);
 
     mempool_opts.address_index_enabled = argsman.GetBoolArg("-addressindex", DEFAULT_ADDRESSINDEX);
