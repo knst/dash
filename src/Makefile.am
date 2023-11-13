@@ -431,6 +431,7 @@ libbitcoin_server_a_SOURCES = \
   governance/validators.cpp \
   governance/vote.cpp \
   governance/votedb.cpp \
+  gsl/assert.cpp \
   llmq/quorums.cpp \
   llmq/blockprocessor.cpp \
   llmq/commitment.cpp \
