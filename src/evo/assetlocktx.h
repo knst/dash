@@ -10,7 +10,6 @@
 #include <primitives/transaction.h>
 #include <gsl/pointers.h>
 
-#include <key_io.h>
 #include <serialize.h>
 #include <tinyformat.h>
 #include <univalue.h>
