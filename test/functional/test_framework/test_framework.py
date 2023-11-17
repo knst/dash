@@ -23,7 +23,7 @@ import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from typing import Any, List, Optional, Union
+from typing import Any, Optional, Union
 from .address import ADDRESS_BCRT1_P2SH_OP_TRUE
 from .authproxy import JSONRPCException
 from test_framework.masternodes import check_banned, check_punished
@@ -124,7 +124,7 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
         self.setup_clean_chain: bool = False
         self.disable_mocktime: bool = False
         self.noban_tx_relay: bool = False
-        self.nodes: List[TestNode] = []
+        self.nodes: list[TestNode] = []
         self.extra_args: Any = None
         self.network_thread = None
         self.mocktime = 0
@@ -134,7 +134,7 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
         self.parse_args()
         self.default_wallet_name = "default_wallet" if self.options.descriptors else ""
         self.wallet_data_filename = "wallet.dat"
-        self.extra_args_from_options: List[str] = []
+        self.extra_args_from_options: list[str] = []
         # Optional list of wallet names that can be set in set_test_params to
         # create and import keys to. If unset, default is len(nodes) *
         # [default_wallet_name]. If wallet names are None, wallet creation is
@@ -1294,8 +1294,8 @@ class MasternodeInfo:
             raise AssertionError(f"Node at pos {self.nodeIdx} not present, did you start the node?")
         return test.nodes[self.nodeIdx]
 
-    def validate_inputs(self, platform_node_id: Optional[str] = None, addrs_platform_p2p: Union[int, str, List[str], None] = None,
-                        addrs_platform_https: Union[int, str, List[str], None] = None, expected_assert_code: Optional[int] = None,
+    def validate_inputs(self, platform_node_id: Optional[str] = None, addrs_platform_p2p: Union[int, str, list[str], None] = None,
+                        addrs_platform_https: Union[int, str, list[str], None] = None, expected_assert_code: Optional[int] = None,
                         expected_assert_msg: Optional[str] = None):
         if (expected_assert_code and not expected_assert_msg) or (not expected_assert_code and expected_assert_msg):
             raise AssertionError("Intending to use assert_raises_rpc_error() but didn't specify code and message")
@@ -1308,11 +1308,11 @@ class MasternodeInfo:
                 raise AssertionError("EvoNode but addrs_platform_https is missing, must be specified!")
 
     def register(self, node: TestNode, submit: bool, collateral_txid: Optional[str] = None, collateral_vout: Optional[int] = None,
-                 addrs_core_p2p: Union[str, List[str], None] = None, ownerAddr: Optional[str] = None, pubKeyOperator: Optional[str] = None,
+                 addrs_core_p2p: Union[str, list[str], None] = None, ownerAddr: Optional[str] = None, pubKeyOperator: Optional[str] = None,
                  votingAddr: Optional[str] = None, operator_reward: Optional[int] = None, rewards_address: Optional[str] = None,
-                 payouts: Optional[List[dict]] = None, fundsAddr: Optional[str] = None,
-                 platform_node_id: Optional[str] = None, addrs_platform_p2p: Union[int, str, List[str], None] = None,
-                 addrs_platform_https: Union[int, str, List[str], None] = None, expected_assert_code: Optional[int] = None,
+                 payouts: Optional[list[dict]] = None, fundsAddr: Optional[str] = None,
+                 platform_node_id: Optional[str] = None, addrs_platform_p2p: Union[int, str, list[str], None] = None,
+                 addrs_platform_https: Union[int, str, list[str], None] = None, expected_assert_code: Optional[int] = None,
                  expected_assert_msg: Optional[str] = None) -> Optional[str]:
         self.validate_inputs(platform_node_id, addrs_platform_p2p, addrs_platform_https, expected_assert_code, expected_assert_msg)
 
@@ -1355,12 +1355,12 @@ class MasternodeInfo:
 
         return ret
 
-    def register_fund(self, node: TestNode, submit: bool, collateral_address: Optional[str] = None, addrs_core_p2p: Union[str, List[str], None] = None,
+    def register_fund(self, node: TestNode, submit: bool, collateral_address: Optional[str] = None, addrs_core_p2p: Union[str, list[str], None] = None,
                       ownerAddr: Optional[str] = None, pubKeyOperator: Optional[str] = None, votingAddr: Optional[str] = None,
                       operator_reward: Optional[int] = None, rewards_address: Optional[str] = None,
-                      payouts: Optional[List[dict]] = None, fundsAddr: Optional[str] = None,
-                      platform_node_id: Optional[str] = None, addrs_platform_p2p: Union[int, str, List[str], None] = None,
-                      addrs_platform_https: Union[int, str, List[str], None] = None, expected_assert_code: Optional[int] = None,
+                      payouts: Optional[list[dict]] = None, fundsAddr: Optional[str] = None,
+                      platform_node_id: Optional[str] = None, addrs_platform_p2p: Union[int, str, list[str], None] = None,
+                      addrs_platform_https: Union[int, str, list[str], None] = None, expected_assert_code: Optional[int] = None,
                       expected_assert_msg: Optional[str] = None) -> Optional[str]:
         self.validate_inputs(platform_node_id, addrs_platform_p2p, addrs_platform_https, expected_assert_code, expected_assert_msg)
 
@@ -1445,7 +1445,7 @@ class MasternodeInfo:
         return ret
 
     def update_registrar(self, node: TestNode, submit: bool, pubKeyOperator: Optional[str] = None, votingAddr: Optional[str] = None,
-                         rewards_address: Optional[str] = None, payouts: Optional[List[dict]] = None, fundsAddr: Optional[str] = None,
+                         rewards_address: Optional[str] = None, payouts: Optional[list[dict]] = None, fundsAddr: Optional[str] = None,
                          expected_assert_code: Optional[int] = None, expected_assert_msg: Optional[str] = None) -> Optional[str]:
         if (expected_assert_code and not expected_assert_msg) or (not expected_assert_code and expected_assert_msg):
             raise AssertionError("Intending to use assert_raises_rpc_error() but didn't specify code and message")
@@ -1486,8 +1486,8 @@ class MasternodeInfo:
 
         return ret
 
-    def update_service(self, node: TestNode, submit: bool, addrs_core_p2p: Union[str, List[str], None] = None, platform_node_id: Optional[str] = None,
-                       addrs_platform_p2p: Union[int, str, List[str], None] = None, addrs_platform_https: Union[int, str, List[str], None] = None,
+    def update_service(self, node: TestNode, submit: bool, addrs_core_p2p: Union[str, list[str], None] = None, platform_node_id: Optional[str] = None,
+                       addrs_platform_p2p: Union[int, str, list[str], None] = None, addrs_platform_https: Union[int, str, list[str], None] = None,
                        address_operator: Optional[str] = None, fundsAddr: Optional[str] = None, expected_assert_code: Optional[int] = None,
                        expected_assert_msg: Optional[str] = None) -> Optional[str]:
         self.validate_inputs(platform_node_id, addrs_platform_p2p, addrs_platform_https, expected_assert_code, expected_assert_msg)
@@ -2751,7 +2751,7 @@ class DashTestFramework(BitcoinTestFramework):
             self.log.info(f"getrecsig failed with '{e}'")
         assert False
 
-    def get_quorum_masternodes(self, q, llmq_type=100) -> List[Optional[MasternodeInfo]]:
+    def get_quorum_masternodes(self, q, llmq_type=100) -> list[Optional[MasternodeInfo]]:
         qi = self.nodes[0].quorum('info', llmq_type, q)
         result = []
         for m in qi['members']:

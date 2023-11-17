@@ -13,7 +13,7 @@ import ipaddress
 import re
 import sys
 import json
-from typing import List, Dict, Union
+from typing import Union
 
 from asmap import ASMap, net_to_prefix
 
@@ -85,21 +85,21 @@ def parseip(ip_in: str) -> Union[dict, None]:
         "sortkey": sortkey
     }
 
-def filtermulticollateralhash(mns : List[Dict]) -> List[Dict]:
+def filtermulticollateralhash(mns : list[dict]) -> list[dict]:
     '''Filter out MNs sharing the same collateral hash'''
     hist = collections.defaultdict(list)
     for mn in mns:
         hist[mn['collateralHash']].append(mn)
     return [mn for mn in mns if len(hist[mn['collateralHash']]) == 1]
 
-def filtermulticollateraladdress(mns : List[Dict]) -> List[Dict]:
+def filtermulticollateraladdress(mns : list[dict]) -> list[dict]:
     '''Filter out MNs sharing the same collateral address'''
     hist = collections.defaultdict(list)
     for mn in mns:
         hist[mn['collateralAddress']].append(mn)
     return [mn for mn in mns if len(hist[mn['collateralAddress']]) == 1]
 
-def filtermultipayoutaddress(mns : List[Dict]) -> List[Dict]:
+def filtermultipayoutaddress(mns : list[dict]) -> list[dict]:
     '''Filter out MNs sharing the same payout address'''
     hist = collections.defaultdict(list)
     for mn in mns:
@@ -107,7 +107,7 @@ def filtermultipayoutaddress(mns : List[Dict]) -> List[Dict]:
     return [mn for mn in mns if len(hist[mn['state']['payoutAddress']]) == 1]
 
 # Based on Greg Maxwell's seed_filter.py
-def filterbyasn(asmap: ASMap, ips: List[Dict], max_per_asn: Dict, max_per_net: int) -> List[Dict]:
+def filterbyasn(asmap: ASMap, ips: list[dict], max_per_asn: dict, max_per_net: int) -> list[dict]:
     """ Prunes `ips` by
     (a) trimming ips to have at most `max_per_net` ips from each net (e.g. ipv4, ipv6); and
     (b) trimming ips to have at most `max_per_asn` ips from each asn in each net.
@@ -119,8 +119,8 @@ def filterbyasn(asmap: ASMap, ips: List[Dict], max_per_asn: Dict, max_per_net: i
 
     # Filter IPv46 by ASN, and limit to max_per_net per network
     result = []
-    net_count: Dict[str, int] = collections.defaultdict(int)
-    asn_count: Dict[int, int] = collections.defaultdict(int)
+    net_count: dict[str, int] = collections.defaultdict(int)
+    asn_count: dict[int, int] = collections.defaultdict(int)
 
     for i, ip in enumerate(ips_ipv46):
         if net_count[ip['net']] == max_per_net:
@@ -142,9 +142,9 @@ def filterbyasn(asmap: ASMap, ips: List[Dict], max_per_asn: Dict, max_per_net: i
     result.extend(ips_i2p[0:max_per_net])
     return result
 
-def ip_stats(ips: List[Dict]) -> str:
+def ip_stats(ips: list[dict]) -> str:
     """ Format and return pretty string from `ips`. """
-    hist: Dict[str, int] = collections.defaultdict(int)
+    hist: dict[str, int] = collections.defaultdict(int)
     for ip in ips:
         if ip is not None:
             hist[ip['net']] += 1
