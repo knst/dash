@@ -182,11 +182,9 @@ popd
 ### After 3 or more people have guix-built and their results match:
 
 * [ ] Combine the `all.SHA256SUMS.asc` file from all signers into `SHA256SUMS.asc`:
-
     ```sh
     cat "$VERSION"/*/all.SHA256SUMS.asc > SHA256SUMS.asc
     ```
-
 * [ ] GPG sign each download / binary
 * [ ] Upload zips and installers, as well as `SHA256SUMS.asc` from last step, to GitHub as GitHub draft release.
     1. The contents of each `./dash/guix-build-${VERSION}/output/${HOST}/` directory, except for
@@ -218,7 +216,6 @@ popd
 * [ ] Ensure that docker hub images are up to date
 
 ### Announce the release:
-
 * [ ] Release on Dash forum: https://www.dash.org/forum/topic/official-announcements.54/ (necessary so we have a permalink to use on twitter, reddit, etc.)
 * [ ] Prepare product brief (major versions only)
 * [ ] Prepare a release announcement tweet
