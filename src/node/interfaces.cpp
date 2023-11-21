@@ -15,6 +15,7 @@
 #include <interfaces/chain.h>
 #include <interfaces/handler.h>
 #include <interfaces/wallet.h>
+#include <llmq/chainlocks.h>
 #include <llmq/instantsend.h>
 #include <mapport.h>
 #include <masternode/sync.h>
@@ -718,6 +719,11 @@ public:
     {
         assert(llmq::quorumInstantSendManager);
         return llmq::quorumInstantSendManager->IsLocked(hash);
+    }
+    bool hasChainLock(int height, const uint256& hash) override
+    {
+        assert(llmq::chainLocksHandler);
+        return llmq::chainLocksHandler->HasChainLock(height, hash);
     }
     bool findBlock(const uint256& hash, const FoundBlock& block) override
     {
