@@ -90,8 +90,7 @@ struct OutputGroup
     }
     void Insert(const CInputCoin& output, int depth, bool from_me, size_t ancestors, size_t descendants);
     std::vector<CInputCoin>::iterator Discard(const CInputCoin& output);
-    bool IsLockedByInstantSend() const;
-    bool EligibleForSpending(const CoinEligibilityFilter& eligibility_filter) const;
+    bool EligibleForSpending(const CoinEligibilityFilter& eligibility_filter, bool isISLocked) const;
 };
 
 bool SelectCoinsBnB(std::vector<OutputGroup>& utxo_pool, const CAmount& target_value, const CAmount& cost_of_change, std::set<CInputCoin>& out_set, CAmount& value_ret, CAmount not_input_fees);
