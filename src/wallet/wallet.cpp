@@ -5134,7 +5134,7 @@ bool CWalletTx::IsLockedByInstantSend() const
     if (fIsChainlocked) {
         fIsInstantSendLocked = false;
     } else if (!fIsInstantSendLocked) {
-        fIsInstantSendLocked = llmq::quorumInstantSendManager->IsLocked(GetHash());
+        fIsInstantSendLocked = pwallet->chain().isInstantSendLockedTx(GetHash());
     }
     return fIsInstantSendLocked;
 }

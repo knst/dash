@@ -714,6 +714,11 @@ public:
         assert(std::addressof(::ChainActive()) == std::addressof(m_node.chainman->ActiveChain()));
         return CheckFinalTx(m_node.chainman->ActiveChain().Tip(), tx);
     }
+    bool isInstantSendLockedTx(const uint256& hash) override
+    {
+        assert(llmq::quorumInstantSendManager);
+        return llmq::quorumInstantSendManager->IsLocked(hash);
+    }
     bool findBlock(const uint256& hash, const FoundBlock& block) override
     {
         WAIT_LOCK(cs_main, lock);
