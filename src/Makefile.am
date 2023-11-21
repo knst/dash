@@ -389,6 +389,9 @@ libbitcoin_util_a-clientversion.$(OBJEXT): obj/build.h
 libbitcoin_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(MINIUPNPC_CPPFLAGS) $(NATPMP_CPPFLAGS) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
 libbitcoin_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_server_a_SOURCES = \
+  coinjoin/client.cpp \
+  coinjoin/options.cpp \
+  coinjoin/util.cpp \
   addrdb.cpp \
   addressindex.cpp \
   addrman.cpp \
@@ -401,6 +404,9 @@ libbitcoin_server_a_SOURCES = \
   coinjoin/context.cpp \
   coinjoin/options.cpp \
   coinjoin/server.cpp \
+  coinjoin/client.cpp \
+  coinjoin/options.cpp \
+  coinjoin/util.cpp \
   consensus/tx_verify.cpp \
   dbwrapper.cpp \
   dsnotificationinterface.cpp \
@@ -520,9 +526,6 @@ endif
 libbitcoin_wallet_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(SQLITE_CFLAGS)
 libbitcoin_wallet_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_wallet_a_SOURCES = \
-  coinjoin/client.cpp \
-  coinjoin/options.cpp \
-  coinjoin/util.cpp \
   hdchain.cpp \
   wallet/coincontrol.cpp \
   wallet/context.cpp \
@@ -865,9 +868,7 @@ endif
 # https://eli.thegreenplace.net/2013/07/09/library-order-in-static-linking#circular-dependency)
 dash_wallet_LDADD = \
   $(LIBBITCOIN_WALLET_TOOL) \
-  $(LIBBITCOIN_SERVER) \
   $(LIBBITCOIN_WALLET) \
-  $(LIBBITCOIN_SERVER) \
   $(LIBBITCOIN_COMMON) \
   $(LIBBITCOIN_CONSENSUS) \
   $(LIBBITCOIN_UTIL) \
