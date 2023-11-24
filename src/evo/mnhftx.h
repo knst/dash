@@ -110,12 +110,15 @@ public:
     explicit CMNHFManager(const CMNHFManager&) = delete;
 
     /**
-     * Every new block should be processed when Tip() is updated by calling of CMNHFManager::ProcessBlock
+     * Every new block should be processed when Tip() is updated by calling of CMNHFManager::ProcessBlock.
+     * This function actually does only validate EHF transaction for this block and update internal caches/evodb state
      */
-    bool ProcessBlock(const CBlock& block, const CBlockIndex* const pindex, bool fJustCheck, BlockValidationState& state) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+    std::optional<Signals> ProcessBlock(const CBlock& block, const CBlockIndex* const pindex, bool fJustCheck, BlockValidationState& state) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
     /**
      * Every undo block should be processed when Tip() is updated by calling of CMNHFManager::UndoBlock
+     * This function actually does nothing at the moment, because status of ancester block is already know.
+     * Altough it should be still called to do some sanity checks
      */
     bool UndoBlock(const CBlock& block, const CBlockIndex* const pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
@@ -132,10 +135,17 @@ private:
 
     /**
      * This function returns list of signals available on previous block.
+     * if the signals for previous block is not available in cache it would read blocks from disk
+     * until state won't be recovered.
      * NOTE: that some signals could expired between blocks.
-     * validate them by
      */
-    Signals GetFromCache(const CBlockIndex* const pindex);
+    Signals GetForBlock(const CBlockIndex* const pindex);
+
+    /**
+     * This function access to in-memory cache or to evo db but does not calculate anything
+     * NOTE: that some signals could expired between blocks.
+     */
+    std::optional<Signals> GetFromCache(const CBlockIndex* const pindex);
 };
 
 std::optional<uint8_t> extractEHFSignal(const CTransaction& tx);
