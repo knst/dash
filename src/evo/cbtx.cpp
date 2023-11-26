@@ -32,7 +32,7 @@ bool CheckCbTx(const CTransaction& tx, const CBlockIndex* pindexPrev, TxValidati
     if (!opt_cbTx) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-cbtx-payload1");
     }
-    auto& cbTx = *opt_cbTx;
+    const auto& cbTx = *opt_cbTx;
 
     if (cbTx.nVersion == CCbTx::Version::INVALID || cbTx.nVersion >= CCbTx::Version::UNKNOWN) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-cbtx-version");
