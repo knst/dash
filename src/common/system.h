@@ -11,12 +11,10 @@
 #include <config/bitcoin-config.h>
 #endif
 
-#include <compat/assumptions.h>
-#include <compat/compat.h>
 #include <consensus/amount.h>
 
+#include <cstdint>
 #include <set>
-#include <stdint.h>
 #include <string>
 
 //Dash only features
