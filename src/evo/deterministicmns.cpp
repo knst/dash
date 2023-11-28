@@ -743,7 +743,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
         }
 
         if (tx.nType == TRANSACTION_PROVIDER_REGISTER) {
-            auto opt_proTx = GetTxPayload<CProRegTx>(tx);
+            const auto opt_proTx = GetTxPayload<CProRegTx>(tx);
             if (!opt_proTx) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-protx-payload");
             }
@@ -807,7 +807,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
                     __func__, tx.GetHash().ToString(), nHeight, proTx.ToString());
             }
         } else if (tx.nType == TRANSACTION_PROVIDER_UPDATE_SERVICE) {
-            auto opt_proTx = GetTxPayload<CProUpServTx>(tx);
+            const auto opt_proTx = GetTxPayload<CProUpServTx>(tx);
             if (!opt_proTx) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-protx-payload");
             }
@@ -856,7 +856,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
                     __func__, opt_proTx->proTxHash.ToString(), nHeight, opt_proTx->ToString());
             }
         } else if (tx.nType == TRANSACTION_PROVIDER_UPDATE_REGISTRAR) {
-            auto opt_proTx = GetTxPayload<CProUpRegTx>(tx);
+            const auto opt_proTx = GetTxPayload<CProUpRegTx>(tx);
             if (!opt_proTx) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-protx-payload");
             }
@@ -884,7 +884,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
                     __func__, opt_proTx->proTxHash.ToString(), nHeight, opt_proTx->ToString());
             }
         } else if (tx.nType == TRANSACTION_PROVIDER_UPDATE_REVOKE) {
-            auto opt_proTx = GetTxPayload<CProUpRevTx>(tx);
+            const auto opt_proTx = GetTxPayload<CProUpRevTx>(tx);
             if (!opt_proTx) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-protx-payload");
             }
@@ -905,7 +905,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
                     __func__, opt_proTx->proTxHash.ToString(), nHeight, opt_proTx->ToString());
             }
         } else if (tx.nType == TRANSACTION_QUORUM_COMMITMENT) {
-            auto opt_qc = GetTxPayload<llmq::CFinalCommitmentTxPayload>(tx);
+            const auto opt_qc = GetTxPayload<llmq::CFinalCommitmentTxPayload>(tx);
             if (!opt_qc) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-qc-payload");
             }
@@ -1097,7 +1097,7 @@ bool CDeterministicMNManager::IsProTxWithCollateral(const CTransactionRef& tx, u
     if (tx->nVersion != 3 || tx->nType != TRANSACTION_PROVIDER_REGISTER) {
         return false;
     }
-    auto opt_proTx = GetTxPayload<CProRegTx>(*tx);
+    const auto opt_proTx = GetTxPayload<CProRegTx>(*tx);
     if (!opt_proTx) {
         return false;
     }
@@ -1517,7 +1517,7 @@ bool CheckProRegTx(const CTransaction& tx, gsl::not_null<const CBlockIndex*> pin
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-type");
     }
 
-    auto opt_ptx = GetTxPayload<CProRegTx>(tx);
+    const auto opt_ptx = GetTxPayload<CProRegTx>(tx);
     if (!opt_ptx) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-payload");
     }
@@ -1639,7 +1639,7 @@ bool CheckProUpServTx(const CTransaction& tx, gsl::not_null<const CBlockIndex*> 
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-type");
     }
 
-    auto opt_ptx = GetTxPayload<CProUpServTx>(tx);
+    const auto opt_ptx = GetTxPayload<CProUpServTx>(tx);
     if (!opt_ptx) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-payload");
     }
@@ -1707,7 +1707,7 @@ bool CheckProUpRegTx(const CTransaction& tx, gsl::not_null<const CBlockIndex*> p
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-type");
     }
 
-    auto opt_ptx = GetTxPayload<CProUpRegTx>(tx);
+    const auto opt_ptx = GetTxPayload<CProUpRegTx>(tx);
     if (!opt_ptx.has_value()) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-payload");
     }
@@ -1780,7 +1780,7 @@ bool CheckProUpRevTx(const CTransaction& tx, gsl::not_null<const CBlockIndex*> p
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-type");
     }
 
-    auto opt_ptx = GetTxPayload<CProUpRevTx>(tx);
+    const auto opt_ptx = GetTxPayload<CProUpRevTx>(tx);
     if (!opt_ptx) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-payload");
     }

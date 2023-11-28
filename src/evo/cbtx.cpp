@@ -28,7 +28,7 @@ bool CheckCbTx(const CTransaction& tx, const CBlockIndex* pindexPrev, TxValidati
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-cbtx-invalid");
     }
 
-    auto opt_cbTx = GetTxPayload<CCbTx>(tx);
+    const auto opt_cbTx = GetTxPayload<CCbTx>(tx);
     if (!opt_cbTx) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-cbtx-payload1");
     }
@@ -68,7 +68,7 @@ bool CheckCbTxMerkleRoots(const CBlock& block, const CBlockIndex* pindex, const 
 
     int64_t nTime1 = GetTimeMicros();
 
-    auto opt_cbTx = GetTxPayload<CCbTx>(*block.vtx[0]);
+    const auto opt_cbTx = GetTxPayload<CCbTx>(*block.vtx[0]);
     if (!opt_cbTx) {
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-payload");
     }
@@ -256,7 +256,7 @@ bool CalcCbTxMerkleRootQuorums(const CBlock& block, const CBlockIndex* pindexPre
         const auto& tx = block.vtx[i];
 
         if (tx->nVersion == 3 && tx->nType == TRANSACTION_QUORUM_COMMITMENT) {
-            auto opt_qc = GetTxPayload<llmq::CFinalCommitmentTxPayload>(*tx);
+            const auto opt_qc = GetTxPayload<llmq::CFinalCommitmentTxPayload>(*tx);
             if (!opt_qc) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-qc-payload-calc-cbtx-quorummerkleroot");
             }
@@ -329,7 +329,7 @@ bool CheckCbTxBestChainlock(const CBlock& block, const CBlockIndex* pindex, cons
         return true;
     }
 
-    auto opt_cbTx = GetTxPayload<CCbTx>(*block.vtx[0]);
+    const auto opt_cbTx = GetTxPayload<CCbTx>(*block.vtx[0]);
     if (!opt_cbTx) {
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-payload");
     }

@@ -31,7 +31,7 @@ std::unique_ptr<CCreditPoolManager> creditPoolManager;
 
 static bool GetDataFromUnlockTx(const CTransaction& tx, CAmount& toUnlock, uint64_t& index, TxValidationState& state)
 {
-    auto opt_assetUnlockTx = GetTxPayload<CAssetUnlockPayload>(tx);
+    const auto opt_assetUnlockTx = GetTxPayload<CAssetUnlockPayload>(tx);
     if (!opt_assetUnlockTx.has_value()) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "failed-creditpool-unlock-payload");
     }
@@ -143,7 +143,7 @@ CCreditPool CCreditPoolManager::ConstructCreditPool(const CBlockIndex* const blo
         return emptyPool;
     }
     CAmount locked = [&, func=__func__]() {
-        auto opt_cbTx = GetTxPayload<CCbTx>(block->vtx[0]->vExtraPayload);
+        const auto opt_cbTx = GetTxPayload<CCbTx>(block->vtx[0]->vExtraPayload);
         if (!opt_cbTx) {
             throw std::runtime_error(strprintf("%s: failed-getcreditpool-cbtx-payload", func));
         }
@@ -233,7 +233,7 @@ CCreditPoolDiff::CCreditPoolDiff(CCreditPool starter, const CBlockIndex *pindex,
 bool CCreditPoolDiff::Lock(const CTransaction& tx, TxValidationState& state)
 {
 
-    if (auto opt_assetLockTx = GetTxPayload<CAssetLockPayload>(tx); !opt_assetLockTx) {
+    if (const auto opt_assetLockTx = GetTxPayload<CAssetLockPayload>(tx); !opt_assetLockTx) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "failed-creditpool-lock-payload");
     }
 
