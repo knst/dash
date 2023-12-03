@@ -29,8 +29,9 @@ namespace llmq
 class CQuorumManager;
 class CQuorumSnapshot;
 
-// Use a separate cache instance instead of versionbitscache to avoid locking cs_main
+// A separate cache instance instead of versionbitscache has been introduced to avoid locking cs_main
 // and dealing with all kinds of deadlocks.
+// TODO: drop llmq_versionbitscache completely so far as VersionBitsCache do not uses anymore cs_main
 extern VersionBitsCache llmq_versionbitscache;
 
 static const bool DEFAULT_ENABLE_QUORUM_DATA_RECOVERY = true;
