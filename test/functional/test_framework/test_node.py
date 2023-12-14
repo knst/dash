@@ -310,7 +310,7 @@ class TestNode():
                 if self.version_is_at_least(180000):
                     # getmempoolinfo.loaded is available since commit
                     # 71e38b9ebcb78b3a264a4c25c7c4e373317f2a40 (version 0.18.0)
-                    wait_until_helper_internal(lambda: rpc.getmempoolinfo()['loaded'], timeout_factor=self.timeout_factor)
+                    self.wait_until(lambda: rpc.getmempoolinfo()['loaded'])
                     # Wait for the node to finish reindex, block import, and
                     # loading the mempool. Usually importing happens fast or
                     # even "immediate" when the node is started. However, there
@@ -456,7 +456,7 @@ class TestNode():
     def wait_until_stopped(self, *, timeout=BITCOIND_PROC_WAIT_TIMEOUT, expect_error=False, **kwargs):
         if "expected_ret_code" not in kwargs:
             kwargs["expected_ret_code"] = 1 if expect_error else 0  # Whether node shutdown return EXIT_FAILURE or EXIT_SUCCESS
-        wait_until_helper_internal(lambda: self.is_node_stopped(**kwargs), timeout=timeout, timeout_factor=self.timeout_factor)
+        self.wait_until(lambda: self.is_node_stopped(**kwargs), timeout=timeout)
 
     def kill_process(self):
         self.process.kill()
@@ -581,8 +581,7 @@ class TestNode():
 
         initial_peer_id = get_highest_peer_id()
         yield
-        wait_until_helper_internal(lambda: get_highest_peer_id() > initial_peer_id,
-                          timeout=timeout, timeout_factor=self.timeout_factor)
+        self.wait_until(lambda: get_highest_peer_id() > initial_peer_id, timeout=timeout)
 
     @contextlib.contextmanager
     def profile_with_perf(self, profile_name: str):
@@ -855,7 +854,10 @@ class TestNode():
 
         del self.p2ps[:]
 
-        wait_until_helper_internal(lambda: self.num_test_p2p_connections() == 0, timeout_factor=self.timeout_factor)
+        self.wait_until(lambda: self.num_test_p2p_connections() == 0)
+
+    def wait_until(self, test_function, timeout=60):
+        return wait_until_helper_internal(test_function, timeout=timeout, timeout_factor=self.timeout_factor)
 
 
 class TestNodeCLIAttr:
