@@ -638,11 +638,9 @@ public:
      *                                          to mempool. The transactions need not be direct
      *                                          ancestors/descendants of each other.
      * @param[in]       limits                  Maximum number and size of ancestors and descendants
-     * @param[out]      errString               Populated with error reason if a limit is hit.
      */
-    bool CheckPackageLimits(const Package& package,
-                            const Limits& limits,
-                            std::string &errString) const EXCLUSIVE_LOCKS_REQUIRED(cs);
+    util::Result<void> CheckPackageLimits(const Package& package,
+                                          const Limits& limits) const EXCLUSIVE_LOCKS_REQUIRED(cs);
 
     /** Populate setDescendants with all in-mempool descendants of hash.
      *  Assumes that setDescendants includes all in-mempool descendants of anything

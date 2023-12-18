@@ -64,6 +64,7 @@
 #include <uint256.h>
 #include <util/check.h>
 #include <util/system.h>
+#include <util/result.h>
 #include <util/translation.h>
 #include <validation.h>
 #include <validationinterface.h>
@@ -1523,14 +1524,16 @@ public:
         limit_ancestor_count = limits.ancestor_count;
         limit_descendant_count = limits.descendant_count;
     }
-    bool checkChainLimits(const CTransactionRef& tx) override
+    util::Result<void> checkChainLimits(const CTransactionRef& tx) override
     {
-        if (!m_node.mempool) return true;
+        if (!m_node.mempool) return {};
         LockPoints lp;
         CTxMemPoolEntry entry(tx, 0, 0, 0, false, 0, lp);
         const CTxMemPool::Limits& limits{m_node.mempool->m_limits};
         LOCK(m_node.mempool->cs);
-        return m_node.mempool->CalculateMemPoolAncestors(entry, limits).has_value();
+        auto ancestors{m_node.mempool->CalculateMemPoolAncestors(entry, limits)};
+        if (!ancestors) return util::Error{util::ErrorString(ancestors)};
+        return {};
     }
     CFeeRate estimateSmartFee(int num_blocks, bool conservative, FeeCalculation* calc) override
     {
