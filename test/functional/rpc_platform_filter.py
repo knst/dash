@@ -56,7 +56,8 @@ class HTTPBasicsTest(BitcoinTestFramework):
                 assert_equal(resp.status, expexted_status)
             conn.close()
 
-        whitelisted = ["getbestblockhash",
+        whitelisted = ["getassetunlockchainlocks",
+                       "getbestblockhash",
                        "getblockhash",
                        "getblockcount",
                        "getbestchainlock",
