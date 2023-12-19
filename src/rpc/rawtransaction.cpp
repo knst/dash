@@ -424,7 +424,7 @@ static UniValue getassetunlockchainlocks(const JSONRPCRequest& request)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "invalid index");
         }
         if (pool.indexes.Contains(index)) {
-            obj.pushKV(std::to_string(index), chainlock_info ? "chainlocked" : "mined");
+            obj.pushKV(str_indexes[i].get_str(), chainlock_info ? "chainlocked" : "mined");
             result_arr.push_back(obj);
             continue;
         }
@@ -444,10 +444,10 @@ static UniValue getassetunlockchainlocks(const JSONRPCRequest& request)
                 }
             }
             if (is_mempooled)
-                obj.pushKV(std::to_string(index), "mempooled");
+                obj.pushKV(str_indexes[i].get_str(), "mempooled");
             else {
                 UniValue jnull(UniValue::VNULL);
-                obj.pushKV(std::to_string(index), jnull);
+                obj.pushKV(str_indexes[i].get_str(), jnull);
             }
             result_arr.push_back(obj);
         }
