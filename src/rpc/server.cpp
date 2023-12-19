@@ -141,7 +141,7 @@ std::string CRPCTable::help(const std::string& strCommand, const std::string& st
 void CRPCTable::InitPlatformRestrictions()
 {
     mapPlatformRestrictions = {
-        {"getassetunlockchainlocks", {}},
+        {"getassetunlockstatuses", {}},
         {"getbestblockhash", {}},
         {"getblockhash", {}},
         {"getblockcount", {}},

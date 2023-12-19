@@ -331,7 +331,7 @@ class AssetLocksTest(DashTestFramework):
         txid = self.send_tx(asset_unlock_tx)
         assert "assetUnlockTx" in node.getrawtransaction(txid, 1)
 
-        indexes_statuses = self.nodes[0].getassetunlockchainlocks(["101", "102", "300"])
+        indexes_statuses = self.nodes[0].getassetunlockstatuses(["101", "102", "300"])
         self.log.info(f'{indexes_statuses}')
         assert any('101' in d for d in indexes_statuses)
         assert_equal(next((d['101'] for d in indexes_statuses if '101' in d), None), "mempooled")
@@ -512,7 +512,7 @@ class AssetLocksTest(DashTestFramework):
         node.generate(1)
         self.sync_all()
 
-        indexes_statuses = self.nodes[0].getassetunlockchainlocks(["101", "102", "103"])
+        indexes_statuses = self.nodes[0].getassetunlockstatuses(["101", "102", "103"])
         self.log.info(f'{indexes_statuses}')
         assert any('101' in d for d in indexes_statuses)
         assert_equal(next((d['101'] for d in indexes_statuses if '101' in d), None), "mined")

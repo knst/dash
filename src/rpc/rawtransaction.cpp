@@ -339,10 +339,10 @@ static UniValue gettxchainlocks(const JSONRPCRequest& request)
     return result_arr;
 }
 
-static UniValue getassetunlockchainlocks(const JSONRPCRequest& request)
+static void getassetunlockstatuses_help(const JSONRPCRequest& request)
 {
     RPCHelpMan{
-            "getassetunlockchainlocks",
+            "getassetunlockstatuses",
             "\nReturns the status of given Asset Unlock indexes.\n",
             {
                     {"indexes", RPCArg::Type::ARR, RPCArg::Optional::NO, "The Asset Unlock indexes (no more than 100)",
@@ -356,15 +356,20 @@ static UniValue getassetunlockchainlocks(const JSONRPCRequest& request)
                     {
                             {RPCResult::Type::OBJ, "xxxx", "Asset Unlock index.",
                              {
-                                     {RPCResult::Type::STR, "", "Status of the Asset Unlock index: {chainlocked|mempooled|null}"},
+                                     {RPCResult::Type::STR, "", "Status of the Asset Unlock index: {chainlocked|mined|mempooled|null}"},
                              }},
                     }
             },
             RPCExamples{
-                    HelpExampleCli("getassetunlockchainlocks", "'[\"myindex\",...]'")
-                    + HelpExampleRpc("getassetunlockchainlocks", "[\"myindex\",...]")
+                    HelpExampleCli("getassetunlockstatuses", "'[\"myindex\",...]'")
+                    + HelpExampleRpc("getassetunlockstatuses", "[\"myindex\",...]")
             },
     }.Check(request);
+}
+
+static UniValue getassetunlockstatuses(const JSONRPCRequest& request)
+{
+    getassetunlockstatuses_help(request);
 
     const NodeContext& node = EnsureAnyNodeContext(request.context);
     const CTxMemPool& mempool = EnsureMemPool(node);
@@ -381,19 +386,14 @@ static UniValue getassetunlockchainlocks(const JSONRPCRequest& request)
         g_txindex->BlockUntilSyncedToCurrentChain();
     }
 
-    CBlockIndex* pTipBlockIndex{nullptr};
-    {
-        LOCK(cs_main);
-        pTipBlockIndex = chainman.ActiveChain().Tip();
-    }
+    CBlockIndex* pTipBlockIndex= WITH_LOCK(cs_main, return chainman.ActiveChain().Tip());
 
     CBlockIndex* pBlockIndex{nullptr};
     bool chainlock_info = false;
     llmq::CChainLockSig bestclsig = llmq_ctx.clhandler->GetBestChainLock();
     if (bestclsig.IsNull()) {
         // If no CL info is available, try to use CbTx CL information
-        auto cbtx_best_cl = GetNonNullCoinbaseChainlock(pTipBlockIndex);
-        if (cbtx_best_cl.has_value()) {
+        if (auto cbtx_best_cl = GetNonNullCoinbaseChainlock(pTipBlockIndex); cbtx_best_cl.has_value()) {
             pBlockIndex = pTipBlockIndex->GetAncestor(pTipBlockIndex->nHeight - cbtx_best_cl->second - 1);
             chainlock_info = true;
         }
@@ -425,29 +425,28 @@ static UniValue getassetunlockchainlocks(const JSONRPCRequest& request)
             result_arr.push_back(obj);
             continue;
         }
-        {
-            LOCK(mempool.cs);
-            bool is_mempooled = false;
-            for (const CTxMemPoolEntry& e : mempool.mapTx) {
-                if (e.GetTx().nType == CAssetUnlockPayload::SPECIALTX_TYPE) {
-                    CAssetUnlockPayload assetUnlockTx;
-                    if (!GetTxPayload(e.GetTx(), assetUnlockTx)) {
-                        throw JSONRPCError(RPC_TRANSACTION_ERROR, "bad-assetunlocktx-payload");
-                    }
-                    if (index == assetUnlockTx.getIndex()) {
-                        is_mempooled = true;
-                        break;
-                    }
+
+        LOCK(mempool.cs);
+        bool is_mempooled = false;
+        for (const CTxMemPoolEntry& e : mempool.mapTx) {
+            if (e.GetTx().nType == CAssetUnlockPayload::SPECIALTX_TYPE) {
+                CAssetUnlockPayload assetUnlockTx;
+                if (!GetTxPayload(e.GetTx(), assetUnlockTx)) {
+                    throw JSONRPCError(RPC_TRANSACTION_ERROR, "bad-assetunlocktx-payload");
+                }
+                if (index == assetUnlockTx.getIndex()) {
+                    is_mempooled = true;
+                    break;
                 }
             }
-            if (is_mempooled)
-                obj.pushKV(str_indexes[i].get_str(), "mempooled");
-            else {
-                UniValue jnull(UniValue::VNULL);
-                obj.pushKV(str_indexes[i].get_str(), jnull);
-            }
-            result_arr.push_back(obj);
         }
+        if (is_mempooled)
+            obj.pushKV(str_indexes[i].get_str(), "mempooled");
+        else {
+            UniValue jnull(UniValue::VNULL);
+            obj.pushKV(str_indexes[i].get_str(), jnull);
+        }
+        result_arr.push_back(obj);
     }
 
     return result_arr;
@@ -1874,7 +1873,7 @@ void RegisterRawTransactionRPCCommands(CRPCTable &t)
 static const CRPCCommand commands[] =
 { //  category              name                            actor (function)            argNames
   //  --------------------- ------------------------        -----------------------     ----------
-    { "rawtransactions",    "getassetunlockchainlocks",     &getassetunlockchainlocks,  {"indexes"} },
+    { "rawtransactions",    "getassetunlockstatuses",       &getassetunlockstatuses,    {"indexes"} },
     { "rawtransactions",    "getrawtransaction",            &getrawtransaction,         {"txid","verbose","blockhash"} },
     { "rawtransactions",    "gettxchainlocks",              &gettxchainlocks,           {"txids"} },
     { "rawtransactions",    "createrawtransaction",         &createrawtransaction,      {"inputs","outputs","locktime"} },
