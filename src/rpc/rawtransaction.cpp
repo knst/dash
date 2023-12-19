@@ -391,12 +391,15 @@ static UniValue getassetunlockchainlocks(const JSONRPCRequest& request)
     bool chainlock_info = false;
     llmq::CChainLockSig bestclsig = llmq_ctx.clhandler->GetBestChainLock();
     if (bestclsig.IsNull()) {
+        // If no CL info is available, try to use CbTx CL information
         auto cbtx_best_cl = GetNonNullCoinbaseChainlock(pTipBlockIndex);
         if (cbtx_best_cl.has_value()) {
             pBlockIndex = pTipBlockIndex->GetAncestor(pTipBlockIndex->nHeight - cbtx_best_cl->second - 1);
             chainlock_info = true;
         }
         else {
+            // If no CL info available at all, build Credit pool based on Tip but chainlock_info is false.
+            // Found Asset Unlock indexes will be marked as "mined" instead of "chainlocked"
             pBlockIndex = pTipBlockIndex;
         }
     }
@@ -405,17 +408,11 @@ static UniValue getassetunlockchainlocks(const JSONRPCRequest& request)
         chainlock_info = true;
     }
 
-    CCreditPool pool;
-    {
-        UniValue result(UniValue::VOBJ);
-        {
-            LOCK(cs_main);
-            if (!pBlockIndex) {
-                throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
-            }
-            pool = node.creditPoolManager->GetCreditPool(pBlockIndex, Params().GetConsensus());
-        }
+    if (!pBlockIndex) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Block not found");
     }
+
+    CCreditPool pool = node.creditPoolManager->GetCreditPool(pBlockIndex, Params().GetConsensus());
 
     for (const auto i : irange::range(str_indexes.size())) {
         UniValue obj(UniValue::VOBJ);
