@@ -637,6 +637,7 @@ public:
      *                                          to mempool. The transactions need not be direct
      *                                          ancestors/descendants of each other.
      * @param[in]       limits                  Maximum number and size of ancestors and descendants
+     * @returns {} or the error reason if a limit is hit.
      */
     util::Result<void> CheckPackageLimits(const Package& package,
                                           const Limits& limits) const EXCLUSIVE_LOCKS_REQUIRED(cs);
