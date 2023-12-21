@@ -539,9 +539,8 @@ void CRecoveredSigsDb::CleanupOldVotes(int64_t maxAge)
 //////////////////
 
 CSigningManager::CSigningManager(CConnman& _connman, const CQuorumManager& _qman,
-                                 const std::unique_ptr<PeerManager>& peerman,
                                  bool fMemory, bool fWipe) :
-    db(fMemory, fWipe), connman(_connman), qman(_qman), m_peerman(peerman)
+    db(fMemory, fWipe), connman(_connman), qman(_qman)
 {
 }
 
@@ -572,16 +571,18 @@ bool CSigningManager::GetRecoveredSigForGetData(const uint256& hash, CRecoveredS
     return true;
 }
 
-void CSigningManager::ProcessMessage(const CNode& pfrom, const std::string& msg_type, CDataStream& vRecv)
+PeerMsgRet CSigningManager::ProcessMessage(const CNode& pfrom, gsl::not_null<PeerManager*> peerman, const std::string& msg_type, CDataStream& vRecv)
 {
     if (msg_type == NetMsgType::QSIGREC) {
         auto recoveredSig = std::make_shared<CRecoveredSig>();
         vRecv >> *recoveredSig;
-        ProcessMessageRecoveredSig(pfrom, recoveredSig);
+
+        return ProcessMessageRecoveredSig(pfrom, peerman, recoveredSig);
     }
+    return {};
 }
 
-void CSigningManager::ProcessMessageRecoveredSig(const CNode& pfrom, const std::shared_ptr<const CRecoveredSig>& recoveredSig)
+PeerMsgRet CSigningManager::ProcessMessageRecoveredSig(const CNode& pfrom, gsl::not_null<PeerManager*> peerman, const std::shared_ptr<const CRecoveredSig>& recoveredSig)
 {
     {
         LOCK(cs_main);
@@ -591,15 +592,15 @@ void CSigningManager::ProcessMessageRecoveredSig(const CNode& pfrom, const std::
     bool ban = false;
     if (!PreVerifyRecoveredSig(qman, *recoveredSig, ban)) {
         if (ban) {
-            m_peerman->Misbehaving(pfrom.GetId(), 100);
+            return tl::unexpected{100};
         }
-        return;
+        return {};
     }
 
     // It's important to only skip seen *valid* sig shares here. See comment for CBatchedSigShare
     // We don't receive recovered sigs in batches, but we do batched verification per node on these
     if (db.HasRecoveredSigForHash(recoveredSig->GetHash())) {
-        return;
+        return {};
     }
 
     LogPrint(BCLog::LLMQ, "CSigningManager::%s -- signHash=%s, id=%s, msgHash=%s, node=%d\n", __func__,
@@ -610,9 +611,17 @@ void CSigningManager::ProcessMessageRecoveredSig(const CNode& pfrom, const std::
         // no need to perform full verification
         LogPrint(BCLog::LLMQ, "CSigningManager::%s -- already pending reconstructed sig, signHash=%s, id=%s, msgHash=%s, node=%d\n", __func__,
                  recoveredSig->buildSignHash().ToString(), recoveredSig->getId().ToString(), recoveredSig->getMsgHash().ToString(), pfrom.GetId());
-        return;
+        return {};
     }
+
+    if (m_peerman == nullptr) {
+        m_peerman = peerman;
+    }
+    // we should never use one CSigningManager with different PeerManager
+    assert(m_peerman == peerman);
+
     pendingRecoveredSigs[pfrom.GetId()].emplace_back(recoveredSig);
+    return {};
 }
 
 bool CSigningManager::PreVerifyRecoveredSig(const CQuorumManager& quorum_manager, const CRecoveredSig& recoveredSig, bool& retBan)
