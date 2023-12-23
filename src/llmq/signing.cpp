@@ -20,6 +20,7 @@
 #include <scheduler.h>
 #include <streams.h>
 #include <util/irange.h>
+#include <util/thread.h>
 #include <util/time.h>
 #include <util/underlying.h>
 #include <validation.h>
@@ -1002,6 +1003,47 @@ bool CSigningManager::IsConflicting(Consensus::LLMQType llmqType, const uint256&
 bool CSigningManager::GetVoteForId(Consensus::LLMQType llmqType, const uint256& id, uint256& msgHashRet) const
 {
     return db.GetVoteForId(llmqType, id, msgHashRet);
+}
+
+void CSigningManager::StartWorkerThread()
+{
+    // can't start new thread if we have one running already
+    if (workThread.joinable()) {
+        assert(false);
+    }
+
+    workThread = std::thread(&util::TraceThread, "sigshares", [this] { WorkThreadMain(); });
+}
+
+void CSigningManager::StopWorkerThread()
+{
+    // make sure to call InterruptWorkerThread() first
+    if (!workInterrupt) {
+        assert(false);
+    }
+
+    if (workThread.joinable()) {
+        workThread.join();
+    }
+}
+
+void CSigningManager::InterruptWorkerThread()
+{
+    workInterrupt();
+}
+
+void CSigningManager::WorkThreadMain()
+{
+    while (!workInterrupt) {
+        bool fMoreWork = ProcessPendingRecoveredSigs();
+
+        Cleanup();
+
+        // TODO Wakeup when pending signing is needed?
+        if (!fMoreWork && !workInterrupt.sleep_for(std::chrono::milliseconds(100))) {
+            return;
+        }
+    }
 }
 
 uint256 CSigBase::buildSignHash() const

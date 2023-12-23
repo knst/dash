@@ -12,6 +12,7 @@
 #include <random.h>
 #include <saltedhasher.h>
 #include <sync.h>
+#include <threadinterrupt.h>
 #include <univalue.h>
 #include <unordered_lru_cache.h>
 
@@ -156,8 +157,6 @@ public:
 
 class CSigningManager
 {
-    friend class CSigSharesManager;
-
 private:
     mutable RecursiveMutex cs;
 
@@ -204,7 +203,10 @@ private:
             std::unordered_map<std::pair<Consensus::LLMQType, uint256>, CQuorumCPtr, StaticSaltedHasher>& retQuorums);
     void ProcessPendingReconstructedRecoveredSigs();
     bool ProcessPendingRecoveredSigs(); // called from the worker thread of CSigSharesManager
+public:
+    // TODO - should not be public!
     void ProcessRecoveredSig(const std::shared_ptr<const CRecoveredSig>& recoveredSig);
+private:
     void Cleanup(); // called from the worker thread of CSigSharesManager
 
 public:
@@ -221,6 +223,15 @@ public:
 
     bool GetVoteForId(Consensus::LLMQType llmqType, const uint256& id, uint256& msgHashRet) const;
 
+private:
+    std::thread workThread;
+    CThreadInterrupt workInterrupt;
+    void WorkThreadMain();
+
+public:
+    void StartWorkerThread();
+    void StopWorkerThread();
+    void InterruptWorkerThread();
 };
 
 template<typename NodesContainer, typename Continue, typename Callback>

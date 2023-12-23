@@ -62,6 +62,7 @@ LLMQContext::~LLMQContext() {
 }
 
 void LLMQContext::Interrupt() {
+    sigman->InterruptWorkerThread();
     shareman->InterruptWorkerThread();
 
     assert(isman == llmq::quorumInstantSendManager.get());
@@ -79,6 +80,7 @@ void LLMQContext::Start() {
     qman->Start();
     shareman->RegisterAsRecoveredSigsListener();
     shareman->StartWorkerThread();
+    sigman->StartWorkerThread();
 
     llmq::chainLocksHandler->Start();
     llmq::quorumInstantSendManager->Start();
@@ -95,6 +97,7 @@ void LLMQContext::Stop() {
 
     shareman->StopWorkerThread();
     shareman->UnregisterAsRecoveredSigsListener();
+    sigman->StopWorkerThread();
     qman->Stop();
     qdkgsman->StopThreads();
     bls_worker->Stop();
