@@ -158,11 +158,6 @@ class CSigningManager
 {
     friend class CSigSharesManager;
 
-    // when selecting a quorum for signing and verification, we use CQuorumManager::SelectQuorum with this offset as
-    // starting height for scanning. This is because otherwise the resulting signatures would not be verifiable by nodes
-    // which are not 100% at the chain tip.
-    static constexpr int SIGN_HEIGHT_OFFSET{8};
-
 private:
     mutable RecursiveMutex cs;
 
@@ -226,11 +221,6 @@ public:
 
     bool GetVoteForId(Consensus::LLMQType llmqType, const uint256& id, uint256& msgHashRet) const;
 
-    static std::vector<CQuorumCPtr> GetActiveQuorumSet(Consensus::LLMQType llmqType, int signHeight);
-    static CQuorumCPtr SelectQuorumForSigning(const Consensus::LLMQParams& llmq_params, const CQuorumManager& quorum_manager, const uint256& selectionHash, int signHeight = -1 /*chain tip*/, int signOffset = SIGN_HEIGHT_OFFSET);
-
-    // Verifies a recovered sig that was signed while the chain tip was at signedAtTip
-    static bool VerifyRecoveredSig(Consensus::LLMQType llmqType, const CQuorumManager& quorum_manager, int signedAtHeight, const uint256& id, const uint256& msgHash, const CBLSSignature& sig, int signOffset = SIGN_HEIGHT_OFFSET);
 };
 
 template<typename NodesContainer, typename Continue, typename Callback>
