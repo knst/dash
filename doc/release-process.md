@@ -229,6 +229,7 @@ popd
 * [ ] Test Docker build runs without error in Dashmate
 * [ ] Add new Release Process items to repo [Release Process](release-process.md) document
 * [ ] Merge `master` branch back into `develop` so that `master` could be fast-forwarded on next release again
+* [ ] Bury BIP9 deployments, update MinBIP9WarningHeight after hard-fork happens (if any)
 
 ### MacOS Notarization
 
