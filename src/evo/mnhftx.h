@@ -10,13 +10,14 @@
 #include <sync.h>
 #include <threadsafety.h>
 #include <univalue.h>
+#include <versionbits.h>
 
 #include <optional>
 #include <saltedhasher.h>
 #include <unordered_map>
 #include <unordered_lru_cache.h>
-#include <versionbits.h>
 
+class AbstractEHFManager;
 class BlockValidationState;
 class CBlock;
 class CBlockIndex;
@@ -101,8 +102,6 @@ private:
     // versionBit <-> height
     unordered_lru_cache<uint256, Signals, StaticSaltedHasher> mnhfCache GUARDED_BY(cs_cache) {MNHFCacheSize};
 
-    // This cache is used only for v20 activation to avoid double lock throught VersionBitsConditionChecker::SignalHeight
-    VersionBitsCache v20_activation GUARDED_BY(cs_cache);
 public:
     explicit CMNHFManager(CEvoDB& evoDb);
     ~CMNHFManager();

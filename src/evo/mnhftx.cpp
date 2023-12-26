@@ -15,7 +15,6 @@
 #include <chain.h>
 #include <chainparams.h>
 #include <validation.h>
-#include <versionbits.h>
 
 #include <algorithm>
 #include <stack>
@@ -314,8 +313,9 @@ std::optional<CMNHFManager::Signals> CMNHFManager::GetFromCache(const CBlockInde
         }
     }
     {
-        LOCK(cs_cache);
-        if (ThresholdState::ACTIVE != v20_activation.State(pindex->pprev, Params().GetConsensus(), Consensus::DEPLOYMENT_V20)) {
+        // It works because v20 is buried deployment and requires no lock over global variables
+        if (pindex->pprev == nullptr || !DeploymentActiveAfter(pindex->pprev, Params().GetConsensus(), Consensus::DEPLOYMENT_V20)) {
+            LOCK(cs_cache);
             mnhfCache.insert(blockHash, signals);
             return signals;
         }
@@ -337,8 +337,8 @@ void CMNHFManager::AddToCache(const Signals& signals, const CBlockIndex* const p
     }
     assert(pindex != nullptr);
     {
-        LOCK(cs_cache);
-        if (ThresholdState::ACTIVE != v20_activation.State(pindex->pprev, Params().GetConsensus(), Consensus::DEPLOYMENT_V20)) return;
+        // It works because v20 is buried deployment and requires no lock over global variables
+        if (pindex->pprev == nullptr || !DeploymentActiveAfter(pindex->pprev, Params().GetConsensus(), Consensus::DEPLOYMENT_V20)) return;
     }
     m_evoDb.Write(std::make_pair(DB_SIGNALS, blockHash), signals);
 }
