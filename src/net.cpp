@@ -3954,7 +3954,6 @@ void CConnman::PushMessage(CNode* pnode, CSerializedNetMsg&& msg)
     statsClient.count("bandwidth.message." + SanitizeString(msg.command.c_str()) + ".bytesSent", nTotalSize, 1.0f);
     statsClient.inc("message.sent." + SanitizeString(msg.command.c_str()), 1.0f);
 
-    size_t nBytesSent = 0;
     {
         LOCK(pnode->cs_vSend);
         bool hasPendingData = !pnode->vSendMsg.empty();
@@ -3985,8 +3984,6 @@ void CConnman::PushMessage(CNode* pnode, CSerializedNetMsg&& msg)
         if (!hasPendingData && wakeupSelectNeeded)
             WakeSelect();
     }
-    if (nBytesSent)
-        RecordBytesSent(nBytesSent);
 }
 
 bool CConnman::ForNode(const CService& addr, std::function<bool(const CNode* pnode)> cond, std::function<bool(CNode* pnode)> func)
