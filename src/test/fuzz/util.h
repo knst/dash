@@ -310,24 +310,10 @@ auto ConsumeNode(FuzzedDataProvider& fuzzed_data_provider, const std::optional<N
     const uint64_t local_host_nonce = fuzzed_data_provider.ConsumeIntegral<uint64_t>();
     const CAddress addr_bind = ConsumeAddress(fuzzed_data_provider);
     const std::string addr_name = fuzzed_data_provider.ConsumeRandomLengthString(64);
-    const bool inbound = fuzzed_data_provider.ConsumeBool();
-    const bool block_relay_only = fuzzed_data_provider.ConsumeBool();
-    ConnectionType conn_type = ConnectionType::OUTBOUND_FULL_RELAY;
-
-    if (inbound == true)  {
-        if (block_relay_only == true) {
-            conn_type = ConnectionType::BLOCK_RELAY;
-        } else {
-            conn_type = ConnectionType::INBOUND;
-        }
-    } else {
-        conn_type = ConnectionType::OUTBOUND_FULL_RELAY;
-    }
-
     if constexpr (ReturnUniquePtr) {
-        return std::make_unique<CNode>(node_id, local_services, socket, address, keyed_net_group, local_host_nonce, addr_bind, addr_name, conn_type);
+        return std::make_unique<CNode>(node_id, local_services, socket, address, keyed_net_group, local_host_nonce, addr_bind, addr_name, ConnectionType::MANUAL);
     } else {
-        return CNode{node_id, local_services, socket, address, keyed_net_group, local_host_nonce, addr_bind, addr_name, conn_type};
+        return CNode{node_id, local_services, socket, address, keyed_net_group, local_host_nonce, addr_bind, addr_name, ConnectionType::MANUAL};
     }
 }
 inline std::unique_ptr<CNode> ConsumeNodeAsUniquePtr(FuzzedDataProvider& fdp, const std::optional<NodeId>& node_id_in = std::nullopt) { return ConsumeNode<true>(fdp, node_id_in); }
