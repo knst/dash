@@ -49,6 +49,7 @@ bench_bench_dash_SOURCES = \
   bench/pool.cpp \
   bench/pow_hash.cpp \
   bench/prevector.cpp \
+  bench/readblock.cpp \
   bench/rollingbloom.cpp \
   bench/rpc_blockchain.cpp \
   bench/rpc_mempool.cpp \
