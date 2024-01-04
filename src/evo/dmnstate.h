@@ -218,53 +218,43 @@ public:
         s >> *this;
     }
 
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action)
+    SERIALIZE_METHODS(CDeterministicMNState, obj)
     {
         READWRITE(
-            nVersion,
-            nRegisteredHeight,
-            nLastPaidHeight,
-            nConsecutivePayments,
-            nPoSePenalty,
-            nPoSeRevivedHeight,
-            nPoSeBanHeight,
-            nRevocationReason,
-            confirmedHash,
-            confirmedHashWithProRegTxHash,
-            keyIDOwner);
-        READWRITE(CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(pubKeyOperator), nVersion == CProRegTx::LEGACY_BLS_VERSION));
+            obj.nVersion,
+            obj.nRegisteredHeight,
+            obj.nLastPaidHeight,
+            obj.nConsecutivePayments,
+            obj.nPoSePenalty,
+            obj.nPoSeRevivedHeight,
+            obj.nPoSeBanHeight,
+            obj.nRevocationReason,
+            obj.confirmedHash,
+            obj.confirmedHashWithProRegTxHash,
+            obj.keyIDOwner);
+        READWRITE(CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), obj.nVersion == CProRegTx::LEGACY_BLS_VERSION));
         READWRITE(
-            keyIDVoting,
-            addr);
-        if (nVersion < CProRegTx::MULTI_PAYOUT_VERSION) {
-            if (ser_action.ForRead()) {
+            obj.keyIDVoting,
+            obj.addr);
+        if (obj.nVersion < CProRegTx::MULTI_PAYOUT_VERSION) {
+/*            if (ser_action.ForRead()) {
                 CScript payoutScript;
                 READWRITE(payoutScript);
                 payoutShares = {PayoutShare(payoutScript)};
+                READWRITE(payoutShares);
             } else {
-                READWRITE(payoutShares[0].scriptPayout);
-            }
+                */
+                READWRITE(obj.payoutShares[0].scriptPayout);
+//            }
         } else {
-            READWRITE(payoutShares);
+            READWRITE(obj.payoutShares);
         }
-        READWRITE(scriptOperatorPayout,
-                  platformNodeID,
-                  platformP2PPort,
-                  platformHTTPPort);
+        READWRITE(obj.scriptOperatorPayout,
+                  obj.platformNodeID,
+                  obj.platformP2PPort,
+                  obj.platformHTTPPort);
     }
 
-    template <typename Stream>
-    void Serialize(Stream& s) const
-    {
-        const_cast<CDeterministicMNState*>(this)->SerializationOp(s, CSerActionSerialize());
-    }
-
-    template <typename Stream>
-    void Unserialize(Stream& s)
-    {
-        SerializationOp(s, CSerActionUnserialize());
-    }
     void ResetOperatorFields()
     {
         nVersion = CProRegTx::LEGACY_BLS_VERSION;
