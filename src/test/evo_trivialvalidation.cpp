@@ -17,8 +17,8 @@ extern UniValue read_json(const std::string& jsondata);
 
 BOOST_FIXTURE_TEST_SUITE(evo_trivialvalidation, BasicTestingSetup)
 
-template<class T>
-void TestTxHelper(const CMutableTransaction& tx, bool is_basic_bls, bool expected_failure, const std::string& expected_error)
+template <class T>
+void TestTxHelper(const CMutableTransaction& tx, bool is_basic_bls, bool is_multi_payout_active, bool expected_failure, const std::string& expected_error)
 {
     T payload;
 
@@ -29,7 +29,7 @@ void TestTxHelper(const CMutableTransaction& tx, bool is_basic_bls, bool expecte
     if (payload_to_fail) return;
 
     TxValidationState dummy_state;
-    BOOST_CHECK_EQUAL(payload.IsTriviallyValid(is_basic_bls, dummy_state), !expected_failure);
+    BOOST_CHECK_EQUAL(payload.IsTriviallyValid(is_basic_bls, is_multi_payout_active, dummy_state), !expected_failure);
     if (expected_failure) {
         BOOST_CHECK_EQUAL(dummy_state.GetRejectReason(), expected_error);
     }
@@ -52,6 +52,7 @@ void trivialvalidation_runner(const std::string& json)
             txType = test[1].get_str();
             BOOST_CHECK(test[2].get_str() == "basic" || test[2].get_str() == "legacy");
             bool is_basic_bls = test[2].get_str() == "basic";
+            bool is_multi_payout_active = false;
             // Raw transaction
             CDataStream stream(ParseHex(test[3].get_str()), SER_NETWORK, PROTOCOL_VERSION);
             stream >> tx;
@@ -68,25 +69,25 @@ void trivialvalidation_runner(const std::string& json)
             case TRANSACTION_PROVIDER_REGISTER: {
                 BOOST_CHECK_EQUAL(txType, "proregtx");
 
-                TestTxHelper<CProRegTx>(tx, is_basic_bls, expected, expected_err);
+                TestTxHelper<CProRegTx>(tx, is_basic_bls, is_multi_payout_active, expected, expected_err);
                 break;
             }
             case TRANSACTION_PROVIDER_UPDATE_SERVICE: {
                 BOOST_CHECK_EQUAL(txType, "proupservtx");
 
-                TestTxHelper<CProUpServTx>(tx, is_basic_bls, expected, expected_err);
+                TestTxHelper<CProUpServTx>(tx, is_basic_bls, is_multi_payout_active, expected, expected_err);
                 break;
             }
             case TRANSACTION_PROVIDER_UPDATE_REGISTRAR: {
                 BOOST_CHECK_EQUAL(txType, "proupregtx");
 
-                TestTxHelper<CProUpRegTx>(tx, is_basic_bls, expected, expected_err);
+                TestTxHelper<CProUpRegTx>(tx, is_basic_bls, is_multi_payout_active, expected, expected_err);
                 break;
             }
             case TRANSACTION_PROVIDER_UPDATE_REVOKE: {
                 BOOST_CHECK_EQUAL(txType, "prouprevtx");
 
-                TestTxHelper<CProUpRevTx>(tx, is_basic_bls, expected, expected_err);
+                TestTxHelper<CProUpRevTx>(tx, is_basic_bls, is_multi_payout_active, expected, expected_err);
                 break;
             }
             default:
