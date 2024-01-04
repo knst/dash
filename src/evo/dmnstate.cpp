@@ -18,7 +18,7 @@ std::string CDeterministicMNState::ToString() const
     CTxDestination dest;
     std::string payoutAddress = "unknown";
     std::string operatorPayoutAddress = "none";
-    if (ExtractDestination(scriptPayout, dest)) {
+    if (ExtractDestination(payoutShares[0].scriptPayout, dest)) {
         payoutAddress = EncodeDestination(dest);
     }
     if (ExtractDestination(scriptOperatorPayout, dest)) {
@@ -52,10 +52,19 @@ UniValue CDeterministicMNState::ToJson(MnType nType) const
         obj.pushKV("platformHTTPPort", platformHTTPPort);
     }
 
+    UniValue payoutArray;
+    payoutArray.setArray();
     CTxDestination dest;
-    if (ExtractDestination(scriptPayout, dest)) {
-        obj.pushKV("payoutAddress", EncodeDestination(dest));
+    for (const auto& payoutShare : payoutShares) {
+        if (ExtractDestination(payoutShare.scriptPayout, dest)) {
+            UniValue payoutField;
+            payoutField.setObject();
+            payoutField.pushKV("payoutAddress", EncodeDestination(dest));
+            payoutField.pushKV("payoutShareReward", payoutShare.payoutShareReward);
+            payoutArray.push_back(payoutField);
+        }
     }
+    obj.pushKV("payouts", payoutArray);
     obj.pushKV("pubKeyOperator", pubKeyOperator.ToString());
     if (ExtractDestination(scriptOperatorPayout, dest)) {
         obj.pushKV("operatorPayoutAddress", EncodeDestination(dest));
@@ -100,11 +109,20 @@ UniValue CDeterministicMNStateDiff::ToJson(MnType nType) const
     if (fields & Field_keyIDVoting) {
         obj.pushKV("votingAddress", EncodeDestination(PKHash(state.keyIDVoting)));
     }
-    if (fields & Field_scriptPayout) {
+    if (fields & Field_payoutShares) {
+        UniValue payoutArray;
+        payoutArray.setArray();
         CTxDestination dest;
-        if (ExtractDestination(state.scriptPayout, dest)) {
-            obj.pushKV("payoutAddress", EncodeDestination(dest));
+        for (const auto& payoutShare : state.payoutShares) {
+            if (ExtractDestination(payoutShare.scriptPayout, dest)) {
+                UniValue payoutField;
+                payoutField.setObject();
+                payoutField.pushKV("payoutAddress", EncodeDestination(dest));
+                payoutField.pushKV("payoutShareReward", payoutShare.payoutShareReward);
+                payoutArray.push_back(payoutField);
+            }
         }
+        obj.pushKV("payouts", payoutArray);
     }
     if (fields & Field_scriptOperatorPayout) {
         CTxDestination dest;

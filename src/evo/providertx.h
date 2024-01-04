@@ -21,16 +21,46 @@ class CBlockIndex;
 class CCoinsViewCache;
 class TxValidationState;
 
+class PayoutShare
+{
+public:
+    CScript scriptPayout{};
+    uint16_t payoutShareReward{0};
+    PayoutShare() = default;
+    explicit PayoutShare(const CScript& scriptPayout, const uint16_t& payoutShareReward = 10000) :
+        scriptPayout(scriptPayout), payoutShareReward(payoutShareReward){};
+    SERIALIZE_METHODS(PayoutShare, obj)
+    {
+        READWRITE(obj.scriptPayout,
+                  obj.payoutShareReward);
+    }
+    bool operator==(const PayoutShare& payoutShare) const
+    {
+        return (this->scriptPayout == payoutShare.scriptPayout && this->payoutShareReward == payoutShare.payoutShareReward);
+    }
+    bool operator!=(const PayoutShare& payoutShare) const
+    {
+        return !(*this == payoutShare);
+    }
+};
+
 class CProRegTx
 {
 public:
     static constexpr auto SPECIALTX_TYPE = TRANSACTION_PROVIDER_REGISTER;
     static constexpr uint16_t LEGACY_BLS_VERSION = 1;
     static constexpr uint16_t BASIC_BLS_VERSION = 2;
+    static constexpr uint16_t MULTI_PAYOUT_VERSION = 3;
 
-    [[nodiscard]] static constexpr auto GetVersion(const bool is_basic_scheme_active) -> uint16_t
+    [[nodiscard]] static constexpr auto GetVersion(const bool is_basic_scheme_active, const bool is_multi_payout_active) -> uint16_t
     {
-        return is_basic_scheme_active ? BASIC_BLS_VERSION : LEGACY_BLS_VERSION;
+        if (is_multi_payout_active) {
+            // multi payout is activated after basic scheme
+            assert(is_basic_scheme_active);
+            return MULTI_PAYOUT_VERSION;
+        } else {
+            return is_basic_scheme_active ? BASIC_BLS_VERSION : LEGACY_BLS_VERSION;
+        }
     }
 
     uint16_t nVersion{LEGACY_BLS_VERSION};                 // message version
@@ -45,41 +75,62 @@ public:
     CBLSLazyPublicKey pubKeyOperator;
     CKeyID keyIDVoting;
     uint16_t nOperatorReward{0};
-    CScript scriptPayout;
+    std::vector<PayoutShare> payoutShares;
     uint256 inputsHash; // replay protection
     std::vector<unsigned char> vchSig;
 
-    SERIALIZE_METHODS(CProRegTx, obj)
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action)
     {
         READWRITE(
-                obj.nVersion
-        );
-        if (obj.nVersion == 0 || obj.nVersion > BASIC_BLS_VERSION) {
+            nVersion);
+        if (nVersion == 0 || nVersion > MULTI_PAYOUT_VERSION) {
             // unknown version, bail out early
             return;
         }
 
         READWRITE(
-                obj.nType,
-                obj.nMode,
-                obj.collateralOutpoint,
-                obj.addr,
-                obj.keyIDOwner,
-                CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), (obj.nVersion == LEGACY_BLS_VERSION)),
-                obj.keyIDVoting,
-                obj.nOperatorReward,
-                obj.scriptPayout,
-                obj.inputsHash
-        );
-        if (obj.nType == MnType::Evo) {
+            nType,
+            nMode,
+            collateralOutpoint,
+            addr,
+            keyIDOwner,
+            CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(pubKeyOperator), (nVersion == LEGACY_BLS_VERSION)),
+            keyIDVoting,
+            nOperatorReward);
+        if (nVersion < MULTI_PAYOUT_VERSION) {
+            if (ser_action.ForRead()) {
+                CScript payoutScript;
+                READWRITE(payoutScript);
+                payoutShares = {PayoutShare(payoutScript)};
+            } else {
+                READWRITE(payoutShares[0].scriptPayout);
+            }
+        } else {
+            READWRITE(payoutShares);
+        }
+        READWRITE(inputsHash);
+        if (nType == MnType::Evo) {
             READWRITE(
-                obj.platformNodeID,
-                obj.platformP2PPort,
-                obj.platformHTTPPort);
+                platformNodeID,
+                platformP2PPort,
+                platformHTTPPort);
         }
         if (!(s.GetType() & SER_GETHASH)) {
-            READWRITE(obj.vchSig);
+            READWRITE(vchSig);
         }
+    }
+
+    template <typename Stream>
+    void Serialize(Stream& s) const
+    {
+        const_cast<CProRegTx*>(this)->SerializationOp(s, CSerActionSerialize());
+    }
+
+    template <typename Stream>
+    void Unserialize(Stream& s)
+    {
+        SerializationOp(s, CSerActionUnserialize());
     }
 
     // When signing with the collateral key, we don't sign the hash but a generated message instead
@@ -100,9 +151,18 @@ public:
         obj.pushKV("ownerAddress", EncodeDestination(PKHash(keyIDOwner)));
         obj.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
 
-        if (CTxDestination dest; ExtractDestination(scriptPayout, dest)) {
-            obj.pushKV("payoutAddress", EncodeDestination(dest));
+        UniValue payoutArray;
+        payoutArray.setArray();
+        for (const auto& payoutShare : payoutShares) {
+            if (CTxDestination dest; ExtractDestination(payoutShare.scriptPayout, dest)) {
+                UniValue payoutField;
+                payoutField.setObject();
+                payoutField.pushKV("payoutAddress", EncodeDestination(dest));
+                payoutField.pushKV("payoutShareReward", payoutShare.payoutShareReward);
+                payoutArray.push_back(payoutField);
+            }
         }
+        obj.pushKV("payouts", payoutArray);
         obj.pushKV("pubKeyOperator", pubKeyOperator.ToString());
         obj.pushKV("operatorReward", (double)nOperatorReward / 100);
         if (nType == MnType::Evo) {
@@ -114,7 +174,7 @@ public:
         return obj;
     }
 
-    bool IsTriviallyValid(bool is_bls_legacy_scheme, TxValidationState& state) const;
+    bool IsTriviallyValid(bool is_bls_legacy_scheme, bool is_multi_payout_active, TxValidationState& state) const;
 };
 
 class CProUpServTx
@@ -194,7 +254,7 @@ public:
         return obj;
     }
 
-    bool IsTriviallyValid(bool is_bls_legacy_scheme, TxValidationState& state) const;
+    bool IsTriviallyValid(bool is_bls_legacy_scheme, bool is_multi_payout_active, TxValidationState& state) const;
 };
 
 class CProUpRegTx
@@ -203,10 +263,17 @@ public:
     static constexpr auto SPECIALTX_TYPE = TRANSACTION_PROVIDER_UPDATE_REGISTRAR;
     static constexpr uint16_t LEGACY_BLS_VERSION = 1;
     static constexpr uint16_t BASIC_BLS_VERSION = 2;
+    static constexpr uint16_t MULTI_PAYOUT_VERSION = 3;
 
-    [[nodiscard]] static constexpr auto GetVersion(const bool is_basic_scheme_active) -> uint16_t
+    [[nodiscard]] static constexpr auto GetVersion(const bool is_basic_scheme_active, const bool is_multi_payout_active) -> uint16_t
     {
-        return is_basic_scheme_active ? BASIC_BLS_VERSION : LEGACY_BLS_VERSION;
+        if (is_multi_payout_active) {
+            // multi payout is activated after basic scheme
+            assert(is_basic_scheme_active);
+            return MULTI_PAYOUT_VERSION;
+        } else {
+            return is_basic_scheme_active ? BASIC_BLS_VERSION : LEGACY_BLS_VERSION;
+        }
     }
 
     uint16_t nVersion{LEGACY_BLS_VERSION}; // message version
@@ -214,32 +281,52 @@ public:
     uint16_t nMode{0}; // only 0 supported for now
     CBLSLazyPublicKey pubKeyOperator;
     CKeyID keyIDVoting;
-    CScript scriptPayout;
+    std::vector<PayoutShare> payoutShares;
     uint256 inputsHash; // replay protection
     std::vector<unsigned char> vchSig;
 
-    SERIALIZE_METHODS(CProUpRegTx, obj)
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action)
     {
         READWRITE(
-                obj.nVersion
-        );
-        if (obj.nVersion == 0 || obj.nVersion > BASIC_BLS_VERSION) {
+            nVersion);
+        if (nVersion == 0 || nVersion > MULTI_PAYOUT_VERSION) {
             // unknown version, bail out early
             return;
         }
         READWRITE(
-                obj.proTxHash,
-                obj.nMode,
-                CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), (obj.nVersion == LEGACY_BLS_VERSION)),
-                obj.keyIDVoting,
-                obj.scriptPayout,
-                obj.inputsHash
-        );
-        if (!(s.GetType() & SER_GETHASH)) {
-            READWRITE(
-                    obj.vchSig
-            );
+            proTxHash,
+            nMode,
+            CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(pubKeyOperator), (nVersion == LEGACY_BLS_VERSION)),
+            keyIDVoting);
+
+        if (nVersion < MULTI_PAYOUT_VERSION) {
+            if (ser_action.ForRead()) {
+                CScript payoutScript;
+                READWRITE(payoutScript);
+                payoutShares = {PayoutShare(payoutScript)};
+            } else {
+                READWRITE(payoutShares[0].scriptPayout);
+            }
+        } else {
+            READWRITE(payoutShares);
         }
+        READWRITE(inputsHash);
+        if (!(s.GetType() & SER_GETHASH)) {
+            READWRITE(vchSig);
+        }
+    }
+
+    template <typename Stream>
+    void Serialize(Stream& s) const
+    {
+        const_cast<CProUpRegTx*>(this)->SerializationOp(s, CSerActionSerialize());
+    }
+
+    template <typename Stream>
+    void Unserialize(Stream& s)
+    {
+        SerializationOp(s, CSerActionUnserialize());
     }
 
     std::string ToString() const;
@@ -251,15 +338,24 @@ public:
         obj.pushKV("version", nVersion);
         obj.pushKV("proTxHash", proTxHash.ToString());
         obj.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
-        if (CTxDestination dest; ExtractDestination(scriptPayout, dest)) {
-            obj.pushKV("payoutAddress", EncodeDestination(dest));
+        UniValue payoutArray;
+        payoutArray.setArray();
+        for (const auto& payoutShare : payoutShares) {
+            if (CTxDestination dest; ExtractDestination(payoutShare.scriptPayout, dest)) {
+                UniValue payoutField;
+                payoutField.setObject();
+                payoutField.pushKV("payoutAddress", EncodeDestination(dest));
+                payoutField.pushKV("payoutShareReward", payoutShare.payoutShareReward);
+                payoutArray.push_back(payoutField);
+            }
         }
+        obj.pushKV("payouts", payoutArray);
         obj.pushKV("pubKeyOperator", pubKeyOperator.ToString());
         obj.pushKV("inputsHash", inputsHash.ToString());
         return obj;
     }
 
-    bool IsTriviallyValid(bool is_bls_legacy_scheme, TxValidationState& state) const;
+    bool IsTriviallyValid(bool is_bls_legacy_scheme, bool is_multi_payout_active, TxValidationState& state) const;
 };
 
 class CProUpRevTx
@@ -323,7 +419,7 @@ public:
         return obj;
     }
 
-    bool IsTriviallyValid(bool is_bls_legacy_scheme, TxValidationState& state) const;
+    bool IsTriviallyValid(bool is_bls_legacy_scheme, bool is_multi_payout_active, TxValidationState& state) const;
 };
 
 template <typename ProTx>

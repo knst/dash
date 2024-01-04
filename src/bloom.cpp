@@ -128,10 +128,17 @@ bool CBloomFilter::CheckSpecialTransactionMatchesAndUpdate(const CTransaction &t
     case(TRANSACTION_PROVIDER_REGISTER): {
         CProRegTx proTx;
         if (GetTxPayload(tx, proTx)) {
-            if(contains(proTx.collateralOutpoint) ||
-                    contains(proTx.keyIDOwner) ||
-                    contains(proTx.keyIDVoting) ||
-                    CheckScript(proTx.scriptPayout)) {
+            bool scriptCheck = false;
+            for (const auto& payoutShare : proTx.payoutShares) {
+                if (CheckScript(payoutShare.scriptPayout)) {
+                    scriptCheck = true;
+                    break;
+                }
+            }
+            if (contains(proTx.collateralOutpoint) ||
+                contains(proTx.keyIDOwner) ||
+                contains(proTx.keyIDVoting) ||
+                scriptCheck) {
                 if ((nFlags & BLOOM_UPDATE_MASK) == BLOOM_UPDATE_ALL)
                     insert(tx.GetHash());
                 return true;
@@ -158,8 +165,15 @@ bool CBloomFilter::CheckSpecialTransactionMatchesAndUpdate(const CTransaction &t
         if (GetTxPayload(tx, proTx)) {
             if(contains(proTx.proTxHash))
                 return true;
-            if(contains(proTx.keyIDVoting) ||
-                    CheckScript(proTx.scriptPayout)) {
+            bool scriptCheck = false;
+            for (const auto& payoutShare : proTx.payoutShares) {
+                if (CheckScript(payoutShare.scriptPayout)) {
+                    scriptCheck = true;
+                    break;
+                }
+            }
+            if (contains(proTx.keyIDVoting) ||
+                scriptCheck) {
                 if ((nFlags & BLOOM_UPDATE_MASK) == BLOOM_UPDATE_ALL)
                     insert(proTx.proTxHash);
                 return true;

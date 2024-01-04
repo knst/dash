@@ -155,7 +155,7 @@ public:
     CBLSLazyPublicKey pubKeyOperator;
     CKeyID keyIDVoting;
     CService addr;
-    CScript scriptPayout;
+    std::vector<PayoutShare> payoutShares;
     CScript scriptOperatorPayout;
 
     uint160 platformNodeID{};
@@ -170,7 +170,7 @@ public:
         pubKeyOperator(proTx.pubKeyOperator),
         keyIDVoting(proTx.keyIDVoting),
         addr(proTx.addr),
-        scriptPayout(proTx.scriptPayout),
+        payoutShares(proTx.payoutShares),
         platformNodeID(proTx.platformNodeID),
         platformP2PPort(proTx.platformP2PPort),
         platformHTTPPort(proTx.platformHTTPPort)
@@ -189,7 +189,7 @@ public:
         pubKeyOperator(s.pubKeyOperator),
         keyIDVoting(s.keyIDVoting),
         addr(s.addr),
-        scriptPayout(s.scriptPayout),
+        payoutShares({PayoutShare(s.scriptPayout, 10000)}),
         scriptOperatorPayout(s.scriptOperatorPayout) {}
 
     explicit CDeterministicMNState(const CDeterministicMNState_mntype_format& s) :
@@ -206,7 +206,7 @@ public:
         pubKeyOperator(s.pubKeyOperator),
         keyIDVoting(s.keyIDVoting),
         addr(s.addr),
-        scriptPayout(s.scriptPayout),
+        payoutShares({PayoutShare(s.scriptPayout, 10000)}),
         scriptOperatorPayout(s.scriptOperatorPayout),
         platformNodeID(s.platformNodeID),
         platformP2PPort(s.platformP2PPort),
@@ -218,31 +218,53 @@ public:
         s >> *this;
     }
 
-    SERIALIZE_METHODS(CDeterministicMNState, obj)
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action)
     {
         READWRITE(
-            obj.nVersion,
-            obj.nRegisteredHeight,
-            obj.nLastPaidHeight,
-            obj.nConsecutivePayments,
-            obj.nPoSePenalty,
-            obj.nPoSeRevivedHeight,
-            obj.nPoSeBanHeight,
-            obj.nRevocationReason,
-            obj.confirmedHash,
-            obj.confirmedHashWithProRegTxHash,
-            obj.keyIDOwner);
-        READWRITE(CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), obj.nVersion == CProRegTx::LEGACY_BLS_VERSION));
+            nVersion,
+            nRegisteredHeight,
+            nLastPaidHeight,
+            nConsecutivePayments,
+            nPoSePenalty,
+            nPoSeRevivedHeight,
+            nPoSeBanHeight,
+            nRevocationReason,
+            confirmedHash,
+            confirmedHashWithProRegTxHash,
+            keyIDOwner);
+        READWRITE(CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(pubKeyOperator), nVersion == CProRegTx::LEGACY_BLS_VERSION));
         READWRITE(
-            obj.keyIDVoting,
-            obj.addr,
-            obj.scriptPayout,
-            obj.scriptOperatorPayout,
-            obj.platformNodeID,
-            obj.platformP2PPort,
-            obj.platformHTTPPort);
+            keyIDVoting,
+            addr);
+        if (nVersion < CProRegTx::MULTI_PAYOUT_VERSION) {
+            if (ser_action.ForRead()) {
+                CScript payoutScript;
+                READWRITE(payoutScript);
+                payoutShares = {PayoutShare(payoutScript)};
+            } else {
+                READWRITE(payoutShares[0].scriptPayout);
+            }
+        } else {
+            READWRITE(payoutShares);
+        }
+        READWRITE(scriptOperatorPayout,
+                  platformNodeID,
+                  platformP2PPort,
+                  platformHTTPPort);
     }
 
+    template <typename Stream>
+    void Serialize(Stream& s) const
+    {
+        const_cast<CDeterministicMNState*>(this)->SerializationOp(s, CSerActionSerialize());
+    }
+
+    template <typename Stream>
+    void Unserialize(Stream& s)
+    {
+        SerializationOp(s, CSerActionUnserialize());
+    }
     void ResetOperatorFields()
     {
         nVersion = CProRegTx::LEGACY_BLS_VERSION;
@@ -302,7 +324,7 @@ public:
         Field_pubKeyOperator = 0x0200,
         Field_keyIDVoting = 0x0400,
         Field_addr = 0x0800,
-        Field_scriptPayout = 0x1000,
+        Field_payoutShares = 0x1000,
         Field_scriptOperatorPayout = 0x2000,
         Field_nConsecutivePayments = 0x4000,
         Field_platformNodeID = 0x8000,
@@ -324,7 +346,7 @@ public:
     DMN_STATE_DIFF_LINE(pubKeyOperator)                \
     DMN_STATE_DIFF_LINE(keyIDVoting)                   \
     DMN_STATE_DIFF_LINE(addr)                          \
-    DMN_STATE_DIFF_LINE(scriptPayout)                  \
+    DMN_STATE_DIFF_LINE(payoutShares)                  \
     DMN_STATE_DIFF_LINE(scriptOperatorPayout)          \
     DMN_STATE_DIFF_LINE(nConsecutivePayments)          \
     DMN_STATE_DIFF_LINE(platformNodeID)                \
