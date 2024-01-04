@@ -611,10 +611,9 @@ static UniValue protx_register_common_wrapper(const JSONRPCRequest& request,
         EnsureWalletIsUnlocked(wallet.get());
     }
 
-    const bool isV19active{DeploymentActiveAfter(WITH_LOCK(cs_main, return chainman.ActiveChain().Tip();), Params().GetConsensus(), Consensus::DEPLOYMENT_V19)};
-    if (isEvoRequested && !isV19active) {
-        throw JSONRPCError(RPC_INVALID_REQUEST, "EvoNodes aren't allowed yet");
-    }
+    const bool isV19Active { DeploymentActiveAfter(WITH_LOCK(cs_main, return chainman.ActiveChain().Tip();), Params().GetConsensus(), Consensus::DEPLOYMENT_V19) };
+    const bool isDIP26Active { DeploymentActiveAfter(WITH_LOCK(cs_main, return chainman.ActiveChain().Tip();), Params().GetConsensus(), Consensus::DEPLOYMENT_DIP0026) };
+    const bool use_legacy = isV19Active ? specific_legacy_bls_scheme : true;
 
     size_t paramIdx = 0;
 
@@ -622,7 +621,6 @@ static UniValue protx_register_common_wrapper(const JSONRPCRequest& request,
     tx.nVersion = 3;
     tx.nType = TRANSACTION_PROVIDER_REGISTER;
 
-    const bool use_legacy = isV19active ? specific_legacy_bls_scheme : true;
 
     CProRegTx ptx;
     ptx.nType = mnType;
@@ -660,10 +658,6 @@ static UniValue protx_register_common_wrapper(const JSONRPCRequest& request,
         }
     }
 
-    ptx.keyIDOwner = ParsePubKeyIDFromAddress(request.params[paramIdx + 1].get_str(), "owner address");
-    ptx.pubKeyOperator.Set(ParseBLSPubKey(request.params[paramIdx + 2].get_str(), "operator BLS address", use_legacy), use_legacy);
-    ptx.nVersion = use_legacy ? CProRegTx::LEGACY_BLS_VERSION : CProRegTx::BASIC_BLS_VERSION;
-    CHECK_NONFATAL(ptx.pubKeyOperator.IsLegacy() == (ptx.nVersion == CProRegTx::LEGACY_BLS_VERSION));
 
     CKeyID keyIDVoting = ptx.keyIDOwner;
 
@@ -680,7 +674,33 @@ static UniValue protx_register_common_wrapper(const JSONRPCRequest& request,
     }
     ptx.nOperatorReward = operatorReward;
 
-    CTxDestination payoutDest = DecodeDestination(request.params[paramIdx + 5].get_str());
+    const auto& payoutShares = request.params[paramIdx + 5].get_array();
+    const bool is_multi_payout = payoutShares.size() > 1;
+    // Multi payout is allowed only for basic bls scheme and only when dip26 is active
+    if (is_multi_payout && !isDIP26Active) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("DIP26 is not active yet"));
+    }
+    if (is_multi_payout && use_legacy) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Multi payout requries basic bls scheme"));
+    }
+    if (isEvoRequested && !isV19Active) {
+        throw JSONRPCError(RPC_INVALID_REQUEST, "EvoNodes aren't allowed yet");
+    }
+    ptx.nVersion = CProRegTx::GetVersion(!use_legacy, is_multi_payout);
+    ptx.keyIDOwner = ParsePubKeyIDFromAddress(request.params[paramIdx + 1].get_str(), "owner address");
+    ptx.pubKeyOperator.Set(ParseBLSPubKey(request.params[paramIdx + 2].get_str(), "operator BLS address", use_legacy), use_legacy);
+    CHECK_NONFATAL(ptx.pubKeyOperator.IsLegacy() == (ptx.nVersion == CProRegTx::LEGACY_BLS_VERSION));
+
+    CTxDestination payoutDest;
+    for (size_t i = 0; i < payoutShares.size(); i++) {
+        const auto& payoutScript = payoutShares[i].get_array()[0].get_str();
+        const auto& payoutShareReward = payoutShares[i].get_array()[1].get_int();
+        payoutDest = DecodeDestination(payoutScript);
+        if (!IsValidDestination(payoutDest)) {
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("invalid payout address: %s", request.params[3].get_str()));
+        }
+        ptx.payoutShares.emplace_back(GetScriptForDestination(payoutDest), payoutShareReward);
+    }
     if (!IsValidDestination(payoutDest)) {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("invalid payout address: %s", request.params[paramIdx + 5].get_str()));
     }
@@ -707,8 +727,6 @@ static UniValue protx_register_common_wrapper(const JSONRPCRequest& request,
     }
 
     ptx.keyIDVoting = keyIDVoting;
-    ptx.scriptPayout = GetScriptForDestination(payoutDest);
-
     if (!isFundRegister) {
         // make sure fee calculation works
         ptx.vchSig.resize(65);
@@ -997,8 +1015,8 @@ static UniValue protx_update_service_common_wrapper(const JSONRPCRequest& reques
             // use operator reward address as default source for fees
             ExtractDestination(ptx.scriptOperatorPayout, feeSource);
         } else {
-            // use payout address as default source for fees
-            ExtractDestination(dmn->pdmnState->scriptPayout, feeSource);
+            // use first payout address as default source for fees
+            ExtractDestination(dmn->pdmnState->payoutShares[0].scriptPayout, feeSource);
         }
     }
 
@@ -1054,10 +1072,20 @@ static UniValue protx_update_registrar_wrapper(const JSONRPCRequest& request, co
         throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("masternode %s not found", ptx.proTxHash.ToString()));
     }
     ptx.keyIDVoting = dmn->pdmnState->keyIDVoting;
-    ptx.scriptPayout = dmn->pdmnState->scriptPayout;
+    ptx.payoutShares = dmn->pdmnState->payoutShares;
 
     const bool isV19Active{DeploymentActiveAfter(WITH_LOCK(cs_main, return chainman.ActiveChain().Tip();), Params().GetConsensus(), Consensus::DEPLOYMENT_V19)};
+    const bool isDIP26Active { DeploymentActiveAfter(WITH_LOCK(cs_main, return chainman.ActiveChain().Tip();), Params().GetConsensus(), Consensus::DEPLOYMENT_DIP0026) };
+
     const bool use_legacy = isV19Active ? specific_legacy_bls_scheme : true;
+    const bool is_multi_payout = request.params[3].get_array().size() > 1;
+    // Multi payout is allowed only for basic bls scheme and only when dip26 is active
+    if (is_multi_payout && !isDIP26Active) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("DIP26 is not active yet"));
+    }
+    if (is_multi_payout && use_legacy) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Multi payout requries basic bls scheme"));
+    }
 
     if (request.params[1].get_str() != "") {
         // new pubkey
@@ -1067,23 +1095,28 @@ static UniValue protx_update_registrar_wrapper(const JSONRPCRequest& request, co
         ptx.pubKeyOperator = dmn->pdmnState->pubKeyOperator;
     }
 
-    ptx.nVersion = use_legacy ? CProUpRegTx::LEGACY_BLS_VERSION : CProUpRegTx::BASIC_BLS_VERSION;
+    ptx.nVersion = CProUpRegTx::GetVersion(!use_legacy, is_multi_payout);
     CHECK_NONFATAL(ptx.pubKeyOperator.IsLegacy() == (ptx.nVersion == CProUpRegTx::LEGACY_BLS_VERSION));
 
     if (request.params[2].get_str() != "") {
         ptx.keyIDVoting = ParsePubKeyIDFromAddress(request.params[2].get_str(), "voting address");
     }
 
+    const auto& payoutShares = request.params[3].get_array();
     CTxDestination payoutDest;
-    ExtractDestination(ptx.scriptPayout, payoutDest);
-    if (request.params[3].get_str() != "") {
-        payoutDest = DecodeDestination(request.params[3].get_str());
+    std::vector<PayoutShare> newPayoutShares;
+    for (size_t i = 0; i < payoutShares.size(); i++) {
+        const auto& payoutScript = payoutShares[i].get_array()[0].get_str();
+        const auto& payoutShareReward = payoutShares[i].get_array()[1].get_int();
+        payoutDest = DecodeDestination(payoutScript);
         if (!IsValidDestination(payoutDest)) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("invalid payout address: %s", request.params[3].get_str()));
         }
-        ptx.scriptPayout = GetScriptForDestination(payoutDest);
+        newPayoutShares.emplace_back(GetScriptForDestination(payoutDest), payoutShareReward);
     }
-
+    if (!newPayoutShares.empty()) {
+        ptx.payoutShares = std::move(newPayoutShares);
+    }
     LegacyScriptPubKeyMan* spk_man = wallet->GetLegacyScriptPubKeyMan();
     if (!spk_man) {
         throw JSONRPCError(RPC_WALLET_ERROR, "This type of wallet does not support this command");
@@ -1100,7 +1133,8 @@ static UniValue protx_update_registrar_wrapper(const JSONRPCRequest& request, co
 
     // make sure we get anough fees added
     ptx.vchSig.resize(65);
-
+    // Use the first payee address as fee source
+    ExtractDestination(ptx.payoutShares[0].scriptPayout, payoutDest);
     CTxDestination feeSourceDest = payoutDest;
     if (!request.params[4].isNull()) {
         feeSourceDest = DecodeDestination(request.params[4].get_str());
@@ -1196,10 +1230,11 @@ static UniValue protx_revoke(const JSONRPCRequest& request, const ChainstateMana
         CTxDestination txDest;
         ExtractDestination(dmn->pdmnState->scriptOperatorPayout, txDest);
         FundSpecialTx(wallet.get(), tx, ptx, txDest);
-    } else if (dmn->pdmnState->scriptPayout != CScript()) {
+    } else if (dmn->pdmnState->payoutShares[0].scriptPayout != CScript()) {
         // Using funds from previousely specified masternode payout address
         CTxDestination txDest;
-        ExtractDestination(dmn->pdmnState->scriptPayout, txDest);
+        // Again, as fee source we can just use the first address in the payee list
+        ExtractDestination(dmn->pdmnState->payoutShares[0].scriptPayout, txDest);
         FundSpecialTx(wallet.get(), tx, ptx, txDest);
     } else {
         throw JSONRPCError(RPC_INTERNAL_ERROR, "No payout or fee source addresses found, can't revoke");
@@ -1290,13 +1325,20 @@ static UniValue BuildDMNListEntry(CWallet* pwallet, const CDeterministicMN& dmn,
         ownsCollateral = CheckWalletOwnsScript(pwallet, collateralTx->vout[dmn.collateralOutpoint.n].scriptPubKey);
     }
 
+    bool ownAnyPayeeScript = false;
+    for (const auto& payoutShare : dmn.pdmnState->payoutShares) {
+        if (CheckWalletOwnsScript(pwallet, payoutShare.scriptPayout)) {
+            ownAnyPayeeScript = true;
+            break;
+        }
+    }
     if (pwallet) {
         UniValue walletObj(UniValue::VOBJ);
         walletObj.pushKV("hasOwnerKey", hasOwnerKey);
         walletObj.pushKV("hasOperatorKey", false);
         walletObj.pushKV("hasVotingKey", hasVotingKey);
         walletObj.pushKV("ownsCollateral", ownsCollateral);
-        walletObj.pushKV("ownsPayeeScript", CheckWalletOwnsScript(pwallet, dmn.pdmnState->scriptPayout));
+        walletObj.pushKV("ownsPayeeScript", ownAnyPayeeScript);
         walletObj.pushKV("ownsOperatorRewardScript", CheckWalletOwnsScript(pwallet, dmn.pdmnState->scriptOperatorPayout));
         o.pushKV("wallet", walletObj);
     }
@@ -1359,10 +1401,17 @@ static UniValue protx_list(const JSONRPCRequest& request, const ChainstateManage
 
         CDeterministicMNList mnList = deterministicMNManager->GetListForBlock(chainman.ActiveChain()[height]);
         mnList.ForEachMN(false, [&](const auto& dmn) {
+            bool ownAnyPayeeScript = false;
+            for (const auto& payoutShare : dmn.pdmnState->payoutShares) {
+                if (CheckWalletOwnsScript(wallet.get(), payoutShare.scriptPayout)) {
+                    ownAnyPayeeScript = true;
+                    break;
+                }
+            }
             if (setOutpts.count(dmn.collateralOutpoint) ||
                 CheckWalletOwnsKey(wallet.get(), dmn.pdmnState->keyIDOwner) ||
                 CheckWalletOwnsKey(wallet.get(), dmn.pdmnState->keyIDVoting) ||
-                CheckWalletOwnsScript(wallet.get(), dmn.pdmnState->scriptPayout) ||
+                ownAnyPayeeScript ||
                 CheckWalletOwnsScript(wallet.get(), dmn.pdmnState->scriptOperatorPayout)) {
                 ret.push_back(BuildDMNListEntry(wallet.get(), dmn, detailed));
             }
@@ -1617,7 +1666,6 @@ static UniValue protx(const JSONRPCRequest& request)
     const std::string command{new_request.strMethod};
 
     const ChainstateManager& chainman = EnsureAnyChainman(request.context);
-
 #ifdef ENABLE_WALLET
     if (command == "protxregister" || command == "protxregister_fund" || command == "protxregister_prepare") {
         return protx_register(new_request, chainman);

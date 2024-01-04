@@ -141,10 +141,6 @@ static UniValue GetNextMasternodeForPayment(int heightShift)
     if (payees.empty())
         return "unknown";
     auto payee = payees.back();
-    CScript payeeScript = payee->pdmnState->scriptPayout;
-
-    CTxDestination payeeDest;
-    ExtractDestination(payeeScript, payeeDest);
 
     UniValue obj(UniValue::VOBJ);
 
@@ -152,7 +148,17 @@ static UniValue GetNextMasternodeForPayment(int heightShift)
     obj.pushKV("IP:port",       payee->pdmnState->addr.ToString());
     obj.pushKV("proTxHash",     payee->proTxHash.ToString());
     obj.pushKV("outpoint",      payee->collateralOutpoint.ToStringShort());
-    obj.pushKV("payee",         IsValidDestination(payeeDest) ? EncodeDestination(payeeDest) : "UNKNOWN");
+
+    UniValue payoutArray(UniValue::VARR);
+    for (const auto& payoutShare : payee->pdmnState->payoutShares) {
+        CTxDestination dest;
+        ExtractDestination(payoutShare.scriptPayout, dest);
+        UniValue payoutField(UniValue::VOBJ);
+        payoutField.pushKV("payoutAddress", IsValidDestination(dest) ? EncodeDestination(dest) : "UNKNOWN");
+        payoutField.pushKV("payoutShareReward", payoutShare.payoutShareReward);
+        payoutArray.push_back(payoutField);
+    }
+    obj.pushKV("payees", payoutArray);
     return obj;
 }
 
@@ -279,13 +285,17 @@ static UniValue masternode_status(const JSONRPCRequest& request)
 
 static std::string GetRequiredPaymentsString(int nBlockHeight, const CDeterministicMNCPtr &payee)
 {
-    std::string strPayments = "Unknown";
+    std::string strPayments = "UNKNOWN";
     if (payee) {
         CTxDestination dest;
-        if (!ExtractDestination(payee->pdmnState->scriptPayout, dest)) {
-            CHECK_NONFATAL(false);
+        for (size_t i = 0; i < payee->pdmnState->payoutShares.size(); i++) {
+            const auto& payeeShare = payee->pdmnState->payoutShares[i];
+            if (!ExtractDestination(payeeShare.scriptPayout, dest)) {
+                CHECK_NONFATAL(false);
+            }
+            strPayments = (i == 0) ? EncodeDestination(dest) : (strPayments + ", " + EncodeDestination(dest));
         }
-        strPayments = EncodeDestination(dest);
+
         if (payee->nOperatorReward != 0 && payee->pdmnState->scriptOperatorPayout != CScript()) {
             if (!ExtractDestination(payee->pdmnState->scriptOperatorPayout, dest)) {
                 CHECK_NONFATAL(false);
@@ -634,13 +644,16 @@ static UniValue masternodelist(const JSONRPCRequest& request, ChainstateManager&
             }
         }
 
-        CScript payeeScript = dmn.pdmnState->scriptPayout;
+        CScript payeeScript = dmn.pdmnState->payoutShares[0].scriptPayout;
         CTxDestination payeeDest;
         std::string payeeStr = "UNKNOWN";
-        if (ExtractDestination(payeeScript, payeeDest)) {
-            payeeStr = EncodeDestination(payeeDest);
+        for (size_t i = 0; i < dmn.pdmnState->payoutShares.size(); i++) {
+            const auto& payeeShare = dmn.pdmnState->payoutShares[i];
+            if (!ExtractDestination(payeeShare.scriptPayout, payeeDest)) {
+                CHECK_NONFATAL(false);
+            }
+            payeeStr = (i == 0) ? EncodeDestination(payeeDest) : (payeeStr + ", " + EncodeDestination(payeeDest));
         }
-
         if (strMode == "addr") {
             std::string strAddress = dmn.pdmnState->addr.ToString(false);
             if (strFilter !="" && strAddress.find(strFilter) == std::string::npos &&
