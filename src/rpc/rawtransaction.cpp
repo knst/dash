@@ -138,7 +138,7 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, const  CTxMemPool
     // Blockchain contextual information (confirmations and blocktime) is not
     // available to code in bitcoin-common, so we query them here and push the
     // data into the returned UniValue.
-    TxToUniv(tx, /*block_hash=*/uint256(), entry, /*include_hex=*/true, /*serialize_flags=*/0, /*txundo=*/txundo, verbosity, txSpentInfoPtr);
+    TxToUniv(tx, /*block_hash=*/uint256(), entry, /*include_hex=*/true, /*txundo=*/txundo, verbosity, txSpentInfoPtr);
 
     bool chainLock = false;
     if (!hashBlock.IsNull()) {
