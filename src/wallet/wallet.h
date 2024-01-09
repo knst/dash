@@ -1278,6 +1278,7 @@ public:
     /* Returns true if HD is enabled */
     bool IsHDEnabled() const;
 
+    // TODO: move it to scriptpubkeyman
     /* Generates a new HD chain */
     bool GenerateNewHDChainEncrypted(const SecureString& secureMnemonic, const SecureString& secureMnemonicPassphrase, const SecureString& secureWalletPassphrase);
 

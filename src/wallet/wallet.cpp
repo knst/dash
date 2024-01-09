@@ -297,6 +297,10 @@ std::shared_ptr<CWallet> CreateWallet(interfaces::Chain& chain, interfaces::Coin
         status = DatabaseStatus::FAILED_CREATE;
         return nullptr;
     }
+    if (gArgs.GetBoolArg("-usehd", DEFAULT_USE_HD_WALLET)) {
+        LogPrintf("set HD by default\n");
+        wallet->SetMinVersion(FEATURE_HD);
+    }
 
     // Encrypt the wallet
     if (!passphrase.empty() && !(wallet_creation_flags & WALLET_FLAG_DISABLE_PRIVATE_KEYS)) {
@@ -313,21 +317,17 @@ std::shared_ptr<CWallet> CreateWallet(interfaces::Chain& chain, interfaces::Coin
                 return nullptr;
             }
 
-            // Set a HD chain for the wallet
-            // TODO: re-enable this and `keypoolsize_hd_internal` check in `wallet_createwallet.py`
-            // when HD is the default mode (make sure this actually works!)...
-            // if (auto spk_man = wallet->GetLegacyScriptPubKeyMan() {
-            //   if (!spk_man->GenerateNewHDChainEncrypted("", "", passphrase)) {
-            //     throw JSONRPCError(RPC_WALLET_ERROR, "Failed to generate encrypted HD wallet");
-            //   }
-            // }
-            // ... and drop this
-            LOCK(wallet->cs_wallet);
-            wallet->UnsetWalletFlag(WALLET_FLAG_BLANK_WALLET);
-            if (auto spk_man = wallet->GetLegacyScriptPubKeyMan()) {
-                spk_man->NewKeyPool();
+            {
+                // TODO: drop this condition after removing option to create non-HD wallets
+                // related backport bitcoin#11250
+                if (wallet->GetVersion() >= FEATURE_HD) {
+                    if (!wallet->GenerateNewHDChainEncrypted(/*secureMnemonic=*/"", /*secureMnemonicPassphrase=*/"", passphrase)) {
+                       error = Untranslated("Error: Failed to generate encrypted HD wallet");
+                       status = DatabaseStatus::FAILED_CREATE;
+                       return nullptr;
+                    }
+                }
             }
-            // end TODO
 
             // backup the wallet we just encrypted
             if (!wallet->AutoBackupWallet("", error, warnings) && !error.original.empty()) {
@@ -4601,6 +4601,10 @@ std::shared_ptr<CWallet> CWallet::Create(interfaces::Chain& chain, interfaces::C
             if (gArgs.GetBoolArg("-usehd", DEFAULT_USE_HD_WALLET) && !walletInstance->IsHDEnabled()) {
                 std::string strSeed = gArgs.GetArg("-hdseed", "not hex");
 
+                // ensure this wallet.dat can only be opened by clients supporting HD
+                walletInstance->WalletLogPrintf("Upgrading wallet to HD\n");
+                walletInstance->SetMinVersion(FEATURE_HD);
+
                 if (gArgs.IsArgSet("-hdseed") && IsHex(strSeed)) {
                     CHDChain newHdChain;
                     std::vector<unsigned char> vchSeed = ParseHex(strSeed);
@@ -4629,10 +4633,6 @@ std::shared_ptr<CWallet> CWallet::Create(interfaces::Chain& chain, interfaces::C
                         spk_man->GenerateNewHDChain(secureMnemonic, secureMnemonicPassphrase);
                     }
                 }
-
-                // ensure this wallet.dat can only be opened by clients supporting HD
-                walletInstance->WalletLogPrintf("Upgrading wallet to HD\n");
-                walletInstance->SetMinVersion(FEATURE_HD);
 
                 // clean up
                 gArgs.ForceRemoveArg("hdseed");
