@@ -6,9 +6,9 @@
 
 import os
 from pathlib import Path
+import platform
 import re
 import shutil
-import sys
 import tempfile
 import time
 
@@ -117,7 +117,7 @@ class ConfArgsTest(BitcoinTestFramework):
     def test_config_file_log(self):
         # Disable this test for windows currently because trying to override
         # the default datadir through the environment does not seem to work.
-        if sys.platform == "win32":
+        if platform.system() == "Windows":
             return
 
         self.log.info('Test that correct configuration path is changed when configuration file changes the datadir')
@@ -339,7 +339,7 @@ class ConfArgsTest(BitcoinTestFramework):
 
     def test_missing_default_datadir(self):
         # Overriding the default datadir through the environment does not work on Windows
-        if sys.platform == "win32":
+        if platform.system() == "Windows":
             return
 
         self.log.info('Test -version, -help and a first start without a default data directory')
@@ -361,7 +361,7 @@ class ConfArgsTest(BitcoinTestFramework):
     def test_ignored_default_conf(self):
         # Disable this test for windows currently because trying to override
         # the default datadir through the environment does not seem to work.
-        if sys.platform == "win32":
+        if platform.system() == "Windows":
             return
 
         self.log.info('Test error is triggered when dash.conf in the default data directory sets another datadir '

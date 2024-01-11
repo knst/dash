@@ -3,8 +3,8 @@
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Stress tests related to node initialization."""
-import platform
 from pathlib import Path
+import platform
 import shutil
 
 from test_framework.test_framework import BitcoinTestFramework, SkipTest
