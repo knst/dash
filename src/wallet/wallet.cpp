@@ -4897,7 +4897,14 @@ bool CWallet::UpgradeWallet(int version, bilingual_str& error)
         return false;
     }
 
+    // Discourage users to skip passphrase for HD wallets
+    if (nMaxVersion >= FEATURE_HD && !IsHDEnabled()) {
+        error = Untranslated("You should use upgradetohd RPC to upgrade non-HD wallet to HD");
+        return false;
+    }
+
     SetMaxVersion(nMaxVersion);
+
     return true;
 }
 

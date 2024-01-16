@@ -17,6 +17,7 @@ from test_framework.util import (
     assert_equal,
     assert_greater_than_or_equal,
     assert_is_hex_string,
+    assert_raises_rpc_error,
 )
 
 
@@ -125,14 +126,14 @@ class UpgradeWalletTest(BitcoinTestFramework):
         assert_equal('hdseedid' in wallet.getwalletinfo(), False)
         # calling upgradewallet with explicit version number
         # should return nothing if successful
-        assert_equal(wallet.upgradewallet(120200), "")
+        assert_raises_rpc_error(-4, "You should use upgradetohd RPC to upgrade non-HD wallet to HD", wallet.upgradewallet, 120200)
 
-        new_version = wallet.getwalletinfo()["walletversion"]
-        # upgraded wallet should have version 120200
-        #assert_equal(new_version, 120200)
-        # after conversion master key hash should not be present yet
         assert 'hdchainid' not in wallet.getwalletinfo()
+
         assert_equal(wallet.upgradetohd(), True)
+        new_version = wallet.getwalletinfo()["walletversion"]
+        # after conversion master key hash should not be present yet
+        assert 'hdchainid' in wallet.getwalletinfo()
         assert_equal(new_version, 120200)
         assert_is_hex_string(wallet.getwalletinfo()['hdchainid'])
 
