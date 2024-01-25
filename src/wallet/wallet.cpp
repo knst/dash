@@ -4908,6 +4908,37 @@ bool CWallet::UpgradeWallet(int version, bilingual_str& error)
     return true;
 }
 
+bool CWallet::UpgradeToHD(const SecureString& secureMnemonic, const SecureString& secureMnemonicPassphrase, const SecureString& secureWalletPassphrase, bilingual_str& error)
+{
+    LOCK(cs_wallet);
+
+    // Do not do anything to HD wallets
+    if (IsHDEnabled()) {
+        error = Untranslated("Cannot upgrade a wallet to HD if it is already upgraded to HD.");
+        return false;
+    }
+
+    if (IsWalletFlagSet(WALLET_FLAG_DISABLE_PRIVATE_KEYS)) {
+        error = Untranslated("Private keys are disabled for this wallet");
+        return false;
+    }
+
+    WalletLogPrintf("Upgrading wallet to HD\n");
+    SetMinVersion(FEATURE_HD);
+
+    auto spk_man = GetOrCreateLegacyScriptPubKeyMan();
+    bool prev_encrypted = IsCrypted();
+    if (prev_encrypted) {
+        if (!GenerateNewHDChainEncrypted(secureMnemonic, secureMnemonicPassphrase, secureWalletPassphrase)) {
+            error = Untranslated("Failed to generate encrypted HD wallet");
+            return false;
+        }
+    } else {
+        spk_man->GenerateNewHDChain(secureMnemonic, secureMnemonicPassphrase);
+    }
+    return true;
+}
+
 const CAddressBookData* CWallet::FindAddressBookEntry(const CTxDestination& dest, bool allow_change) const
 {
     const auto& address_book_it = m_address_book.find(dest);

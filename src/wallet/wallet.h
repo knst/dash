@@ -1331,6 +1331,9 @@ public:
     /** Upgrade the wallet */
     bool UpgradeWallet(int version, bilingual_str& error);
 
+    /** Upgrade non-HD wallet to HD wallet */
+    bool UpgradeToHD(const SecureString& secureMnemonic, const SecureString& secureMnemonicPassphrase, const SecureString& secureWalletPassphrase, bilingual_str& error);
+
     //! Returns all unique ScriptPubKeyMans in m_internal_spk_managers and m_external_spk_managers
     std::set<ScriptPubKeyMan*> GetActiveScriptPubKeyMans() const;
 
