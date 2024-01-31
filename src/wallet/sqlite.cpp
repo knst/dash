@@ -381,6 +381,17 @@ void SQLiteDatabase::Close()
     m_db = nullptr;
 }
 
+bool SQLiteDatabase::HasActiveTxn()
+{
+    // 'sqlite3_get_autocommit' returns true by default, and false if a transaction has begun and not been committed or rolled back.
+    return m_db && sqlite3_get_autocommit(m_db) == 0;
+}
+
+int SQliteExecHandler::Exec(SQLiteDatabase& database, const std::string& statement)
+{
+    return sqlite3_exec(database.m_db, statement.data(), nullptr, nullptr, nullptr);
+}
+
 std::unique_ptr<DatabaseBatch> SQLiteDatabase::MakeBatch(bool flush_on_close)
 {
     // We ignore flush_on_close because we don't do manual flushing for SQLite
@@ -398,15 +409,21 @@ SQLiteBatch::SQLiteBatch(SQLiteDatabase& database)
 
 void SQLiteBatch::Close()
 {
+    bool force_conn_refresh = false;
+
     // If this batch started a transaction that was never committed/aborted,
     // abort it now. We intentionally only abort transactions this batch owns:
     // nested WalletBatches sharing the SQLite connection must not roll back an
     // outer transaction started by a different batch.
-    if (m_txn_started && m_database.m_db && sqlite3_get_autocommit(m_database.m_db) == 0) {
+    if (m_txn_started && m_database.HasActiveTxn()) {
         if (TxnAbort()) {
             LogPrintf("SQLiteBatch: Batch closed unexpectedly without the transaction being explicitly committed or aborted\n");
         } else {
-            LogPrintf("SQLiteBatch: Batch closed and failed to abort transaction\n");
+            // If transaction cannot be aborted, it means there is a bug or there has been data corruption. Try to recover in this case
+            // by closing and reopening the database. Closing the database should also ensure that any changes made since the transaction
+            // was opened will be rolled back and future transactions can succeed without committing old data.
+            force_conn_refresh = true;
+            LogPrintf("SQLiteBatch: Batch closed and failed to abort transaction, resetting db connection..\n");
         }
     }
 
@@ -426,6 +443,17 @@ void SQLiteBatch::Close()
                       stmt_description, sqlite3_errstr(res));
         }
         *stmt_prepared = nullptr;
+    }
+
+    if (force_conn_refresh) {
+        m_database.Close();
+        try {
+            m_database.Open();
+        } catch (const std::runtime_error&) {
+            // If open fails, cleanup this object and rethrow the exception
+            m_database.Close();
+            throw;
+        }
     }
 }
 
@@ -613,8 +641,8 @@ std::unique_ptr<DatabaseCursor> SQLiteBatch::GetNewPrefixCursor(Span<const std::
 
 bool SQLiteBatch::TxnBegin()
 {
-    if (!m_database.m_db || sqlite3_get_autocommit(m_database.m_db) == 0) return false;
-    int res = sqlite3_exec(m_database.m_db, "BEGIN TRANSACTION", nullptr, nullptr, nullptr);
+    if (!m_database.m_db || m_database.HasActiveTxn()) return false;
+    int res = Assert(m_exec_handler)->Exec(m_database, "BEGIN TRANSACTION");
     if (res != SQLITE_OK) {
         LogPrintf("SQLiteBatch: Failed to begin the transaction\n");
     } else {
@@ -629,8 +657,8 @@ bool SQLiteBatch::TxnCommit()
     // batch whose TxnBegin() failed cannot accidentally commit an outer
     // transaction started by a different batch on the shared connection.
     if (!m_txn_started) return false;
-    if (!m_database.m_db || sqlite3_get_autocommit(m_database.m_db) != 0) return false;
-    int res = sqlite3_exec(m_database.m_db, "COMMIT TRANSACTION", nullptr, nullptr, nullptr);
+    if (!m_database.HasActiveTxn()) return false;
+    int res = Assert(m_exec_handler)->Exec(m_database, "COMMIT TRANSACTION");
     if (res != SQLITE_OK) {
         LogPrintf("SQLiteBatch: Failed to commit the transaction\n");
     } else {
@@ -643,8 +671,8 @@ bool SQLiteBatch::TxnAbort()
 {
     // Refuse to operate on a transaction this batch does not own; see TxnCommit.
     if (!m_txn_started) return false;
-    if (!m_database.m_db || sqlite3_get_autocommit(m_database.m_db) != 0) return false;
-    int res = sqlite3_exec(m_database.m_db, "ROLLBACK TRANSACTION", nullptr, nullptr, nullptr);
+    if (!m_database.HasActiveTxn()) return false;
+    int res = Assert(m_exec_handler)->Exec(m_database, "ROLLBACK TRANSACTION");
     if (res != SQLITE_OK) {
         LogPrintf("SQLiteBatch: Failed to abort the transaction\n");
     } else {
