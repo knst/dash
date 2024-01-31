@@ -4971,7 +4971,11 @@ std::optional<MigrationData> CWallet::GetDescriptorsForLegacy(bilingual_str& err
     AssertLockHeld(cs_wallet);
 
     LegacyScriptPubKeyMan* legacy_spkm = GetLegacyScriptPubKeyMan();
-    assert(legacy_spkm);
+    if (!Assume(legacy_spkm)) {
+        // This shouldn't happen
+        error = Untranslated(STR_INTERNAL_BUG("Error: Legacy wallet data missing"));
+        return std::nullopt;
+    }
 
     std::optional<MigrationData> res = legacy_spkm->MigrateToDescriptor();
     if (res == std::nullopt) {
@@ -4986,8 +4990,9 @@ bool CWallet::ApplyMigrationData(MigrationData& data, bilingual_str& error)
     AssertLockHeld(cs_wallet);
 
     LegacyScriptPubKeyMan* legacy_spkm = GetLegacyScriptPubKeyMan();
-    if (!legacy_spkm) {
-        error = _("Error: This wallet is already a descriptor wallet");
+    if (!Assume(legacy_spkm)) {
+        // This shouldn't happen
+        error = Untranslated(STR_INTERNAL_BUG("Error: Legacy wallet data missing"));
         return false;
     }
 
@@ -5382,7 +5387,7 @@ util::Result<MigrationResult> MigrateLegacyToDescriptor(const std::string& walle
     };
 
     // Before anything else, check if there is something to migrate.
-    if (!local_wallet->GetLegacyScriptPubKeyMan()) {
+    if (local_wallet->IsWalletFlagSet(WALLET_FLAG_DESCRIPTORS)) {
         if (was_loaded) {
             reload_wallet(local_wallet);
         }
@@ -5450,8 +5455,11 @@ util::Result<MigrationResult> MigrateLegacyToDescriptor(const std::string& walle
         fs::rename(res.backup_path, backup_path);
         res.backup_path = backup_path;
 
-        // Do the migration, and cleanup if it fails
-        success = DoMigration(*local_wallet, context, error, res);
+        // Do the migration of keys and scripts for non-blank wallets, and cleanup if it fails
+        success = local_wallet->IsWalletFlagSet(WALLET_FLAG_BLANK_WALLET);
+        if (!success) {
+            success = DoMigration(*local_wallet, context, error, res);
+        }
     }
 
     // In case of loading failure, we need to remember the wallet files we have created to remove.

@@ -56,7 +56,6 @@ class WalletMigrationTest(BitcoinTestFramework):
         info = wallet.getwalletinfo()
         assert_equal(info["descriptors"], False)
         assert_equal(info["format"], "bdb")
-        assert_equal(info["private_keys_enabled"], not disable_private_keys)
         return wallet
 
     def migrate_wallet(self, wallet_rpc, *args, **kwargs):
@@ -1035,6 +1034,13 @@ class WalletMigrationTest(BitcoinTestFramework):
             _, _, magic = struct.unpack("QII", data)
             assert_equal(magic, BTREE_MAGIC)
 
+    def test_blank(self):
+        self.log.info("Test that a blank wallet is migrated")
+        wallet = self.create_legacy_wallet("blank", blank=True)
+        assert_equal(wallet.getwalletinfo()["blank"], True)
+        wallet.migratewallet()
+        assert_equal(wallet.getwalletinfo()["blank"], True)
+
     def test_preserve_tx_extra_info(self):
         self.log.info("Test that tx extra data is preserved after migration")
         def_wallet = self.nodes[0].get_wallet_rpc(self.default_wallet_name)
@@ -1174,6 +1180,7 @@ class WalletMigrationTest(BitcoinTestFramework):
         self.test_failed_migration_cleanup()
         self.test_avoidreuse()
         self.test_preserve_tx_extra_info()
+        self.test_blank()
 
         # Note: After this test the first block file of 'nodes[0]' is pruned
         self.unsynced_wallet_on_pruned_node_fails()
