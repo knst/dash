@@ -23,7 +23,7 @@ static bool CheckSpecialTxInner(const CTransaction& tx, const CBlockIndex* pinde
 {
     AssertLockHeld(cs_main);
 
-    if (tx.nVersion != 3 || tx.nType == TRANSACTION_NORMAL)
+    if (!tx.IsSpecialTxVersion() || tx.nType == TRANSACTION_NORMAL)
         return true;
 
     const auto& consensusParams = Params().GetConsensus();
@@ -81,7 +81,7 @@ bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const
 
 static bool ProcessSpecialTx(const CTransaction& tx, const CBlockIndex* pindex, TxValidationState& state)
 {
-    if (tx.nVersion != 3 || tx.nType == TRANSACTION_NORMAL) {
+    if (!tx.IsSpecialTxVersion() || tx.nType == TRANSACTION_NORMAL) {
         return true;
     }
 
@@ -107,7 +107,7 @@ static bool ProcessSpecialTx(const CTransaction& tx, const CBlockIndex* pindex, 
 
 static bool UndoSpecialTx(const CTransaction& tx, const CBlockIndex* pindex)
 {
-    if (tx.nVersion != 3 || tx.nType == TRANSACTION_NORMAL) {
+    if (!tx.IsSpecialTxVersion() || tx.nType == TRANSACTION_NORMAL) {
         return true;
     }
 
@@ -285,7 +285,7 @@ bool CheckCreditPoolDiffForBlock(const CBlock& block, const CBlockIndex* pindex,
         // If we get there we have v20 activated and credit pool amount must be included in block CbTx
         const auto& tx = *block.vtx[0];
         assert(tx.IsCoinBase());
-        assert(tx.nVersion == 3);
+        assert(tx.IsSpecialTxVersion());
         assert(tx.nType == TRANSACTION_COINBASE);
 
         const auto opt_cbTx = GetTxPayload<CCbTx>(tx);

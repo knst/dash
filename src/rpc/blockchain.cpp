@@ -2484,7 +2484,7 @@ static UniValue getspecialtxes(const JSONRPCRequest& request)
 
     for(const auto& tx : block.vtx)
     {
-        if (tx->nVersion != 3 || tx->nType == TRANSACTION_NORMAL // ensure it's in fact a special tx
+        if (!tx->IsSpecialTxVersion() || tx->nType == TRANSACTION_NORMAL // ensure it's in fact a special tx
             || (nTxType != -1 && tx->nType != nTxType)) { // ensure special tx type matches filter, if given
                 continue;
         }

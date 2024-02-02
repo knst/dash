@@ -61,7 +61,7 @@ static UnlockDataPerBlock GetDataFromUnlockTxes(const std::vector<CTransactionRe
     UnlockDataPerBlock blockData;
 
     for (CTransactionRef tx : vtx) {
-        if (tx->nVersion != 3 || tx->nType != TRANSACTION_ASSET_UNLOCK) continue;
+        if (!tx->IsSpecialTxVersion() || tx->nType != TRANSACTION_ASSET_UNLOCK) continue;
 
         CAmount unlocked{0};
         TxValidationState tx_state;
@@ -121,10 +121,10 @@ static std::optional<CBlock> GetBlockForCreditPool(const CBlockIndex* const bloc
         throw std::runtime_error("failed-getcbforblock-read");
     }
     // Should not fail if V20 (DIP0027) is active but it happens for RegChain (unit tests)
-    if (block.vtx[0]->nVersion != 3) return std::nullopt;
+    if (!block.vtx[0]->IsSpecialTxVersion()) return std::nullopt;
 
     assert(!block.vtx.empty());
-    assert(block.vtx[0]->nVersion == 3);
+    assert(block.vtx[0]->IsSpecialTxVersion());
     assert(!block.vtx[0]->vExtraPayload.empty());
 
     return block;
@@ -272,7 +272,7 @@ bool CCreditPoolDiff::Unlock(const CTransaction& tx, TxValidationState& state)
 
 bool CCreditPoolDiff::ProcessLockUnlockTransaction(const CTransaction& tx, TxValidationState& state)
 {
-    if (tx.nVersion != 3) return true;
+    if (!tx.IsSpecialTxVersion()) return true;
     if (tx.nType != TRANSACTION_ASSET_LOCK && tx.nType != TRANSACTION_ASSET_UNLOCK) return true;
 
     if (!CheckAssetLockUnlockTx(tx, pindexPrev, pool.indexes, state)) {
