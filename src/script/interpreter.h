@@ -130,6 +130,7 @@ struct PrecomputedTransactionData
 enum class SigVersion
 {
     BASE = 0,
+    DIP0143 = 1,
 };
 
 template <class T>
