@@ -1040,6 +1040,7 @@ class WalletMigrationTest(BitcoinTestFramework):
         assert_equal(wallet.getwalletinfo()["blank"], True)
         wallet.migratewallet()
         assert_equal(wallet.getwalletinfo()["blank"], True)
+        assert_equal(wallet.getwalletinfo()["descriptors"], True)
 
     def test_preserve_tx_extra_info(self):
         self.log.info("Test that tx extra data is preserved after migration")
