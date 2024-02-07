@@ -347,6 +347,10 @@ class AssetLocksTest(DashTestFramework):
         assert_equal(asset_unlock_tx_payload.quorumHash, int(self.mninfo[0].node.quorum("selectquorum", llmq_type_test, 'e6c7a809d79f78ea85b72d5df7e9bd592aecf151e679d6e976b74f053a7f9056')["quorumHash"], 16))
 
         txid = self.send_tx(asset_unlock_tx)
+        rawtx = node.getrawtransaction(txid, 1)
+        assert_equal(rawtx["instantlock"], False)
+        assert_equal(rawtx["chainlock"], False)
+        assert not "confirmations" in rawtx
         assert "assetUnlockTx" in node.getrawtransaction(txid, 1)
 
         tip = self.nodes[0].getblockcount()
@@ -361,6 +365,10 @@ class AssetLocksTest(DashTestFramework):
         self.validate_credit_pool_balance(locked_1)
         node.generate(1)
         self.sync_all()
+        assert_equal(rawtx["instantlock"], False)
+        assert_equal(rawtx["chainlock"], False)
+        rawtx = node.getrawtransaction(txid, 1)
+        assert_equal(rawtx["confirmations"], 1)
         self.validate_credit_pool_balance(locked_1 - COIN)
         self.mempool_size -= 1
         self.check_mempool_size()
