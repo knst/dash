@@ -190,7 +190,6 @@ class AssetLocksTest(DashTestFramework):
 
         self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", spork_enabled)
         self.nodes[0].sporkupdate("SPORK_19_CHAINLOCKS_ENABLED", spork_disabled)
-        self.nodes[0].sporkupdate("SPORK_3_INSTANTSEND_BLOCK_FILTERING", spork_disabled)
         self.nodes[0].sporkupdate("SPORK_2_INSTANTSEND_ENABLED", spork_disabled)
         self.wait_for_sporks_same()
 
@@ -346,11 +345,23 @@ class AssetLocksTest(DashTestFramework):
 
         assert_equal(asset_unlock_tx_payload.quorumHash, int(self.mninfo[0].node.quorum("selectquorum", llmq_type_test, 'e6c7a809d79f78ea85b72d5df7e9bd592aecf151e679d6e976b74f053a7f9056')["quorumHash"], 16))
 
+        self.nodes[0].sporkupdate("SPORK_2_INSTANTSEND_ENABLED", 0)
+        self.wait_for_sporks_same()
+
+        is_id = node_wallet.sendtoaddress(node_wallet.getnewaddress(), 1)
+        for node in self.nodes:
+            self.wait_for_instantlock(is_id, node)
+
         txid = self.send_tx(asset_unlock_tx)
+
         rawtx = node.getrawtransaction(txid, 1)
+        rawtx_is = node.getrawtransaction(is_id, 1)
         assert_equal(rawtx["instantlock"], False)
+        assert_equal(rawtx_is["instantlock"], True)
         assert_equal(rawtx["chainlock"], False)
+        assert_equal(rawtx_is["chainlock"], False)
         assert not "confirmations" in rawtx
+        assert not "confirmations" in rawtx_is
         assert "assetUnlockTx" in node.getrawtransaction(txid, 1)
 
         tip = self.nodes[0].getblockcount()
@@ -360,7 +371,7 @@ class AssetLocksTest(DashTestFramework):
         assert_equal([{'index': 101, 'status': 'unknown'}, {'index': 102, 'status': 'unknown'}, {'index': 300, 'status': 'unknown'}], indexes_statuses_height)
 
 
-        self.mempool_size += 1
+        self.mempool_size += 2
         self.check_mempool_size()
         self.validate_credit_pool_balance(locked_1)
         node.generate(1)
@@ -370,7 +381,7 @@ class AssetLocksTest(DashTestFramework):
         rawtx = node.getrawtransaction(txid, 1)
         assert_equal(rawtx["confirmations"], 1)
         self.validate_credit_pool_balance(locked_1 - COIN)
-        self.mempool_size -= 1
+        self.mempool_size -= 2
         self.check_mempool_size()
         block_asset_unlock = node.getrawtransaction(asset_unlock_tx.rehash(), 1)['blockhash']
 
