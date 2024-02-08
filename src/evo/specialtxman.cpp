@@ -23,7 +23,7 @@ static bool CheckSpecialTxInner(const CTransaction& tx, const CBlockIndex* pinde
 {
     AssertLockHeld(cs_main);
 
-    if (!tx.IsSpecialTxVersion() || tx.nType == TRANSACTION_NORMAL)
+    if (!tx.HasExtraPayloadField())
         return true;
 
     const auto& consensusParams = Params().GetConsensus();
@@ -81,7 +81,7 @@ bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const
 
 static bool ProcessSpecialTx(const CTransaction& tx, const CBlockIndex* pindex, TxValidationState& state)
 {
-    if (!tx.IsSpecialTxVersion() || tx.nType == TRANSACTION_NORMAL) {
+    if (!tx.HasExtraPayloadField()) {
         return true;
     }
 
@@ -107,7 +107,7 @@ static bool ProcessSpecialTx(const CTransaction& tx, const CBlockIndex* pindex, 
 
 static bool UndoSpecialTx(const CTransaction& tx, const CBlockIndex* pindex)
 {
-    if (!tx.IsSpecialTxVersion() || tx.nType == TRANSACTION_NORMAL) {
+    if (!tx.HasExtraPayloadField()) {
         return true;
     }
 
