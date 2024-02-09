@@ -434,7 +434,7 @@ class AssetLocksTest(DashTestFramework):
         self.log.info("Checking credit pool amount still is same...")
         self.validate_credit_pool_balance(locked - 1 * COIN)
         self.send_tx(asset_unlock_tx_late)
-        node.generate(1)
+        node.generate(10)
         self.sync_all()
         self.validate_credit_pool_balance(locked - 2 * COIN)
 
@@ -443,22 +443,30 @@ class AssetLocksTest(DashTestFramework):
         priv_key = [bytes_to_wif(key.get_bytes(), key.is_compressed)]
         asset_unlock_spend = node_wallet.createrawtransaction([{"txid":asset_unlock_tx.rehash(), "vout": 0}], {node_wallet.getnewaddress():0.001})
         asset_unlock_spend = node_wallet.signrawtransactionwithkey(asset_unlock_spend, priv_key)
-        asset_unlock_spend_to_fail = node_wallet.createrawtransaction([{"txid":asset_unlock_tx_too_late.rehash(), "vout": 0}], {node_wallet.getnewaddress():0.001})
+        asset_unlock_spend_to_fail = node_wallet.createrawtransaction([{"txid":asset_unlock_tx_late.rehash(), "vout": 0}], {node_wallet.getnewaddress():0.001})
         asset_unlock_spend_to_fail = node_wallet.signrawtransactionwithkey(asset_unlock_spend_to_fail, priv_key)
 
         self.log.info("Disconnect wallet-node to be sure that tx is not actually sent...")
         node_wallet.disconnect_p2ps()
-        tx1 = node_wallet.sendrawtransaction(asset_unlock_tx_too_late.serialize().hex(), maxfeerate=0)
+        #tx1 = node_wallet.sendrawtransaction(asset_unlock_tx_late.serialize().hex(), maxfeerate=0)
+        #best_block_hash = node_wallet.getbestblockhash()
+        #node_wallet.generate(1)
+        best_block_hash_1 = node_wallet.getbestblockhash()
+
 #        self.log.info(f"sent-1: {tx1}")
-        self.log.info(f"raw-1: {node_wallet.getrawtransaction(tx1, 1)}")
+        #self.log.info(f"raw-1: {node_wallet.getrawtransaction(tx1, 1)}")
         tx2 = node_wallet.sendrawtransaction(asset_unlock_spend['hex'], maxfeerate=0)
         self.log.info(f"sent-2: {tx2}")
-        self.log.info(f"raw-2: {node_wallet.getrawtransaction(tx1, 1)}")
+        self.log.info(f"raw-2: {node_wallet.getrawtransaction(tx2, 1)}")
         tx3 = node_wallet.sendrawtransaction(asset_unlock_spend_to_fail['hex'], maxfeerate=0)
         self.log.info(f"sent-3: {tx3}")
 
-        self.log.info(f"raw-3: {node_wallet.getrawtransaction(tx2)}")
+        self.log.info(f"raw-3: {node_wallet.getrawtransaction(tx3, 1)}")
 
+        node_wallet.invalidateblock(best_block_hash_1)
+        self.log.info(f"raw-3: {node_wallet.getrawtransaction(tx3, 1)}")
+        node_wallet.reconsiderblock(best_block_hash_1)
+        self.log.info(f"raw-3: {node_wallet.getrawtransaction(tx3, 1)}")
         #--------------
         self.log.info("Generating many blocks to make quorum far behind (even still active)...")
         self.slowly_generate_batch(too_late_height - node.getblockcount() - 1)
