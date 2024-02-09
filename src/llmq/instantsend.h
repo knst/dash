@@ -206,7 +206,7 @@ private:
     CSporkManager& spork_manager;
     CTxMemPool& mempool;
     const CMasternodeSync& m_mn_sync;
-    PeerManager* m_peerman{nullptr};
+    std::atomic<PeerManager*> m_peerman{nullptr};
 
     std::atomic<bool> fUpgradedDB{false};
 

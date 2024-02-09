@@ -51,7 +51,7 @@ public:
 
 private:
     mutable RecursiveMutex cs;
-    PeerManager* m_peerman{nullptr};
+    std::atomic<PeerManager*> m_peerman{nullptr};
     const int invType;
     size_t maxMessagesPerNode GUARDED_BY(cs);
     std::list<BinaryMessage> pendingMessages GUARDED_BY(cs);

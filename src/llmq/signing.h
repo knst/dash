@@ -164,7 +164,7 @@ private:
     CConnman& connman;
     const CQuorumManager& qman;
 
-    PeerManager* m_peerman{nullptr};
+    std::atomic<PeerManager*> m_peerman{nullptr};
 
     // Incoming and not verified yet
     std::unordered_map<NodeId, std::list<std::shared_ptr<const CRecoveredSig>>> pendingRecoveredSigs GUARDED_BY(cs);
