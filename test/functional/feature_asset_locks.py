@@ -27,6 +27,7 @@ from test_framework.messages import (
     hash256,
     ser_string,
 )
+from test_framework.address import byte_to_base58
 from test_framework.script import (
     CScript,
     OP_CHECKSIG,
@@ -34,6 +35,7 @@ from test_framework.script import (
     OP_EQUALVERIFY,
     OP_HASH160,
     OP_RETURN,
+    OP_TRUE,
     hash160,
 )
 from test_framework.test_framework import DashTestFramework
@@ -44,6 +46,18 @@ from test_framework.util import (
     get_bip9_details,
     hex_str_to_bytes,
 )
+
+def bytes_to_wif(b, compressed=True):
+    if compressed:
+        b += b'\x01'
+    return byte_to_base58(b, 239)
+
+def generate_wif_key():
+    # Makes a WIF privkey for imports
+    k = ECKey()
+    k.generate()
+    return bytes_to_wif(k.get_bytes(), k.is_compressed)
+
 
 llmq_type_test = 106 # LLMQType::LLMQ_TEST_PLATFORM
 tiny_amount = int(Decimal("0.0007") * COIN)
@@ -91,7 +105,8 @@ class AssetLocksTest(DashTestFramework):
         node_wallet = self.nodes[0]
         mninfo = self.mninfo
         assert_greater_than(int(withdrawal), fee)
-        tx_output = CTxOut(int(withdrawal) - fee, CScript([pubkey, OP_CHECKSIG]))
+        scriptOut = CScript([OP_DUP, OP_HASH160, hash160(pubkey), OP_EQUALVERIFY, OP_CHECKSIG])
+        tx_output = CTxOut(int(withdrawal) - fee, scriptOut)
 
         # request ID = sha256("plwdtx", index)
         request_id_buf = ser_string(b"plwdtx") + struct.pack("<Q", index)
@@ -262,8 +277,14 @@ class AssetLocksTest(DashTestFramework):
         key.generate()
         pubkey = key.get_pubkey().get_bytes()
 
+        self.log.info(f"key: {key}")
+        self.log.info(f"bytes: {key.get_bytes()}")
+        self.log.info(f"bytes: {byte_to_base58(key.get_bytes(), version=99)}")
+        self.log.info(f"compressed: {key.is_compressed}")
+        self.log.info(f"key: {bytes_to_wif(key.get_bytes(), key.is_compressed)}")
+
         self.test_asset_locks(node_wallet, node, pubkey)
-        self.test_asset_unlocks(node_wallet, node, pubkey)
+        self.test_asset_unlocks(node_wallet, node, pubkey, key)
         self.test_withdrawal_limits(node_wallet, node, pubkey)
         self.test_mn_rr(node_wallet, node, pubkey)
 
@@ -326,7 +347,7 @@ class AssetLocksTest(DashTestFramework):
         self.validate_credit_pool_balance(locked_1)
 
 
-    def test_asset_unlocks(self, node_wallet, node, pubkey):
+    def test_asset_unlocks(self, node_wallet, node, pubkey, key):
         self.log.info("Testing asset unlock...")
 
         self.log.info("Generating several txes by same quorum....")
@@ -366,7 +387,6 @@ class AssetLocksTest(DashTestFramework):
         is_id = node_wallet.sendtoaddress(node_wallet.getnewaddress(), 1)
         for node in self.nodes:
             self.wait_for_instantlock(is_id, node)
-
 
         tip = self.nodes[0].getblockcount()
         indexes_statuses_no_height = self.nodes[0].getassetunlockstatuses(["101", "102", "300"])
@@ -418,6 +438,28 @@ class AssetLocksTest(DashTestFramework):
         self.sync_all()
         self.validate_credit_pool_balance(locked - 2 * COIN)
 
+        #--------------
+        self.log.info("Trying to spend withdrawals...")
+        priv_key = [bytes_to_wif(key.get_bytes(), key.is_compressed)]
+        asset_unlock_spend = node_wallet.createrawtransaction([{"txid":asset_unlock_tx.rehash(), "vout": 0}], {node_wallet.getnewaddress():0.001})
+        asset_unlock_spend = node_wallet.signrawtransactionwithkey(asset_unlock_spend, priv_key)
+        asset_unlock_spend_to_fail = node_wallet.createrawtransaction([{"txid":asset_unlock_tx_too_late.rehash(), "vout": 0}], {node_wallet.getnewaddress():0.001})
+        asset_unlock_spend_to_fail = node_wallet.signrawtransactionwithkey(asset_unlock_spend_to_fail, priv_key)
+
+        self.log.info("Disconnect wallet-node to be sure that tx is not actually sent...")
+        node_wallet.disconnect_p2ps()
+        tx1 = node_wallet.sendrawtransaction(asset_unlock_tx_too_late.serialize().hex(), maxfeerate=0)
+#        self.log.info(f"sent-1: {tx1}")
+        self.log.info(f"raw-1: {node_wallet.getrawtransaction(tx1, 1)}")
+        tx2 = node_wallet.sendrawtransaction(asset_unlock_spend['hex'], maxfeerate=0)
+        self.log.info(f"sent-2: {tx2}")
+        self.log.info(f"raw-2: {node_wallet.getrawtransaction(tx1, 1)}")
+        tx3 = node_wallet.sendrawtransaction(asset_unlock_spend_to_fail['hex'], maxfeerate=0)
+        self.log.info(f"sent-3: {tx3}")
+
+        self.log.info(f"raw-3: {node_wallet.getrawtransaction(tx2)}")
+
+        #--------------
         self.log.info("Generating many blocks to make quorum far behind (even still active)...")
         self.slowly_generate_batch(too_late_height - node.getblockcount() - 1)
         self.check_mempool_result(tx=asset_unlock_tx_too_late, result_expected={'allowed': True, 'fees': {'base': Decimal(str(tiny_amount / COIN))}})
@@ -425,7 +467,6 @@ class AssetLocksTest(DashTestFramework):
         self.sync_all()
         self.check_mempool_result(tx=asset_unlock_tx_too_late,
                 result_expected={'allowed': False, 'reject-reason' : 'bad-assetunlock-too-late'})
-
         self.log.info("Checking that two quorums later it is too late because quorum is not active...")
         self.mine_quorum(llmq_type_name="llmq_test_platform", llmq_type=106)
         self.log.info("Expecting new reject-reason...")
@@ -454,6 +495,10 @@ class AssetLocksTest(DashTestFramework):
 
         self.log.info("Forcibly mine asset_unlock_tx_full and ensure block is invalid...")
         self.create_and_check_block([asset_unlock_tx_duplicate_index], expected_error = "bad-assetunlock-duplicated-index")
+
+        self.log.info("re-connect to wallet node...")
+        self.connect_nodes(0, 1)
+        self.sync_all()
 
 
     def test_withdrawal_limits(self, node_wallet, node, pubkey):
