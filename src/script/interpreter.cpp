@@ -323,6 +323,11 @@ static bool EvalChecksig(const valtype& vchSig, const valtype& vchPubKey, CScrip
     // Subset of script starting at the most recent codeseparator
     CScript scriptCode(pbegincodehash, pend);
 
+    int nHashType = vchSig.empty() ? 0 : vchSig.back();
+    // Can't use using SIGHASH_DIP0143 hash type without SCRIPT_ENABLE_DIP0143 flag
+    if ((nHashType & SIGHASH_DIP0143) && (~flags & SCRIPT_ENABLE_DIP0143)) {
+        return set_error(serror, SCRIPT_ERR_SIGHASHTYPE_DIP0143);
+    }
     // Drop the signature, since there's no way for a signature to sign itself
     if (sigversion == SigVersion::BASE) {
         int found = FindAndDelete(scriptCode, CScript() << vchSig);
@@ -334,7 +339,7 @@ static bool EvalChecksig(const valtype& vchSig, const valtype& vchPubKey, CScrip
         //serror is set
         return false;
     }
-    fSuccess = checker.CheckSig(vchSig, vchPubKey, scriptCode, sigversion);
+    fSuccess = checker.CheckSig(vchSig, vchPubKey, scriptCode, GetSigVersion(flags, nHashType));
 
     if (!fSuccess && (flags & SCRIPT_VERIFY_NULLFAIL) && vchSig.size())
         return set_error(serror, SCRIPT_ERR_SIG_NULLFAIL);
@@ -1122,10 +1127,15 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                     // Subset of script starting at the most recent codeseparator
                     CScript scriptCode(pbegincodehash, pend);
 
-                    // Drop the signatures, since there's no way for a signature to sign itself
                     for (int k = 0; k < nSigsCount; k++)
                     {
                         valtype& vchSig = stacktop(-isig-k);
+                        int nHashType = vchSig.empty() ? 0 : vchSig.back();
+                        // Can't use using SIGHASH_DIP0143 hash type without SCRIPT_ENABLE_DIP0143 flag
+                        if ((nHashType & SIGHASH_DIP0143) && (~flags & SCRIPT_ENABLE_DIP0143)) {
+                            return set_error(serror, SCRIPT_ERR_SIGHASHTYPE_DIP0143);
+                        }
+                        // Drop the signatures, since there's no way for a signature to sign itself
                         if (sigversion == SigVersion::BASE) {
                             int found = FindAndDelete(scriptCode, CScript() << vchSig);
                             if (found > 0 && (flags & SCRIPT_VERIFY_CONST_SCRIPTCODE))
@@ -1148,7 +1158,8 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                         }
 
                         // Check signature
-                        bool fOk = checker.CheckSig(vchSig, vchPubKey, scriptCode, sigversion);
+                        int nHashType = vchSig.empty() ? 0 : vchSig.back();
+                        bool fOk = checker.CheckSig(vchSig, vchPubKey, scriptCode, GetSigVersion(flags, nHashType));
 
                         if (fOk) {
                             isig++;
@@ -1509,6 +1520,11 @@ template PrecomputedTransactionData::PrecomputedTransactionData(const CMutableTr
         return false;
     }
     assert(!"Unknown MissingDataBehavior value");
+}
+
+SigVersion GetSigVersion(unsigned int flags, int nHashType)
+{
+    return (flags & SCRIPT_ENABLE_DIP0143) && (nHashType & SIGHASH_DIP0143) ? SigVersion::DIP0143 : SigVersion::BASE;
 }
 
 template <class T>
