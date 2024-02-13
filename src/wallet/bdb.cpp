@@ -937,13 +937,16 @@ bool BerkeleyBatch::ErasePrefix(Span<const std::byte> prefix)
 {
     if (!pdb)
         return false;
-    if (!TxnBegin()) return false;
+    // Because this function erases records one by one, ensure that it is executed within a txn context.
+    // Otherwise, consistency is at risk; it's possible that certain records are removed while others
+    // remain due to an internal failure during the procedure.
+    // Additionally, the Dbc::del() cursor delete call below would fail without an active transaction.
+    if (!Assume(activeTxn)) return false;
     Dbc* cursor = nullptr;
     // Transaction argument to cursor is needed when using the cursor to
     // write to the database (delete in this case).
     int ret = pdb->cursor(activeTxn, &cursor, 0);
     if (ret != 0) {
-        TxnAbort();
         return false;
     }
     // const_cast is safe below even though prefix_key is an in/out parameter,
@@ -958,7 +961,7 @@ bool BerkeleyBatch::ErasePrefix(Span<const std::byte> prefix)
         ret = cursor->del(0);
     }
     cursor->close();
-    return TxnCommit() && (ret == 0 || ret == DB_NOTFOUND);
+    return ret == 0 || ret == DB_NOTFOUND;
 }
 
 void BerkeleyDatabase::AddRef()
