@@ -505,7 +505,7 @@ class TestNode():
              tempfile.NamedTemporaryFile(dir=self.stdout_dir, delete=False) as log_stdout:
             try:
                 self.start(extra_args, stdout=log_stdout, stderr=log_stderr, *args, **kwargs)
-                ret = self.process.wait(timeout=self.rpc_timeout)
+                ret = self.process.wait(timeout=20)
                 self.log.debug(self._node_msg(f'dashd exited with status {ret} during initialization'))
                 self.running = False
                 self.process = None

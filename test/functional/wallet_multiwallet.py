@@ -203,7 +203,7 @@ class MultiWalletTest(BitcoinTestFramework):
             exp_stderr = r"Error: SQLiteDatabase: Unable to obtain an exclusive lock on the database, is it being used by another dashd?"
         else:
             exp_stderr = r"Error: Error initializing wallet database environment \"\S+competing_walletdir\S*\"!"
-            self.nodes[1].assert_start_raises_init_error(['-walletdir=' + competing_wallet_dir], exp_stderr, match=ErrorMatch.PARTIAL_REGEX)
+        self.nodes[1].assert_start_raises_init_error(['-walletdir=' + competing_wallet_dir], exp_stderr, match=ErrorMatch.PARTIAL_REGEX)
 
         self.restart_node(0)
         for wallet_name in wallet_names:
@@ -419,7 +419,7 @@ class MultiWalletTest(BitcoinTestFramework):
             exp_stderr = "SQLiteDatabase: Unable to obtain an exclusive lock on the database, is it being used by another dashd?"
         else:
             exp_stderr = "Error initializing wallet database environment"
-            assert_raises_rpc_error(-4, exp_stderr, self.nodes[1].loadwallet, wallet)
+        assert_raises_rpc_error(-4, exp_stderr, self.nodes[1].loadwallet, wallet)
         self.nodes[0].unloadwallet(wallet)
         self.nodes[1].loadwallet(wallet)
 

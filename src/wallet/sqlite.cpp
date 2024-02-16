@@ -93,9 +93,12 @@ SQLiteDatabase::SQLiteDatabase(const fs::path& dir_path, const fs::path& file_pa
     }
 
     try {
+        LogPrintf("sqq: Open ...\n");
         Open();
-    } catch (const std::runtime_error&) {
+        LogPrintf("sqq: Open succeed\n");
+    } catch (const std::runtime_error& e) {
         // If open fails, cleanup this object and rethrow the exception
+        LogPrintf("sqq failed... %s\n", e.what());
         Cleanup();
         throw;
     }
@@ -199,6 +202,7 @@ bool SQLiteDatabase::Verify(bilingual_str& error)
 
 void SQLiteDatabase::Open()
 {
+    LogPrintf("sqq: inside open\n");
     int flags = SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
     if (m_mock) {
         flags |= SQLITE_OPEN_MEMORY; // In memory database for mock db
@@ -209,6 +213,7 @@ void SQLiteDatabase::Open()
             TryCreateDirectories(m_dir_path);
         }
         int ret = sqlite3_open_v2(m_file_path.c_str(), &m_db, flags, nullptr);
+        LogPrintf("sqq: openv2 %s : %lld\n", m_file_path, m_db);
         if (ret != SQLITE_OK) {
             throw std::runtime_error(strprintf("SQLiteDatabase: Failed to open database: %s\n", sqlite3_errstr(ret)));
         }
@@ -293,6 +298,7 @@ bool SQLiteDatabase::Backup(const std::string& dest) const
 {
     sqlite3* db_copy;
     int res = sqlite3_open(dest.c_str(), &db_copy);
+    LogPrintf("sqq: backup open %s : %lld\n", dest, db_copy);
     if (res != SQLITE_OK) {
         sqlite3_close(db_copy);
         return false;
@@ -319,6 +325,7 @@ bool SQLiteDatabase::Backup(const std::string& dest) const
 void SQLiteDatabase::Close()
 {
     int res = sqlite3_close(m_db);
+    LogPrintf("sqq: close %lld\n", m_db);
     if (res != SQLITE_OK) {
         throw std::runtime_error(strprintf("SQLiteDatabase: Failed to close database: %s\n", sqlite3_errstr(res)));
     }

@@ -39,6 +39,7 @@ class WalletDescriptorTest(BitcoinTestFramework):
         assert_equal(wallet_info['keypoolsize'], 100)
         assert_equal(wallet_info['format'], 'sqlite')
         # TODO: somehow hd_internal is 0 for us
+        # TODO: our implementation of SetupGeneration is slightly different, probably need to update it?
         #assert_equal(wallet_info['keypoolsize_hd_internal'], 100)
         assert_equal(wallet_info['keypoolsize_hd_internal'], 0)
         assert_equal(wallet_info['keypoolsize'], 100)
