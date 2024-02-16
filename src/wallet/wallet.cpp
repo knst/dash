@@ -5112,7 +5112,7 @@ bool CWallet::AutoBackupWallet(const fs::path& wallet_path, bilingual_str& error
 
     return true;
 }
-#elif defined(USE_SQLITE)
+#elif USE_SQLITE
 bool CWallet::AutoBackupWallet(const fs::path& wallet_path, bilingual_str& error_string, std::vector<bilingual_str>& warnings)
 {
     WalletLogPrintf("Automatic wallet backups are currently only supported with Berkeley DB!\n");
