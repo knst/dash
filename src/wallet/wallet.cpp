@@ -33,10 +33,9 @@
 #include <util/moneystr.h>
 #include <util/string.h>
 #include <util/translation.h>
-/*#ifdef USE_BDB
+#ifdef USE_BDB
 #include <wallet/bdb.h>
 #endif
-*/
 #include <wallet/coincontrol.h>
 #include <wallet/coinselection.h>
 #include <wallet/fees.h>
@@ -4536,12 +4535,9 @@ std::shared_ptr<CWallet> CWallet::Create(interfaces::Chain& chain, interfaces::C
     // TODO: Can't use std::make_shared because we need a custom deleter but
     // should be possible to use std::allocate_shared.
     std::shared_ptr<CWallet> walletInstance(new CWallet(&chain, &coinjoin_loader, name, std::move(database)), ReleaseWallet);
-    LogPrintf("before auto backup\n");
     if (!walletInstance->AutoBackupWallet(walletFile, error, warnings) && !error.original.empty()) {
-        LogPrintf("auto backup failed\n");
         return nullptr;
     }
-    LogPrintf("after auto backup\n");
     DBErrors nLoadWalletRet = walletInstance->LoadWallet(fFirstRun);
     if (nLoadWalletRet != DBErrors::LOAD_OK)
     {
@@ -4570,7 +4566,6 @@ std::shared_ptr<CWallet> CWallet::Create(interfaces::Chain& chain, interfaces::C
         }
     }
 
-    LogPrintf("first run? %d\n"), fFirstRun;
     if (fFirstRun)
     {
         walletInstance->SetMaxVersion(FEATURE_LATEST);
@@ -4631,7 +4626,6 @@ std::shared_ptr<CWallet> CWallet::Create(interfaces::Chain& chain, interfaces::C
             }
         } // Otherwise, do not create a new HD chain
 
-        LogPrintf("create-wallet-1!\n");
         // Top up the keypool
         {
             LOCK(walletInstance->cs_wallet);
@@ -4648,7 +4642,6 @@ std::shared_ptr<CWallet> CWallet::Create(interfaces::Chain& chain, interfaces::C
 
         walletInstance->chainStateFlushed(chain.getTipLocator());
 
-        LogPrintf("create-wallet-2!\n");
         // Try to create wallet backup right after new wallet was created
         bilingual_str strBackupError;
         if(!walletInstance->AutoBackupWallet("", strBackupError, warnings)) {
@@ -4698,7 +4691,6 @@ std::shared_ptr<CWallet> CWallet::Create(interfaces::Chain& chain, interfaces::C
         walletInstance->m_min_fee = CFeeRate{min_tx_fee.value()};
     }
 
-    LogPrintf("create-wallet-3!\n");
     if (gArgs.IsArgSet("-fallbackfee")) {
         std::optional<CAmount> fallback_fee = ParseMoney(gArgs.GetArg("-fallbackfee", ""));
         if (!fallback_fee) {
@@ -4976,10 +4968,10 @@ bool CWallet::BackupWallet(const std::string& strDest) const
 
 // This should be called carefully:
 // either supply the actual wallet_path to make a raw copy of wallet.dat or "" to backup current instance via BackupWallet()
-/*
 #ifdef USE_BDB
 bool CWallet::AutoBackupWallet(const fs::path& wallet_path, bilingual_str& error_string, std::vector<bilingual_str>& warnings)
 {
+    return false;
     std::string strWalletName = GetName();
     if (strWalletName.empty()) {
         strWalletName = "wallet.dat";
@@ -5122,8 +5114,6 @@ bool CWallet::AutoBackupWallet(const fs::path& wallet_path, bilingual_str& error
     return true;
 }
 #elif USE_SQLITE
-*/
-#ifdef USE_SQLITE
 bool CWallet::AutoBackupWallet(const fs::path& wallet_path, bilingual_str& error_string, std::vector<bilingual_str>& warnings)
 {
     WalletLogPrintf("Automatic wallet backups are currently only supported with Berkeley DB!\n");
