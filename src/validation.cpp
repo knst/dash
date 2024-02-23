@@ -1908,7 +1908,9 @@ bool CheckInputScripts(const CTransaction& tx, TxValidationState& state,
         } else if (!check()) {
             const bool hasNonMandatoryFlags = (flags & STANDARD_NOT_MANDATORY_VERIFY_FLAGS) != 0;
 
-            if (hasNonMandatoryFlags) {
+            const bool hasDIP0143Flag = (flags & SCRIPT_ENABLE_DIP0143) != 0;
+
+            if (hasNonMandatoryFlags || !hasDIP0143Flag) {
                 // Check whether the failure was caused by a
                 // non-mandatory script verification check, such as
                 // non-standard DER encodings or non-null dummy
@@ -1918,7 +1920,7 @@ bool CheckInputScripts(const CTransaction& tx, TxValidationState& state,
                 // non-upgraded nodes by banning CONSENSUS-failing
                 // data providers.
                 CScriptCheck check2(coin.out, tx, i,
-                        (flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS), cacheSigStore, &txdata);
+                        (flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS) | SCRIPT_ENABLE_DIP0143, cacheSigStore, &txdata);
                 if (check2())
                     return state.Invalid(TxValidationResult::TX_NOT_STANDARD, strprintf("non-mandatory-script-verify-flag (%s)", ScriptErrorString(check.GetScriptError())));
             }
@@ -2243,6 +2245,11 @@ static unsigned int GetBlockScriptFlags(const CBlockIndex* pindex, const Chainst
     // Enforce BIP147 NULLDUMMY
     if (DeploymentActiveAt(*pindex, chainman.GetConsensus(), Consensus::DEPLOYMENT_BIP147)) {
         flags |= SCRIPT_VERIFY_NULLDUMMY;
+    }
+
+    // Enforce DIP0143
+    if (DeploymentActiveAt(*pindex, chainman, Consensus::DEPLOYMENT_V24)){
+        flags |= SCRIPT_ENABLE_DIP0143;
     }
 
     return flags;
