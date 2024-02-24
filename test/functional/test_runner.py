@@ -358,6 +358,7 @@ BASE_SCRIPTS = [
     'p2p_fingerprint.py',
     'rpc_external_queue.py',
     'rpc_wipewallettxes.py',
+    'feature_dip0143_activation.py',
     'feature_uacomment.py',
     'feature_init.py',
     'wallet_coinbase_category.py --legacy-wallet',
