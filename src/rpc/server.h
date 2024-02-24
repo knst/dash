@@ -16,6 +16,7 @@
 #include <string>
 
 #include <univalue.h>
+#include <logging.h>
 
 class CRPCCommand;
 
@@ -110,6 +111,19 @@ public:
               fn().GetArgNames(),
               intptr_t(fn))
     {
+        if (fn().m_name != name_in || fn().GetArgNames() != args_in) {
+            std::cerr << "names:  " << fn().m_name << ' ' << name_in << std::endl;
+            std::cerr << "arg names: " << fn().GetArgNames().size() << std::endl;
+            for (const auto& i : fn().GetArgNames()) {
+                std::cerr << "arg: " << i << std::endl;
+            }
+            std::cerr << "FIASCO FIASCO FIASCO FIASCO FIASCO FIASCO" << std::endl;
+            std::cerr << "FIASCO FIASCO FIASCO FIASCO FIASCO FIASCO" << std::endl;
+            std::cerr << "FIASCO FIASCO FIASCO FIASCO FIASCO FIASCO" << std::endl;
+            std::cerr << "FIASCO FIASCO FIASCO FIASCO FIASCO FIASCO" << std::endl;
+            std::cerr << "FIASCO FIASCO FIASCO FIASCO FIASCO FIASCO" << std::endl;
+            std::cerr << "FIASCO FIASCO FIASCO FIASCO FIASCO FIASCO" << std::endl;
+        }
         CHECK_NONFATAL(fn().m_name == name_in);
         CHECK_NONFATAL(fn().GetArgNames() == args_in);
     }
