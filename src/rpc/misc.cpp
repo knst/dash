@@ -1364,7 +1364,18 @@ static RPCHelpMan echo(const std::string& name)
                 "\nIt will return an internal bug report when arg9='trigger_internal_bug' is passed.\n"
                 "\nThe difference between echo and echojson is that echojson has argument conversion enabled in the client-side table in "
                 "dash-cli and the GUI. There is no server-side difference.",
-                {},
+                {
+                    {"arg0", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
+                    {"arg1", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
+                    {"arg2", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
+                    {"arg3", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
+                    {"arg4", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
+                    {"arg5", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
+                    {"arg6", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
+                    {"arg7", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
+                    {"arg8", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
+                    {"arg9", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
+                },
                 RPCResult{RPCResult::Type::NONE, "", "Returns whatever was passed in"},
                 RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
@@ -1378,6 +1389,9 @@ static RPCHelpMan echo(const std::string& name)
 },
     };
 }
+
+static RPCHelpMan echo() { return echo("echo"); }
+static RPCHelpMan echojson() { return echo("echojson"); }
 
 static UniValue SummaryToJSON(const IndexSummary&& summary, std::string index_name)
 {
@@ -1437,15 +1451,13 @@ static RPCHelpMan getindexinfo()
     };
 }
 
-static RPCHelpMan echo() { return echo("echo"); }
-static RPCHelpMan echojson() { return echo("echojson"); }
 
 void RegisterMiscRPCCommands(CRPCTable &t)
 {
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         argNames
   //  --------------------- ------------------------  -----------------------  ----------
-    { "control",            "debug",                  &debug,                  {} },
+    { "control",            "debug",                  &debug,                  {"category"} },
     { "control",            "getmemoryinfo",          &getmemoryinfo,          {"mode"} },
     { "control",            "logging",                &logging,                {"include", "exclude"}},
     { "util",               "validateaddress",        &validateaddress,        {"address"} },
@@ -1455,7 +1467,7 @@ static const CRPCCommand commands[] =
     { "util",               "verifymessage",          &verifymessage,          {"address","signature","message"} },
     { "util",               "signmessagewithprivkey", &signmessagewithprivkey, {"privkey","message"} },
     { "util",               "getindexinfo",           &getindexinfo,           {"index_name"} },
-    { "blockchain",         "getspentinfo",           &getspentinfo,           {"json"} },
+    { "blockchain",         "getspentinfo",           &getspentinfo,           {"request"} },
 
     /* Address index */
     { "addressindex",       "getaddressmempool",      &getaddressmempool,      {"addresses"}  },
@@ -1465,7 +1477,7 @@ static const CRPCCommand commands[] =
     { "addressindex",       "getaddressbalance",      &getaddressbalance,      {"addresses"} },
 
     /* Dash features */
-    { "dash",               "mnsync",                 &mnsync,                 {} },
+    { "dash",               "mnsync",                 &mnsync,                 {"mode"} },
     { "dash",               "spork",                  &spork,                  {"command"} },
     { "dash",               "sporkupdate",            &sporkupdate,            {"name","value"} },
 
