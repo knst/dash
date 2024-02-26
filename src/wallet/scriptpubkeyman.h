@@ -51,7 +51,7 @@ public:
     virtual bool WithEncryptionKey(std::function<bool (const CKeyingMaterial&)> cb) const = 0;
     virtual bool HasEncryptionKeys() const = 0;
     virtual bool IsLocked(bool fForMixing) const = 0;
-    //! Callback function for after TopUp completes containining any scripts that were added by a SPKMan
+    //! Callback function for after TopUp completes containing any scripts that were added by a SPKMan
     virtual void TopUpCallback(const std::set<CScript>&, ScriptPubKeyMan*) = 0;
 
     // for LegacyScriptPubKeyMan::TopUpInner needs:
