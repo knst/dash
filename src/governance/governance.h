@@ -406,6 +406,6 @@ private:
 
 };
 
-bool AreSuperblocksEnabled(const CSporkManager& sporkManager);
+bool AreSuperblocksEnabled(const CSporkManager& sporkman);
 
 #endif // BITCOIN_GOVERNANCE_GOVERNANCE_H
