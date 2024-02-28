@@ -71,6 +71,7 @@ struct NodeContext {
     std::function<void()> rpc_interruption_point = [] {};
     //! Dash
     std::unique_ptr<CEvoDB> evodb;
+    std::unique_ptr<CGovernanceManager> govman;
     std::unique_ptr<CJContext> cj_ctx;
     std::unique_ptr<CMNHFManager> mnhf_manager;
     std::unique_ptr<CNetFulfilledRequestManager> netfulfilledman;
@@ -79,7 +80,6 @@ struct NodeContext {
     std::unique_ptr<MNSubsidyAgent> mn_subsidy;
     CCreditPoolManager* cpoolman{nullptr};
     CDeterministicMNManager* dmnman{nullptr};
-    CGovernanceManager* govman{nullptr};
     CMasternodeMetaMan* mn_metaman{nullptr};
     CMasternodeSync* mn_sync{nullptr};
 

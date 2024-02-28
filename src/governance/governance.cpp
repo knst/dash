@@ -25,8 +25,6 @@
 #include <util/time.h>
 #include <validation.h>
 
-std::unique_ptr<CGovernanceManager> governance;
-
 int nSubmittedFinalBudget;
 
 const std::string GovernanceStore::SERIALIZATION_VERSION_STRING = "CGovernanceManager-Version-16";
@@ -271,7 +269,7 @@ void CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj, CConnman& c
         CGovernanceException e;
         if (pairVote.second < nNow) {
             fRemove = true;
-        } else if (govobj.ProcessVote(vote, e)) {
+        } else if (govobj.ProcessVote(*this, vote, e)) {
             vote.Relay(connman);
             fRemove = true;
         }
@@ -1098,7 +1096,7 @@ bool CGovernanceManager::ProcessVote(CNode* pfrom, const CGovernanceVote& vote, 
         return false;
     }
 
-    bool fOk = govobj.ProcessVote(vote, exception) && cmapVoteToObject.Insert(nHashVote, &govobj);
+    bool fOk = govobj.ProcessVote(*this, vote, exception) && cmapVoteToObject.Insert(nHashVote, &govobj);
     LEAVE_CRITICAL_SECTION(cs)
     return fOk;
 }

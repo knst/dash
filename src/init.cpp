@@ -311,8 +311,7 @@ void PrepareShutdown(NodeContext& node)
     node.mn_sync = nullptr;
     ::masternodeSync.reset();
     node.sporkman.reset();
-    node.govman = nullptr;
-    ::governance.reset();
+    node.govman.reset();
     node.netfulfilledman.reset();
 
     // Stop and delete all indexes only after flushing background callbacks.
@@ -1711,9 +1710,8 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     assert(!node.netfulfilledman);
     node.netfulfilledman = std::make_unique<CNetFulfilledRequestManager>();
 
-    assert(!::governance);
-    ::governance = std::make_unique<CGovernanceManager>(*node.netfulfilledman);
-    node.govman = ::governance.get();
+    assert(!node.govman);
+    node.govman = std::make_unique<CGovernanceManager>(*node.netfulfilledman);
 
     assert(!node.sporkman);
     node.sporkman = std::make_unique<CSporkManager>();
