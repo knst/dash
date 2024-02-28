@@ -195,10 +195,10 @@ static void TestSigHashFromData(SigVersion sigVersion)
             // deserialize test data
             raw_tx = test[0].get_str();
             raw_script = test[1].get_str();
-            nIn = test[2].get_int();
-            amount = isDip0143 ? test[3].get_int() : 0;
+            nIn = test[2].getInt<int>();
+            amount = test[3].getInt<int64_t>();
             size_t offset = isDip0143 ? 1 : 0;
-            nHashType = test[3 + offset].get_int();
+            nHashType = test[3 + offset].getInt<int>();
             sigHashHex = test[4 + offset].get_str();
 
             CDataStream stream(ParseHex(raw_tx), SER_NETWORK, PROTOCOL_VERSION);
