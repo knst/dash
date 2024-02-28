@@ -227,7 +227,6 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
     ::masternodeSync = std::make_unique<CMasternodeSync>(*m_node.connman, *m_node.govman);
     m_node.mn_sync = ::masternodeSync.get();
     m_node.mn_subsidy = std::make_unique<MNSubsidyAgent>(*m_node.govman, Params().GetConsensus(), *m_node.mn_sync, *m_node.sporkman);
-    m_node.dstxman = ::dstxManager.get();
     ::mmetaman = std::make_unique<CMasternodeMetaMan>(/* load_cache */ false);
     m_node.mn_metaman = ::mmetaman.get();
     ::netfulfilledman = std::make_unique<CNetFulfilledRequestManager>(/* load_cache */ false);
@@ -249,8 +248,6 @@ ChainTestingSetup::~ChainTestingSetup()
     ::netfulfilledman.reset();
     m_node.mn_metaman = nullptr;
     ::mmetaman.reset();
-    m_node.dstxman = nullptr;
-    ::dstxManager.reset();
     m_node.mn_subsidy.reset();
     m_node.mn_sync = nullptr;
     ::masternodeSync.reset();
