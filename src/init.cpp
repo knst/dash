@@ -310,8 +310,7 @@ void PrepareShutdown(NodeContext& node)
     node.mn_subsidy.reset();
     node.mn_sync = nullptr;
     ::masternodeSync.reset();
-    node.sporkman = nullptr;
-    ::sporkManager.reset();
+    node.sporkman.reset();
     node.govman = nullptr;
     ::governance.reset();
     node.netfulfilledman.reset();
@@ -1716,15 +1715,8 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     ::governance = std::make_unique<CGovernanceManager>(*node.netfulfilledman);
     node.govman = ::governance.get();
 
-    assert(!node.peerman);
-    node.peerman = PeerManager::make(chainparams, *node.connman, *node.addrman, node.banman.get(),
-                                     *node.scheduler, chainman, *node.mempool, *node.govman,
-                                     node.cj_ctx, node.llmq_ctx, ignores_incoming_txs);
-    RegisterValidationInterface(node.peerman.get());
-
-    assert(!::sporkManager);
-    ::sporkManager = std::make_unique<CSporkManager>();
-    node.sporkman = ::sporkManager.get();
+    assert(!node.sporkman);
+    node.sporkman = std::make_unique<CSporkManager>();
 
     std::vector<std::string> vSporkAddresses;
     if (args.IsArgSet("-sporkaddr")) {
@@ -1756,6 +1748,12 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 
     assert(!node.mn_subsidy);
     node.mn_subsidy = std::make_unique<MNSubsidyAgent>(*node.govman, Params().GetConsensus(), *node.mn_sync, *node.sporkman);
+
+    assert(!node.peerman);
+    node.peerman = PeerManager::make(chainparams, *node.connman, *node.addrman, node.banman.get(),
+                                     *node.scheduler, chainman, *node.mempool, *node.govman, *node.sporkman,
+                                     node.cj_ctx, node.llmq_ctx, ignores_incoming_txs);
+    RegisterValidationInterface(node.peerman.get());
 
     // sanitize comments per BIP-0014, format user agent and check total size
     std::vector<std::string> uacomments;

@@ -19,6 +19,7 @@
 #include <net_processing.h>
 #include <policy/fees.h>
 #include <scheduler.h>
+#include <spork.h>
 #include <txmempool.h>
 
 NodeContext::NodeContext() {}
