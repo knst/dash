@@ -140,8 +140,7 @@ static bool IsOldBudgetBlockValueValid(const CMasternodeSync& mn_sync, const CBl
     // all we know is predefined budget cycle and window
 
     int nOffset = nBlockHeight % consensusParams.nBudgetPaymentsCycleBlocks;
-    if(nBlockHeight >= consensusParams.nBudgetPaymentsStartBlock &&
-       nOffset < consensusParams.nBudgetPaymentsWindowBlocks) {
+    if(nOffset < consensusParams.nBudgetPaymentsWindowBlocks) {
         // NOTE: old budget system is disabled since 12.1
         if(mn_sync.IsSynced()) {
             // no old budget blocks should be accepted here on mainnet,
