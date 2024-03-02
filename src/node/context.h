@@ -72,13 +72,13 @@ struct NodeContext {
     std::unique_ptr<CEvoDB> evodb;
     std::unique_ptr<CJContext> cj_ctx;
     std::unique_ptr<CMNHFManager> mnhf_manager;
+    std::unique_ptr<CNetFulfilledRequestManager> netfulfilledman;
     std::unique_ptr<LLMQContext> llmq_ctx;
     CCreditPoolManager* cpoolman{nullptr};
     CDeterministicMNManager* dmnman{nullptr};
     CGovernanceManager* govman{nullptr};
     CMasternodeMetaMan* mn_metaman{nullptr};
     CMasternodeSync* mn_sync{nullptr};
-    CNetFulfilledRequestManager* netfulfilledman{nullptr};
     CSporkManager* sporkman{nullptr};
 
     //! Declare default constructor and destructor that are not inline, so code

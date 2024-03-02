@@ -304,8 +304,6 @@ void PrepareShutdown(NodeContext& node)
 
     // After all scheduled tasks have been flushed, destroy pointers
     // and reset all to nullptr.
-    node.netfulfilledman = nullptr;
-    ::netfulfilledman.reset();
     node.mn_metaman = nullptr;
     ::mmetaman.reset();
     node.mn_sync = nullptr;
@@ -314,6 +312,7 @@ void PrepareShutdown(NodeContext& node)
     ::sporkManager.reset();
     node.govman = nullptr;
     ::governance.reset();
+    node.netfulfilledman.reset();
 
     // Stop and delete all indexes only after flushing background callbacks.
     if (g_txindex) {
@@ -1709,8 +1708,11 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     node.chainman = &g_chainman;
     ChainstateManager& chainman = *Assert(node.chainman);
 
+    assert(!node.netfulfilledman);
+    node.netfulfilledman = std::make_unique<CNetFulfilledRequestManager>();
+
     assert(!::governance);
-    ::governance = std::make_unique<CGovernanceManager>();
+    ::governance = std::make_unique<CGovernanceManager>(*node.netfulfilledman);
     node.govman = ::governance.get();
 
     assert(!node.peerman);
@@ -1748,7 +1750,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     }
 
     assert(!::masternodeSync);
-    ::masternodeSync = std::make_unique<CMasternodeSync>(*node.connman, *node.govman);
+    ::masternodeSync = std::make_unique<CMasternodeSync>(*node.connman, *node.netfulfilledman, *node.govman);
     node.mn_sync = ::masternodeSync.get();
 
     // sanitize comments per BIP-0014, format user agent and check total size
@@ -2250,10 +2252,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
         return InitError(strprintf(_("Failed to clear masternode cache at %s"), file_path));
     }
 
-    assert(!::netfulfilledman);
-    ::netfulfilledman = std::make_unique<CNetFulfilledRequestManager>(fLoadCacheFiles);
-    node.netfulfilledman = ::netfulfilledman.get();
-    if (!node.netfulfilledman->IsValid()) {
+    if (!node.netfulfilledman->LoadCache(fLoadCacheFiles)) {
         auto file_path = (GetDataDir() / "netfulfilled.dat").string();
         if (fLoadCacheFiles) {
             return InitError(strprintf(_("Failed to load fulfilled requests cache from %s"), file_path));
