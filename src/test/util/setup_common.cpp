@@ -219,16 +219,15 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
 
     m_node.connman = std::make_unique<CConnman>(0x1337, 0x1337, *m_node.addrman); // Deterministic randomness for tests.
 
+    m_node.netfulfilledman = std::make_unique<CNetFulfilledRequestManager>();
     ::sporkManager = std::make_unique<CSporkManager>();
     m_node.sporkman = ::sporkManager.get();
-    ::governance = std::make_unique<CGovernanceManager>();
+    ::governance = std::make_unique<CGovernanceManager>(*m_node.netfulfilledman);
     m_node.govman = ::governance.get();
-    ::masternodeSync = std::make_unique<CMasternodeSync>(*m_node.connman, *m_node.govman);
+    ::masternodeSync = std::make_unique<CMasternodeSync>(*m_node.connman, *m_node.netfulfilledman, *m_node.govman);
     m_node.mn_sync = ::masternodeSync.get();
     ::mmetaman = std::make_unique<CMasternodeMetaMan>(/* load_cache */ false);
     m_node.mn_metaman = ::mmetaman.get();
-    ::netfulfilledman = std::make_unique<CNetFulfilledRequestManager>(/* load_cache */ false);
-    m_node.netfulfilledman = ::netfulfilledman.get();
 
     // Start script-checking threads. Set g_parallel_script_checks to true so they are used.
     constexpr int script_check_threads = 2;
@@ -242,8 +241,6 @@ ChainTestingSetup::~ChainTestingSetup()
     StopScriptCheckWorkerThreads();
     GetMainSignals().FlushBackgroundCallbacks();
     GetMainSignals().UnregisterBackgroundSignalScheduler();
-    m_node.netfulfilledman = nullptr;
-    ::netfulfilledman.reset();
     m_node.mn_metaman = nullptr;
     ::mmetaman.reset();
     m_node.mn_sync = nullptr;
@@ -252,6 +249,7 @@ ChainTestingSetup::~ChainTestingSetup()
     ::governance.reset();
     m_node.sporkman = nullptr;
     ::sporkManager.reset();
+    m_node.netfulfilledman.reset();
     m_node.connman.reset();
     m_node.addrman.reset();
     m_node.args = nullptr;
