@@ -104,7 +104,7 @@ bool CGovernanceManager::AddNewTrigger(uint256 nHash)
 
     // IF WE ALREADY HAVE THIS HASH, RETURN
     if (mapTrigger.count(nHash)) {
-        LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s(): Already have hash, nHash = %s, count = %d, size = %s\n",
+        LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s -- Already have hash, nHash = %s, count = %d, size = %s\n",
                     __func__, nHash.GetHex(), mapTrigger.count(nHash), mapTrigger.size());
         return false;
     }
@@ -114,10 +114,10 @@ bool CGovernanceManager::AddNewTrigger(uint256 nHash)
         auto pSuperblockTmp = std::make_shared<CSuperblock>(nHash);
         pSuperblock = pSuperblockTmp;
     } catch (std::exception& e) {
-        LogPrintf("CGovernanceManager::%s(): Error creating superblock: %s\n", __func__, e.what());
+        LogPrintf("CGovernanceManager::%s -- Error creating superblock: %s\n", __func__, e.what());
         return false;
     } catch (...) {
-        LogPrintf("CGovernanceManager::%s(): Unknown Error creating superblock\n", __func__);
+        LogPrintf("CGovernanceManager::%s -- Unknown Error creating superblock\n", __func__);
         return false;
     }
 
@@ -139,7 +139,7 @@ void CGovernanceManager::CleanAndRemoveTriggers()
     AssertLockHeld(cs);
 
     // Remove triggers that are invalid or expired
-    LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s(): mapTrigger.size() = %d\n", __func__, mapTrigger.size());
+    LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s -- mapTrigger.size() = %d\n", __func__, mapTrigger.size());
 
     auto it = mapTrigger.begin();
     while (it != mapTrigger.end()) {
@@ -147,25 +147,25 @@ void CGovernanceManager::CleanAndRemoveTriggers()
         CGovernanceObject* pObj = nullptr;
         const CSuperblock_sptr& pSuperblock = it->second;
         if (!pSuperblock) {
-            LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s(): nullptr superblock\n", __func__);
+            LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s -- nullptr superblock\n", __func__);
             remove = true;
         } else {
             pObj = FindGovernanceObject(it->first);
             if (!pObj || pObj->GetObjectType() != GovernanceObject::TRIGGER) {
-                LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s(): Unknown or non-trigger superblock\n", __func__);
+                LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s -- Unknown or non-trigger superblock\n", __func__);
                 pSuperblock->SetStatus(SeenObjectStatus::ErrorInvalid);
             }
 
-            LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s(): superblock status = %d\n", __func__, ToUnderlying(pSuperblock->GetStatus()));
+            LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s -- superblock status = %d\n", __func__, ToUnderlying(pSuperblock->GetStatus()));
             switch (pSuperblock->GetStatus()) {
             case SeenObjectStatus::ErrorInvalid:
             case SeenObjectStatus::Unknown:
-                LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s(): Unknown or invalid trigger found\n", __func__);
+                LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s -- Unknown or invalid trigger found\n", __func__);
                 remove = true;
                 break;
             case SeenObjectStatus::Valid:
             case SeenObjectStatus::Executed: {
-                LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s(): Valid trigger found\n", __func__);
+                LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s -- Valid trigger found\n", __func__);
                 if (pSuperblock->IsExpired(*governance)) {
                     // update corresponding object
                     pObj->SetExpired();
@@ -177,7 +177,7 @@ void CGovernanceManager::CleanAndRemoveTriggers()
                 break;
             }
         }
-        LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s(): %smarked for removal\n", __func__, remove ? "" : "NOT ");
+        LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s -- %smarked for removal\n", __func__, remove ? "" : "NOT ");
 
         if (remove) {
             std::string strDataAsPlainString = "nullptr";
@@ -186,7 +186,7 @@ void CGovernanceManager::CleanAndRemoveTriggers()
                 // mark corresponding object for deletion
                 pObj->PrepareDeletion(GetTime<std::chrono::seconds>().count());
             }
-            LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s(): Removing trigger object %s\n", __func__, strDataAsPlainString);
+            LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s -- Removing trigger object %s\n", __func__, strDataAsPlainString);
             // delete the trigger
             mapTrigger.erase(it++);
         } else {
