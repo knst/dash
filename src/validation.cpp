@@ -1326,6 +1326,7 @@ CChainState::CChainState(CTxMemPool* mempool,
                          BlockManager& blockman,
                          CMNHFManager& mnhfManager,
                          CEvoDB& evoDb,
+                         MNSubsidyAgent& mn_subsidy,
                          const std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
                          const std::unique_ptr<llmq::CInstantSendManager>& isman,
                          const std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,
@@ -1337,6 +1338,7 @@ CChainState::CChainState(CTxMemPool* mempool,
       m_quorum_block_processor(quorum_block_processor),
       m_mnhfManager(mnhfManager),
       m_evoDb(evoDb),
+      m_mn_subsidy(mn_subsidy),
       m_blockman(blockman),
       m_from_snapshot_blockhash(from_snapshot_blockhash) {}
 
@@ -2438,7 +2440,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     int64_t nTime5_3 = GetTimeMicros(); nTimeCreditPool += nTime5_3 - nTime5_2;
     LogPrint(BCLog::BENCHMARK, "      - CheckCreditPoolDiffForBlock: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime5_3 - nTime5_2), nTimeCreditPool * MICRO, nTimeCreditPool * MILLI / nBlocksTotal);
 
-    if (!MasternodePayments::IsBlockValueValid(*sporkManager, *governance, *::masternodeSync, block, pindex->nHeight, blockSubsidy + feeReward, strError)) {
+    if (!m_mn_subsidy.IsBlockValueValid(block, pindex->nHeight, blockSubsidy + feeReward, strError)) {
         // NOTE: Do not punish, the node might be missing governance data
         LogPrintf("ERROR: ConnectBlock(DASH): %s\n", strError);
         return state.Invalid(BlockValidationResult::BLOCK_RESULT_UNSET, "bad-cb-amount");
@@ -2447,7 +2449,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     int64_t nTime5_4 = GetTimeMicros(); nTimeValueValid += nTime5_4 - nTime5_3;
     LogPrint(BCLog::BENCHMARK, "      - IsBlockValueValid: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime5_4 - nTime5_3), nTimeValueValid * MICRO, nTimeValueValid * MILLI / nBlocksTotal);
 
-    if (!MasternodePayments::IsBlockPayeeValid(*sporkManager, *governance, *::masternodeSync, *block.vtx[0], pindex->pprev, blockSubsidy, feeReward)) {
+    if (!m_mn_subsidy.IsBlockPayeeValid(*block.vtx[0], pindex->pprev, blockSubsidy, feeReward)) {
         // NOTE: Do not punish, the node might be missing governance data
         LogPrintf("ERROR: ConnectBlock(DASH): couldn't find masternode or superblock payments\n");
         return state.Invalid(BlockValidationResult::BLOCK_RESULT_UNSET, "bad-cb-payee");
@@ -5721,6 +5723,7 @@ std::vector<CChainState*> ChainstateManager::GetAll()
 CChainState& ChainstateManager::InitializeChainstate(CTxMemPool* mempool,
                                                      CMNHFManager& mnhfManager,
                                                      CEvoDB& evoDb,
+                                                     MNSubsidyAgent& mn_subsidy,
                                                      const std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
                                                      const std::unique_ptr<llmq::CInstantSendManager>& isman,
                                                      const std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,
@@ -5734,7 +5737,7 @@ CChainState& ChainstateManager::InitializeChainstate(CTxMemPool* mempool,
         throw std::logic_error("should not be overwriting a chainstate");
     }
 
-    to_modify.reset(new CChainState(mempool, m_blockman, mnhfManager, evoDb, clhandler, isman, quorum_block_processor, snapshot_blockhash));
+    to_modify.reset(new CChainState(mempool, m_blockman, mnhfManager, evoDb, mn_subsidy, clhandler, isman, quorum_block_processor, snapshot_blockhash));
 
     // Snapshot chainstates and initial IBD chaintates always become active.
     if (is_snapshot || (!is_snapshot && !m_active_chainstate)) {
@@ -5807,6 +5810,7 @@ bool ChainstateManager::ActivateSnapshot(
             /* mempool */ nullptr, m_blockman,
             this->ActiveChainstate().m_mnhfManager,
             this->ActiveChainstate().m_evoDb,
+            this->ActiveChainstate().m_mn_subsidy,
             this->ActiveChainstate().m_clhandler,
             this->ActiveChainstate().m_isman,
             this->ActiveChainstate().m_quorum_block_processor,

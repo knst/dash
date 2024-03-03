@@ -11,6 +11,7 @@
 #include <interfaces/chain.h>
 #include <interfaces/coinjoin.h>
 #include <llmq/context.h>
+#include <masternode/payments.h>
 #include <evo/evodb.h>
 #include <evo/mnhftx.h>
 #include <net.h>

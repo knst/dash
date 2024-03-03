@@ -465,10 +465,12 @@ static UniValue masternode_payments(const JSONRPCRequest& request, const Chainst
             nBlockFees += nValueIn - tx->GetValueOut();
         }
 
+        CHECK_NONFATAL(node.mn_subsidy);
+
         std::vector<CTxOut> voutMasternodePayments, voutDummy;
         CMutableTransaction dummyTx;
         CAmount blockSubsidy = GetBlockSubsidy(pindex, Params().GetConsensus());
-        MasternodePayments::FillBlockPayments(*node.sporkman, *node.govman, dummyTx, pindex->pprev, blockSubsidy, nBlockFees, voutMasternodePayments, voutDummy);
+        node.mn_subsidy->FillBlockPayments(dummyTx, pindex->pprev, blockSubsidy, nBlockFees, voutMasternodePayments, voutDummy);
 
         UniValue blockObj(UniValue::VOBJ);
         CAmount payedPerBlock{0};

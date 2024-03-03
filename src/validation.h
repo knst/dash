@@ -63,6 +63,7 @@ class CScriptCheck;
 class CTxMemPool;
 class TxValidationState;
 class ChainstateManager;
+class MNSubsidyAgent;
 struct PrecomputedTransactionData;
 struct ChainTxData;
 
@@ -667,6 +668,7 @@ protected:
     const std::unique_ptr<llmq::CQuorumBlockProcessor>& m_quorum_block_processor;
     CMNHFManager& m_mnhfManager;
     CEvoDB& m_evoDb;
+    MNSubsidyAgent& m_mn_subsidy;
 
 public:
     //! Reference to a BlockManager instance which itself is shared across all
@@ -677,6 +679,7 @@ public:
                          BlockManager& blockman,
                          CMNHFManager& mnhfManager,
                          CEvoDB& evoDb,
+                         MNSubsidyAgent& mn_subsidy,
                          const std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
                          const std::unique_ptr<llmq::CInstantSendManager>& isman,
                          const std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,
@@ -1027,6 +1030,7 @@ public:
     CChainState& InitializeChainstate(CTxMemPool* mempool,
                                       CMNHFManager& mnhfManager,
                                       CEvoDB& evoDb,
+                                      MNSubsidyAgent& mn_subsidy,
                                       const std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
                                       const std::unique_ptr<llmq::CInstantSendManager>& isman,
                                       const std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,

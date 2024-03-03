@@ -28,6 +28,7 @@ class CScheduler;
 class CSporkManager;
 class CTxMemPool;
 class CMNHFManager;
+class MNSubsidyAgent;
 class PeerManager;
 struct CJContext;
 struct LLMQContext;
@@ -74,6 +75,7 @@ struct NodeContext {
     std::unique_ptr<CJContext> cj_ctx;
     std::unique_ptr<CMNHFManager> mnhf_manager;
     std::unique_ptr<LLMQContext> llmq_ctx;
+    std::unique_ptr<MNSubsidyAgent> mn_subsidy;
     CCreditPoolManager* cpoolman{nullptr};
     CDeterministicMNManager* dmnman{nullptr};
     CDSTXManager* dstxman{nullptr};

@@ -70,6 +70,7 @@
 #include <validationinterface.h>
 
 #include <masternode/node.h>
+#include <masternode/payments.h>
 #include <coinjoin/coinjoin.h>
 #include <coinjoin/context.h>
 #ifdef ENABLE_WALLET
@@ -310,6 +311,7 @@ void PrepareShutdown(NodeContext& node)
     ::mmetaman.reset();
     node.dstxman = nullptr;
     ::dstxManager.reset();
+    node.mn_subsidy.reset();
     node.mn_sync = nullptr;
     ::masternodeSync.reset();
     node.sporkman = nullptr;
@@ -1752,6 +1754,9 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     ::masternodeSync = std::make_unique<CMasternodeSync>(*node.connman, *node.govman);
     node.mn_sync = ::masternodeSync.get();
 
+    assert(!node.mn_subsidy);
+    node.mn_subsidy = std::make_unique<MNSubsidyAgent>(*node.govman, Params().GetConsensus(), *node.mn_sync, *node.sporkman);
+
     // sanitize comments per BIP-0014, format user agent and check total size
     std::vector<std::string> uacomments;
 
@@ -1952,7 +1957,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 
 
                 chainman.Reset();
-                chainman.InitializeChainstate(Assert(node.mempool.get()), *node.mnhf_manager, *node.evodb, llmq::chainLocksHandler, llmq::quorumInstantSendManager, llmq::quorumBlockProcessor);
+                chainman.InitializeChainstate(Assert(node.mempool.get()), *node.mnhf_manager, *node.evodb, *node.mn_subsidy, llmq::chainLocksHandler, llmq::quorumInstantSendManager, llmq::quorumBlockProcessor);
                 chainman.m_total_coinstip_cache = nCoinCacheUsage;
                 chainman.m_total_coinsdb_cache = nCoinDBCache;
 
