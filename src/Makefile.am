@@ -180,6 +180,7 @@ BITCOIN_CORE_H = \
   evo/assetlocktx.h \
   evo/dmn_types.h \
   evo/cbtx.h \
+  evo/chainhelper.h \
   evo/creditpool.h \
   evo/deterministicmns.h \
   evo/dmnstate.h \
