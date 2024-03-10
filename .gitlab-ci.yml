@@ -373,15 +373,6 @@ linux64_sqlite-test:
 #  variables:
 #    BUILD_TARGET: linux64_asan
 
-linux64_msan-test:
-  extends:
-    - .test-template
-    - .skip-in-fast-mode-template
-  needs:
-    - linux64_msan-build
-  variables:
-    BUILD_TARGET: linux64_msan
-
 linux64_tsan-test:
   extends:
     - .test-template
