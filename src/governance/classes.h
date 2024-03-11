@@ -27,6 +27,7 @@ CAmount ParsePaymentAmount(const std::string& strAmount);
 *   Class for querying superblock information
 */
 
+// TODO: move all these methods inside CGovernanceManager
 class CSuperblockManager
 {
 private:
