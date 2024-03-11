@@ -158,7 +158,6 @@ private:
     const CChainParams& chainparams;
     const CTxMemPool& m_mempool;
     CChainState& m_chainstate;
-    const CSporkManager& spork_manager;
     CGovernanceManager& governance_manager;
     const llmq::CQuorumBlockProcessor& quorum_block_processor;
     llmq::CChainLocksHandler& m_clhandler;

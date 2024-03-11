@@ -716,7 +716,7 @@ static UniValue getblocktemplate(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, PACKAGE_NAME " is in initial sync and waiting for blocks...");
 
     // next bock is a superblock and we need governance info to correctly construct it
-    if (AreSuperblocksEnabled(*node.sporkman)
+    if (node.govman->AreSuperblocksEnabled()
         && !node.mn_sync->IsSynced()
         && CSuperblock::IsValidBlockHeight(active_chain.Height() + 1))
             throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, PACKAGE_NAME " is syncing with network...");
@@ -953,7 +953,7 @@ static UniValue getblocktemplate(const JSONRPCRequest& request)
     }
     result.pushKV("superblock", superblockObjArray);
     result.pushKV("superblocks_started", pindexPrev->nHeight + 1 > consensusParams.nSuperblockStartBlock);
-    result.pushKV("superblocks_enabled", AreSuperblocksEnabled(*node.sporkman));
+    result.pushKV("superblocks_enabled", node.govman->AreSuperblocksEnabled());
 
     result.pushKV("coinbase_payload", HexStr(pblock->vtx[0]->vExtraPayload));
 

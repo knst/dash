@@ -253,6 +253,7 @@ private:
     bool is_valid{false};
 
     CNetFulfilledRequestManager& m_netfulfilledman;
+    const CSporkManager& m_sporkman;
 
     int64_t nTimeLastDiff;
     // keep track of current block height
@@ -266,7 +267,7 @@ private:
     std::map<uint256, std::shared_ptr<CSuperblock>> mapTrigger;
 
 public:
-    explicit CGovernanceManager(CNetFulfilledRequestManager& netfulfilledman);
+    explicit CGovernanceManager(CNetFulfilledRequestManager& netfulfilledman, const CSporkManager& sporkman);
     ~CGovernanceManager();
 
     bool LoadCache(bool load_cache);
@@ -366,6 +367,7 @@ public:
     bool AddNewTrigger(uint256 nHash);
     void CleanAndRemoveTriggers();
 
+    bool AreSuperblocksEnabled() const;
 private:
     std::optional<const CSuperblock> CreateSuperblockCandidate(int nHeight) const;
     std::optional<const CGovernanceObject> CreateGovernanceTrigger(const std::optional<const CSuperblock>& sb_opt, CConnman& connman);
@@ -403,7 +405,5 @@ private:
     void RemoveInvalidVotes();
 
 };
-
-bool AreSuperblocksEnabled(const CSporkManager& sporkman);
 
 #endif // BITCOIN_GOVERNANCE_GOVERNANCE_H

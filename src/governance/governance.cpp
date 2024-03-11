@@ -43,9 +43,10 @@ GovernanceStore::GovernanceStore() :
 {
 }
 
-CGovernanceManager::CGovernanceManager(CNetFulfilledRequestManager& netfulfilledman) :
+CGovernanceManager::CGovernanceManager(CNetFulfilledRequestManager& netfulfilledman, const CSporkManager& sporkman) :
     m_db{std::make_unique<db_type>("governance.dat", "magicGovernanceCache")},
     m_netfulfilledman{netfulfilledman},
+    m_sporkman{sporkman},
     nTimeLastDiff(0),
     nCachedBlockHeight(0),
     setRequestedObjects(),
@@ -1564,7 +1565,7 @@ void CGovernanceManager::RemoveInvalidVotes()
     lastMNListForVotingKeys = std::make_shared<CDeterministicMNList>(curMNList);
 }
 
-bool AreSuperblocksEnabled(const CSporkManager& sporkman)
+bool CGovernanceManager::AreSuperblocksEnabled() const
 {
-    return sporkman.IsSporkActive(SPORK_9_SUPERBLOCKS_ENABLED);
+    return m_sporkman.IsSporkActive(SPORK_9_SUPERBLOCKS_ENABLED);
 }

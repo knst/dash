@@ -1709,11 +1709,11 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     assert(!node.netfulfilledman);
     node.netfulfilledman = std::make_unique<CNetFulfilledRequestManager>();
 
-    assert(!node.govman);
-    node.govman = std::make_unique<CGovernanceManager>(*node.netfulfilledman);
-
     assert(!node.sporkman);
     node.sporkman = std::make_unique<CSporkManager>();
+
+    assert(!node.govman);
+    node.govman = std::make_unique<CGovernanceManager>(*node.netfulfilledman, *node.sporkman);
 
     std::vector<std::string> vSporkAddresses;
     if (args.IsArgSet("-sporkaddr")) {

@@ -34,7 +34,6 @@
 #include <llmq/instantsend.h>
 #include <llmq/options.h>
 #include <masternode/payments.h>
-#include <spork.h>
 #include <validation.h>
 
 #include <algorithm>
@@ -60,12 +59,11 @@ BlockAssembler::Options::Options() {
     nBlockMaxSize = DEFAULT_BLOCK_MAX_SIZE;
 }
 
-BlockAssembler::BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
+BlockAssembler::BlockAssembler(const CSporkManager& /*sporkman*/, CGovernanceManager& governanceManager,
                                LLMQContext& llmq_ctx, CEvoDB& evoDb, CChainState& chainstate, const CTxMemPool& mempool, const CChainParams& params, const Options& options) :
       chainparams(params),
       m_mempool(mempool),
       m_chainstate(chainstate),
-      spork_manager(sporkManager),
       governance_manager(governanceManager),
       quorum_block_processor(*llmq_ctx.quorum_block_processor),
       m_clhandler(*llmq_ctx.clhandler),
@@ -247,7 +245,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     // Update coinbase transaction with additional info about masternode and governance payments,
     // get some info back to pass to getblocktemplate
-    MasternodePayments::FillBlockPayments(spork_manager, governance_manager, coinbaseTx, pindexPrev, blockSubsidy, nFees, pblocktemplate->voutMasternodePayments, pblocktemplate->voutSuperblockPayments);
+    MasternodePayments::FillBlockPayments(governance_manager, coinbaseTx, pindexPrev, blockSubsidy, nFees, pblocktemplate->voutMasternodePayments, pblocktemplate->voutSuperblockPayments);
 
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
     pblocktemplate->vTxFees[0] = -nFees;
