@@ -175,7 +175,7 @@ namespace MasternodePayments {
 *   - Other blocks are 10% lower in outgoing value, so in total, no extra coins are created
 *   - When non-superblocks are detected, the normal schedule should be maintained
 */
-bool IsBlockValueValid(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
+bool IsBlockValueValid(CGovernanceManager& governanceManager,
                        const CMasternodeSync& mn_sync, const CBlock& block, const int nBlockHeight, const CAmount blockReward, std::string& strErrorRet)
 {
     const Consensus::Params& consensusParams = Params().GetConsensus();
@@ -227,7 +227,7 @@ bool IsBlockValueValid(const CSporkManager& sporkManager, CGovernanceManager& go
 
     // we are synced and possibly on a superblock now
 
-    if (!AreSuperblocksEnabled(sporkManager)) {
+    if (!governanceManager.AreSuperblocksEnabled()) {
         // should NOT allow superblocks at all, when superblocks are disabled
         // revert to block reward limits in this case
         LogPrint(BCLog::GOBJECT, "%s -- Superblocks are disabled, no superblocks allowed\n", __func__);
@@ -261,7 +261,7 @@ bool IsBlockValueValid(const CSporkManager& sporkManager, CGovernanceManager& go
     return true;
 }
 
-bool IsBlockPayeeValid(const CSporkManager& sporkManager, CGovernanceManager& governanceManager, const CMasternodeSync& mn_sync,
+bool IsBlockPayeeValid(CGovernanceManager& governanceManager, const CMasternodeSync& mn_sync,
                        const CTransaction& txNew, const CBlockIndex* const pindexPrev, const CAmount blockSubsidy, const CAmount feeReward)
 {
     const int nBlockHeight = pindexPrev  == nullptr ? 0 : pindexPrev->nHeight + 1;
@@ -292,7 +292,7 @@ bool IsBlockPayeeValid(const CSporkManager& sporkManager, CGovernanceManager& go
 
     // superblocks started
 
-    if (AreSuperblocksEnabled(sporkManager)) {
+    if (governanceManager.AreSuperblocksEnabled()) {
         if (CSuperblockManager::IsSuperblockTriggered(governanceManager, nBlockHeight)) {
             if (CSuperblockManager::IsValid(governanceManager, txNew, nBlockHeight, blockSubsidy + feeReward)) {
                 LogPrint(BCLog::GOBJECT, "%s -- Valid superblock at height %d: %s", __func__, nBlockHeight, txNew.ToString()); /* Continued */
@@ -313,7 +313,7 @@ bool IsBlockPayeeValid(const CSporkManager& sporkManager, CGovernanceManager& go
     return true;
 }
 
-void FillBlockPayments(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
+void FillBlockPayments(CGovernanceManager& governanceManager,
                        CMutableTransaction& txNew, const CBlockIndex* const pindexPrev, const CAmount blockSubsidy, const CAmount feeReward,
                        std::vector<CTxOut>& voutMasternodePaymentsRet, std::vector<CTxOut>& voutSuperblockPaymentsRet)
 {
@@ -321,7 +321,7 @@ void FillBlockPayments(const CSporkManager& sporkManager, CGovernanceManager& go
 
     // only create superblocks if spork is enabled AND if superblock is actually triggered
     // (height should be validated inside)
-    if(AreSuperblocksEnabled(sporkManager) && CSuperblockManager::IsSuperblockTriggered(governanceManager, nBlockHeight)) {
+    if(governanceManager.AreSuperblocksEnabled() && CSuperblockManager::IsSuperblockTriggered(governanceManager, nBlockHeight)) {
         LogPrint(BCLog::GOBJECT, "%s -- triggered superblock creation at height %d\n", __func__, nBlockHeight);
         CSuperblockManager::GetSuperblockPayments(governanceManager, nBlockHeight, voutSuperblockPaymentsRet);
     }

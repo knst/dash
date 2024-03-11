@@ -85,7 +85,6 @@ EXPECTED_CIRCULAR_DEPENDENCIES=(
     "llmq/blockprocessor -> llmq/utils -> llmq/snapshot -> llmq/blockprocessor"
     "llmq/context -> llmq/instantsend -> net_processing -> llmq/context"
     "llmq/commitment -> llmq/utils -> llmq/snapshot -> llmq/commitment"
-    "spork -> validation -> spork"
     "governance/governance -> validation -> governance/governance"
     "evo/deterministicmns -> validationinterface -> governance/vote -> evo/deterministicmns"
     "governance/vote -> validation -> validationinterface -> governance/vote"
