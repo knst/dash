@@ -57,7 +57,6 @@
 #include <evo/mnhftx.h>
 #include <evo/specialtx.h>
 #include <evo/specialtxman.h>
-#include <governance/governance.h>
 
 #include <llmq/instantsend.h>
 #include <llmq/chainlocks.h>
@@ -1325,6 +1324,7 @@ CChainState::CChainState(CTxMemPool* mempool,
                          BlockManager& blockman,
                          CMNHFManager& mnhfManager,
                          CEvoDB& evoDb,
+                         CGovernanceManager& govman,
                          const std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
                          const std::unique_ptr<llmq::CInstantSendManager>& isman,
                          const std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,
@@ -1336,6 +1336,7 @@ CChainState::CChainState(CTxMemPool* mempool,
       m_quorum_block_processor(quorum_block_processor),
       m_mnhfManager(mnhfManager),
       m_evoDb(evoDb),
+      m_govman(govman),
       m_blockman(blockman),
       m_from_snapshot_blockhash(from_snapshot_blockhash) {}
 
@@ -2437,7 +2438,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     int64_t nTime5_3 = GetTimeMicros(); nTimeCreditPool += nTime5_3 - nTime5_2;
     LogPrint(BCLog::BENCHMARK, "      - CheckCreditPoolDiffForBlock: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime5_3 - nTime5_2), nTimeCreditPool * MICRO, nTimeCreditPool * MILLI / nBlocksTotal);
 
-    if (!MasternodePayments::IsBlockValueValid(*governance, *::masternodeSync, block, pindex->nHeight, blockSubsidy + feeReward, strError)) {
+    if (!MasternodePayments::IsBlockValueValid(m_govman, *::masternodeSync, block, pindex->nHeight, blockSubsidy + feeReward, strError)) {
         // NOTE: Do not punish, the node might be missing governance data
         LogPrintf("ERROR: ConnectBlock(DASH): %s\n", strError);
         return state.Invalid(BlockValidationResult::BLOCK_RESULT_UNSET, "bad-cb-amount");
@@ -2446,7 +2447,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     int64_t nTime5_4 = GetTimeMicros(); nTimeValueValid += nTime5_4 - nTime5_3;
     LogPrint(BCLog::BENCHMARK, "      - IsBlockValueValid: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime5_4 - nTime5_3), nTimeValueValid * MICRO, nTimeValueValid * MILLI / nBlocksTotal);
 
-    if (!MasternodePayments::IsBlockPayeeValid(*governance, *::masternodeSync, *block.vtx[0], pindex->pprev, blockSubsidy, feeReward)) {
+    if (!MasternodePayments::IsBlockPayeeValid(m_govman, *::masternodeSync, *block.vtx[0], pindex->pprev, blockSubsidy, feeReward)) {
         // NOTE: Do not punish, the node might be missing governance data
         LogPrintf("ERROR: ConnectBlock(DASH): couldn't find masternode or superblock payments\n");
         return state.Invalid(BlockValidationResult::BLOCK_RESULT_UNSET, "bad-cb-payee");
@@ -5720,6 +5721,7 @@ std::vector<CChainState*> ChainstateManager::GetAll()
 CChainState& ChainstateManager::InitializeChainstate(CTxMemPool* mempool,
                                                      CMNHFManager& mnhfManager,
                                                      CEvoDB& evoDb,
+                                                     CGovernanceManager& govman,
                                                      const std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
                                                      const std::unique_ptr<llmq::CInstantSendManager>& isman,
                                                      const std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,
@@ -5733,7 +5735,7 @@ CChainState& ChainstateManager::InitializeChainstate(CTxMemPool* mempool,
         throw std::logic_error("should not be overwriting a chainstate");
     }
 
-    to_modify.reset(new CChainState(mempool, m_blockman, mnhfManager, evoDb, clhandler, isman, quorum_block_processor, snapshot_blockhash));
+    to_modify.reset(new CChainState(mempool, m_blockman, mnhfManager, evoDb, govman, clhandler, isman, quorum_block_processor, snapshot_blockhash));
 
     // Snapshot chainstates and initial IBD chaintates always become active.
     if (is_snapshot || (!is_snapshot && !m_active_chainstate)) {
@@ -5806,6 +5808,7 @@ bool ChainstateManager::ActivateSnapshot(
             /* mempool */ nullptr, m_blockman,
             this->ActiveChainstate().m_mnhfManager,
             this->ActiveChainstate().m_evoDb,
+            this->ActiveChainstate().m_govman,
             this->ActiveChainstate().m_clhandler,
             this->ActiveChainstate().m_isman,
             this->ActiveChainstate().m_quorum_block_processor,

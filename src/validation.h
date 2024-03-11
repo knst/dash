@@ -58,6 +58,7 @@ class CChainParams;
 struct CCheckpointData;
 class CInv;
 class CConnman;
+class CGovernanceManager;
 class CMNHFManager;
 class CScriptCheck;
 class CTxMemPool;
@@ -667,6 +668,7 @@ protected:
     const std::unique_ptr<llmq::CQuorumBlockProcessor>& m_quorum_block_processor;
     CMNHFManager& m_mnhfManager;
     CEvoDB& m_evoDb;
+    CGovernanceManager& m_govman;
 
 public:
     //! Reference to a BlockManager instance which itself is shared across all
@@ -677,6 +679,7 @@ public:
                          BlockManager& blockman,
                          CMNHFManager& mnhfManager,
                          CEvoDB& evoDb,
+                         CGovernanceManager& govman,
                          const std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
                          const std::unique_ptr<llmq::CInstantSendManager>& isman,
                          const std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,
@@ -1027,6 +1030,7 @@ public:
     CChainState& InitializeChainstate(CTxMemPool* mempool,
                                       CMNHFManager& mnhfManager,
                                       CEvoDB& evoDb,
+                                      CGovernanceManager& govman,
                                       const std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
                                       const std::unique_ptr<llmq::CInstantSendManager>& isman,
                                       const std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,
