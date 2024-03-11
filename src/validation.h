@@ -59,6 +59,7 @@ struct CCheckpointData;
 class CInv;
 class CConnman;
 class CGovernanceManager;
+class CMasternodeSync;
 class CMNHFManager;
 class CScriptCheck;
 class CTxMemPool;
@@ -861,10 +862,18 @@ public:
         size_t max_coins_cache_size_bytes,
         size_t max_mempool_size_bytes) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
+    std::string ToString() EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+
+    //! Dash:
     /** Return list of MN EHF signals for current Tip() */
     std::unordered_map<uint8_t, int> GetMNHFSignalsStage(const CBlockIndex* pindex);
 
-    std::string ToString() EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+    bool IsBlockValueValid(const CMasternodeSync& mn_sync,
+                           const CBlock& block, const int nBlockHeight, const CAmount blockReward, std::string& strErrorRet);
+    bool IsBlockPayeeValid(const CMasternodeSync& mn_sync,
+                           const CTransaction& txNew, const CBlockIndex* const pindexPrev, const CAmount blockSubsidy, const CAmount feeReward);
+    void FillBlockPayments(CMutableTransaction& txNew, const CBlockIndex* const pindexPrev, const CAmount blockSubsidy, const CAmount feeReward,
+                           std::vector<CTxOut>& voutMasternodePaymentsRet, std::vector<CTxOut>& voutSuperblockPaymentsRet);
 private:
     bool ActivateBestChainStep(BlockValidationState& state, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock>& pblock, bool& fInvalidFound, ConnectTrace& connectTrace) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);
     bool ConnectTip(BlockValidationState& state, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock>& pblock, ConnectTrace& connectTrace, DisconnectedBlockTransactions& disconnectpool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);

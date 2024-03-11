@@ -158,7 +158,6 @@ private:
     const CChainParams& chainparams;
     const CTxMemPool& m_mempool;
     CChainState& m_chainstate;
-    CGovernanceManager& governance_manager;
     const llmq::CQuorumBlockProcessor& quorum_block_processor;
     llmq::CChainLocksHandler& m_clhandler;
     llmq::CInstantSendManager& m_isman;

@@ -7,16 +7,6 @@
 
 #include <amount.h>
 
-#include <string>
-#include <vector>
-
-class CGovernanceManager;
-class CBlock;
-class CBlockIndex;
-class CTransaction;
-struct CMutableTransaction;
-class CTxOut;
-class CMasternodeSync;
 
 /**
  * Masternode Payments Namespace
@@ -25,14 +15,6 @@ class CMasternodeSync;
 
 namespace MasternodePayments
 {
-bool IsBlockValueValid(CGovernanceManager& governanceManager, const CMasternodeSync& mn_sync,
-                       const CBlock& block, const int nBlockHeight, const CAmount blockReward, std::string& strErrorRet);
-bool IsBlockPayeeValid(CGovernanceManager& governanceManager, const CMasternodeSync& mn_sync,
-                       const CTransaction& txNew, const CBlockIndex* const pindexPrev, const CAmount blockSubsidy, const CAmount feeReward);
-void FillBlockPayments(CGovernanceManager& governanceManager,
-                       CMutableTransaction& txNew, const CBlockIndex* const pindexPrev, const CAmount blockSubsidy, const CAmount feeReward,
-                       std::vector<CTxOut>& voutMasternodePaymentsRet, std::vector<CTxOut>& voutSuperblockPaymentsRet);
-
 /**
  * this helper returns amount that should be reallocated to platform
  * it is calculated based on total amount of Masternode rewards (not block reward)

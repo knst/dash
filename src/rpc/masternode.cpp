@@ -10,7 +10,6 @@
 #include <node/context.h>
 #include <governance/governance.h>
 #include <masternode/node.h>
-#include <masternode/payments.h>
 #include <net.h>
 #include <netbase.h>
 #include <rpc/blockchain.h>
@@ -442,6 +441,7 @@ static UniValue masternode_payments(const JSONRPCRequest& request, const Chainst
     std::vector<UniValue> vecPayments;
 
     const NodeContext& node = EnsureAnyNodeContext(request.context);
+    CChainState& active_chainstate = chainman.ActiveChainstate();
     while (vecPayments.size() < uint64_t(std::abs(nCount)) && pindex != nullptr) {
         CBlock block;
         if (!ReadBlockFromDisk(block, pindex, Params().GetConsensus())) {
@@ -468,7 +468,7 @@ static UniValue masternode_payments(const JSONRPCRequest& request, const Chainst
         std::vector<CTxOut> voutMasternodePayments, voutDummy;
         CMutableTransaction dummyTx;
         CAmount blockSubsidy = GetBlockSubsidy(pindex, Params().GetConsensus());
-        MasternodePayments::FillBlockPayments(*node.govman, dummyTx, pindex->pprev, blockSubsidy, nBlockFees, voutMasternodePayments, voutDummy);
+        active_chainstate.FillBlockPayments(dummyTx, pindex->pprev, blockSubsidy, nBlockFees, voutMasternodePayments, voutDummy);
 
         UniValue blockObj(UniValue::VOBJ);
         CAmount payedPerBlock{0};
