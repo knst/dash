@@ -1211,4 +1211,10 @@ inline bool IsBlockPruned(const CBlockIndex* pblockindex)
  */
 const AssumeutxoData* ExpectedAssumeutxo(const int height, const CChainParams& params);
 
+/**
+ * this helper returns amount that should be reallocated to platform
+ * it is calculated based on total amount of Masternode rewards (not block reward)
+ */
+CAmount PlatformShare(const CAmount masternodeReward);
+
 #endif // BITCOIN_VALIDATION_H

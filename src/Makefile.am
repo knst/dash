@@ -189,7 +189,6 @@ BITCOIN_CORE_H = \
   evo/providertx.h \
   evo/simplifiedmns.h \
   evo/specialtx.h \
-  evo/specialtxman.h \
   dsnotificationinterface.h \
   governance/governance.h \
   governance/classes.h \
@@ -246,7 +245,6 @@ BITCOIN_CORE_H = \
   mapport.h \
   masternode/node.h \
   masternode/meta.h \
-  masternode/payments.h \
   masternode/sync.h \
   masternode/utils.h \
   memusage.h \
@@ -431,7 +429,6 @@ libbitcoin_server_a_SOURCES = \
   evo/providertx.cpp \
   evo/simplifiedmns.cpp \
   evo/specialtx.cpp \
-  evo/specialtxman.cpp \
   flatfile.cpp \
   governance/classes.cpp \
   governance/exceptions.cpp \
@@ -468,7 +465,6 @@ libbitcoin_server_a_SOURCES = \
   mapport.cpp \
   masternode/node.cpp \
   masternode/meta.cpp \
-  masternode/payments.cpp \
   masternode/sync.cpp \
   masternode/utils.cpp \
   messagesigner.cpp \

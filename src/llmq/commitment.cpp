@@ -13,8 +13,8 @@
 #include <llmq/options.h>
 #include <llmq/utils.h>
 #include <logging.h>
-#include <validation.h>
 #include <util/underlying.h>
+#include <validation.h>
 
 namespace llmq
 {

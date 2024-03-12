@@ -22,9 +22,7 @@
 
 // Forward declaration to prevent a circular dependencies through validation.h
 CAmount GetMasternodePayment(int nHeight, CAmount blockValue, bool fV20Active);
-namespace MasternodePayments {
 CAmount PlatformShare(const CAmount masternodeReward);
-} // namespace MasternodePayments
 
 static const std::string DB_CREDITPOOL_SNAPSHOT = "cpm_S";
 
@@ -229,7 +227,7 @@ CCreditPoolDiff::CCreditPoolDiff(CCreditPool starter, const CBlockIndex *pindexP
 
     if (DeploymentActiveAfter(pindexPrev, consensusParams, Consensus::DEPLOYMENT_MN_RR)) {
         // We consider V20 active if mn_rr is active
-        platformReward = MasternodePayments::PlatformShare(GetMasternodePayment(pindexPrev->nHeight + 1, blockSubsidy, /*fV20Active=*/ true));
+        platformReward = PlatformShare(GetMasternodePayment(pindexPrev->nHeight + 1, blockSubsidy, /*fV20Active=*/ true));
     }
 }
 

@@ -43,6 +43,7 @@
 #include <undo.h>
 #include <util/check.h> // For NDEBUG compile time check
 #include <util/hasher.h>
+#include <util/ranges.h>
 #include <util/strencodings.h>
 #include <util/translation.h>
 #include <util/system.h>
@@ -51,12 +52,19 @@
 
 #include <masternode/sync.h>
 
+#include <governance/classes.h>
+#include <governance/governance.h>
+
+#include <evo/assetlocktx.h>
+#include <evo/cbtx.h>
+#include <evo/creditpool.h>
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
 #include <evo/mnhftx.h>
 #include <evo/specialtx.h>
-#include <evo/specialtxman.h>
 
+#include <llmq/blockprocessor.h>
+#include <llmq/commitment.h>
 #include <llmq/instantsend.h>
 #include <llmq/chainlocks.h>
 
@@ -6107,3 +6115,622 @@ void ChainstateManager::MaybeRebalanceCaches()
         }
     }
 }
+
+
+// ----- There's Dash methods below required for transaction validation
+static bool CheckSpecialTxInner(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, const Consensus::Params& consensusParams, const std::optional<CRangesSet>& indexes, bool check_sigs, TxValidationState& state)
+{
+    AssertLockHeld(cs_main);
+
+    if (tx.nVersion != 3 || tx.nType == TRANSACTION_NORMAL)
+        return true;
+
+    if (!DeploymentActiveAfter(pindexPrev, consensusParams, Consensus::DEPLOYMENT_DIP0003)) {
+        return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-tx-type");
+    }
+
+    try {
+        switch (tx.nType) {
+        case TRANSACTION_PROVIDER_REGISTER:
+            return CheckProRegTx(tx, pindexPrev, state, view, check_sigs);
+        case TRANSACTION_PROVIDER_UPDATE_SERVICE:
+            return CheckProUpServTx(tx, pindexPrev, state, check_sigs);
+        case TRANSACTION_PROVIDER_UPDATE_REGISTRAR:
+            return CheckProUpRegTx(tx, pindexPrev, state, view, check_sigs);
+        case TRANSACTION_PROVIDER_UPDATE_REVOKE:
+            return CheckProUpRevTx(tx, pindexPrev, state, check_sigs);
+        case TRANSACTION_COINBASE:
+            return CheckCbTx(tx, pindexPrev, state);
+        case TRANSACTION_QUORUM_COMMITMENT:
+            return llmq::CheckLLMQCommitment(tx, pindexPrev, state);
+        case TRANSACTION_MNHF_SIGNAL:
+            if (!DeploymentActiveAfter(pindexPrev, consensusParams, Consensus::DEPLOYMENT_V20)) {
+                return state.Invalid(TxValidationResult::TX_CONSENSUS, "mnhf-before-v20");
+            }
+            return CheckMNHFTx(tx, pindexPrev, state);
+        case TRANSACTION_ASSET_LOCK:
+            if (!DeploymentActiveAfter(pindexPrev, consensusParams, Consensus::DEPLOYMENT_V20)) {
+                return state.Invalid(TxValidationResult::TX_CONSENSUS, "assetlocks-before-v20");
+            }
+            return CheckAssetLockUnlockTx(tx, pindexPrev, indexes, state);
+        case TRANSACTION_ASSET_UNLOCK:
+            if (Params().NetworkIDString() == CBaseChainParams::REGTEST && !DeploymentActiveAfter(pindexPrev, consensusParams, Consensus::DEPLOYMENT_V20)) {
+                // TODO:  adjust functional tests to make it activated by MN_RR on regtest too
+                return state.Invalid(TxValidationResult::TX_CONSENSUS, "assetunlocks-before-v20");
+            }
+            if (Params().NetworkIDString() != CBaseChainParams::REGTEST && !DeploymentActiveAfter(pindexPrev, consensusParams, Consensus::DEPLOYMENT_MN_RR)) {
+                return state.Invalid(TxValidationResult::TX_CONSENSUS, "assetunlocks-before-mn_rr");
+            }
+            return CheckAssetLockUnlockTx(tx, pindexPrev, indexes, state);
+        }
+    } catch (const std::exception& e) {
+        LogPrintf("%s -- failed: %s\n", __func__, e.what());
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "failed-check-special-tx");
+    }
+
+    return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-tx-type-check");
+}
+
+bool CChainState::CheckSpecialTx(const CTransaction& tx, bool check_sigs, TxValidationState& state)
+{
+    AssertLockHeld(cs_main);
+    const CBlockIndex* const pindexPrev{m_chain.Tip()};
+    CCoinsViewCache view(&CoinsTip());
+    return CheckSpecialTxInner(tx, pindexPrev, view, m_params.GetConsensus(), std::nullopt, check_sigs, state);
+}
+
+static bool ProcessSpecialTx(const CTransaction& tx, const CBlockIndex* pindex, TxValidationState& state)
+{
+    if (tx.nVersion != 3 || tx.nType == TRANSACTION_NORMAL) {
+        return true;
+    }
+
+    switch (tx.nType) {
+    case TRANSACTION_ASSET_LOCK:
+    case TRANSACTION_ASSET_UNLOCK:
+        return true; // handled per block (during cb)
+    case TRANSACTION_PROVIDER_REGISTER:
+    case TRANSACTION_PROVIDER_UPDATE_SERVICE:
+    case TRANSACTION_PROVIDER_UPDATE_REGISTRAR:
+    case TRANSACTION_PROVIDER_UPDATE_REVOKE:
+        return true; // handled in batches per block
+    case TRANSACTION_COINBASE:
+        return true; // nothing to do
+    case TRANSACTION_QUORUM_COMMITMENT:
+        return true; // handled per block
+    case TRANSACTION_MNHF_SIGNAL:
+        return true; // handled per block
+    }
+
+    return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-tx-type-proc");
+}
+
+static bool UndoSpecialTx(const CTransaction& tx, const CBlockIndex* pindex)
+{
+    if (tx.nVersion != 3 || tx.nType == TRANSACTION_NORMAL) {
+        return true;
+    }
+
+    switch (tx.nType) {
+    case TRANSACTION_ASSET_LOCK:
+    case TRANSACTION_ASSET_UNLOCK:
+        return true; // handled per block (during cb)
+    case TRANSACTION_PROVIDER_REGISTER:
+    case TRANSACTION_PROVIDER_UPDATE_SERVICE:
+    case TRANSACTION_PROVIDER_UPDATE_REGISTRAR:
+    case TRANSACTION_PROVIDER_UPDATE_REVOKE:
+        return true; // handled in batches per block
+    case TRANSACTION_COINBASE:
+        return true; // nothing to do
+    case TRANSACTION_QUORUM_COMMITMENT:
+        return true; // handled per block
+    case TRANSACTION_MNHF_SIGNAL:
+        return true; // handled per block
+    }
+
+    return false;
+}
+
+bool CChainState::ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view,
+                              bool fJustCheck, bool fCheckCbTxMerleRoots,
+                              BlockValidationState& state, std::optional<MNListUpdates>& updatesRet)
+{
+    AssertLockHeld(cs_main);
+
+    try {
+        static int64_t nTimeLoop = 0;
+        static int64_t nTimeQuorum = 0;
+        static int64_t nTimeDMN = 0;
+        static int64_t nTimeMerkle = 0;
+        static int64_t nTimeCbTxCL = 0;
+        static int64_t nTimeMnehf = 0;
+
+        int64_t nTime1 = GetTimeMicros();
+
+        const CCreditPool creditPool = creditPoolManager->GetCreditPool(pindex->pprev, m_params.GetConsensus());
+        if (DeploymentActiveAt(*pindex, m_params.GetConsensus(), Consensus::DEPLOYMENT_V20)) {
+            LogPrint(BCLog::CREDITPOOL, "%s: CCreditPool is %s\n", __func__, creditPool.ToString());
+        }
+
+        for (const auto& ptr_tx : block.vtx) {
+            TxValidationState tx_state;
+            // At this moment CheckSpecialTx() and ProcessSpecialTx() may fail by 2 possible ways:
+            // consensus failures and "TX_BAD_SPECIAL"
+            if (!CheckSpecialTxInner(*ptr_tx, pindex->pprev, view, m_params.GetConsensus(), creditPool.indexes, fCheckCbTxMerleRoots, tx_state)) {
+                assert(tx_state.GetResult() == TxValidationResult::TX_CONSENSUS || tx_state.GetResult() == TxValidationResult::TX_BAD_SPECIAL);
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, tx_state.GetRejectReason(),
+                                 strprintf("Special Transaction check failed (tx hash %s) %s", ptr_tx->GetHash().ToString(), tx_state.GetDebugMessage()));
+            }
+            if (!ProcessSpecialTx(*ptr_tx, pindex, tx_state)) {
+                assert(tx_state.GetResult() == TxValidationResult::TX_CONSENSUS || tx_state.GetResult() == TxValidationResult::TX_BAD_SPECIAL);
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, tx_state.GetRejectReason(),
+                                 strprintf("Process Special Transaction failed (tx hash %s) %s", ptr_tx->GetHash().ToString(), tx_state.GetDebugMessage()));
+            }
+        }
+
+        int64_t nTime2 = GetTimeMicros();
+        nTimeLoop += nTime2 - nTime1;
+        LogPrint(BCLog::BENCHMARK, "        - Loop: %.2fms [%.2fs]\n", 0.001 * (nTime2 - nTime1), nTimeLoop * 0.000001);
+
+        if (!m_quorum_block_processor->ProcessBlock(block, pindex, state, fJustCheck, fCheckCbTxMerleRoots)) {
+            // pass the state returned by the function above
+            return false;
+        }
+
+        int64_t nTime3 = GetTimeMicros();
+        nTimeQuorum += nTime3 - nTime2;
+        LogPrint(BCLog::BENCHMARK, "        - quorumBlockProcessor: %.2fms [%.2fs]\n", 0.001 * (nTime3 - nTime2), nTimeQuorum * 0.000001);
+
+        if (!deterministicMNManager->ProcessBlock(block, pindex, state, view, fJustCheck, updatesRet)) {
+            // pass the state returned by the function above
+            return false;
+        }
+
+        int64_t nTime4 = GetTimeMicros();
+        nTimeDMN += nTime4 - nTime3;
+        LogPrint(BCLog::BENCHMARK, "        - deterministicMNManager: %.2fms [%.2fs]\n", 0.001 * (nTime4 - nTime3), nTimeDMN * 0.000001);
+
+        if (fCheckCbTxMerleRoots && !CheckCbTxMerkleRoots(block, pindex, *m_quorum_block_processor, state, view)) {
+            // pass the state returned by the function above
+            return false;
+        }
+
+        int64_t nTime5 = GetTimeMicros();
+        nTimeMerkle += nTime5 - nTime4;
+        LogPrint(BCLog::BENCHMARK, "        - CheckCbTxMerkleRoots: %.2fms [%.2fs]\n", 0.001 * (nTime5 - nTime4), nTimeMerkle * 0.000001);
+
+        if (fCheckCbTxMerleRoots && !CheckCbTxBestChainlock(block, pindex, *m_clhandler, state)) {
+            // pass the state returned by the function above
+            return false;
+        }
+
+        int64_t nTime6 = GetTimeMicros();
+        nTimeCbTxCL += nTime6 - nTime5;
+        LogPrint(BCLog::BENCHMARK, "        - CheckCbTxBestChainlock: %.2fms [%.2fs]\n", 0.001 * (nTime6 - nTime5), nTimeCbTxCL * 0.000001);
+
+        if (!m_mnhfManager.ProcessBlock(block, pindex, fJustCheck, state)) {
+            // pass the state returned by the function above
+            return false;
+        }
+
+        int64_t nTime7 = GetTimeMicros();
+        nTimeMnehf += nTime7 - nTime6;
+        LogPrint(BCLog::BENCHMARK, "        - mnhfManager: %.2fms [%.2fs]\n", 0.001 * (nTime7 - nTime6), nTimeMnehf * 0.000001);
+
+        if (Params().GetConsensus().V19Height == pindex->nHeight + 1) {
+            // NOTE: The block next to the activation is the one that is using new rules.
+            // V19 activated just activated, so we must switch to the new rules here.
+            bls::bls_legacy_scheme.store(false);
+            LogPrintf("%s: bls_legacy_scheme=%d\n", __func__, bls::bls_legacy_scheme.load());
+        }
+    } catch (const std::exception& e) {
+        LogPrintf("%s -- failed: %s\n", __func__, e.what());
+        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "failed-procspectxsinblock");
+    }
+
+    return true;
+}
+
+bool CChainState::UndoSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, std::optional<MNListUpdates>& updatesRet)
+{
+    AssertLockHeld(cs_main);
+
+    auto bls_legacy_scheme = bls::bls_legacy_scheme.load();
+
+    try {
+        if (Params().GetConsensus().V19Height == pindex->nHeight + 1) {
+            // NOTE: The block next to the activation is the one that is using new rules.
+            // Removing the activation block here, so we must switch back to the old rules.
+            bls::bls_legacy_scheme.store(true);
+            LogPrintf("%s: bls_legacy_scheme=%d\n", __func__, bls::bls_legacy_scheme.load());
+        }
+
+        for (int i = (int)block.vtx.size() - 1; i >= 0; --i) {
+            const CTransaction& tx = *block.vtx[i];
+            if (!UndoSpecialTx(tx, pindex)) {
+                return false;
+            }
+        }
+
+        if (!m_mnhfManager.UndoBlock(block, pindex)) {
+            return false;
+        }
+
+        if (!deterministicMNManager->UndoBlock(pindex, updatesRet)) {
+            return false;
+        }
+
+        if (!m_quorum_block_processor->UndoBlock(block, pindex)) {
+            return false;
+        }
+    } catch (const std::exception& e) {
+        bls::bls_legacy_scheme.store(bls_legacy_scheme);
+        LogPrintf("%s: bls_legacy_scheme=%d\n", __func__, bls::bls_legacy_scheme.load());
+        return error(strprintf("%s -- failed: %s\n", __func__, e.what()).c_str());
+    }
+
+    return true;
+}
+
+bool CChainState::CheckCreditPoolDiffForBlock(const CBlock& block, const CBlockIndex* pindex,
+                                const CAmount blockSubsidy, BlockValidationState& state)
+{
+    try {
+        if (!DeploymentActiveAt(*pindex, m_params.GetConsensus(), Consensus::DEPLOYMENT_V20)) return true;
+
+        auto creditPoolDiff = GetCreditPoolDiffForBlock(block, pindex->pprev, m_params.GetConsensus(), blockSubsidy, state);
+        if (!creditPoolDiff.has_value()) return false;
+
+        // If we get there we have v20 activated and credit pool amount must be included in block CbTx
+        const auto& tx = *block.vtx[0];
+        assert(tx.IsCoinBase());
+        assert(tx.nVersion == 3);
+        assert(tx.nType == TRANSACTION_COINBASE);
+
+        const auto opt_cbTx = GetTxPayload<CCbTx>(tx);
+        if (!opt_cbTx) {
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-payload");
+        }
+        CAmount target_balance{opt_cbTx->creditPoolBalance};
+        // But it maybe not included yet in previous block yet; in this case value must be 0
+        CAmount locked_calculated{creditPoolDiff->GetTotalLocked()};
+        if (target_balance != locked_calculated) {
+            LogPrintf("%s: mismatched locked amount in CbTx: %lld against re-calculated: %lld\n", __func__, target_balance, locked_calculated);
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-assetlocked-amount");
+        }
+
+    } catch (const std::exception& e) {
+        LogPrintf("%s -- failed: %s\n", __func__, e.what());
+        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "failed-checkcreditpooldiff");
+    }
+
+    return true;
+}
+
+[[nodiscard]] static bool GetBlockTxOuts(const CBlockIndex* const pindexPrev, const CAmount blockSubsidy, const CAmount feeReward, std::vector<CTxOut>& voutMasternodePaymentsRet)
+{
+    voutMasternodePaymentsRet.clear();
+
+    const int nBlockHeight = pindexPrev  == nullptr ? 0 : pindexPrev->nHeight + 1;
+    const Consensus::Params& consensusParams = Params().GetConsensus();
+
+    bool fV20Active = DeploymentActiveAfter(pindexPrev, consensusParams, Consensus::DEPLOYMENT_V20);
+    CAmount masternodeReward = GetMasternodePayment(nBlockHeight, blockSubsidy + feeReward, fV20Active);
+
+    if (DeploymentActiveAfter(pindexPrev, consensusParams, Consensus::DEPLOYMENT_MN_RR)) {
+        CAmount masternodeSubsidyReward = GetMasternodePayment(nBlockHeight, blockSubsidy, fV20Active);
+        const CAmount platformReward = PlatformShare(masternodeSubsidyReward);
+        masternodeReward -= platformReward;
+
+        assert(MoneyRange(masternodeReward));
+
+        LogPrint(BCLog::MNPAYMENTS, "CMasternodePayments::%s -- MN reward %lld reallocated to credit pool\n", __func__, platformReward);
+        voutMasternodePaymentsRet.emplace_back(platformReward, CScript() << OP_RETURN);
+    }
+
+    auto dmnPayee = deterministicMNManager->GetListForBlock(pindexPrev).GetMNPayee(pindexPrev);
+    if (!dmnPayee) {
+        return false;
+    }
+
+    CAmount operatorReward = 0;
+
+    if (dmnPayee->nOperatorReward != 0 && dmnPayee->pdmnState->scriptOperatorPayout != CScript()) {
+        // This calculation might eventually turn out to result in 0 even if an operator reward percentage is given.
+        // This will however only happen in a few years when the block rewards drops very low.
+        operatorReward = (masternodeReward * dmnPayee->nOperatorReward) / 10000;
+        masternodeReward -= operatorReward;
+    }
+
+    if (masternodeReward > 0) {
+        voutMasternodePaymentsRet.emplace_back(masternodeReward, dmnPayee->pdmnState->scriptPayout);
+    }
+    if (operatorReward > 0) {
+        voutMasternodePaymentsRet.emplace_back(operatorReward, dmnPayee->pdmnState->scriptOperatorPayout);
+    }
+
+    return true;
+}
+
+
+/**
+*   GetMasternodeTxOuts
+*
+*   Get masternode payment tx outputs
+*/
+[[nodiscard]] static bool GetMasternodeTxOuts(const CBlockIndex* const pindexPrev, const CAmount blockSubsidy, const CAmount feeReward, std::vector<CTxOut>& voutMasternodePaymentsRet)
+{
+    // make sure it's not filled yet
+    voutMasternodePaymentsRet.clear();
+
+    if(!GetBlockTxOuts(pindexPrev, blockSubsidy, feeReward, voutMasternodePaymentsRet)) {
+        LogPrintf("MasternodePayments::%s -- no payee (deterministic masternode list empty)\n", __func__);
+        return false;
+    }
+
+    for (const auto& txout : voutMasternodePaymentsRet) {
+        CTxDestination dest;
+        ExtractDestination(txout.scriptPubKey, dest);
+
+        LogPrintf("MasternodePayments::%s -- Masternode payment %lld to %s\n", __func__, txout.nValue, EncodeDestination(dest));
+    }
+
+    return true;
+}
+
+[[nodiscard]] static bool IsTransactionValid(const CTransaction& txNew, const CBlockIndex* const pindexPrev, const CAmount blockSubsidy, const CAmount feeReward)
+{
+    const int nBlockHeight = pindexPrev  == nullptr ? 0 : pindexPrev->nHeight + 1;
+    if (!DeploymentDIP0003Enforced(nBlockHeight, Params().GetConsensus())) {
+        // can't verify historical blocks here
+        return true;
+    }
+
+    std::vector<CTxOut> voutMasternodePayments;
+    if (!GetBlockTxOuts(pindexPrev, blockSubsidy, feeReward, voutMasternodePayments)) {
+        LogPrintf("MasternodePayments::%s -- ERROR failed to get payees for block at height %s\n", __func__, nBlockHeight);
+        return true;
+    }
+
+    for (const auto& txout : voutMasternodePayments) {
+        bool found = ranges::any_of(txNew.vout, [&txout](const auto& txout2) {return txout == txout2;});
+        if (!found) {
+            CTxDestination dest;
+            if (!ExtractDestination(txout.scriptPubKey, dest))
+                assert(false);
+            LogPrintf("MasternodePayments::%s -- ERROR failed to find expected payee %s in block at height %s\n", __func__, EncodeDestination(dest), nBlockHeight);
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool IsOldBudgetBlockValueValid(const CMasternodeSync& mn_sync, const CBlock& block, const int nBlockHeight, const CAmount blockReward, std::string& strErrorRet) {
+    const Consensus::Params& consensusParams = Params().GetConsensus();
+    bool isBlockRewardValueMet = (block.vtx[0]->GetValueOut() <= blockReward);
+
+    if (nBlockHeight < consensusParams.nBudgetPaymentsStartBlock) {
+        strErrorRet = strprintf("Incorrect block %d, old budgets are not activated yet", nBlockHeight);
+        return false;
+    }
+
+    if (nBlockHeight >= consensusParams.nSuperblockStartBlock) {
+        strErrorRet = strprintf("Incorrect block %d, old budgets are no longer active", nBlockHeight);
+        return false;
+    }
+
+    // we are still using budgets, but we have no data about them anymore,
+    // all we know is predefined budget cycle and window
+
+    int nOffset = nBlockHeight % consensusParams.nBudgetPaymentsCycleBlocks;
+    if(nOffset < consensusParams.nBudgetPaymentsWindowBlocks) {
+        // NOTE: old budget system is disabled since 12.1
+        if(mn_sync.IsSynced()) {
+            // no old budget blocks should be accepted here on mainnet,
+            // testnet/devnet/regtest should produce regular blocks only
+            LogPrint(BCLog::GOBJECT, "%s -- WARNING: Client synced but old budget system is disabled, checking block value against block reward\n", __func__);
+            if(!isBlockRewardValueMet) {
+                strErrorRet = strprintf("coinbase pays too much at height %d (actual=%d vs limit=%d), exceeded block reward, old budgets are disabled",
+                                        nBlockHeight, block.vtx[0]->GetValueOut(), blockReward);
+            }
+            return isBlockRewardValueMet;
+        }
+        // when not synced, rely on online nodes (all networks)
+        LogPrint(BCLog::GOBJECT, "%s -- WARNING: Skipping old budget block value checks, accepting block\n", __func__);
+        return true;
+    }
+    if(!isBlockRewardValueMet) {
+        strErrorRet = strprintf("coinbase pays too much at height %d (actual=%d vs limit=%d), exceeded block reward, block is not in old budget cycle window",
+                                nBlockHeight, block.vtx[0]->GetValueOut(), blockReward);
+    }
+    return isBlockRewardValueMet;
+}
+
+/**
+* IsBlockValueValid
+*
+*   Determine if coinbase outgoing created money is the correct value
+*
+*   Why is this needed?
+*   - In Dash some blocks are superblocks, which output much higher amounts of coins
+*   - Other blocks are 10% lower in outgoing value, so in total, no extra coins are created
+*   - When non-superblocks are detected, the normal schedule should be maintained
+*/
+bool CChainState::IsBlockValueValid(
+                       const CMasternodeSync& mn_sync, const CBlock& block, const int nBlockHeight, const CAmount blockReward, std::string& strErrorRet)
+{
+    const Consensus::Params& consensusParams = Params().GetConsensus();
+    bool isBlockRewardValueMet = (block.vtx[0]->GetValueOut() <= blockReward);
+
+    strErrorRet = "";
+
+    if (nBlockHeight < consensusParams.nBudgetPaymentsStartBlock) {
+        // old budget system is not activated yet, just make sure we do not exceed the regular block reward
+        if(!isBlockRewardValueMet) {
+            strErrorRet = strprintf("coinbase pays too much at height %d (actual=%d vs limit=%d), exceeded block reward, old budgets are not activated yet",
+                                    nBlockHeight, block.vtx[0]->GetValueOut(), blockReward);
+        }
+        return isBlockRewardValueMet;
+    } else if (nBlockHeight < consensusParams.nSuperblockStartBlock) {
+        // superblocks are not enabled yet, check if we can pass old budget rules
+        return IsOldBudgetBlockValueValid(mn_sync, block, nBlockHeight, blockReward, strErrorRet);
+    }
+
+    LogPrint(BCLog::MNPAYMENTS, "block.vtx[0]->GetValueOut() %lld <= blockReward %lld\n", block.vtx[0]->GetValueOut(), blockReward);
+
+    CAmount nSuperblockMaxValue =  blockReward + CSuperblock::GetPaymentsLimit(nBlockHeight);
+    bool isSuperblockMaxValueMet = (block.vtx[0]->GetValueOut() <= nSuperblockMaxValue);
+
+    LogPrint(BCLog::GOBJECT, "block.vtx[0]->GetValueOut() %lld <= nSuperblockMaxValue %lld\n", block.vtx[0]->GetValueOut(), nSuperblockMaxValue);
+
+    if (!CSuperblock::IsValidBlockHeight(nBlockHeight)) {
+        // can't possibly be a superblock, so lets just check for block reward limits
+        if (!isBlockRewardValueMet) {
+            strErrorRet = strprintf("coinbase pays too much at height %d (actual=%d vs limit=%d), exceeded block reward, only regular blocks are allowed at this height",
+                                    nBlockHeight, block.vtx[0]->GetValueOut(), blockReward);
+        }
+        return isBlockRewardValueMet;
+    }
+
+    // bail out in case superblock limits were exceeded
+    if (!isSuperblockMaxValueMet) {
+        strErrorRet = strprintf("coinbase pays too much at height %d (actual=%d vs limit=%d), exceeded superblock max value",
+                                nBlockHeight, block.vtx[0]->GetValueOut(), nSuperblockMaxValue);
+        return false;
+    }
+
+    if(!mn_sync.IsSynced() || fDisableGovernance) {
+        LogPrint(BCLog::MNPAYMENTS, "%s -- WARNING: Not enough data, checked superblock max bounds only\n", __func__);
+        // not enough data for full checks but at least we know that the superblock limits were honored.
+        // We rely on the network to have followed the correct chain in this case
+        return true;
+    }
+
+    // we are synced and possibly on a superblock now
+
+    if (!m_govman.AreSuperblocksEnabled()) {
+        // should NOT allow superblocks at all, when superblocks are disabled
+        // revert to block reward limits in this case
+        LogPrint(BCLog::GOBJECT, "%s -- Superblocks are disabled, no superblocks allowed\n", __func__);
+        if(!isBlockRewardValueMet) {
+            strErrorRet = strprintf("coinbase pays too much at height %d (actual=%d vs limit=%d), exceeded block reward, superblocks are disabled",
+                                    nBlockHeight, block.vtx[0]->GetValueOut(), blockReward);
+        }
+        return isBlockRewardValueMet;
+    }
+
+    if (!CSuperblockManager::IsSuperblockTriggered(m_govman, nBlockHeight)) {
+        // we are on a valid superblock height but a superblock was not triggered
+        // revert to block reward limits in this case
+        if(!isBlockRewardValueMet) {
+            strErrorRet = strprintf("coinbase pays too much at height %d (actual=%d vs limit=%d), exceeded block reward, no triggered superblock detected",
+                                    nBlockHeight, block.vtx[0]->GetValueOut(), blockReward);
+        }
+        return isBlockRewardValueMet;
+    }
+
+    // this actually also checks for correct payees and not only amount
+    if (!CSuperblockManager::IsValid(m_govman, *block.vtx[0], nBlockHeight, blockReward)) {
+        // triggered but invalid? that's weird
+        LogPrintf("%s -- ERROR: Invalid superblock detected at height %d: %s", __func__, nBlockHeight, block.vtx[0]->ToString()); /* Continued */
+        // should NOT allow invalid superblocks, when superblocks are enabled
+        strErrorRet = strprintf("invalid superblock detected at height %d", nBlockHeight);
+        return false;
+    }
+
+    // we got a valid superblock
+    return true;
+}
+
+bool CChainState::IsBlockPayeeValid(const CMasternodeSync& mn_sync,
+                       const CTransaction& txNew, const CBlockIndex* const pindexPrev, const CAmount blockSubsidy, const CAmount feeReward)
+{
+    const int nBlockHeight = pindexPrev  == nullptr ? 0 : pindexPrev->nHeight + 1;
+
+    // Check for correct masternode payment
+    if (IsTransactionValid(txNew, pindexPrev, blockSubsidy, feeReward)) {
+        LogPrint(BCLog::MNPAYMENTS, "%s -- Valid masternode payment at height %d: %s", __func__, nBlockHeight, txNew.ToString()); /* Continued */
+    } else {
+        LogPrintf("%s -- ERROR: Invalid masternode payment detected at height %d: %s", __func__, nBlockHeight, txNew.ToString()); /* Continued */
+        return false;
+    }
+
+    if (!mn_sync.IsSynced() || fDisableGovernance) {
+        // governance data is either incomplete or non-existent
+        LogPrint(BCLog::MNPAYMENTS, "%s -- WARNING: Not enough data, skipping superblock payee checks\n", __func__);
+        return true;  // not an error
+    }
+
+    if (nBlockHeight < Params().GetConsensus().nSuperblockStartBlock) {
+        // We are still using budgets, but we have no data about them anymore,
+        // we can only check masternode payments.
+        // NOTE: old budget system is disabled since 12.1 and we should never enter this branch
+        // anymore when sync is finished (on mainnet). We have no old budget data but these blocks
+        // have tons of confirmations and can be safely accepted without payee verification
+        LogPrint(BCLog::GOBJECT, "%s -- WARNING: Client synced but old budget system is disabled, accepting any payee\n", __func__);
+        return true; // not an error
+    }
+
+    // superblocks started
+
+    if (m_govman.AreSuperblocksEnabled()) {
+        if (CSuperblockManager::IsSuperblockTriggered(m_govman, nBlockHeight)) {
+            if (CSuperblockManager::IsValid(m_govman, txNew, nBlockHeight, blockSubsidy + feeReward)) {
+                LogPrint(BCLog::GOBJECT, "%s -- Valid superblock at height %d: %s", __func__, nBlockHeight, txNew.ToString()); /* Continued */
+                // continue validation, should also pay MN
+            } else {
+                LogPrintf("%s -- ERROR: Invalid superblock detected at height %d: %s", __func__, nBlockHeight, txNew.ToString()); /* Continued */
+                // should NOT allow such superblocks, when superblocks are enabled
+                return false;
+            }
+        } else {
+            LogPrint(BCLog::GOBJECT, "%s -- No triggered superblock detected at height %d\n", __func__, nBlockHeight);
+        }
+    } else {
+        // should NOT allow superblocks at all, when superblocks are disabled
+        LogPrint(BCLog::GOBJECT, "%s -- Superblocks are disabled, no superblocks allowed\n", __func__);
+    }
+
+    return true;
+}
+
+void CChainState::FillBlockPayments(CMutableTransaction& txNew, const CBlockIndex* const pindexPrev, const CAmount blockSubsidy, const CAmount feeReward,
+                       std::vector<CTxOut>& voutMasternodePaymentsRet, std::vector<CTxOut>& voutSuperblockPaymentsRet)
+{
+    int nBlockHeight = pindexPrev == nullptr ? 0 : pindexPrev->nHeight + 1;
+
+    // only create superblocks if spork is enabled AND if superblock is actually triggered
+    // (height should be validated inside)
+    if(m_govman.AreSuperblocksEnabled() && CSuperblockManager::IsSuperblockTriggered(m_govman, nBlockHeight)) {
+        LogPrint(BCLog::GOBJECT, "%s -- triggered superblock creation at height %d\n", __func__, nBlockHeight);
+        CSuperblockManager::GetSuperblockPayments(m_govman, nBlockHeight, voutSuperblockPaymentsRet);
+    }
+
+    if (!GetMasternodeTxOuts(pindexPrev, blockSubsidy, feeReward, voutMasternodePaymentsRet)) {
+        LogPrint(BCLog::MNPAYMENTS, "%s -- no masternode to pay (MN list probably empty)\n", __func__);
+    }
+
+    txNew.vout.insert(txNew.vout.end(), voutMasternodePaymentsRet.begin(), voutMasternodePaymentsRet.end());
+    txNew.vout.insert(txNew.vout.end(), voutSuperblockPaymentsRet.begin(), voutSuperblockPaymentsRet.end());
+
+    std::string voutMasternodeStr;
+    for (const auto& txout : voutMasternodePaymentsRet) {
+        // subtract MN payment from miner reward
+        txNew.vout[0].nValue -= txout.nValue;
+        if (!voutMasternodeStr.empty())
+            voutMasternodeStr += ",";
+        voutMasternodeStr += txout.ToString();
+    }
+
+    LogPrint(BCLog::MNPAYMENTS, "%s -- nBlockHeight %d blockReward %lld voutMasternodePaymentsRet \"%s\" txNew %s", __func__, /* Continued */
+                            nBlockHeight, blockSubsidy + feeReward, voutMasternodeStr, txNew.ToString());
+}
+
+CAmount PlatformShare(const CAmount reward)
+{
+    const CAmount platformReward = reward * 375 / 1000;
+    bool ok = MoneyRange(platformReward);
+    assert(ok);
+    return platformReward;
+}
+

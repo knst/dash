@@ -27,7 +27,6 @@
 #include <llmq/chainlocks.h>
 #include <llmq/context.h>
 #include <llmq/instantsend.h>
-#include <masternode/payments.h>
 #include <util/enumerate.h>
 #include <util/irange.h>
 
@@ -291,7 +290,7 @@ BOOST_FIXTURE_TEST_CASE(block_reward_reallocation, TestChainBRRBeforeActivationS
         const auto pblocktemplate = BlockAssembler(*m_node.sporkman, *m_node.govman, *m_node.llmq_ctx, *m_node.evodb, m_node.chainman->ActiveChainstate(), *m_node.mempool, Params()).CreateNewBlock(coinbasePubKey);
 
         if (isMNRewardReallocated) {
-            const CAmount platform_payment = MasternodePayments::PlatformShare(masternode_payment);
+            const CAmount platform_payment = PlatformShare(masternode_payment);
             masternode_payment -= platform_payment;
         }
         size_t payment_index = isMNRewardReallocated ? 1 : 0;
@@ -308,7 +307,7 @@ BOOST_FIXTURE_TEST_CASE(block_reward_reallocation, TestChainBRRBeforeActivationS
         const CAmount block_subsidy = GetBlockSubsidyInner(tip->nBits, tip->nHeight, consensus_params, isV20Active);
         const CAmount block_subsidy_sb = GetSuperblockSubsidyInner(tip->nBits, tip->nHeight, consensus_params, isV20Active);
         CAmount masternode_payment = GetMasternodePayment(tip->nHeight, block_subsidy, isV20Active);
-        const CAmount platform_payment = MasternodePayments::PlatformShare(masternode_payment);
+        const CAmount platform_payment = PlatformShare(masternode_payment);
         masternode_payment -= platform_payment;
         const auto pblocktemplate = BlockAssembler(*m_node.sporkman, *m_node.govman, *m_node.llmq_ctx, *m_node.evodb, m_node.chainman->ActiveChainstate(), *m_node.mempool, Params()).CreateNewBlock(coinbasePubKey);
 
@@ -319,7 +318,7 @@ BOOST_FIXTURE_TEST_CASE(block_reward_reallocation, TestChainBRRBeforeActivationS
         CAmount expected_block_reward = block_subsidy_potential - block_subsidy_potential / 5;
         // Since MNRewardReallocation, MN reward share is 75% of the block reward
         CAmount expected_masternode_reward = expected_block_reward * 3 / 4;
-        CAmount expected_mn_platform_payment = MasternodePayments::PlatformShare(expected_masternode_reward);
+        CAmount expected_mn_platform_payment = PlatformShare(expected_masternode_reward);
         CAmount expected_mn_core_payment = expected_masternode_reward - expected_mn_platform_payment;
 
         BOOST_CHECK_EQUAL(pblocktemplate->block.vtx[0]->GetValueOut(), expected_block_reward);
