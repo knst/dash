@@ -471,7 +471,7 @@ static UniValue masternode_payments(const JSONRPCRequest& request, const Chainst
         std::vector<CTxOut> voutMasternodePayments, voutDummy;
         CMutableTransaction dummyTx;
         CAmount blockSubsidy = GetBlockSubsidy(pindex, Params().GetConsensus());
-        node.chain_helper->FillBlockPayments(dummyTx, pindex->pprev, blockSubsidy, nBlockFees, voutMasternodePayments, voutDummy);
+        node.chain_helper->mnPayments->FillBlockPayments(dummyTx, pindex->pprev, blockSubsidy, nBlockFees, voutMasternodePayments, voutDummy);
 
         UniValue blockObj(UniValue::VOBJ);
         CAmount payedPerBlock{0};

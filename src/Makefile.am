@@ -424,6 +424,7 @@ libbitcoin_server_a_SOURCES = \
   evo/assetlocktx.cpp \
   evo/cbtx.cpp \
   evo/creditpool.cpp \
+  evo/chainhelper.cpp \
   evo/deterministicmns.cpp \
   evo/dmnstate.cpp \
   evo/evodb.cpp \

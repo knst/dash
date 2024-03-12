@@ -17,7 +17,6 @@
 #include <index/txindex.h>
 #include <init.h>
 #include <interfaces/chain.h>
-#include <masternode/meta.h>
 #include <netfulfilledman.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
@@ -28,6 +27,7 @@
 #include <llmq/signing.h>
 #include <llmq/signing_shares.h>
 #include <llmq/snapshot.h>
+#include <masternode/meta.h>
 #include <masternode/sync.h>
 #include <miner.h>
 #include <net.h>
