@@ -23,4 +23,5 @@ export GOAL="install"
 export BITCOIN_CONFIG="--enable-wallet --with-sanitizers=memory --with-asm=no CC=clang-16 CXX=clang++-16"
 export USE_MEMORY_SANITIZER="true"
 export RUN_FUNCTIONAL_TESTS="false"
+export RUN_SYMBOL_TESTS=false
 export CCACHE_SIZE=250M
