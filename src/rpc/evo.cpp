@@ -13,7 +13,6 @@
 #include <evo/providertx.h>
 #include <evo/simplifiedmns.h>
 #include <evo/specialtx.h>
-#include <evo/specialtxman.h>
 #include <index/txindex.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/context.h>
@@ -330,7 +329,7 @@ static std::string SignAndSendSpecialTx(const JSONRPCRequest& request, const Cha
     LOCK(cs_main);
 
     TxValidationState state;
-    if (!CheckSpecialTx(CTransaction(tx), chainman.ActiveChain().Tip(), chainman.ActiveChainstate().CoinsTip(), true, state)) {
+    if (!chainman.ActiveChainstate().CheckSpecialTx(CTransaction(tx), chainman.ActiveChain().Tip(), chainman.ActiveChainstate().CoinsTip(), true, state)) {
         throw std::runtime_error(state.ToString());
     }
     } // cs_main

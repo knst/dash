@@ -70,6 +70,7 @@ struct ChainTxData;
 
 struct DisconnectedBlockTransactions;
 struct LockPoints;
+struct MNListUpdates;
 struct AssumeutxoData;
 
 /** Default for -minrelaytxfee, minimum relay fee for transactions */
@@ -868,12 +869,25 @@ public:
     /** Return list of MN EHF signals for current Tip() */
     std::unordered_map<uint8_t, int> GetMNHFSignalsStage(const CBlockIndex* pindex);
 
+    //! Masternode payments
     bool IsBlockValueValid(const CMasternodeSync& mn_sync,
                            const CBlock& block, const int nBlockHeight, const CAmount blockReward, std::string& strErrorRet);
     bool IsBlockPayeeValid(const CMasternodeSync& mn_sync,
                            const CTransaction& txNew, const CBlockIndex* const pindexPrev, const CAmount blockSubsidy, const CAmount feeReward);
     void FillBlockPayments(CMutableTransaction& txNew, const CBlockIndex* const pindexPrev, const CAmount blockSubsidy, const CAmount feeReward,
                            std::vector<CTxOut>& voutMasternodePaymentsRet, std::vector<CTxOut>& voutSuperblockPaymentsRet);
+
+    //! Special Txs processing
+    bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, bool check_sigs,
+                        TxValidationState& state) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+    bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CMNHFManager& mnhfManager,
+                                  llmq::CQuorumBlockProcessor& quorum_block_processor, const llmq::CChainLocksHandler& chainlock_handler,
+                                  const Consensus::Params& consensusParams, const CCoinsViewCache& view, bool fJustCheck, bool fCheckCbTxMerleRoots,
+                                  BlockValidationState& state, std::optional<MNListUpdates>& updatesRet) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+    bool UndoSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CMNHFManager& mnhfManager,
+                               llmq::CQuorumBlockProcessor& quorum_block_processor, std::optional<MNListUpdates>& updatesRet) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+    bool CheckCreditPoolDiffForBlock(const CBlock& block, const CBlockIndex* pindex, const Consensus::Params& consensusParams,
+                                    const CAmount blockSubsidy, BlockValidationState& state);
 private:
     bool ActivateBestChainStep(BlockValidationState& state, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock>& pblock, bool& fInvalidFound, ConnectTrace& connectTrace) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);
     bool ConnectTip(BlockValidationState& state, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock>& pblock, ConnectTrace& connectTrace, DisconnectedBlockTransactions& disconnectpool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);
