@@ -14,14 +14,14 @@
 #include <deploymentstatus.h>
 #include <logging.h>
 #include <node/blockstorage.h>
-#include <validation.h>
 
 #include <algorithm>
 #include <exception>
 #include <memory>
 #include <stack>
 
-// Forward declaration to prevent a new circular dependencies through masternode/payments.h
+// Forward declaration to prevent a circular dependencies through validation.h
+CAmount GetMasternodePayment(int nHeight, CAmount blockValue, bool fV20Active);
 namespace MasternodePayments {
 CAmount PlatformShare(const CAmount masternodeReward);
 } // namespace MasternodePayments
