@@ -878,15 +878,14 @@ public:
                            std::vector<CTxOut>& voutMasternodePaymentsRet, std::vector<CTxOut>& voutSuperblockPaymentsRet);
 
     //! Special Txs processing
-    bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, bool check_sigs,
+    bool CheckSpecialTx(const CTransaction& tx, bool check_sigs,
                         TxValidationState& state) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
-    bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CMNHFManager& mnhfManager,
-                                  llmq::CQuorumBlockProcessor& quorum_block_processor, const llmq::CChainLocksHandler& chainlock_handler,
-                                  const Consensus::Params& consensusParams, const CCoinsViewCache& view, bool fJustCheck, bool fCheckCbTxMerleRoots,
+    bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view,
+                                  bool fJustCheck, bool fCheckCbTxMerleRoots,
                                   BlockValidationState& state, std::optional<MNListUpdates>& updatesRet) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
-    bool UndoSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CMNHFManager& mnhfManager,
-                               llmq::CQuorumBlockProcessor& quorum_block_processor, std::optional<MNListUpdates>& updatesRet) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
-    bool CheckCreditPoolDiffForBlock(const CBlock& block, const CBlockIndex* pindex, const Consensus::Params& consensusParams,
+    bool UndoSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex,
+                               std::optional<MNListUpdates>& updatesRet) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+    bool CheckCreditPoolDiffForBlock(const CBlock& block, const CBlockIndex* pindex,
                                     const CAmount blockSubsidy, BlockValidationState& state);
 private:
     bool ActivateBestChainStep(BlockValidationState& state, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock>& pblock, bool& fInvalidFound, ConnectTrace& connectTrace) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);

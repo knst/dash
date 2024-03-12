@@ -18,14 +18,13 @@
 #include <llmq/commitment.h>
 #include <primitives/block.h>
 
-static bool CheckSpecialTxInner(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, const std::optional<CRangesSet>& indexes, bool check_sigs, TxValidationState& state)
+static bool CheckSpecialTxInner(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, const Consensus::Params& consensusParams, const std::optional<CRangesSet>& indexes, bool check_sigs, TxValidationState& state)
 {
     AssertLockHeld(cs_main);
 
     if (tx.nVersion != 3 || tx.nType == TRANSACTION_NORMAL)
         return true;
 
-    const auto& consensusParams = Params().GetConsensus();
     if (!DeploymentActiveAfter(pindexPrev, consensusParams, Consensus::DEPLOYMENT_DIP0003)) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-tx-type");
     }
@@ -72,10 +71,12 @@ static bool CheckSpecialTxInner(const CTransaction& tx, const CBlockIndex* pinde
     return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-tx-type-check");
 }
 
-bool CChainState::CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, bool check_sigs, TxValidationState& state)
+bool CChainState::CheckSpecialTx(const CTransaction& tx, bool check_sigs, TxValidationState& state)
 {
     AssertLockHeld(cs_main);
-    return CheckSpecialTxInner(tx, pindexPrev, view, std::nullopt, check_sigs, state);
+    const CBlockIndex* const pindexPrev{m_chain.Tip()};
+    CCoinsViewCache view(&CoinsTip());
+    return CheckSpecialTxInner(tx, pindexPrev, view, m_params.GetConsensus(), std::nullopt, check_sigs, state);
 }
 
 static bool ProcessSpecialTx(const CTransaction& tx, const CBlockIndex* pindex, TxValidationState& state)
@@ -130,9 +131,8 @@ static bool UndoSpecialTx(const CTransaction& tx, const CBlockIndex* pindex)
     return false;
 }
 
-bool CChainState::ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CMNHFManager& mnhfManager,
-                              llmq::CQuorumBlockProcessor& quorum_block_processor, const llmq::CChainLocksHandler& chainlock_handler,
-                              const Consensus::Params& consensusParams, const CCoinsViewCache& view, bool fJustCheck, bool fCheckCbTxMerleRoots,
+bool CChainState::ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view,
+                              bool fJustCheck, bool fCheckCbTxMerleRoots,
                               BlockValidationState& state, std::optional<MNListUpdates>& updatesRet)
 {
     AssertLockHeld(cs_main);
@@ -147,8 +147,8 @@ bool CChainState::ProcessSpecialTxsInBlock(const CBlock& block, const CBlockInde
 
         int64_t nTime1 = GetTimeMicros();
 
-        const CCreditPool creditPool = creditPoolManager->GetCreditPool(pindex->pprev, consensusParams);
-        if (DeploymentActiveAt(*pindex, consensusParams, Consensus::DEPLOYMENT_V20)) {
+        const CCreditPool creditPool = creditPoolManager->GetCreditPool(pindex->pprev, m_params.GetConsensus());
+        if (DeploymentActiveAt(*pindex, m_params.GetConsensus(), Consensus::DEPLOYMENT_V20)) {
             LogPrint(BCLog::CREDITPOOL, "%s: CCreditPool is %s\n", __func__, creditPool.ToString());
         }
 
@@ -156,7 +156,7 @@ bool CChainState::ProcessSpecialTxsInBlock(const CBlock& block, const CBlockInde
             TxValidationState tx_state;
             // At this moment CheckSpecialTx() and ProcessSpecialTx() may fail by 2 possible ways:
             // consensus failures and "TX_BAD_SPECIAL"
-            if (!CheckSpecialTxInner(*ptr_tx, pindex->pprev, view, creditPool.indexes, fCheckCbTxMerleRoots, tx_state)) {
+            if (!CheckSpecialTxInner(*ptr_tx, pindex->pprev, view, m_params.GetConsensus(), creditPool.indexes, fCheckCbTxMerleRoots, tx_state)) {
                 assert(tx_state.GetResult() == TxValidationResult::TX_CONSENSUS || tx_state.GetResult() == TxValidationResult::TX_BAD_SPECIAL);
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, tx_state.GetRejectReason(),
                                  strprintf("Special Transaction check failed (tx hash %s) %s", ptr_tx->GetHash().ToString(), tx_state.GetDebugMessage()));
@@ -172,7 +172,7 @@ bool CChainState::ProcessSpecialTxsInBlock(const CBlock& block, const CBlockInde
         nTimeLoop += nTime2 - nTime1;
         LogPrint(BCLog::BENCHMARK, "        - Loop: %.2fms [%.2fs]\n", 0.001 * (nTime2 - nTime1), nTimeLoop * 0.000001);
 
-        if (!quorum_block_processor.ProcessBlock(block, pindex, state, fJustCheck, fCheckCbTxMerleRoots)) {
+        if (!m_quorum_block_processor->ProcessBlock(block, pindex, state, fJustCheck, fCheckCbTxMerleRoots)) {
             // pass the state returned by the function above
             return false;
         }
@@ -190,7 +190,7 @@ bool CChainState::ProcessSpecialTxsInBlock(const CBlock& block, const CBlockInde
         nTimeDMN += nTime4 - nTime3;
         LogPrint(BCLog::BENCHMARK, "        - deterministicMNManager: %.2fms [%.2fs]\n", 0.001 * (nTime4 - nTime3), nTimeDMN * 0.000001);
 
-        if (fCheckCbTxMerleRoots && !CheckCbTxMerkleRoots(block, pindex, quorum_block_processor, state, view)) {
+        if (fCheckCbTxMerleRoots && !CheckCbTxMerkleRoots(block, pindex, *m_quorum_block_processor, state, view)) {
             // pass the state returned by the function above
             return false;
         }
@@ -199,7 +199,7 @@ bool CChainState::ProcessSpecialTxsInBlock(const CBlock& block, const CBlockInde
         nTimeMerkle += nTime5 - nTime4;
         LogPrint(BCLog::BENCHMARK, "        - CheckCbTxMerkleRoots: %.2fms [%.2fs]\n", 0.001 * (nTime5 - nTime4), nTimeMerkle * 0.000001);
 
-        if (fCheckCbTxMerleRoots && !CheckCbTxBestChainlock(block, pindex, chainlock_handler, state)) {
+        if (fCheckCbTxMerleRoots && !CheckCbTxBestChainlock(block, pindex, *m_clhandler, state)) {
             // pass the state returned by the function above
             return false;
         }
@@ -208,7 +208,7 @@ bool CChainState::ProcessSpecialTxsInBlock(const CBlock& block, const CBlockInde
         nTimeCbTxCL += nTime6 - nTime5;
         LogPrint(BCLog::BENCHMARK, "        - CheckCbTxBestChainlock: %.2fms [%.2fs]\n", 0.001 * (nTime6 - nTime5), nTimeCbTxCL * 0.000001);
 
-        if (!mnhfManager.ProcessBlock(block, pindex, fJustCheck, state)) {
+        if (!m_mnhfManager.ProcessBlock(block, pindex, fJustCheck, state)) {
             // pass the state returned by the function above
             return false;
         }
@@ -231,7 +231,7 @@ bool CChainState::ProcessSpecialTxsInBlock(const CBlock& block, const CBlockInde
     return true;
 }
 
-bool CChainState::UndoSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CMNHFManager& mnhfManager, llmq::CQuorumBlockProcessor& quorum_block_processor, std::optional<MNListUpdates>& updatesRet)
+bool CChainState::UndoSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, std::optional<MNListUpdates>& updatesRet)
 {
     AssertLockHeld(cs_main);
 
@@ -252,7 +252,7 @@ bool CChainState::UndoSpecialTxsInBlock(const CBlock& block, const CBlockIndex* 
             }
         }
 
-        if (!mnhfManager.UndoBlock(block, pindex)) {
+        if (!m_mnhfManager.UndoBlock(block, pindex)) {
             return false;
         }
 
@@ -260,7 +260,7 @@ bool CChainState::UndoSpecialTxsInBlock(const CBlock& block, const CBlockIndex* 
             return false;
         }
 
-        if (!quorum_block_processor.UndoBlock(block, pindex)) {
+        if (!m_quorum_block_processor->UndoBlock(block, pindex)) {
             return false;
         }
     } catch (const std::exception& e) {
@@ -272,13 +272,13 @@ bool CChainState::UndoSpecialTxsInBlock(const CBlock& block, const CBlockIndex* 
     return true;
 }
 
-bool CChainState::CheckCreditPoolDiffForBlock(const CBlock& block, const CBlockIndex* pindex, const Consensus::Params& consensusParams,
+bool CChainState::CheckCreditPoolDiffForBlock(const CBlock& block, const CBlockIndex* pindex,
                                 const CAmount blockSubsidy, BlockValidationState& state)
 {
     try {
-        if (!DeploymentActiveAt(*pindex, consensusParams, Consensus::DEPLOYMENT_V20)) return true;
+        if (!DeploymentActiveAt(*pindex, m_params.GetConsensus(), Consensus::DEPLOYMENT_V20)) return true;
 
-        auto creditPoolDiff = GetCreditPoolDiffForBlock(block, pindex->pprev, consensusParams, blockSubsidy, state);
+        auto creditPoolDiff = GetCreditPoolDiffForBlock(block, pindex->pprev, m_params.GetConsensus(), blockSubsidy, state);
         if (!creditPoolDiff.has_value()) return false;
 
         // If we get there we have v20 activated and credit pool amount must be included in block CbTx

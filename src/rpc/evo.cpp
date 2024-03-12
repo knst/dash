@@ -329,7 +329,7 @@ static std::string SignAndSendSpecialTx(const JSONRPCRequest& request, const Cha
     LOCK(cs_main);
 
     TxValidationState state;
-    if (!chainman.ActiveChainstate().CheckSpecialTx(CTransaction(tx), chainman.ActiveChain().Tip(), chainman.ActiveChainstate().CoinsTip(), true, state)) {
+    if (!chainman.ActiveChainstate().CheckSpecialTx(CTransaction(tx), true, state)) {
         throw std::runtime_error(state.ToString());
     }
     } // cs_main
