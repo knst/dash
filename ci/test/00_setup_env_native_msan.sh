@@ -7,9 +7,11 @@
 export LC_ALL=C.UTF-8
 
 #LIBCXX_DIR="${BASE_ROOT_DIR}/ci/scratch/msan/build/"
-export MSAN_FLAGS="-fsanitize=memory -fsanitize-memory-track-origins=2 -fno-omit-frame-pointer -g -O1 -fno-optimize-sibling-calls"
+#export MSAN_FLAGS="-fsanitize=memory -fsanitize-memory-track-origins=2 -fno-omit-frame-pointer -g -O1 -fno-optimize-sibling-calls"
+export MSAN_FLAGS="-fsanitize=memory"
 #LIBCXX_FLAGS="-nostdinc++ -stdlib=libc++ -L${LIBCXX_DIR}lib -lc++abi -I${LIBCXX_DIR}include -I${LIBCXX_DIR}include/c++/v1 -lpthread -Wl,-rpath,${LIBCXX_DIR}lib -Wno-unused-command-line-argument"
-LIBCXX_FLAGS="-nostdinc++ -stdlib=libc++  -lc++abi  -lpthread" # -Wl,-rpath,${LIBCXX_DIR}lib -Wno-unused-command-line-argument"
+#LIBCXX_FLAGS="-nostdinc++ -stdlib=libc++  -lc++abi  -lpthread" # -Wl,-rpath,${LIBCXX_DIR}lib -Wno-unused-command-line-argument"
+LIBCXX_FLAGS=""
 export MSAN_AND_LIBCXX_FLAGS="${MSAN_FLAGS} ${LIBCXX_FLAGS}"
 #export BDB_PREFIX="${BASE_ROOT_DIR}/db4"
 
@@ -19,8 +21,8 @@ export PACKAGES="clang-16 llvm-16 cmake"
 export GOAL="install"
 
 #export BITCOIN_CONFIG="--enable-wallet --with-sanitizers=memory --with-asm=no --prefix=${BASE_ROOT_DIR}/depends/x86_64-pc-linux-gnu/ CC=clang-16 CXX=clang++-16 CFLAGS='${MSAN_FLAGS}' CXXFLAGS='${MSAN_AND_LIBCXX_FLAGS}' BDB_LIBS='-L${BDB_PREFIX}/lib -ldb_cxx-4.8' BDB_CFLAGS='-I${BDB_PREFIX}/include'"
-#export BITCOIN_CONFIG="--enable-wallet --with-sanitizers=memory --with-asm=no CC=clang-16 CXX=clang++-16 CFLAGS='${MSAN_FLAGS}' CXXFLAGS='${MSAN_AND_LIBCXX_FLAGS}' "
-export BITCOIN_CONFIG="--enable-wallet --with-sanitizers=memory --with-asm=no CC=clang-16 CXX=clang++-16"
+export BITCOIN_CONFIG="--enable-wallet --with-sanitizers=memory --with-asm=no CC=clang-16 CXX=clang++-16 CFLAGS='${MSAN_FLAGS}' CXXFLAGS='${MSAN_AND_LIBCXX_FLAGS}' "
+#export BITCOIN_CONFIG="--enable-wallet --with-sanitizers=memory --with-asm=no CC=clang-16 CXX=clang++-16"
 export USE_MEMORY_SANITIZER="true"
 export RUN_FUNCTIONAL_TESTS="false"
 export RUN_SYMBOL_TESTS=false
