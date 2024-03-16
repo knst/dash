@@ -8,7 +8,6 @@
 
 #include <net.h>
 #include <sync.h>
-#include <txrequest.h>
 #include <validationinterface.h>
 
 #include <atomic>
