@@ -68,7 +68,7 @@ struct Initializer
 class Tester
 {
     //! TxRequestTracker object being tested.
-    TxRequestTracker m_tracker;
+    ObjRequestTracker m_tracker;
 
     //! States for txid/peer combinations in the naive data structure.
     enum class State {
@@ -94,7 +94,7 @@ class Tester
         uint64_t m_sequence;
         State m_state{State::NOTHING};
         bool m_preferred;
-        bool m_is_wtxid;
+        uint32_t m_type;
         uint64_t m_priority; //!< Precomputed priority.
     };
 
@@ -174,7 +174,7 @@ public:
         m_tracker.DisconnectedPeer(peer);
     }
 
-    void ForgetTxHash(int txhash)
+    void ForgetObjHash(int txhash)
     {
         // Apply to naive structure: all announcements for that txhash are wiped.
         for (int peer = 0; peer < MAX_PEERS; ++peer) {
@@ -183,10 +183,10 @@ public:
         Cleanup(txhash);
 
         // Call TxRequestTracker's implementation.
-        m_tracker.ForgetTxHash(TXHASHES[txhash]);
+        m_tracker.ForgetObjHash(TXHASHES[txhash]);
     }
 
-    void ReceivedInv(int peer, int txhash, bool is_wtxid, bool preferred, std::chrono::microseconds reqtime)
+    void ReceivedInv(int peer, int txhash, bool is_dstx, bool preferred, std::chrono::microseconds reqtime)
     {
         // Apply to naive structure: if no announcement for txidnum/peer combination
         // already, create a new CANDIDATE; otherwise do nothing.
@@ -195,7 +195,7 @@ public:
             ann.m_preferred = preferred;
             ann.m_state = State::CANDIDATE;
             ann.m_time = reqtime;
-            ann.m_is_wtxid = is_wtxid;
+            ann.m_type = !is_dstx ? MSG_TX : MSG_DSTX;
             ann.m_sequence = m_current_sequence++;
             ann.m_priority = m_tracker.ComputePriority(TXHASHES[txhash], peer, ann.m_preferred);
 
@@ -204,10 +204,10 @@ public:
         }
 
         // Call TxRequestTracker's implementation.
-        m_tracker.ReceivedInv(peer, GenTxid{is_wtxid, TXHASHES[txhash]}, preferred, reqtime);
+        m_tracker.ReceivedInv(peer, CInv{!is_dstx ? MSG_TX : MSG_DSTX, TXHASHES[txhash]}, preferred, reqtime);
     }
 
-    void RequestedTx(int peer, int txhash, std::chrono::microseconds exptime)
+    void RequestedObj(int peer, int txhash, std::chrono::microseconds exptime)
     {
         // Apply to naive structure: if a CANDIDATE announcement exists for peer/txhash,
         // convert it to REQUESTED, and change any existing REQUESTED announcement for the same txhash to COMPLETED.
@@ -225,7 +225,7 @@ public:
         if (exptime > m_now) m_events.push(exptime);
 
         // Call TxRequestTracker's implementation.
-        m_tracker.RequestedTx(peer, TXHASHES[txhash], exptime);
+        m_tracker.RequestedObj(peer, TXHASHES[txhash], exptime);
     }
 
     void ReceivedResponse(int peer, int txhash)
@@ -244,7 +244,7 @@ public:
     {
         // Implement using naive structure:
 
-        //! list of (sequence number, txhash, is_wtxid) tuples.
+        //! list of (sequence number, txhash, type) tuples.
         std::vector<std::tuple<uint64_t, int, bool>> result;
         for (int txhash = 0; txhash < MAX_TXHASHES; ++txhash) {
             // Mark any expired REQUESTED announcements as COMPLETED.
@@ -260,7 +260,7 @@ public:
             // CANDIDATEs for which this announcement has the highest priority get returned.
             const Announcement& ann = m_announcements[txhash][peer];
             if (ann.m_state == State::CANDIDATE && GetSelected(txhash) == peer) {
-                result.emplace_back(ann.m_sequence, txhash, ann.m_is_wtxid);
+                result.emplace_back(ann.m_sequence, txhash, ann.m_type);
             }
         }
         // Sort the results by sequence number.
@@ -272,8 +272,8 @@ public:
         m_tracker.PostGetRequestableSanityCheck(m_now);
         assert(result.size() == actual.size());
         for (size_t pos = 0; pos < actual.size(); ++pos) {
-            assert(TXHASHES[std::get<1>(result[pos])] == actual[pos].GetHash());
-            assert(std::get<2>(result[pos]) == actual[pos].IsWtxid());
+            assert(TXHASHES[std::get<1>(result[pos])] == actual[pos].hash);
+            assert(std::get<2>(result[pos]) == actual[pos].type);
         }
     }
 
@@ -332,7 +332,7 @@ void test_one_input(const std::vector<uint8_t>& buffer)
             break;
         case 4: // No longer need tx
             txidnum = it == buffer.end() ? 0 : *(it++);
-            tester.ForgetTxHash(txidnum % MAX_TXHASHES);
+            tester.ForgetObjHash(txidnum % MAX_TXHASHES);
             break;
         case 5: // Received immediate preferred inv
         case 6: // Same, but non-preferred.
@@ -353,7 +353,7 @@ void test_one_input(const std::vector<uint8_t>& buffer)
             peer = it == buffer.end() ? 0 : *(it++) % MAX_PEERS;
             txidnum = it == buffer.end() ? 0 : *(it++);
             delaynum = it == buffer.end() ? 0 : *(it++);
-            tester.RequestedTx(peer, txidnum % MAX_TXHASHES, tester.Now() + DELAYS[delaynum]);
+            tester.RequestedObj(peer, txidnum % MAX_TXHASHES, tester.Now() + DELAYS[delaynum]);
             break;
         case 10: // Received response
             peer = it == buffer.end() ? 0 : *(it++) % MAX_PEERS;
