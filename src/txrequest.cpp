@@ -61,12 +61,12 @@ struct Announcement {
     std::chrono::microseconds m_time;
     /** What peer the request was from. */
     const NodeId m_peer;
+    /** Type of inventory */
+    uint32_t m_type;
     /** What sequence number this announcement has. */
     const SequenceNumber m_sequence : 59;
     /** Whether the request is preferred. */
     const bool m_preferred : 1;
-    /** Whether this is a wtxid request. */
-    const bool m_is_wtxid : 1;
 
     /** What state this announcement is in. */
     State m_state : 3;
@@ -90,10 +90,11 @@ struct Announcement {
     }
 
     /** Construct a new announcement from scratch, initially in CANDIDATE_DELAYED state. */
-    Announcement(const GenTxid& gtxid, NodeId peer, bool preferred, std::chrono::microseconds reqtime,
+    Announcement(const CInv& inv, NodeId peer, bool preferred, std::chrono::microseconds reqtime,
         SequenceNumber sequence) :
-        m_txhash(gtxid.GetHash()), m_time(reqtime), m_peer(peer), m_sequence(sequence), m_preferred(preferred),
-        m_is_wtxid(gtxid.IsWtxid()), m_state(State::CANDIDATE_DELAYED) {}
+        m_txhash(inv.hash), m_time(reqtime), m_peer(peer), m_type(inv.type),
+        m_sequence(sequence), m_preferred(preferred),
+        m_state(State::CANDIDATE_DELAYED) {}
 };
 
 //! Type alias for priorities.
@@ -151,7 +152,7 @@ struct ByPeerViewExtractor
 // Note: priority == 0 whenever state != CANDIDATE_READY.
 //
 // Uses:
-// * Deleting all announcements with a given txhash in ForgetTxHash.
+// * Deleting all announcements with a given txhash in ForgetObjHash.
 // * Finding the best CANDIDATE_READY to convert to CANDIDATE_BEST, when no other CANDIDATE_READY or REQUESTED
 //   announcement exists for that txhash.
 // * Determining when no more non-COMPLETED announcements for a given txhash exist, so the COMPLETED ones can be
@@ -229,8 +230,8 @@ struct PeerInfo {
 
 }  // namespace
 
-/** Actual implementation for TxRequestTracker's data structure. */
-class TxRequestTracker::Impl {
+/** Actual implementation for ObjRequestTracker's data structure. */
+class ObjRequestTracker::Impl {
     //! The current sequence number. Increases for every announcement. This is used to sort txhashes returned by
     //! GetRequestable in announcement order.
     SequenceNumber m_current_sequence{0};
@@ -380,7 +381,7 @@ class TxRequestTracker::Impl {
         while (!m_index.empty()) {
             // If time went backwards, we may need to demote CANDIDATE_BEST and CANDIDATE_READY announcements back
             // to CANDIDATE_DELAYED. This is an unusual edge case, and unlikely to matter in production. However,
-            // it makes it much easier to specify and test TxRequestTracker::Impl's behaviour.
+            // it makes it much easier to specify and test ObjRequestTracker::Impl's behaviour.
             auto it = std::prev(m_index.get<ByTime>().end());
             if (it->IsSelectable() && it->m_time > now) {
                 ChangeAndReselect(m_index.project<ByTxHash>(it), State::CANDIDATE_DELAYED);
@@ -435,7 +436,7 @@ public:
         }
     }
 
-    void ForgetTxHash(const uint256& txhash)
+    void ForgetObjHash(const uint256& txhash)
     {
         auto it = m_index.get<ByTxHash>().lower_bound(ByTxHashView{txhash, State::CANDIDATE_DELAYED, 0});
         while (it != m_index.get<ByTxHash>().end() && it->m_txhash == txhash) {
@@ -443,18 +444,18 @@ public:
         }
     }
 
-    void ReceivedInv(NodeId peer, const GenTxid& gtxid, bool preferred,
+    void ReceivedInv(NodeId peer, const CInv& inv, bool preferred,
         std::chrono::microseconds reqtime)
     {
         // Bail out if we already have a CANDIDATE_BEST announcement for this (txhash, peer) combination. The case
         // where there is a non-CANDIDATE_BEST announcement already will be caught by the uniqueness property of the
         // ByPeer index when we try to emplace the new object below.
-        if (m_index.get<ByPeer>().count(ByPeerView{peer, true, gtxid.GetHash()})) return;
+        if (m_index.get<ByPeer>().count(ByPeerView{peer, true, inv.hash})) return;
 
         // Try creating the announcement with CANDIDATE_DELAYED state (which will fail due to the uniqueness
         // of the ByPeer index if a non-CANDIDATE_BEST announcement already exists with the same txhash and peer).
         // Bail out in that case.
-        auto ret = m_index.get<ByPeer>().emplace(gtxid, peer, preferred, reqtime, m_current_sequence);
+        auto ret = m_index.get<ByPeer>().emplace(inv, peer, preferred, reqtime, m_current_sequence);
         if (!ret.second) return;
 
         // Update accounting metadata.
@@ -463,7 +464,7 @@ public:
     }
 
     //! Find the GenTxids to request now from peer.
-    std::vector<GenTxid> GetRequestable(NodeId peer, std::chrono::microseconds now)
+    std::vector<CInv> GetRequestable(NodeId peer, std::chrono::microseconds now)
     {
         // Move time.
         SetTimePoint(now);
@@ -482,22 +483,22 @@ public:
             return a->m_sequence < b->m_sequence;
         });
 
-        // Convert to GenTxid and return.
-        std::vector<GenTxid> ret;
+        // Convert to CInv and return.
+        std::vector<CInv> ret;
         ret.reserve(selected.size());
         std::transform(selected.begin(), selected.end(), std::back_inserter(ret), [](const Announcement* ann) {
-            return GenTxid{ann->m_is_wtxid, ann->m_txhash};
+            return CInv{ann->m_type, ann->m_txhash};
         });
         return ret;
     }
 
-    void RequestedTx(NodeId peer, const uint256& txhash, std::chrono::microseconds expiry)
+    void RequestedObj(NodeId peer, const uint256& txhash, std::chrono::microseconds expiry)
     {
         auto it = m_index.get<ByPeer>().find(ByPeerView{peer, true, txhash});
         if (it == m_index.get<ByPeer>().end()) {
             // There is no CANDIDATE_BEST announcement, look for a _READY or _DELAYED instead. If the caller only
-            // ever invokes RequestedTx with the values returned by GetRequestable, and no other non-const functions
-            // other than ForgetTxHash and GetRequestable in between, this branch will never execute (as txhashes
+            // ever invokes RequestedObj with the values returned by GetRequestable, and no other non-const functions
+            // other than ForgetObjHash and GetRequestable in between, this branch will never execute (as txhashes
             // returned by GetRequestable always correspond to CANDIDATE_BEST announcements).
 
             it = m_index.get<ByPeer>().find(ByPeerView{peer, false, txhash});
@@ -505,7 +506,7 @@ public:
                 it->m_state != State::CANDIDATE_READY)) {
                 // There is no CANDIDATE announcement tracked for this peer, so we have nothing to do. Either this
                 // txhash wasn't tracked at all (and the caller should have called ReceivedInv), or it was already
-                // requested and/or completed for other reasons and this is just a superfluous RequestedTx call.
+                // requested and/or completed for other reasons and this is just a superfluous RequestedObj call.
                 return;
             }
 
@@ -571,35 +572,35 @@ public:
     size_t Size() const { return m_index.size(); }
 };
 
-TxRequestTracker::TxRequestTracker(bool deterministic) :
-    m_impl{std::make_unique<TxRequestTracker::Impl>(deterministic)} {}
+ObjRequestTracker::ObjRequestTracker(bool deterministic) :
+    m_impl{std::make_unique<ObjRequestTracker::Impl>(deterministic)} {}
 
-TxRequestTracker::~TxRequestTracker() = default;
+ObjRequestTracker::~ObjRequestTracker() = default;
 
-void TxRequestTracker::ForgetTxHash(const uint256& txhash) { m_impl->ForgetTxHash(txhash); }
-void TxRequestTracker::DisconnectedPeer(NodeId peer) { m_impl->DisconnectedPeer(peer); }
-size_t TxRequestTracker::CountInFlight(NodeId peer) const { return m_impl->CountInFlight(peer); }
-size_t TxRequestTracker::CountCandidates(NodeId peer) const { return m_impl->CountCandidates(peer); }
-size_t TxRequestTracker::Count(NodeId peer) const { return m_impl->Count(peer); }
-size_t TxRequestTracker::Size() const { return m_impl->Size(); }
+void ObjRequestTracker::ForgetObjHash(const uint256& txhash) { m_impl->ForgetObjHash(txhash); }
+void ObjRequestTracker::DisconnectedPeer(NodeId peer) { m_impl->DisconnectedPeer(peer); }
+size_t ObjRequestTracker::CountInFlight(NodeId peer) const { return m_impl->CountInFlight(peer); }
+size_t ObjRequestTracker::CountCandidates(NodeId peer) const { return m_impl->CountCandidates(peer); }
+size_t ObjRequestTracker::Count(NodeId peer) const { return m_impl->Count(peer); }
+size_t ObjRequestTracker::Size() const { return m_impl->Size(); }
 
-void TxRequestTracker::ReceivedInv(NodeId peer, const GenTxid& gtxid, bool preferred,
+void ObjRequestTracker::ReceivedInv(NodeId peer, const CInv& inv, bool preferred,
     std::chrono::microseconds reqtime)
 {
-    m_impl->ReceivedInv(peer, gtxid, preferred, reqtime);
+    m_impl->ReceivedInv(peer, inv, preferred, reqtime);
 }
 
-void TxRequestTracker::RequestedTx(NodeId peer, const uint256& txhash, std::chrono::microseconds expiry)
+void ObjRequestTracker::RequestedObj(NodeId peer, const uint256& txhash, std::chrono::microseconds expiry)
 {
-    m_impl->RequestedTx(peer, txhash, expiry);
+    m_impl->RequestedObj(peer, txhash, expiry);
 }
 
-void TxRequestTracker::ReceivedResponse(NodeId peer, const uint256& txhash)
+void ObjRequestTracker::ReceivedResponse(NodeId peer, const uint256& txhash)
 {
     m_impl->ReceivedResponse(peer, txhash);
 }
 
-std::vector<GenTxid> TxRequestTracker::GetRequestable(NodeId peer, std::chrono::microseconds now)
+std::vector<CInv> ObjRequestTracker::GetRequestable(NodeId peer, std::chrono::microseconds now)
 {
     return m_impl->GetRequestable(peer, now);
 }
