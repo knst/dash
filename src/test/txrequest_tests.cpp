@@ -473,24 +473,24 @@ void BuildWtxidTest(Scenario& scenario, int config)
     auto peerW = scenario.NewPeer();
     auto txhash = scenario.NewTxHash();
     CInv txid{MSG_TX, txhash};
-    CInv wtxid{MSG_DSTX, txhash};
+    CInv dstxid{MSG_DSTX, txhash};
 
     auto reqtimeT = InsecureRandBool() ? MIN_TIME : scenario.Now() + RandomTime8s();
     auto reqtimeW = InsecureRandBool() ? MIN_TIME : scenario.Now() + RandomTime8s();
 
-    // Announce txid first or wtxid first.
+    // Announce txid first or dstxid first.
     if (config & 1) {
         scenario.ReceivedInv(peerT, txid, config & 2, reqtimeT);
         if (InsecureRandBool()) scenario.AdvanceTime(RandomTime8s());
-        scenario.ReceivedInv(peerW, wtxid, !(config & 2), reqtimeW);
+        scenario.ReceivedInv(peerW, dstxid, !(config & 2), reqtimeW);
     } else {
-        scenario.ReceivedInv(peerW, wtxid, !(config & 2), reqtimeW);
+        scenario.ReceivedInv(peerW, dstxid, !(config & 2), reqtimeW);
         if (InsecureRandBool()) scenario.AdvanceTime(RandomTime8s());
         scenario.ReceivedInv(peerT, txid, config & 2, reqtimeT);
     }
 
-    // Let time pass if needed, and check that the preferred announcement (txid or wtxid)
-    // is correctly to-be-requested (and with the correct wtxidness).
+    // Let time pass if needed, and check that the preferred announcement (txid or dstxid)
+    // is correctly to-be-requested (and with the correct dstxidness).
     auto max_reqtime = std::max(reqtimeT, reqtimeW);
     if (max_reqtime > scenario.Now()) scenario.AdvanceTime(max_reqtime - scenario.Now());
     if (config & 2) {
@@ -498,7 +498,7 @@ void BuildWtxidTest(Scenario& scenario, int config)
         scenario.Check(peerW, {}, 1, 0, 0, "w2");
     } else {
         scenario.Check(peerT, {}, 1, 0, 0, "w3");
-        scenario.Check(peerW, {wtxid}, 1, 0, 0, "w4");
+        scenario.Check(peerW, {dstxid}, 1, 0, 0, "w4");
     }
 
     // Let the preferred announcement be requested. It's not going to be delivered.
@@ -508,7 +508,7 @@ void BuildWtxidTest(Scenario& scenario, int config)
         scenario.Check(peerT, {}, 0, 1, 0, "w5");
         scenario.Check(peerW, {}, 1, 0, 0, "w6");
     } else {
-        scenario.RequestedObj(peerW, wtxid.hash, scenario.Now() + expiry);
+        scenario.RequestedObj(peerW, dstxid.hash, scenario.Now() + expiry);
         scenario.Check(peerT, {}, 1, 0, 0, "w7");
         scenario.Check(peerW, {}, 0, 1, 0, "w8");
     }
@@ -518,13 +518,13 @@ void BuildWtxidTest(Scenario& scenario, int config)
     scenario.AdvanceTime(expiry);
     if (config & 2) {
         scenario.Check(peerT, {}, 0, 0, 1, "w9");
-        scenario.Check(peerW, {wtxid}, 1, 0, 0, "w10");
+        scenario.Check(peerW, {dstxid}, 1, 0, 0, "w10");
     } else {
         scenario.Check(peerT, {txid}, 1, 0, 0, "w11");
         scenario.Check(peerW, {}, 0, 0, 1, "w12");
     }
 
-    // If a good transaction with either that hash as wtxid or txid arrives, both
+    // If a good transaction with either that hash as dstxid or txid arrives, both
     // announcements are gone.
     if (InsecureRandBool()) scenario.AdvanceTime(RandomTime8s());
     scenario.ForgetObjHash(txhash);
