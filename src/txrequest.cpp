@@ -21,6 +21,10 @@
 
 namespace {
 
+/**
+ * DASH implementation is able to work with any type of inventory, not only transactions asin original implementation 
+ */
+
 /** The various states a (txhash,peer) pair can be in.
  *
  * Note that CANDIDATE is split up into 3 substates (DELAYED, BEST, READY), allowing more efficient implementation.
