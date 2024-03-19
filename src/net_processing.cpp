@@ -699,7 +699,7 @@ struct CNodeState {
 
 // Keeps track of the time (in microseconds) when transactions were requested last time
 // TODO: consider removing it or not as part of bitcoin#19988
-unordered_limitedmap<uint256, std::chrono::microseconds, StaticSaltedHasher> g_erased_object_requests(MAX_INV_SZ, MAX_INV_SZ * 2);
+//unordered_limitedmap<uint256, std::chrono::microseconds, StaticSaltedHasher> g_erased_object_requests(MAX_INV_SZ, MAX_INV_SZ * 2);
 
 /** Map maintaining per-node state. */
 static std::map<NodeId, CNodeState> mapNodeState GUARDED_BY(cs_main);
@@ -997,7 +997,6 @@ void PeerManagerImpl::PushNodeVersion(CNode& pnode, int64_t nTime)
 
 // TODO: consider removing it or not as part of bitcoin#19988
 // TODO: or move to m_txrequests/m_objrequests
-/*
 std::chrono::microseconds GetObjectInterval(int invType)
 {
     // some messages need to be re-requested faster when the first announcing peer did not answer to GETDATA
@@ -1014,6 +1013,7 @@ std::chrono::microseconds GetObjectInterval(int invType)
     }
 }
 
+/*
 // TODO: consider removing it or not as part of bitcoin#19988
 std::chrono::microseconds GetObjectExpiryInterval(int invType)
 {
@@ -4272,6 +4272,7 @@ void PeerManagerImpl::ProcessMessage(
         std::vector<CInv> vInv;
         vRecv >> vInv;
         if (vInv.size() <= MAX_PEER_OBJECT_ANNOUNCEMENTS + MAX_BLOCKS_IN_TRANSIT_PER_PEER) {
+            LOCK(::cs_main);
             for (CInv &inv : vInv) {
                 if (inv.IsKnownType()) {
                     // If we receive a NOTFOUND message for a tx we requested, mark the announcement for it as
@@ -5209,7 +5210,7 @@ bool PeerManagerImpl::SendMessages(CNode* pto)
                     m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::GETDATA, vGetData));
                     vGetData.clear();
                 }
-                m_objrequest.RequestedObj(pto->GetId(), inv.hash, current_time + GETDATA_TX_INTERVAL);
+                m_objrequest.RequestedObj(pto->GetId(), inv.hash, current_time + GetObjectInterval(inv.type));
             } else {
                 // We have already seen this object, no need to download.
                 m_objrequest.ForgetObjHash(inv.hash);
