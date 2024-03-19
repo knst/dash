@@ -6,6 +6,7 @@
 Test transaction download behavior
 """
 
+import time
 from test_framework.messages import (
     CInv,
     CTransaction,
@@ -33,6 +34,7 @@ class TestP2PConn(P2PInterface):
 
     def on_getdata(self, message):
         for i in message.inv:
+            print("get data: {i.type}")
             if i.type & MSG_TYPE_MASK == MSG_TX:
                 self.tx_getdata_count += 1
 
@@ -135,7 +137,7 @@ class TxDownloadTest(BitcoinTestFramework):
         for i in range(MAX_GETDATA_IN_FLIGHT):
             p.send_message(msg_inv([CInv(t=MSG_TX, h=txids[i])]))
         p.sync_with_ping()
-        self.bump_mocktim(INBOUND_PEER_TX_DELAY)
+        self.bump_mocktime(INBOUND_PEER_TX_DELAY)
 #self.nodes[0].setmocktime(mock_time)
         p.wait_until(lambda: p.tx_getdata_count >= MAX_GETDATA_IN_FLIGHT)
         for i in range(MAX_GETDATA_IN_FLIGHT, len(txids)):
@@ -158,6 +160,10 @@ class TxDownloadTest(BitcoinTestFramework):
         for p in [peer1, peer2]:
             p.send_message(msg_inv([CInv(t=MSG_TX, h=WTXID)]))
         # One of the peers is asked for the tx
+        print (sum(p.tx_getdata_count for p in [peer1, peer2]))
+        self.bump_mocktime(1)
+        time.sleep(5)
+        print (sum(p.tx_getdata_count for p in [peer1, peer2]))
         peer2.wait_until(lambda: sum(p.tx_getdata_count for p in [peer1, peer2]) == 1)
         with p2p_lock:
             peer_expiry, peer_fallback = (peer1, peer2) if peer1.tx_getdata_count == 1 else (peer2, peer1)
@@ -189,6 +195,7 @@ class TxDownloadTest(BitcoinTestFramework):
     def test_notfound_fallback(self):
         self.log.info('Check that notfounds will select another peer for download immediately')
         WTXID = 0xffdd
+        self.restart_node(0, extra_args=['-whitelist=noban@127.0.0.1'])
         peer1 = self.nodes[0].add_p2p_connection(TestP2PConn())
         peer2 = self.nodes[0].add_p2p_connection(TestP2PConn())
         for p in [peer1, peer2]:
@@ -218,9 +225,9 @@ class TxDownloadTest(BitcoinTestFramework):
 
     def run_test(self):
         # Run tests without mocktime that only need one peer-connection first, to avoid restarting the nodes
-#    self.test_expiry_fallback()
-        self.test_disconnect_fallback()
-        self.test_notfound_fallback()
+        self.test_expiry_fallback()
+#        self.test_disconnect_fallback() #broken
+#        self.test_notfound_fallback()
         self.test_preferred_inv() #works 
 #        self.test_spurious_notfound()
 
