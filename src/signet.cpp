@@ -25,7 +25,7 @@
 
 static constexpr uint8_t SIGNET_HEADER[4] = {0xec, 0xc7, 0xda, 0xa2};
 
-static constexpr unsigned int BLOCK_SCRIPT_VERIFY_FLAGS = SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_WITNESS | SCRIPT_VERIFY_DERSIG | SCRIPT_VERIFY_NULLDUMMY;
+static constexpr unsigned int BLOCK_SCRIPT_VERIFY_FLAGS = SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_DERSIG | SCRIPT_VERIFY_NULLDUMMY;
 
 static bool FetchAndClearCommitmentSection(const Span<const uint8_t> header, CScript& witness_commitment, std::vector<uint8_t>& result)
 {
@@ -86,21 +86,13 @@ SignetTxs SignetTxs::Create(const CBlock& block, const CScript& challenge)
     if (block.vtx.empty()) return invalid(); // no coinbase tx in block; invalid
     CMutableTransaction modified_cb(*block.vtx.at(0));
 
-    const int cidx = GetWitnessCommitmentIndex(block);
-    if (cidx == NO_WITNESS_COMMITMENT) {
-        return invalid(); // require a witness commitment
-    }
-
-    CScript& witness_commitment = modified_cb.vout.at(cidx).scriptPubKey;
-
     std::vector<uint8_t> signet_solution;
-    if (!FetchAndClearCommitmentSection(SIGNET_HEADER, witness_commitment, signet_solution)) {
-        // no signet solution -- allow this to support OP_TRUE as trivial block challenge
-    } else {
+    // TODO: FIX FIX knst
+    // no signet solution -- allow this to support OP_TRUE as trivial block challenge
+    {
         try {
             SpanReader v(SER_NETWORK, INIT_PROTO_VERSION, signet_solution, 0);
             v >> tx_spending.vin[0].scriptSig;
-            v >> tx_spending.vin[0].scriptWitness.stack;
             if (!v.empty()) return invalid(); // extraneous data encountered
         } catch (const std::exception&) {
             return invalid(); // parsing error
@@ -137,11 +129,10 @@ bool CheckSignetBlockSolution(const CBlock& block, const Consensus::Params& cons
     }
 
     const CScript& scriptSig = signet_txs.m_to_sign.vin[0].scriptSig;
-    const CScriptWitness& witness = signet_txs.m_to_sign.vin[0].scriptWitness;
 
     TransactionSignatureChecker sigcheck(&signet_txs.m_to_sign, /*nIn=*/ 0, /*amount=*/ signet_txs.m_to_spend.vout[0].nValue);
 
-    if (!VerifyScript(scriptSig, signet_txs.m_to_spend.vout[0].scriptPubKey, &witness, BLOCK_SCRIPT_VERIFY_FLAGS, sigcheck)) {
+    if (!VerifyScript(scriptSig, signet_txs.m_to_spend.vout[0].scriptPubKey, BLOCK_SCRIPT_VERIFY_FLAGS, sigcheck)) {
         LogPrint(BCLog::VALIDATION, "CheckSignetBlockSolution: Errors in block (block solution invalid)\n");
         return false;
     }
