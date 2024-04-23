@@ -4323,9 +4323,11 @@ static RPCHelpMan sethdseed()
 //    spk_man.SetHDSeed(master_pub_key);
         spk_man.GenerateNewHDChain("", "");
     } else {
+        CKey key = DecodeSecret(request.params[1].get_str());
         CHDChain newHdChain;
-        std::vector<unsigned char> vchSeed = ParseHex(request.params[1].get_str());
-        if (!newHdChain.SetSeed(SecureVector(vchSeed.begin(), vchSeed.end()), true)) {
+//        std::vector<unsigned char> vchSeed = ParseHex(request.params[1].get_str());
+        //if (!newHdChain.SetSeed(SecureVector(vchSeed.begin(), vchSeed.end()), true)) {
+        if (!newHdChain.SetSeed(SecureVector(key.begin(), key.end()), true)) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid private key: SetSeed failed");
         }
         if (!spk_man.SetHDChainSingle(newHdChain, false)) {
@@ -4659,6 +4661,7 @@ static const CRPCCommand commands[] =
     { "wallet",             "send",                             &send,                          {"outputs","conf_target","estimate_mode","options"} },
     { "wallet",             "sendmany",                         &sendmany,                      {"dummy","amounts","minconf","addlocked","comment","subtractfeefrom","use_is","use_cj","conf_target","estimate_mode"} },
     { "wallet",             "sendtoaddress",                    &sendtoaddress,                 {"address","amount","comment","comment_to","subtractfeefromamount","use_is","use_cj","conf_target","estimate_mode", "avoid_reuse"} },
+    { "wallet",             "sethdseed",                        &sethdseed,                     {"newkeypool","seed"} },
     { "wallet",             "setcoinjoinrounds",                &setcoinjoinrounds,             {"rounds"} },
     { "wallet",             "setcoinjoinamount",                &setcoinjoinamount,             {"amount"} },
     { "wallet",             "setlabel",                         &setlabel,                      {"address","label"} },
