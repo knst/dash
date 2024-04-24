@@ -354,6 +354,28 @@ static std::string SignAndSendSpecialTx(const JSONRPCRequest& request, CChainsta
     return sendrawtransaction().HandleRequest(sendRequest).get_str();
 }
 
+
+static std::vector<unsigned char> SignPayloadWithWallet(const CWallet* wallet, const PKHash& pkhash, const CTxDestination& txDest, const std::string& ptxString)
+{
+    LOCK(wallet->cs_wallet);
+    // lets prove we own the collateral
+    CScript scriptPubKey = GetScriptForDestination(txDest);
+    std::unique_ptr<SigningProvider> provider = wallet->GetSolvingProvider(scriptPubKey);
+
+    std::string signed_payload;
+    SigningResult err = wallet->SignMessage(ptxString, pkhash, signed_payload);
+    if (err == SigningResult::SIGNING_FAILED) {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, SigningResultString(err));
+    } else if (err != SigningResult::OK){
+        throw JSONRPCError(RPC_WALLET_ERROR, SigningResultString(err));
+    }
+    bool invalid = false;
+    const auto vchSig = DecodeBase64(signed_payload.c_str(), &invalid);
+    if (invalid) throw JSONRPCError(RPC_INTERNAL_ERROR, "failed to decode base64 ready signature for protx");
+
+    return vchSig;
+}
+
 static void protx_register_fund_help(const JSONRPCRequest& request, bool legacy)
 {
     std::string rpc_name = legacy ? "register_fund_legacy" : "register_fund";
@@ -776,23 +798,7 @@ static UniValue protx_register_common_wrapper(const JSONRPCRequest& request,
                 ret.pushKV("signMessage", ptx.MakeSignString());
                 return ret;
             } else {
-                {
-                    LOCK(wallet->cs_wallet);
-                    // lets prove we own the collateral
-                    CScript scriptPubKey = GetScriptForDestination(txDest);
-                    std::unique_ptr<SigningProvider> provider = wallet->GetSolvingProvider(scriptPubKey);
-
-                    std::string signed_payload;
-                    SigningResult err = wallet->SignMessage(ptx.MakeSignString(), *pkhash, signed_payload);
-                    if (err == SigningResult::SIGNING_FAILED) {
-                        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, SigningResultString(err));
-                    } else if (err != SigningResult::OK){
-                        throw JSONRPCError(RPC_WALLET_ERROR, SigningResultString(err));
-                    }
-                    bool invalid = false;
-                    ptx.vchSig = DecodeBase64(signed_payload.c_str(), &invalid);
-                    if (invalid) throw JSONRPCError(RPC_INTERNAL_ERROR, "failed to decode base64 ready signature for protx");
-                } // cs_wallet
+                ptx.vchSig = SignPayloadWithWallet(wallet.get(), *pkhash, txDest, ptx.MakeSignString());
                 SetTxPayload(tx, ptx);
                 return SignAndSendSpecialTx(request, chain_helper, chainman, tx, fSubmit);
             }
