@@ -4309,6 +4309,9 @@ static RPCHelpMan sethdseed()
     if (!pwallet->CanSupportFeature(FEATURE_HD)) {
         throw JSONRPCError(RPC_WALLET_ERROR, "Cannot set an HD seed on a non-HD wallet. Use the upgradewallet RPC in order to upgrade a non-HD wallet to HD");
     }
+    if (pwallet->IsHDEnabled()) {
+        throw JSONRPCError(RPC_WALLET_ERROR, "Cannot set a HD seed. The wallet already has a seed");
+    }
 
     EnsureWalletIsUnlocked(pwallet);
 
@@ -4324,6 +4327,12 @@ static RPCHelpMan sethdseed()
         spk_man.GenerateNewHDChain("", "");
     } else {
         CKey key = DecodeSecret(request.params[1].get_str());
+        if (!key.IsValid()) {
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid private key");
+        }
+        if (HaveKey(spk_man, key)) {
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Already have this key (either as an HD seed or as a loose private key)");
+        }
         CHDChain newHdChain;
 //        std::vector<unsigned char> vchSeed = ParseHex(request.params[1].get_str());
         //if (!newHdChain.SetSeed(SecureVector(vchSeed.begin(), vchSeed.end()), true)) {
@@ -4337,16 +4346,8 @@ static RPCHelpMan sethdseed()
         newHdChain.AddAccount();
         /*
         CKey key = DecodeSecret(request.params[1].get_str());
-        if (!key.IsValid()) {
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid private key");
-        }
-        */
-        /*
-        if (HaveKey(spk_man, key)) {
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Already have this key (either as an HD seed or as a loose private key)");
-        }
-        */
 //        master_pub_key = spk_man.DeriveNewSeed(key);
+*/
     }
 
 //    spk_man.SetHDSeed(master_pub_key);
