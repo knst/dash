@@ -716,6 +716,26 @@ SigningResult LegacyScriptPubKeyMan::SignMessage(const std::string& message, con
     return SigningResult::SIGNING_FAILED;
 }
 
+SigningResult LegacyScriptPubKeyMan::SignHash(const uint256& hash, const PKHash& pkhash, std::string& str_sig) const
+{
+    CKey key;
+    if (!GetKey(ToKeyID(pkhash), key)) {
+        return SigningResult::PRIVATE_KEY_NOT_AVAILABLE;
+    }
+
+    std::vector<unsigned char> signature_bytes;
+    if (!key.SignCompact(hash, signature_bytes)) {
+        return SigningResult::SIGNING_FAILED;
+    }
+    str_sig = EncodeBase64(signature_bytes);
+    /*
+    if (HashSign(key, hash, str_sig)) {
+        return SigningResult::OK;
+    }
+    */
+    return SigningResult::SIGNING_FAILED;
+}
+
 TransactionError LegacyScriptPubKeyMan::FillPSBT(PartiallySignedTransaction& psbtx, int sighash_type, bool sign, bool bip32derivs, int* n_signed) const
 {
     if (n_signed) {
@@ -2217,6 +2237,30 @@ SigningResult DescriptorScriptPubKeyMan::SignMessage(const std::string& message,
     if (!MessageSign(key, message, str_sig)) {
         return SigningResult::SIGNING_FAILED;
     }
+    return SigningResult::OK;
+}
+
+SigningResult DescriptorScriptPubKeyMan::SignHash(const uint256& hash, const PKHash& pkhash, std::string& str_sig) const
+{
+    std::unique_ptr<FlatSigningProvider> keys = GetSigningProvider(GetScriptForDestination(pkhash), true);
+    if (!keys) {
+        return SigningResult::PRIVATE_KEY_NOT_AVAILABLE;
+    }
+
+    CKey key;
+    if (!keys->GetKey(ToKeyID(pkhash), key)) {
+        return SigningResult::PRIVATE_KEY_NOT_AVAILABLE;
+    }
+
+    std::vector<unsigned char> signature_bytes;
+    if (!key.SignCompact(hash, signature_bytes)) {
+        return SigningResult::SIGNING_FAILED;
+    }
+    str_sig = EncodeBase64(signature_bytes);
+    /*
+    if (!HashSign(key, hash, str_sig)) {
+        return SigningResult::SIGNING_FAILED;
+    }*/
     return SigningResult::OK;
 }
 

@@ -303,7 +303,7 @@ static void SignSpecialTxPayloadByHash(const CMutableTransaction& tx, SpecialTxP
         throw JSONRPCError(RPC_INTERNAL_ERROR, "failed to sign special tx");
     }
 }
-
+/*
 template<typename SpecialTxPayload>
 static void SignSpecialTxPayloadByString(const CMutableTransaction& tx, SpecialTxPayload& payload, const CKey& key)
 {
@@ -315,6 +315,7 @@ static void SignSpecialTxPayloadByString(const CMutableTransaction& tx, SpecialT
         throw JSONRPCError(RPC_INTERNAL_ERROR, "failed to sign special tx");
     }
 }
+*/
 
 template<typename SpecialTxPayload>
 static void SignSpecialTxPayloadByHash(const CMutableTransaction& tx, SpecialTxPayload& payload, const CBLSSecretKey& key)
@@ -355,12 +356,39 @@ static std::string SignAndSendSpecialTx(const JSONRPCRequest& request, CChainsta
 }
 
 
-static std::vector<unsigned char> SignPayloadWithWallet(const CWallet* wallet, const PKHash& pkhash, const CTxDestination& txDest, const std::string& ptxString)
+static std::vector<unsigned char> SignPayloadWithWalletByHash(const CWallet* wallet, const CKeyID& keyid, const uint256& hash)
+{
+    LOCK(wallet->cs_wallet);
+    // lets prove we own the collateral
+//    CScript scriptPubKey = GetScriptForDestination(txDest);
+    std::unique_ptr<SigningProvider> provider = wallet->GetSolvingProvider(GetScriptForDestination(PKHash(keyid)));
+    if (provider == nullptr) {
+        throw JSONRPCError(RPC_WALLET_ERROR, strprintf("Private key for owner address %s not found in your wallet", "TODO TODO"));
+    }
+
+    std::string signed_payload;
+    SigningResult err = wallet->SignHash(hash, PKHash(keyid), signed_payload);
+    if (err == SigningResult::SIGNING_FAILED) {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, SigningResultString(err));
+    } else if (err != SigningResult::OK){
+        throw JSONRPCError(RPC_WALLET_ERROR, SigningResultString(err));
+    }
+    bool invalid = false;
+    const auto vchSig = DecodeBase64(signed_payload.c_str(), &invalid);
+    if (invalid) throw JSONRPCError(RPC_INTERNAL_ERROR, "failed to decode base64 ready signature for protx");
+
+    return vchSig;
+}
+
+static std::vector<unsigned char> SignPayloadWithWalletByString(const CWallet* wallet, const PKHash& pkhash, const CTxDestination& txDest, const std::string& ptxString)
 {
     LOCK(wallet->cs_wallet);
     // lets prove we own the collateral
     CScript scriptPubKey = GetScriptForDestination(txDest);
     std::unique_ptr<SigningProvider> provider = wallet->GetSolvingProvider(scriptPubKey);
+    if (provider == nullptr) {
+        throw JSONRPCError(RPC_WALLET_ERROR, strprintf("Private key for owner address %s not found in your wallet", "TODO TODO"));
+    }
 
     std::string signed_payload;
     SigningResult err = wallet->SignMessage(ptxString, pkhash, signed_payload);
@@ -798,7 +826,8 @@ static UniValue protx_register_common_wrapper(const JSONRPCRequest& request,
                 ret.pushKV("signMessage", ptx.MakeSignString());
                 return ret;
             } else {
-                ptx.vchSig = SignPayloadWithWallet(wallet.get(), *pkhash, txDest, ptx.MakeSignString());
+                UpdateSpecialTxInputsHash(tx, ptx); // really need ??
+                ptx.vchSig = SignPayloadWithWalletByString(wallet.get(), *pkhash, txDest, ptx.MakeSignString());
                 SetTxPayload(tx, ptx);
                 return SignAndSendSpecialTx(request, chain_helper, chainman, tx, fSubmit);
             }
@@ -1035,7 +1064,6 @@ static UniValue protx_update_service_common_wrapper(const JSONRPCRequest& reques
     }
 
     FundSpecialTx(wallet.get(), tx, ptx, feeSource);
-
     SignSpecialTxPayloadByHash(tx, ptx, keyOperator);
     SetTxPayload(tx, ptx);
 
@@ -1071,16 +1099,20 @@ static void protx_update_registrar_help(const JSONRPCRequest& request, bool lega
 
 static UniValue protx_update_registrar_wrapper(const JSONRPCRequest& request, CChainstateHelper& chain_helper, CDeterministicMNManager& dmnman, const ChainstateManager& chainman, const bool specific_legacy_bls_scheme)
 {
+    LogPrintf("protx-1\n");
     protx_update_registrar_help(request, specific_legacy_bls_scheme);
 
+    LogPrintf("protx-2\n");
     std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(request);
     if (!wallet) return NullUniValue;
 
+    LogPrintf("protx-3\n");
     EnsureWalletIsUnlocked(wallet.get());
 
     CProUpRegTx ptx;
     ptx.proTxHash = ParseHashV(request.params[0], "proTxHash");
 
+    LogPrintf("protx-4\n");
     auto dmn = dmnman.GetListAtChainTip().GetMN(ptx.proTxHash);
     if (!dmn) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("masternode %s not found", ptx.proTxHash.ToString()));
@@ -1088,9 +1120,11 @@ static UniValue protx_update_registrar_wrapper(const JSONRPCRequest& request, CC
     ptx.keyIDVoting = dmn->pdmnState->keyIDVoting;
     ptx.scriptPayout = dmn->pdmnState->scriptPayout;
 
+    LogPrintf("protx-5\n");
     const bool isV19Active{DeploymentActiveAfter(WITH_LOCK(cs_main, return chainman.ActiveChain().Tip();), Params().GetConsensus(), Consensus::DEPLOYMENT_V19)};
     const bool use_legacy = isV19Active ? specific_legacy_bls_scheme : true;
 
+    LogPrintf("protx-6\n");
     if (request.params[1].get_str() != "") {
         // new pubkey
         ptx.pubKeyOperator.Set(ParseBLSPubKey(request.params[1].get_str(), "operator BLS address", use_legacy), use_legacy);
@@ -1099,6 +1133,7 @@ static UniValue protx_update_registrar_wrapper(const JSONRPCRequest& request, CC
         ptx.pubKeyOperator = dmn->pdmnState->pubKeyOperator;
     }
 
+    LogPrintf("protx-7\n");
     ptx.nVersion = use_legacy ? CProUpRegTx::LEGACY_BLS_VERSION : CProUpRegTx::BASIC_BLS_VERSION;
     CHECK_NONFATAL(ptx.pubKeyOperator.IsLegacy() == (ptx.nVersion == CProUpRegTx::LEGACY_BLS_VERSION));
 
@@ -1108,9 +1143,11 @@ static UniValue protx_update_registrar_wrapper(const JSONRPCRequest& request, CC
 
     CTxDestination payoutDest;
     ExtractDestination(ptx.scriptPayout, payoutDest);
+    LogPrintf("protx-8\n");
     if (request.params[3].get_str() != "") {
         payoutDest = DecodeDestination(request.params[3].get_str());
         if (!IsValidDestination(payoutDest)) {
+            LogPrintf("protx-9\n");
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("invalid payout address: %s", request.params[3].get_str()));
         }
         ptx.scriptPayout = GetScriptForDestination(payoutDest);
@@ -1118,6 +1155,7 @@ static UniValue protx_update_registrar_wrapper(const JSONRPCRequest& request, CC
 
     LegacyScriptPubKeyMan* spk_man = wallet->GetLegacyScriptPubKeyMan();
     if (!spk_man) {
+        LogPrintf("protx-9\n");
         throw JSONRPCError(RPC_WALLET_ERROR, "This type of wallet does not support this command");
     }
 
@@ -1141,7 +1179,12 @@ static UniValue protx_update_registrar_wrapper(const JSONRPCRequest& request, CC
     }
 
     FundSpecialTx(wallet.get(), tx, ptx, feeSourceDest);
+    // TODO DTODO
+    uint256 hash = ::SerializeHash(ptx);
+    ptx.vchSig = SignPayloadWithWalletByHash(wallet.get(), dmn->pdmnState->keyIDOwner, hash);
+    LogPrintf("ptx.vchSig: %s\n", HexStr(ptx.vchSig));
     SignSpecialTxPayloadByHash(tx, ptx, keyOwner);
+
     SetTxPayload(tx, ptx);
 
     return SignAndSendSpecialTx(request, chain_helper, chainman, tx);
