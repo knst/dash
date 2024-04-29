@@ -292,6 +292,7 @@ static void UpdateSpecialTxInputsHash(const CMutableTransaction& tx, SpecialTxPa
     payload.inputsHash = CalcTxInputsHash(CTransaction(tx));
 }
 
+/*
 template<typename SpecialTxPayload>
 static void SignSpecialTxPayloadByHash(const CMutableTransaction& tx, SpecialTxPayload& payload, const CKey& key)
 {
@@ -303,7 +304,8 @@ static void SignSpecialTxPayloadByHash(const CMutableTransaction& tx, SpecialTxP
         throw JSONRPCError(RPC_INTERNAL_ERROR, "failed to sign special tx");
     }
 }
-
+*/
+/*
 template<typename SpecialTxPayload>
 static void SignSpecialTxPayloadByString(const CMutableTransaction& tx, SpecialTxPayload& payload, const CKey& key)
 {
@@ -315,6 +317,7 @@ static void SignSpecialTxPayloadByString(const CMutableTransaction& tx, SpecialT
         throw JSONRPCError(RPC_INTERNAL_ERROR, "failed to sign special tx");
     }
 }
+*/
 
 template<typename SpecialTxPayload>
 static void SignSpecialTxPayloadByHash(const CMutableTransaction& tx, SpecialTxPayload& payload, const CBLSSecretKey& key)
@@ -355,12 +358,39 @@ static std::string SignAndSendSpecialTx(const JSONRPCRequest& request, CChainsta
 }
 
 
-static std::vector<unsigned char> SignPayloadWithWallet(const CWallet* wallet, const PKHash& pkhash, const CTxDestination& txDest, const std::string& ptxString)
+static std::vector<unsigned char> SignPayloadWithWalletByHash(const CWallet* wallet, const CKeyID& keyid, const uint256& hash)
+{
+    LOCK(wallet->cs_wallet);
+    // lets prove we own the collateral
+//    CScript scriptPubKey = GetScriptForDestination(txDest);
+    std::unique_ptr<SigningProvider> provider = wallet->GetSolvingProvider(GetScriptForDestination(PKHash(keyid)));
+    if (provider == nullptr) {
+        throw JSONRPCError(RPC_WALLET_ERROR, strprintf("Private key for owner address %s not found in your wallet", "TODO TODO"));
+    }
+
+    std::string signed_payload;
+    SigningResult err = wallet->SignHash(hash, PKHash(keyid), signed_payload);
+    if (err == SigningResult::SIGNING_FAILED) {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, SigningResultString(err));
+    } else if (err != SigningResult::OK){
+        throw JSONRPCError(RPC_WALLET_ERROR, SigningResultString(err));
+    }
+    bool invalid = false;
+    const auto vchSig = DecodeBase64(signed_payload.c_str(), &invalid);
+    if (invalid) throw JSONRPCError(RPC_INTERNAL_ERROR, "failed to decode base64 ready signature for protx");
+
+    return vchSig;
+}
+
+static std::vector<unsigned char> SignPayloadWithWalletByString(const CWallet* wallet, const PKHash& pkhash, const CTxDestination& txDest, const std::string& ptxString)
 {
     LOCK(wallet->cs_wallet);
     // lets prove we own the collateral
     CScript scriptPubKey = GetScriptForDestination(txDest);
     std::unique_ptr<SigningProvider> provider = wallet->GetSolvingProvider(scriptPubKey);
+    if (provider == nullptr) {
+        throw JSONRPCError(RPC_WALLET_ERROR, strprintf("Private key for owner address %s not found in your wallet", "TODO TODO"));
+    }
 
     std::string signed_payload;
     SigningResult err = wallet->SignMessage(ptxString, pkhash, signed_payload);
@@ -798,7 +828,8 @@ static UniValue protx_register_common_wrapper(const JSONRPCRequest& request,
                 ret.pushKV("signMessage", ptx.MakeSignString());
                 return ret;
             } else {
-                ptx.vchSig = SignPayloadWithWallet(wallet.get(), *pkhash, txDest, ptx.MakeSignString());
+                UpdateSpecialTxInputsHash(tx, ptx); // really need ??
+                ptx.vchSig = SignPayloadWithWalletByString(wallet.get(), *pkhash, txDest, ptx.MakeSignString());
                 SetTxPayload(tx, ptx);
                 return SignAndSendSpecialTx(request, chain_helper, chainman, tx, fSubmit);
             }
@@ -1035,7 +1066,6 @@ static UniValue protx_update_service_common_wrapper(const JSONRPCRequest& reques
     }
 
     FundSpecialTx(wallet.get(), tx, ptx, feeSource);
-
     SignSpecialTxPayloadByHash(tx, ptx, keyOperator);
     SetTxPayload(tx, ptx);
 
@@ -1116,15 +1146,7 @@ static UniValue protx_update_registrar_wrapper(const JSONRPCRequest& request, CC
         ptx.scriptPayout = GetScriptForDestination(payoutDest);
     }
 
-    LegacyScriptPubKeyMan* spk_man = wallet->GetLegacyScriptPubKeyMan();
-    if (!spk_man) {
-        throw JSONRPCError(RPC_WALLET_ERROR, "This type of wallet does not support this command");
-    }
-
-    CKey keyOwner;
-    if (!spk_man->GetKey(dmn->pdmnState->keyIDOwner, keyOwner)) {
-        throw std::runtime_error(strprintf("Private key for owner address %s not found in your wallet", EncodeDestination(PKHash(dmn->pdmnState->keyIDOwner))));
-    }
+    //const PKHash* pkhash = std::get_if<PKHash>(&txDest);
 
     CMutableTransaction tx;
     tx.nVersion = 3;
@@ -1141,7 +1163,10 @@ static UniValue protx_update_registrar_wrapper(const JSONRPCRequest& request, CC
     }
 
     FundSpecialTx(wallet.get(), tx, ptx, feeSourceDest);
-    SignSpecialTxPayloadByHash(tx, ptx, keyOwner);
+    // TODO DTODO
+    uint256 hash = ::SerializeHash(ptx);
+    ptx.vchSig = SignPayloadWithWalletByHash(wallet.get(), dmn->pdmnState->keyIDOwner, hash);
+//    SignSpecialTxPayloadByHash(tx, ptx, keyOwner);
     SetTxPayload(tx, ptx);
 
     return SignAndSendSpecialTx(request, chain_helper, chainman, tx);

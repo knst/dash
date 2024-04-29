@@ -1072,6 +1072,7 @@ public:
     // Sign the tx given the input coins and sighash.
     bool SignTransaction(CMutableTransaction& tx, const std::map<COutPoint, Coin>& coins, int sighash, std::map<int, std::string>& input_errors) const;
     SigningResult SignMessage(const std::string& message, const PKHash& pkhash, std::string& str_sig) const;
+    SigningResult SignHash(const uint256& hash, const PKHash& pkhash, std::string& str_sig) const;
 
     /**
      * Fills out a PSBT with information from the wallet. Fills in UTXOs if we have
