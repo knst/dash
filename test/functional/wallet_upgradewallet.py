@@ -30,21 +30,6 @@ from test_framework.util import (
 
 UPGRADED_KEYMETA_VERSION = 12
 
-def deser_keymeta(f):
-    ver, create_time = struct.unpack('<Iq', f.read(12))
-    kp_str = deser_string(f)
-    seed_id = f.read(20)
-    fpr = f.read(4)
-    path_len = 0
-    path = []
-    has_key_orig = False
-    if ver == UPGRADED_KEYMETA_VERSION:
-        path_len = deser_compact_size(f)
-        for i in range(0, path_len):
-            path.append(struct.unpack('<I', f.read(4))[0])
-        has_key_orig = bool(f.read(1))
-    return ver, create_time, kp_str, seed_id, fpr, path_len, path, has_key_orig
-
 class UpgradeWalletTest(BitcoinTestFramework):
     def set_test_params(self):
         self.setup_clean_chain = True
@@ -195,13 +180,11 @@ class UpgradeWalletTest(BitcoinTestFramework):
         wallet.unloadwallet()
         before_checksum = sha256sum_file(node_master_wallet)
         node_master.loadwallet('')
-        # Can "upgrade" to 129999 which should have no effect on the wallet
-        wallet.upgradewallet(129999)
-# TODO
-#        assert_equal(60000, wallet.getwalletinfo()['walletversion'])
+        # Can "upgrade" to 120199 which should have no effect on the wallet
+        wallet.upgradewallet(120199)
+        assert_equal(61000, wallet.getwalletinfo()['walletversion'])
         wallet.unloadwallet()
-# TODO
-#assert_equal(before_checksum, sha256sum_file(node_master_wallet))
+        assert_equal(before_checksum, sha256sum_file(node_master_wallet))
         node_master.loadwallet('')
 
         self.log.info('Wallets cannot be downgraded')
@@ -220,20 +203,26 @@ class UpgradeWalletTest(BitcoinTestFramework):
         assert_equal(120200, wallet.getwalletinfo()['walletversion'])
         # Check that there is now a hd chain and it is version 1, no internal chain counter
         new_kvs = dump_bdb_kv(node_master_wallet)
-        print(f"new kvs before HD: {new_kvs}")
         wallet.upgradetohd()
         new_kvs = dump_bdb_kv(node_master_wallet)
-        print(f"new kvs after HD: {new_kvs}")
         assert b'\x07hdchain' in new_kvs
         hd_chain = new_kvs[b'\x07hdchain']
-        print(f"new chain : {hd_chain}")
         assert_greater_than(220, len(hd_chain))
         assert_greater_than(len(hd_chain), 180)
+#                obj.nVersion   int
+#                obj.id         uint256
+#                obj.fCrypted   bool
+#                obj.vchSeed    SecureVector
+#                obj.vchMnemonic SecureVector
+#                obj.vchMnemonicPassphrase SecureVector
+#                obj.mapAccounts #map accounts
 # FIX FIX TODO
-#        hd_chain_version, external_counter, seed_id = struct.unpack('<iI20s', hd_chain)
-#        assert_equal(1, hd_chain_version)
-#        seed_id = bytearray(seed_id)
-#        seed_id.reverse()
+        print(f"chain: {hd_chain}")
+        hd_chain_version, seed_id, is_crypted = struct.unpack('<i32s?', hd_chain[:37])
+        print(f"everything: {hd_chain_version}, {seed_id} {is_crypted}")
+        assert_equal(1, hd_chain_version)
+        seed_id = bytearray(seed_id)
+        seed_id.reverse()
         old_kvs = new_kvs
         # First 2 keys should still be non-HD
 #        for i in range(0, 2):
@@ -244,7 +233,7 @@ class UpgradeWalletTest(BitcoinTestFramework):
             assert 'hdchainid' not in info
         # Next key should be HD
         info = wallet.getaddressinfo(wallet.getnewaddress())
-#        assert_equal(seed_id.hex(), info['hdchainid'])
+        assert_equal(seed_id.hex(), info['hdchainid'])
         assert_equal("m/44'/1'/0'/0/0", info['hdkeypath'])
         prev_seed_id = info['hdchainid']
         # Change key should be the same keypool
