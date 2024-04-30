@@ -207,30 +207,21 @@ class UpgradeWalletTest(BitcoinTestFramework):
         new_kvs = dump_bdb_kv(node_master_wallet)
         assert b'\x07hdchain' in new_kvs
         hd_chain = new_kvs[b'\x07hdchain']
+        # hd_chain:
+        #  obj.nVersion               int
+        #  obj.id                     uint256
+        #  obj.fCrypted               bool
+        #  obj.vchSeed                SecureVector
+        #  obj.vchMnemonic            SecureVector
+        #  obj.vchMnemonicPassphrase  SecureVector
+        #  obj.mapAccounts            map<> accounts
         assert_greater_than(220, len(hd_chain))
         assert_greater_than(len(hd_chain), 180)
-#                obj.nVersion   int
-#                obj.id         uint256
-#                obj.fCrypted   bool
-#                obj.vchSeed    SecureVector
-#                obj.vchMnemonic SecureVector
-#                obj.vchMnemonicPassphrase SecureVector
-#                obj.mapAccounts #map accounts
-# FIX FIX TODO
-        print(f"chain: {hd_chain}")
         hd_chain_version, seed_id, is_crypted = struct.unpack('<i32s?', hd_chain[:37])
-        print(f"everything: {hd_chain_version}, {seed_id} {is_crypted}")
         assert_equal(1, hd_chain_version)
         seed_id = bytearray(seed_id)
         seed_id.reverse()
         old_kvs = new_kvs
-        # First 2 keys should still be non-HD
-#        for i in range(0, 2):
-        for i in range(0, 0):
-            info = wallet.getaddressinfo(wallet.getnewaddress())
-            self.log.info(f"keypath: {info}")
-            assert 'hdkeypath' not in info
-            assert 'hdchainid' not in info
         # Next key should be HD
         info = wallet.getaddressinfo(wallet.getnewaddress())
         assert_equal(seed_id.hex(), info['hdchainid'])
