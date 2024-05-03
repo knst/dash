@@ -1385,6 +1385,8 @@ public:
     //! Make a LegacyScriptPubKeyMan and set it for all types, internal, and external.
     void SetupLegacyScriptPubKeyMan();
 
+    bool GetSigningPrivateKey(const CKeyID &address, CKey& keyOut) const;
+
     const CKeyingMaterial& GetEncryptionKey() const override;
     bool HasEncryptionKeys() const override;
 

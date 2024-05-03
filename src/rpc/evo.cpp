@@ -1116,6 +1116,7 @@ static UniValue protx_update_registrar_wrapper(const JSONRPCRequest& request, CC
         ptx.scriptPayout = GetScriptForDestination(payoutDest);
     }
 
+    /*
     LegacyScriptPubKeyMan* spk_man = wallet->GetLegacyScriptPubKeyMan();
     if (!spk_man) {
         throw JSONRPCError(RPC_WALLET_ERROR, "This type of wallet does not support this command");
@@ -1123,6 +1124,11 @@ static UniValue protx_update_registrar_wrapper(const JSONRPCRequest& request, CC
 
     CKey keyOwner;
     if (!spk_man->GetKey(dmn->pdmnState->keyIDOwner, keyOwner)) {
+        throw std::runtime_error(strprintf("Private key for owner address %s not found in your wallet", EncodeDestination(PKHash(dmn->pdmnState->keyIDOwner))));
+    }
+    */
+    CKey keyOwner;
+    if (!wallet->GetSigningPrivateKey(dmn->pdmnState->keyIDOwner, keyOwner)) {
         throw std::runtime_error(strprintf("Private key for owner address %s not found in your wallet", EncodeDestination(PKHash(dmn->pdmnState->keyIDOwner))));
     }
 

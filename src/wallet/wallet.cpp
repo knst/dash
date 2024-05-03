@@ -5553,6 +5553,74 @@ void CWallet::SetupLegacyScriptPubKeyMan()
     m_spk_managers[spk_manager->GetID()] = std::move(spk_manager);
 }
 
+bool CWallet::GetSigningPrivateKey(const CKeyID &keyid, CKey& keyOut) const
+{
+    LogPrintf("signing-1\n");
+    if (!IsWalletFlagSet(WALLET_FLAG_DESCRIPTORS)) {
+        const auto spk_man = GetLegacyScriptPubKeyMan();
+    LogPrintf("signing-2\n");
+        if (!spk_man) return false;
+    LogPrintf("signing-3\n");
+        return spk_man->GetKey(keyid, keyOut);\
+    }
+/*
+    for (auto spk_man : spk_mans) {
+        if (sk_man -> CanProvide(script, sigdata
+        */
+    LogPrintf("signing-4\n");
+    SignatureData sigdata;
+    CScript script_pub_key = GetScriptForDestination(PKHash(keyid));
+    LogPrintf("signing-5\n");
+    for (const auto& spk_man_pair : m_spk_managers) {
+        LogPrintf("signing-6\n");
+        if (spk_man_pair.second->CanProvide(script_pub_key, sigdata)) {
+            LogPrintf("signing-7\n");
+            /*
+            LOCK(cs_wallet);  // DescriptorScriptPubKeyMan calls IsLocked which can lock cs_wallet in a deadlocking order
+            return spk_man_pair.second->SignMessage(message, pkhash, str_sig);
+            */
+//            std::unique_ptr<FlatSigningProvider> keys = GetSolvingProvider(GetScriptForDestination(PKHash(keyid)), true);
+            std::unique_ptr<SigningProvider> keys = GetSolvingProvider(GetScriptForDestination(PKHash(keyid)));
+            LogPrintf("signing-8\n");
+            if (!keys) {
+            LogPrintf("signing-9\n");
+                return false;
+            }
+
+            CKey key;
+            LogPrintf("signing-10\n");
+            return keys->GetKey(keyid, key);
+
+        }
+    }
+    LogPrintf("signing-11\n");
+    return false;
+/*
+    std::unique_ptr<FlatSigningProvider> keys = GetSigningProvider(GetScriptForDestination(PKHash(keyid)), true);
+    if (!keys) {
+        return false;
+    }
+
+    CKey key;
+    return keys->GetKey(keyid, key);
+    */
+    //if (IsMine(address)) ISMINE_SPENDABLE;
+
+            /// for descriptor: se DescriptorScriptPubKeyMan::SignMessage
+            /*
+    std::unique_ptr<FlatSigningProvider> keys = GetSigningProvider(GetScriptForDestination(pkhash), true);
+    if (!keys) {
+        return SigningResult::PRIVATE_KEY_NOT_AVAILABLE;
+    }
+
+    CKey key;
+    if (!keys->GetKey(ToKeyID(pkhash), key)) {
+        return SigningResult::PRIVATE_KEY_NOT_AVAILABLE;
+    }
+    */
+}
+
+
 const CKeyingMaterial& CWallet::GetEncryptionKey() const
 {
     return vMasterKey;

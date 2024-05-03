@@ -512,17 +512,19 @@ static UniValue gobject_vote_many(const JSONRPCRequest& request)
 
     EnsureWalletIsUnlocked(wallet.get());
 
+
+    /*
     LegacyScriptPubKeyMan* spk_man = wallet->GetLegacyScriptPubKeyMan();
     if (!spk_man) {
         throw JSONRPCError(RPC_WALLET_ERROR, "This type of wallet does not support this command");
-    }
+    }*/
 
     std::map<uint256, CKey> votingKeys;
 
     auto mnList = node.dmnman->GetListAtChainTip();
     mnList.ForEachMN(true, [&](auto& dmn) {
         CKey votingKey;
-        if (spk_man->GetKey(dmn.pdmnState->keyIDVoting, votingKey)) {
+        if (wallet->GetSigningPrivateKey(dmn.pdmnState->keyIDVoting, votingKey)) {
             votingKeys.emplace(dmn.proTxHash, votingKey);
         }
     });
