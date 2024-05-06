@@ -92,7 +92,7 @@ EXTENDED_SCRIPTS = [
 BASE_SCRIPTS = [
     # Scripts that are run by default.
     # Longest test should go first, to favor running tests in parallel
-    'feature_dip3_deterministicmns.py --legacy-wallet', # NOTE: needs dash_hash to pass
+    'feature_dip3_deterministicmns.py', # NOTE: needs dash_hash to pass
     'feature_llmq_data_recovery.py',
     'wallet_hd.py --legacy-wallet',
     'wallet_hd.py --descriptors',
@@ -155,7 +155,7 @@ BASE_SCRIPTS = [
     'wallet_keypool_topup.py --legacy-wallet',
     'wallet_keypool_topup.py --descriptors',
     'feature_fee_estimation.py',
-    'interface_zmq_dash.py --legacy-wallet',
+    'interface_zmq_dash.py',
     'interface_zmq.py',
     'rpc_invalid_address_message.py',
     'interface_bitcoin_cli.py',
@@ -258,7 +258,7 @@ BASE_SCRIPTS = [
     'wallet_upgradewallet.py --legacy-wallet',
     'wallet_importdescriptors.py --descriptors',
     'wallet_mnemonicbits.py --legacy-wallet',
-    # 'wallet_mnemonicbits.py --descriptors', # TODO : implement mnemonics for descriptor wallets
+    'wallet_mnemonicbits.py --descriptors',
     'rpc_bind.py --ipv4',
     'rpc_bind.py --ipv6',
     'rpc_bind.py --nonloopback',
@@ -279,7 +279,7 @@ BASE_SCRIPTS = [
     'feature_cltv.py',
     'feature_new_quorum_type_activation.py',
     'feature_governance_objects.py',
-    'feature_governance.py --legacy-wallet',
+    'feature_governance.py',
     'rpc_uptime.py',
     'wallet_resendwallettransactions.py --legacy-wallet',
     'wallet_resendwallettransactions.py --descriptors',
