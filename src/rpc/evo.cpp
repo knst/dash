@@ -1131,6 +1131,7 @@ static UniValue protx_update_registrar_wrapper(const JSONRPCRequest& request, CC
     if (!wallet->GetSigningPrivateKey(dmn->pdmnState->keyIDOwner, keyOwner)) {
         throw std::runtime_error(strprintf("Private key for owner address %s not found in your wallet", EncodeDestination(PKHash(dmn->pdmnState->keyIDOwner))));
     }
+    LogPrintf("key valid: %d pubkey: %s owner: %s\n", keyOwner.IsValid(), keyOwner.GetPubKey().GetHash().ToString(), dmn->pdmnState->keyIDOwner.ToString());
 
     CMutableTransaction tx;
     tx.nVersion = 3;
