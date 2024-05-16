@@ -115,5 +115,4 @@ descriptors with private keys for now as explained earlier.
 
 
 ## RPC changes
- - `createwallet` has changed list of arguments: `createwallet "wallet_name" ( disable_private_keys blank "passphrase" avoid_reuse descriptors load_on_startup )`
-`load_on_startup` used to be an argument 5 but now has a number 6.
+ - `createwallet` has a new argument `descriptors` at number 6: `createwallet "wallet_name" ( disable_private_keys blank "passphrase" avoid_reuse load_on_startup descriptors )`
