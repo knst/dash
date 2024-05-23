@@ -300,6 +300,7 @@ void AssertLockNotHeldInternal(const char* pszName, const char* pszFile, int nLi
 }
 template void AssertLockNotHeldInternal(const char*, const char*, int, Mutex*);
 template void AssertLockNotHeldInternal(const char*, const char*, int, RecursiveMutex*);
+template void AssertLockNotHeldInternal(const char*, const char*, int, SharedMutex*);
 
 void DeleteLock(void* cs)
 {
