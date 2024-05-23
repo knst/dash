@@ -1020,7 +1020,7 @@ void CSigSharesManager::CollectSigSharesToAnnounce(std::unordered_map<NodeId, st
 
     std::unordered_map<std::pair<Consensus::LLMQType, uint256>, std::unordered_set<NodeId>, StaticSaltedHasher> quorumNodesMap;
 
-    sigSharesQueuedToAnnounce.ForEach([this, &quorumNodesMap, &sigSharesToAnnounce](const SigShareKey& sigShareKey, bool) {
+    sigSharesQueuedToAnnounce.ForEach([this, &quorumNodesMap, &sigSharesToAnnounce](const SigShareKey& sigShareKey, bool) EXCLUSIVE_LOCKS_REQUIRED(cs) {
         AssertLockHeld(cs);
         const auto& signHash = sigShareKey.first;
         auto quorumMember = sigShareKey.second;
@@ -1076,7 +1076,7 @@ bool CSigSharesManager::SendMessages()
     std::unordered_map<NodeId, std::unordered_map<uint256, CSigSharesInv, StaticSaltedHasher>> sigSharesToAnnounce;
     std::unordered_map<NodeId, std::vector<CSigSesAnn>> sigSessionAnnouncements;
 
-    auto addSigSesAnnIfNeeded = [&](NodeId nodeId, const uint256& signHash) {
+    auto addSigSesAnnIfNeeded = [&](NodeId nodeId, const uint256& signHash) EXCLUSIVE_LOCKS_REQUIRED(cs) {
         AssertLockHeld(cs);
         auto& nodeState = nodeStates[nodeId];
         auto* session = nodeState.GetSessionBySignHash(signHash);
@@ -1357,7 +1357,7 @@ void CSigSharesManager::Cleanup()
             continue;
         }
         // remove global requested state to force a re-request from another node
-        it->second.requestedSigShares.ForEach([this](const SigShareKey& k, bool) {
+        it->second.requestedSigShares.ForEach([this](const SigShareKey& k, bool) EXCLUSIVE_LOCKS_REQUIRED(cs) {
             AssertLockHeld(cs);
             sigSharesRequested.Erase(k);
         });
@@ -1390,7 +1390,7 @@ void CSigSharesManager::RemoveBannedNodeStates()
     for (auto it = nodeStates.begin(); it != nodeStates.end();) {
         if (Assert(m_peerman)->IsBanned(it->first)) {
             // re-request sigshares from other nodes
-            it->second.requestedSigShares.ForEach([this](const SigShareKey& k, int64_t) {
+            it->second.requestedSigShares.ForEach([this](const SigShareKey& k, int64_t) EXCLUSIVE_LOCKS_REQUIRED(cs) {
                 AssertLockHeld(cs);
                 sigSharesRequested.Erase(k);
             });
@@ -1419,7 +1419,7 @@ void CSigSharesManager::BanNode(NodeId nodeId)
     auto& nodeState = it->second;
 
     // Whatever we requested from him, let's request it from someone else now
-    nodeState.requestedSigShares.ForEach([this](const SigShareKey& k, int64_t) {
+    nodeState.requestedSigShares.ForEach([this](const SigShareKey& k, int64_t) EXCLUSIVE_LOCKS_REQUIRED(cs) {
         AssertLockHeld(cs);
         sigSharesRequested.Erase(k);
     });

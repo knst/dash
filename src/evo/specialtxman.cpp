@@ -18,7 +18,7 @@
 #include <llmq/commitment.h>
 #include <primitives/block.h>
 
-static bool CheckSpecialTxInner(CDeterministicMNManager& dmnman, const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, const std::optional<CRangesSet>& indexes, bool check_sigs, TxValidationState& state)
+static bool CheckSpecialTxInner(CDeterministicMNManager& dmnman, const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, const std::optional<CRangesSet>& indexes, bool check_sigs, TxValidationState& state) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
     AssertLockHeld(cs_main);
 

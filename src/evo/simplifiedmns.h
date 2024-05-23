@@ -171,6 +171,6 @@ public:
 
 bool BuildSimplifiedMNListDiff(const uint256& baseBlockHash, const uint256& blockHash, CSimplifiedMNListDiff& mnListDiffRet,
                                CDeterministicMNManager& dmnman, const llmq::CQuorumBlockProcessor& quorum_block_processor,
-                               std::string& errorRet, bool extended = false);
+                               std::string& errorRet, bool extended = false) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
 #endif // BITCOIN_EVO_SIMPLIFIEDMNS_H

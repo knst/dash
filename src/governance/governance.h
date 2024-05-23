@@ -365,9 +365,9 @@ public:
      *   - Track governance objects which are triggers
      *   - After triggers are activated and executed, they can be removed
     */
-    std::vector<std::shared_ptr<CSuperblock>> GetActiveTriggers();
-    bool AddNewTrigger(uint256 nHash);
-    void CleanAndRemoveTriggers();
+    std::vector<std::shared_ptr<CSuperblock>> GetActiveTriggers() EXCLUSIVE_LOCKS_REQUIRED(cs);
+    bool AddNewTrigger(uint256 nHash) EXCLUSIVE_LOCKS_REQUIRED(cs);
+    void CleanAndRemoveTriggers() EXCLUSIVE_LOCKS_REQUIRED(cs);
 
 private:
     std::optional<const CSuperblock> CreateSuperblockCandidate(int nHeight) const;
