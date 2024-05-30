@@ -125,13 +125,13 @@ public:
 
 struct HTTPPathHandler
 {
-    HTTPPathHandler(std::string _prefix, bool _exactMatch, bool prioritized, HTTPRequestHandler _handler):
-        prefix(_prefix), exactMatch(_exactMatch), m_prioritized(prioritized), handler(_handler)
+    HTTPPathHandler(std::string _prefix, bool _exactMatch, bool external, HTTPRequestHandler _handler):
+        prefix(_prefix), exactMatch(_exactMatch), m_external(external), handler(_handler)
     {
     }
     std::string prefix;
     bool exactMatch;
-    bool m_prioritized;
+    bool m_external;
     HTTPRequestHandler handler;
 };
 
@@ -145,6 +145,7 @@ static struct evhttp* eventHTTP = nullptr;
 static std::vector<CSubNet> rpc_allow_subnets;
 //! Work queue for handling longer requests off the event loop thread
 static std::unique_ptr<WorkQueue<HTTPClosure>> g_work_queue{nullptr};
+static std::unique_ptr<WorkQueue<HTTPClosure>> g_work_queue_external{nullptr};
 //! Handlers for (sub)paths
 static std::vector<HTTPPathHandler> pathHandlers;
 //! Bound listening sockets
@@ -267,10 +268,16 @@ static void http_request_cb(struct evhttp_request* req, void* arg)
     if (i != iend) {
         auto item{std::make_unique<HTTPWorkItem>(std::move(hreq), path, i->handler)}; /// this handler!
         assert(g_work_queue);
-        if (i->m_prioritized && g_work_queue->Enqueue(item.get()))
-        {
-            LogPrintf("knst g-prioritized! %s\n", path);
-            item.release();
+        if (i->m_external) {
+            assert(g_work_queue_external);
+            if (g_work_queue_external->Enqueue(item.get()))
+            {
+                LogPrintf("knst g-externals! %s\n", path);
+                item.release();
+            } else {
+                LogPrintf("WARNING: request rejected because http work queue depth of externals exceeded, it can be increased with the -rpcworkqueue= setting\n");
+                item->req->WriteReply(HTTP_SERVICE_UNAVAILABLE, "Work queue depth of externals exceeded");
+            }
         } else if (g_work_queue->Enqueue(item.get())) {
             LogPrintf("knst g-work enqueue: %s\n", path);
             item.release(); /* if true, queue took ownership */
@@ -299,7 +306,7 @@ static bool ThreadHTTP(struct event_base* base)
     // Event loop will be interrupted by InterruptHTTPServer()
     LogPrint(BCLog::HTTP, "Exited http event loop\n");
     return event_base_got_break(base) == 0;
-}/g
+}
 
 /** Bind HTTP server to specified addresses */
 static bool HTTPBindAddresses(struct evhttp* http)
@@ -408,6 +415,7 @@ bool InitHTTPServer()
     LogPrintf("HTTP: creating work queue of depth %d\n", workQueueDepth);
 
     g_work_queue = std::make_unique<WorkQueue<HTTPClosure>>(workQueueDepth);
+    g_work_queue_external = std::make_unique<WorkQueue<HTTPClosure>>(workQueueDepth);
     // transfer ownership to eventBase/HTTP via .release()
     eventBase = base_ctr.release();
     eventHTTP = http_ctr.release();
@@ -435,11 +443,15 @@ void StartHTTPServer()
 {
     LogPrint(BCLog::HTTP, "Starting HTTP server\n");
     int rpcThreads = std::max((long)gArgs.GetArg("-rpcthreads", DEFAULT_HTTP_THREADS), 1L);
+    int rpcThreadsExternals = std::max((long)gArgs.GetArg("-rpcexternalthreads", DEFAULT_HTTP_THREADS), 1L);
     LogPrintf("HTTP: starting %d worker threads\n", rpcThreads);
     g_thread_http = std::thread(ThreadHTTP, eventBase);
 
     for (int i = 0; i < rpcThreads; i++) {
         g_thread_http_workers.emplace_back(HTTPWorkQueueRun, g_work_queue.get(), i);
+    }
+    for (int i = 0; i < rpcThreadsExternals; i++) {
+        g_thread_http_workers.emplace_back(HTTPWorkQueueRun, g_work_queue_external.get(), i);
     }
 }
 
@@ -450,6 +462,9 @@ void InterruptHTTPServer()
         // Reject requests on current connections
         evhttp_set_gencb(eventHTTP, http_reject_request_cb, nullptr);
     }
+    if (g_work_queue_external) {
+        g_work_queue_external->Interrupt();
+    }
     if (g_work_queue) {
         g_work_queue->Interrupt();
     }
@@ -458,6 +473,9 @@ void InterruptHTTPServer()
 void StopHTTPServer()
 {
     LogPrint(BCLog::HTTP, "Stopping HTTP server\n");
+    if (g_work_queue_external) {
+        g_work_queue_external->Interrupt();
+    }
     if (g_work_queue) {
         LogPrint(BCLog::HTTP, "Waiting for HTTP worker threads to exit\n");
         for (auto& thread : g_thread_http_workers) {
@@ -483,6 +501,7 @@ void StopHTTPServer()
         event_base_free(eventBase);
         eventBase = nullptr;
     }
+    g_work_queue_external.reset();
     g_work_queue.reset();
     LogPrint(BCLog::HTTP, "Stopped HTTP server\n");
 }
@@ -651,10 +670,10 @@ HTTPRequest::RequestMethod HTTPRequest::GetRequestMethod() const
     }
 }
 
-void RegisterHTTPHandler(const std::string &prefix, bool exactMatch, const HTTPRequestHandler &handler)
+void RegisterHTTPHandler(const std::string &prefix, bool exactMatch, bool external, const HTTPRequestHandler &handler)
 {
     LogPrint(BCLog::HTTP, "Registering HTTP handler for %s (exactmatch %d)\n", prefix, exactMatch);
-    pathHandlers.push_back(HTTPPathHandler(prefix, exactMatch, handler));
+    pathHandlers.push_back(HTTPPathHandler(prefix, exactMatch, external, handler));
 }
 
 void UnregisterHTTPHandler(const std::string &prefix, bool exactMatch)

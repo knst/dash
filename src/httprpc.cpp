@@ -300,10 +300,11 @@ bool StartHTTPRPC(const CoreContext& context)
     // knst here is handlers registered
     // HTTPReq_JSONRPC - knows about rpc user and auth users
     auto handle_rpc = [&context](HTTPRequest* req, const std::string&) { return HTTPReq_JSONRPC(context, req); };
-    RegisterHTTPHandler("/", true, handle_rpc);
+    RegisterHTTPHandler("/", true, false, handle_rpc);
     if (g_wallet_init_interface.HasWalletSupport()) {
-        RegisterHTTPHandler("/wallet/", false, handle_rpc);
+        RegisterHTTPHandler("/wallet/", false, false, handle_rpc);
     }
+    RegisterHTTPHandler("/external", true, false, handle_rpc);
     struct event_base* eventBase = EventBase();
     assert(eventBase);
     httpRPCTimerInterface = std::make_unique<HTTPRPCTimerInterface>(eventBase);
