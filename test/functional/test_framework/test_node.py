@@ -327,6 +327,14 @@ class TestNode():
             wallet_path = "wallet/{}".format(urllib.parse.quote(wallet_name))
             return RPCOverloadWrapper(self.rpc / wallet_path, descriptors=self.descriptors)
 
+    def get_external_rpc(self):
+        if self.use_cli:
+            raise "NOT SUPPORTED"
+        else:
+            assert self.rpc_connected and self.rpc, self._node_msg("RPC not connected")
+            return RPCOverloadWrapper(self.rpc / "external", descriptors=self.descriptors)
+
+
     def version_is_at_least(self, ver):
         return self.version is None or self.version >= ver
 
