@@ -1,6 +1,7 @@
 Checks: '
 -*,
 bugprone-argument-comment,
+bugprone-move-forwarding-reference,
 bugprone-string-constructor,
 bugprone-use-after-move,
 misc-unused-using-decls,
