@@ -89,6 +89,7 @@ public:
         if (!running || queue.size() >= maxDepth) {
             return false;
         }
+        LogPrintf("knst queue: enqueued! \n");
         queue.emplace_back(std::unique_ptr<WorkItem>(item));
         cond.notify_one();
         return true;
@@ -97,6 +98,8 @@ public:
     void Run() EXCLUSIVE_LOCKS_REQUIRED(!cs)
     {
         while (true) {
+            // there's a queue extractor!
+            LogPrintf("knst de-queue...\n");
             std::unique_ptr<WorkItem> i;
             {
                 WAIT_LOCK(cs, lock);
@@ -107,6 +110,7 @@ public:
                 i = std::move(queue.front());
                 queue.pop_front();
             }
+            LogPrintf("knst call handler!...\n");
             (*i)();
         }
     }
@@ -121,12 +125,13 @@ public:
 
 struct HTTPPathHandler
 {
-    HTTPPathHandler(std::string _prefix, bool _exactMatch, HTTPRequestHandler _handler):
-        prefix(_prefix), exactMatch(_exactMatch), handler(_handler)
+    HTTPPathHandler(std::string _prefix, bool _exactMatch, bool prioritized, HTTPRequestHandler _handler):
+        prefix(_prefix), exactMatch(_exactMatch), m_prioritized(prioritized), handler(_handler)
     {
     }
     std::string prefix;
     bool exactMatch;
+    bool m_prioritized;
     HTTPRequestHandler handler;
 };
 
@@ -244,6 +249,8 @@ static void http_request_cb(struct evhttp_request* req, void* arg)
     std::string path;
     std::vector<HTTPPathHandler>::const_iterator i = pathHandlers.begin();
     std::vector<HTTPPathHandler>::const_iterator iend = pathHandlers.end();
+    // it seems as there can be multiple handler
+    // can make it different handler for different rpc?
     for (; i != iend; ++i) {
         bool match = false;
         if (i->exactMatch)
@@ -258,9 +265,14 @@ static void http_request_cb(struct evhttp_request* req, void* arg)
 
     // Dispatch to worker thread
     if (i != iend) {
-        auto item{std::make_unique<HTTPWorkItem>(std::move(hreq), path, i->handler)};
+        auto item{std::make_unique<HTTPWorkItem>(std::move(hreq), path, i->handler)}; /// this handler!
         assert(g_work_queue);
-        if (g_work_queue->Enqueue(item.get())) {
+        if (i->m_prioritized && g_work_queue->Enqueue(item.get()))
+        {
+            LogPrintf("knst g-prioritized! %s\n", path);
+            item.release();
+        } else if (g_work_queue->Enqueue(item.get())) {
+            LogPrintf("knst g-work enqueue: %s\n", path);
             item.release(); /* if true, queue took ownership */
         } else {
             LogPrintf("WARNING: request rejected because http work queue depth exceeded, it can be increased with the -rpcworkqueue= setting\n");
@@ -287,7 +299,7 @@ static bool ThreadHTTP(struct event_base* base)
     // Event loop will be interrupted by InterruptHTTPServer()
     LogPrint(BCLog::HTTP, "Exited http event loop\n");
     return event_base_got_break(base) == 0;
-}
+}/g
 
 /** Bind HTTP server to specified addresses */
 static bool HTTPBindAddresses(struct evhttp* http)

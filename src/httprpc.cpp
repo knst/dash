@@ -297,6 +297,8 @@ bool StartHTTPRPC(const CoreContext& context)
     if (!InitRPCAuthentication())
         return false;
 
+    // knst here is handlers registered
+    // HTTPReq_JSONRPC - knows about rpc user and auth users
     auto handle_rpc = [&context](HTTPRequest* req, const std::string&) { return HTTPReq_JSONRPC(context, req); };
     RegisterHTTPHandler("/", true, handle_rpc);
     if (g_wallet_init_interface.HasWalletSupport()) {
