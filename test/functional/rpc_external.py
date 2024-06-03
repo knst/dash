@@ -8,7 +8,7 @@ from test_framework.test_framework import BitcoinTestFramework
 class RPCExternalTest(BitcoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 2
-        self.extra_args = [["-rpc
+        self.extra_args = [["-rpcexternalthreads=1", "-rpcexternaluser=ext1"]]
 
     def add_options(self. parser):
 
