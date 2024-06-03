@@ -131,6 +131,7 @@ static bool RPCAuthorized(const std::string& strAuth, std::string& strAuthUserna
         return false;
     if (strAuth.substr(0, 6) != "Basic ")
         return false;
+    LogPrintf("user-pass: %s\n", strAuth);
     std::string strUserPass64 = TrimString(strAuth.substr(6));
     bool invalid;
     std::string strUserPass = DecodeBase64(strUserPass64, &invalid);
@@ -146,7 +147,7 @@ static bool RPCAuthorized(const std::string& strAuth, std::string& strAuthUserna
     return multiUserAuthorized(strUserPass);
 }
 
-static bool HTTPReq_JSONRPC(const CoreContext& context, HTTPRequest* req)
+static bool HTTPReq_JSONRPC(const CoreContext& context, HTTPRequest* req, bool external = false)
 {
     // JSONRPC handles only POST
     if (req->GetRequestMethod() != HTTPRequest::POST) {
@@ -163,7 +164,8 @@ static bool HTTPReq_JSONRPC(const CoreContext& context, HTTPRequest* req)
 
     JSONRPCRequest jreq(context);
     jreq.peerAddr = req->GetPeer().ToString();
-    if (!RPCAuthorized(authHeader.second, jreq.authUser)) {
+    std::string auth_user;
+    if (!RPCAuthorized(authHeader.second, auth_user)) {
         LogPrintf("ThreadRPCServer incorrect password attempt from %s\n", jreq.peerAddr);
 
         /* Deter brute-forcing
@@ -175,7 +177,17 @@ static bool HTTPReq_JSONRPC(const CoreContext& context, HTTPRequest* req)
         req->WriteReply(HTTP_UNAUTHORIZED);
         return false;
     }
+    LogPrintf("users '%s' -> '%s'\n", jreq.authUser, auth_user);
+    jreq.authUser = auth_user;
 
+
+    static const std::string defaultExternalUser = "external-user";
+    LogPrintf("test external: %d '%s' '%s'\n", external, jreq.authUser, gArgs.GetArg("-rpcexternaluser", defaultExternalUser));
+    if (external != (jreq.authUser == gArgs.GetArg("-rpcexternaluser", defaultExternalUser))) {
+        LogPrintf("RPC User '%s' not allowed to call is_external=%d handler\n", jreq.authUser, external);
+        req->WriteReply(HTTP_FORBIDDEN);
+        return false;
+    }
     try {
         // Parse request
         UniValue valRequest;
@@ -299,12 +311,13 @@ bool StartHTTPRPC(const CoreContext& context)
 
     // knst here is handlers registered
     // HTTPReq_JSONRPC - knows about rpc user and auth users
-    auto handle_rpc = [&context](HTTPRequest* req, const std::string&) { return HTTPReq_JSONRPC(context, req); };
+    auto handle_rpc = [&context](HTTPRequest* req, const std::string) { return HTTPReq_JSONRPC(context, req); };
+    auto handle_rpc_external = [&context](HTTPRequest* req, const std::string) { return HTTPReq_JSONRPC(context, req, true); };
     RegisterHTTPHandler("/", true, false, handle_rpc);
     if (g_wallet_init_interface.HasWalletSupport()) {
         RegisterHTTPHandler("/wallet/", false, false, handle_rpc);
     }
-    RegisterHTTPHandler("/external", true, true, handle_rpc);
+    RegisterHTTPHandler("/external", true, true, handle_rpc_external);
     struct event_base* eventBase = EventBase();
     assert(eventBase);
     httpRPCTimerInterface = std::make_unique<HTTPRPCTimerInterface>(eventBase);
