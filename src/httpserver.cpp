@@ -71,10 +71,12 @@ private:
     std::deque<std::unique_ptr<WorkItem>> queue GUARDED_BY(cs);
     bool running GUARDED_BY(cs);
     const size_t maxDepth;
+    const bool m_is_external;
 
 public:
-    explicit WorkQueue(size_t _maxDepth) : running(true),
-                                 maxDepth(_maxDepth)
+    explicit WorkQueue(size_t _maxDepth, bool is_external) : running(true),
+                                 maxDepth(_maxDepth),
+                                 m_is_external(is_external)
     {
     }
     /** Precondition: worker threads have all stopped (they have been joined).
@@ -99,7 +101,7 @@ public:
     {
         while (true) {
             // there's a queue extractor!
-            LogPrintf("knst de-queue...\n");
+            LogPrintf("knst de-queue ext=%d...\n", m_is_external);
             std::unique_ptr<WorkItem> i;
             {
                 WAIT_LOCK(cs, lock);
@@ -110,7 +112,7 @@ public:
                 i = std::move(queue.front());
                 queue.pop_front();
             }
-            LogPrintf("knst call handler!...\n");
+            LogPrintf("knst call handler ext=%d!...\n", m_is_external);
             (*i)();
         }
     }
@@ -268,10 +270,10 @@ static void http_request_cb(struct evhttp_request* req, void* arg)
     if (i != iend) {
         auto item{std::make_unique<HTTPWorkItem>(std::move(hreq), path, i->handler)}; /// this handler!
         assert(g_work_queue);
+        LogPrintf("item: url: '%s' external: %d\n", path, i->m_external);
         if (i->m_external) {
             assert(g_work_queue_external);
-            if (g_work_queue_external->Enqueue(item.get()))
-            {
+            if (g_work_queue_external->Enqueue(item.get())) {
                 LogPrintf("knst g-externals! %s\n", path);
                 item.release();
             } else {
@@ -414,8 +416,8 @@ bool InitHTTPServer()
     int workQueueDepth = std::max((long)gArgs.GetArg("-rpcworkqueue", DEFAULT_HTTP_WORKQUEUE), 1L);
     LogPrintf("HTTP: creating work queue of depth %d\n", workQueueDepth);
 
-    g_work_queue = std::make_unique<WorkQueue<HTTPClosure>>(workQueueDepth);
-    g_work_queue_external = std::make_unique<WorkQueue<HTTPClosure>>(workQueueDepth);
+    g_work_queue = std::make_unique<WorkQueue<HTTPClosure>>(workQueueDepth, false);
+    g_work_queue_external = std::make_unique<WorkQueue<HTTPClosure>>(workQueueDepth, true);
     // transfer ownership to eventBase/HTTP via .release()
     eventBase = base_ctr.release();
     eventHTTP = http_ctr.release();

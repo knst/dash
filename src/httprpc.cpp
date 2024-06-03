@@ -304,7 +304,7 @@ bool StartHTTPRPC(const CoreContext& context)
     if (g_wallet_init_interface.HasWalletSupport()) {
         RegisterHTTPHandler("/wallet/", false, false, handle_rpc);
     }
-    RegisterHTTPHandler("/external", true, false, handle_rpc);
+    RegisterHTTPHandler("/external", true, true, handle_rpc);
     struct event_base* eventBase = EventBase();
     assert(eventBase);
     httpRPCTimerInterface = std::make_unique<HTTPRPCTimerInterface>(eventBase);
