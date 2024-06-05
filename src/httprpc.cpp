@@ -176,8 +176,7 @@ static bool HTTPReq_JSONRPC(const CoreContext& context, HTTPRequest* req, bool e
         return false;
     }
 
-    static const std::string defaultExternalUser = "external-user";
-    if (jreq.authUser == gArgs.GetArg("-rpcexternaluser", defaultExternalUser)) {
+    if (jreq.authUser == gArgs.GetArg("-rpcexternaluser", "") && !jreq.authUser.empty()) {
         if (!external) {
             LogPrintf("RPC User '%s' is allowed to call rpc only by path /external\n", jreq.authUser);
             req->WriteReply(HTTP_FORBIDDEN);
@@ -306,10 +305,8 @@ bool StartHTTPRPC(const CoreContext& context)
     if (!InitRPCAuthentication())
         return false;
 
-    // knst here is handlers registered
-    // HTTPReq_JSONRPC - knows about rpc user and auth users
-    auto handle_rpc = [&context](HTTPRequest* req, const std::string) { return HTTPReq_JSONRPC(context, req); };
-    auto handle_rpc_external = [&context](HTTPRequest* req, const std::string) { return HTTPReq_JSONRPC(context, req, true); };
+    auto handle_rpc = [&context](HTTPRequest* req, const std::string&) { return HTTPReq_JSONRPC(context, req); };
+    auto handle_rpc_external = [&context](HTTPRequest* req, const std::string&) { return HTTPReq_JSONRPC(context, req, true); };
     RegisterHTTPHandler("/", true, false, handle_rpc);
     if (g_wallet_init_interface.HasWalletSupport()) {
         RegisterHTTPHandler("/wallet/", false, false, handle_rpc);
@@ -330,6 +327,7 @@ void InterruptHTTPRPC()
 void StopHTTPRPC()
 {
     LogPrint(BCLog::RPC, "Stopping HTTP RPC server\n");
+    UnregisterHTTPHandler("/external", true);
     UnregisterHTTPHandler("/", true);
     if (g_wallet_init_interface.HasWalletSupport()) {
         UnregisterHTTPHandler("/wallet/", false);

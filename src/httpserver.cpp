@@ -91,7 +91,6 @@ public:
         if (!running || queue.size() >= maxDepth) {
             return false;
         }
-        LogPrintf("knst queue: enqueued! \n");
         queue.emplace_back(std::unique_ptr<WorkItem>(item));
         cond.notify_one();
         return true;
@@ -101,7 +100,6 @@ public:
     {
         while (true) {
             // there's a queue extractor!
-            LogPrintf("knst de-queue ext=%d...\n", m_is_external);
             std::unique_ptr<WorkItem> i;
             {
                 WAIT_LOCK(cs, lock);
@@ -112,7 +110,8 @@ public:
                 i = std::move(queue.front());
                 queue.pop_front();
             }
-            LogPrintf("knst call handler ext=%d!...\n", m_is_external);
+            if (m_is_external) {
+                LogPrintf("Calling handler for external user...\n");
             (*i)();
         }
     }
@@ -252,8 +251,6 @@ static void http_request_cb(struct evhttp_request* req, void* arg)
     std::string path;
     std::vector<HTTPPathHandler>::const_iterator i = pathHandlers.begin();
     std::vector<HTTPPathHandler>::const_iterator iend = pathHandlers.end();
-    // it seems as there can be multiple handler
-    // can make it different handler for different rpc?
     for (; i != iend; ++i) {
         bool match = false;
         if (i->exactMatch)
@@ -270,18 +267,16 @@ static void http_request_cb(struct evhttp_request* req, void* arg)
     if (i != iend) {
         auto item{std::make_unique<HTTPWorkItem>(std::move(hreq), path, i->handler)}; /// this handler!
         assert(g_work_queue);
-        LogPrintf("item: url: '%s' external: %d\n", path, i->m_external);
-        if (i->m_external) {
-            assert(g_work_queue_external);
+
+        // We have queue created only if RPC arg 'rpcexternaluser' is specified
+        if (i->m_external && g_work_queue_external) {
             if (g_work_queue_external->Enqueue(item.get())) {
-                LogPrintf("knst g-externals! %s\n", path);
                 item.release();
             } else {
-                LogPrintf("WARNING: request rejected because http work queue depth of externals exceeded, it can be increased with the -rpcworkqueue= setting\n");
+                LogPrintf("WARNING: request rejected because http work queue depth of externals exceeded, it can be increased with the -rpcexternalworkqueue= setting\n");
                 item->req->WriteReply(HTTP_SERVICE_UNAVAILABLE, "Work queue depth of externals exceeded");
             }
         } else if (g_work_queue->Enqueue(item.get())) {
-            LogPrintf("knst g-work enqueue: %s\n", path);
             item.release(); /* if true, queue took ownership */
         } else {
             LogPrintf("WARNING: request rejected because http work queue depth exceeded, it can be increased with the -rpcworkqueue= setting\n");
@@ -414,10 +409,14 @@ bool InitHTTPServer()
 
     LogPrint(BCLog::HTTP, "Initialized HTTP server\n");
     int workQueueDepth = std::max((long)gArgs.GetArg("-rpcworkqueue", DEFAULT_HTTP_WORKQUEUE), 1L);
+    int workQueueDepthExternal = std::max((long)gArgs.GetArg("-rpcexternalworkqueue", DEFAULT_HTTP_WORKQUEUE), 1L);
     LogPrintf("HTTP: creating work queue of depth %d\n", workQueueDepth);
 
     g_work_queue = std::make_unique<WorkQueue<HTTPClosure>>(workQueueDepth, false);
-    g_work_queue_external = std::make_unique<WorkQueue<HTTPClosure>>(workQueueDepth, true);
+    if (!gArgs.GetArg("-rpcexternaluser", "").empty()) {
+        LogPrintf("HTTP: creating external work queue of depth %d\n", workQueueDepthExternal);
+        g_work_queue_external = std::make_unique<WorkQueue<HTTPClosure>>(workQueueDepthExternal, true);
+    }
     // transfer ownership to eventBase/HTTP via .release()
     eventBase = base_ctr.release();
     eventHTTP = http_ctr.release();
@@ -452,8 +451,10 @@ void StartHTTPServer()
     for (int i = 0; i < rpcThreads; i++) {
         g_thread_http_workers.emplace_back(HTTPWorkQueueRun, g_work_queue.get(), i);
     }
-    for (int i = 0; i < rpcThreadsExternals; i++) {
-        g_thread_http_workers.emplace_back(HTTPWorkQueueRun, g_work_queue_external.get(), i);
+    if (g_work_queue_external) {
+        for (int i = 0; i < rpcThreadsExternals; i++) {
+            g_thread_http_workers.emplace_back(HTTPWorkQueueRun, g_work_queue_external.get(), i);
+        }
     }
 }
 
@@ -674,7 +675,7 @@ HTTPRequest::RequestMethod HTTPRequest::GetRequestMethod() const
 
 void RegisterHTTPHandler(const std::string &prefix, bool exactMatch, bool external, const HTTPRequestHandler &handler)
 {
-    LogPrint(BCLog::HTTP, "Registering HTTP handler for %s (exactmatch %d)\n", prefix, exactMatch);
+    LogPrint(BCLog::HTTP, "Registering HTTP handler for %s (exactmatch %d external %d)\n", prefix, exactMatch, external);
     pathHandlers.push_back(HTTPPathHandler(prefix, exactMatch, external, handler));
 }
 
