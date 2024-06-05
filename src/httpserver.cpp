@@ -111,7 +111,8 @@ public:
                 queue.pop_front();
             }
             if (m_is_external) {
-                LogPrintf("Calling handler for external user...\n");
+                LogPrintf("HTTP: Calling handler for external user...\n");
+            }
             (*i)();
         }
     }
