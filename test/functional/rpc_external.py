@@ -35,14 +35,15 @@ class RPCExternalTest(BitcoinTestFramework):
             f.write(rpcauthplatform+"\n")
             f.write(rpcauthoperator+"\n")
 
-    def test_command(self, method, params, auth, expexted_status, should_not_match=False):
+    def test_command(self, method, params, external, auth, expexted_status, should_not_match=False):
         url = urllib.parse.urlparse(self.nodes[0].url)
         conn = http.client.HTTPConnection(url.hostname, url.port)
         conn.connect()
         body = {"method": method}
         if len(params):
             body["params"] = params
-        conn.request('POST', '/external', json.dumps(body), {"Authorization": "Basic " + str_to_b64str(auth)})
+        path = '/' if not external else '/external'
+        conn.request('POST', path, json.dumps(body), {"Authorization": "Basic " + str_to_b64str(auth)})
         resp = conn.getresponse()
         if should_not_match:
             assert resp.status != expexted_status
@@ -59,8 +60,9 @@ class RPCExternalTest(BitcoinTestFramework):
         rpcuser_authpair_platform = "platform-user:password123"
         rpcuser_authpair_operator = "operator:otherpassword"
 
-        self.test_command("getblockchaininfo", [], rpcuser_authpair_platform, 200)
-        self.test_command("getblockchaininfo", [], rpcuser_authpair_operator, 403)
+        self.test_command("getblockchaininfo", [], True, rpcuser_authpair_platform, 200)
+        self.test_command("getblockchaininfo", [], False, rpcuser_authpair_operator, 200)
+        self.test_command("getblockchaininfo", [], False, rpcuser_authpair_platform, 403)
 
 if __name__ == '__main__':
     RPCExternalTest().main()
