@@ -131,7 +131,6 @@ static bool RPCAuthorized(const std::string& strAuth, std::string& strAuthUserna
         return false;
     if (strAuth.substr(0, 6) != "Basic ")
         return false;
-    LogPrintf("user-pass: %s\n", strAuth);
     std::string strUserPass64 = TrimString(strAuth.substr(6));
     bool invalid;
     std::string strUserPass = DecodeBase64(strUserPass64, &invalid);
@@ -164,8 +163,7 @@ static bool HTTPReq_JSONRPC(const CoreContext& context, HTTPRequest* req, bool e
 
     JSONRPCRequest jreq(context);
     jreq.peerAddr = req->GetPeer().ToString();
-    std::string auth_user;
-    if (!RPCAuthorized(authHeader.second, auth_user)) {
+    if (!RPCAuthorized(authHeader.second, jreq.authUser)) {
         LogPrintf("ThreadRPCServer incorrect password attempt from %s\n", jreq.peerAddr);
 
         /* Deter brute-forcing
@@ -177,16 +175,15 @@ static bool HTTPReq_JSONRPC(const CoreContext& context, HTTPRequest* req, bool e
         req->WriteReply(HTTP_UNAUTHORIZED);
         return false;
     }
-    LogPrintf("users '%s' -> '%s'\n", jreq.authUser, auth_user);
-    jreq.authUser = auth_user;
-
 
     static const std::string defaultExternalUser = "external-user";
-    LogPrintf("test external: %d '%s' '%s'\n", external, jreq.authUser, gArgs.GetArg("-rpcexternaluser", defaultExternalUser));
-    if (external != (jreq.authUser == gArgs.GetArg("-rpcexternaluser", defaultExternalUser))) {
-        LogPrintf("RPC User '%s' not allowed to call is_external=%d handler\n", jreq.authUser, external);
-        req->WriteReply(HTTP_FORBIDDEN);
-        return false;
+    if (jreq.authUser == gArgs.GetArg("-rpcexternaluser", defaultExternalUser)) {
+        if (!external) {
+            LogPrintf("RPC User '%s' is allowed to call rpc only by path /external\n", jreq.authUser);
+            req->WriteReply(HTTP_FORBIDDEN);
+            return false;
+        }
+        LogPrintf("RPC user '%s' is external\n", jreq.authUser);
     }
     try {
         // Parse request

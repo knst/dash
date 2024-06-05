@@ -55,20 +55,12 @@ class RPCExternalTest(BitcoinTestFramework):
         self.log.info(f"node-0: {self.nodes[0].getblockchaininfo()}")
         self.log.info(f"node-1: {self.nodes[1].getblockchaininfo()}")
 
-        rpc_ext = self.nodes[0].get_external_rpc()
-        self.log.info(f"ext: {rpc_ext}")
-        rpc_ext.rpcuser = "platform-user"
-        rpc_ext.rpcpassword = "password123"
-        # rpc_ext.getblockchaininfo() ---- doesn't work!!!!
-
-
 
         rpcuser_authpair_platform = "platform-user:password123"
         rpcuser_authpair_operator = "operator:otherpassword"
 
         self.test_command("getblockchaininfo", [], rpcuser_authpair_platform, 200)
         self.test_command("getblockchaininfo", [], rpcuser_authpair_operator, 403)
-        raise "error" # keep it so can read logs
 
 if __name__ == '__main__':
     RPCExternalTest().main()
