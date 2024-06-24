@@ -128,7 +128,7 @@ static bool JSONErrorReply(RpcHttpRequest& rpcRequest, const UniValue& objError,
         if (objError.exists("message")) {
             const auto& message = objError["message"];
             if (message.isStr()) rpcRequest.error_msg = message.get_str();
-            if (rpcRequest.size() > 100) rpcRequest = rpcRequest.substr(0, 100);
+            if (rpcRequest.error_msg.size() > 100) rpcRequest.error_msg = rpcRequest.error_msg.substr(0, 100);
         }
         if (objError.exists("code")) {
             const auto& code = objError["code"];
