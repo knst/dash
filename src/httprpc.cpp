@@ -82,6 +82,9 @@ public:
     std::string user;
     std::string command;
 
+    std::string error_msg;
+    int64_t error_code;
+
     RpcHttpRequest(HTTPRequest* req) :
         m_req{req},
         m_startTime{GetTimeMicros()}
@@ -90,7 +93,11 @@ public:
     ~RpcHttpRequest()
     {
         const bool is_external = find(g_external_usernames.begin(), g_external_usernames.end(), user) != g_external_usernames.end();
-        LogPrint(BCLog::BENCHMARK, "-- HTTP RPC request handled: user=%s command=%s is_external=%s status=%d elapsed_time_ms=%d\n", user, command, is_external, m_status, (GetTimeMicros() - m_startTime) / 1000);
+        std::string log_error;
+        if (!error_msg.empty() || error_code) {
+            log_error = strprintf(" error_code=%lld error_msg=\"%s\"", error_code, error_msg);
+        }
+        LogPrint(BCLog::BENCHMARK, "-- HTTP RPC request handled: user=%s command=%s is_external=%s status=%d elapsed_time_ms=%d%s\n", user, command, is_external, m_status, (GetTimeMicros() - m_startTime) / 1000, log_error);
     }
 
     bool send_reply(int status, const std::string& response = "")
@@ -117,6 +124,18 @@ static bool JSONErrorReply(RpcHttpRequest& rpcRequest, const UniValue& objError,
 
     std::string strReply = JSONRPCReply(NullUniValue, objError, id);
 
+    if (objError.isObject()) {
+        if (objError.exists("message")) {
+            const auto& message = objError["message"];
+            if (message.isStr()) rpcRequest.error_msg = message.get_str();
+        }
+        if (objError.exists("code")) {
+            const auto& code = objError["code"];
+            if (code.isNum()) rpcRequest.error_code = code.get_int();
+        }
+    }
+
+    LogPrintf("obj error: %s\n", objError.write());
     rpcRequest.m_req->WriteHeader("Content-Type", "application/json");
     return rpcRequest.send_reply(nStatus, strReply);
 }
