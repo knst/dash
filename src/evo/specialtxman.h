@@ -43,10 +43,6 @@ private:
     const llmq::CChainLocksHandler& m_clhandler;
     const llmq::CQuorumManager& m_qman;
 
-private:
-    [[nodiscard]] bool ProcessSpecialTx(const CTransaction& tx, const CBlockIndex* pindex, TxValidationState& state);
-    [[nodiscard]] bool UndoSpecialTx(const CTransaction& tx, const CBlockIndex* pindex);
-
 public:
     explicit CSpecialTxProcessor(CCreditPoolManager& cpoolman, CDeterministicMNManager& dmnman, CMNHFManager& mnhfman,
                                  llmq::CQuorumBlockProcessor& qblockman, const ChainstateManager& chainman, const Consensus::Params& consensus_params,
