@@ -59,7 +59,6 @@
 #include <evo/evodb.h>
 #include <evo/mnhftx.h>
 #include <evo/specialtx.h>
-#include <evo/specialtxman.h>
 #include <governance/governance.h>
 
 #include <llmq/instantsend.h>
@@ -808,7 +807,7 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
     // DoS scoring a node for non-critical errors, e.g. duplicate keys because a TX is received that was already
     // mined
     // NOTE: we use UTXO here and do NOT allow mempool txes as masternode collaterals
-    if (!m_chain_helper.special_tx->CheckSpecialTx(tx, m_active_chainstate.m_chain.Tip(), m_active_chainstate.CoinsTip(), true, state))
+    if (!m_chain_helper.CheckSpecialTx(tx, m_active_chainstate.m_chain.Tip(), m_active_chainstate.CoinsTip(), true, state))
         return false;
 
     if (m_pool.existsProviderTxConflict(tx)) {
@@ -1740,7 +1739,7 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
     std::vector<std::pair<CSpentIndexKey, CSpentIndexValue> > spentIndex;
 
     std::optional<MNListUpdates> mnlist_updates_opt{std::nullopt};
-    if (!m_chain_helper->special_tx->UndoSpecialTxsInBlock(block, pindex, mnlist_updates_opt)) {
+    if (!m_chain_helper->UndoSpecialTxsInBlock(block, pindex, mnlist_updates_opt)) {
         error("DisconnectBlock(): UndoSpecialTxsInBlock failed");
         return DISCONNECT_FAILED;
     }
@@ -2210,7 +2209,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
 
     // MUST process special txes before updating UTXO to ensure consistency between mempool and block processing
     std::optional<MNListUpdates> mnlist_updates_opt{std::nullopt};
-    if (!m_chain_helper->special_tx->ProcessSpecialTxsInBlock(block, pindex, view, fJustCheck, fScriptChecks, state, mnlist_updates_opt)) {
+    if (!m_chain_helper->ProcessSpecialTxsInBlock(block, pindex, view, fJustCheck, fScriptChecks, state, mnlist_updates_opt)) {
         return error("ConnectBlock(DASH): ProcessSpecialTxsInBlock for block %s failed with %s",
                      pindex->GetBlockHash().ToString(), state.ToString());
     }
@@ -2399,7 +2398,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     int64_t nTime5_2 = GetTimeMicros(); nTimeSubsidy += nTime5_2 - nTime5_1;
     LogPrint(BCLog::BENCHMARK, "      - GetBlockSubsidy: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime5_2 - nTime5_1), nTimeSubsidy * MICRO, nTimeSubsidy * MILLI / nBlocksTotal);
 
-    if (!m_chain_helper->special_tx->CheckCreditPoolDiffForBlock(block, pindex, blockSubsidy, state)) {
+    if (!m_chain_helper->CheckCreditPoolDiffForBlock(block, pindex, blockSubsidy, state)) {
         return error("ConnectBlock(DASH): CheckCreditPoolDiffForBlock for block %s failed with %s",
                      pindex->GetBlockHash().ToString(), state.ToString());
     }
@@ -4826,7 +4825,7 @@ bool CChainState::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& i
     // MUST process special txes before updating UTXO to ensure consistency between mempool and block processing
     BlockValidationState state;
     std::optional<MNListUpdates> mnlist_updates_opt{std::nullopt};
-    if (!m_chain_helper->special_tx->ProcessSpecialTxsInBlock(block, pindex, inputs, false /*fJustCheck*/, false /*fScriptChecks*/, state, mnlist_updates_opt)) {
+    if (!m_chain_helper->ProcessSpecialTxsInBlock(block, pindex, inputs, false /*fJustCheck*/, false /*fScriptChecks*/, state, mnlist_updates_opt)) {
         return error("RollforwardBlock(DASH): ProcessSpecialTxsInBlock for block %s failed with %s",
             pindex->GetBlockHash().ToString(), state.ToString());
     }

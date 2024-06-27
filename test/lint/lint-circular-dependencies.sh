@@ -82,7 +82,6 @@ EXPECTED_CIRCULAR_DEPENDENCIES=(
     "llmq/signing -> masternode/node -> validationinterface -> llmq/signing"
     "evo/mnhftx -> validation -> evo/mnhftx"
     "evo/deterministicmns -> validation -> evo/deterministicmns"
-    "evo/specialtxman -> validation -> evo/specialtxman"
     "evo/chainhelper -> evo/specialtxman -> validation -> evo/chainhelper"
     "evo/deterministicmns -> validationinterface -> evo/deterministicmns"
     "logging -> util/system -> sync -> logging/timer -> logging"
