@@ -218,6 +218,13 @@ x86_64-apple-darwin:
   variables:
     HOST: x86_64-apple-darwin
 
+x86_64-android:
+  extends:
+    - .build-depends-template
+    - .skip-in-fast-mode-template
+  variables:
+    HOST: x86_64-android
+
 ###
 
 arm-linux-build:
@@ -332,6 +339,15 @@ mac-build:
     - x86_64-apple-darwin
   variables:
     BUILD_TARGET: mac
+
+android-build:
+  extends:
+    - .build-template
+    - .skip-in-fast-mode-template
+  needs:
+    - x86_64-android
+  variables:
+    BUILD_TARGET: android
 
 ###
 
