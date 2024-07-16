@@ -29,7 +29,10 @@ Before every major release:
 * [ ] Update [`src/chainparams.cpp`](/src/chainparams.cpp) `chainTxData` with statistics about the transaction count and rate. Use the output of the `getchaintxstats` RPC, see
   [this pull request](https://github.com/dashpay/dash/pull/5692) for an example. Reviewers can verify the results by running `getchaintxstats <window_block_count> <window_last_block_hash>` with the `window_block_count` and `window_last_block_hash` from your output.
 
+<details>
+<summary>
 ### First time / New builders
+</summary>
 
 Install Guix using one of the installation methods detailed in
 [contrib/guix/INSTALL.md](/contrib/guix/INSTALL.md).
@@ -42,8 +45,12 @@ git clone https://github.com/dashpay/guix.sigs.git
 git clone https://github.com/dashpay/dash-detached-sigs.git
 git clone https://github.com/dashpay/dash.git
 ```
+</details>
 
+<details>
+<summary>
 ### Dash Core maintainers/release engineers, suggestion for writing release notes
+</summary>
 
 Write release notes. git shortlog helps a lot, for example:
 
@@ -62,8 +69,12 @@ Tag version (or release candidate) in git
 ```sh
 git tag -s v(new version, e.g. 20.0.0)
 ```
+</details>
 
+<details>
+<summary>
 ### Setup and perform Guix builds
+</summary>
 
 Checkout the Dash Core version you'd like to build:
 
@@ -82,6 +93,7 @@ against other `guix-attest` signatures.
 ```sh
 git -C ./guix.sigs pull
 ```
+</details>
 
 ### Create the macOS SDK tarball: (first time, or when SDK version changes)
 
