@@ -241,7 +241,7 @@ unsigned int CCoinsViewCache::GetCacheSize() const {
 
 bool CCoinsViewCache::HaveInputs(const CTransaction& tx) const
 {
-    if (!tx.IsCoinBase()) {
+    if (!tx.IsCoinBase() && !tx.IsWithdrawal()) {
         for (unsigned int i = 0; i < tx.vin.size(); i++) {
             if (!HaveCoin(tx.vin[i].prevout)) {
                 return false;

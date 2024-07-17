@@ -183,6 +183,13 @@ bool Consensus::CheckTxInputs(const CTransaction& tx, TxValidationState& state, 
                 strprintf("tried to spend coinbase at depth %d", nSpendHeight - coin.nHeight));
         }
 
+        // If prev is withdrawal, check that it's matured
+        if (coin.IsWithdrawal() && nSpendHeight - coin.nHeight < WITHDRAWAL_MATURITY) {
+            return state.Invalid(TxValidationResult::TX_PREMATURE_SPEND, "bad-txns-premature-spend-of-withdrawal",
+                strprintf("tried to spend withdrawal at depth %d", nSpendHeight - coin.nHeight));
+        }
+
+
         // Check for negative or overflow input values
         nValueIn += coin.out.nValue;
         if (!MoneyRange(coin.out.nValue) || !MoneyRange(nValueIn)) {

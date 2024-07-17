@@ -52,7 +52,7 @@ public:
     //! empty constructor
     Coin() : fCoinBase(false), nHeight(0) { }
 
-    bool IsCoinBase() const {
+    bool RequiresMaturing() const {
         return fCoinBase;
     }
 
