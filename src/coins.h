@@ -37,11 +37,14 @@ public:
     unsigned int fCoinBase : 1;
 
     //! at which height this containing transaction was included in the active block chain
-    uint32_t nHeight : 31;
+    uint32_t nHeight : 30;
+
+    //! wheter cointaining transaction was a withdrawal from platform
+    unsigned int fWithdrawal : 1;
 
     //! construct a Coin from a CTxOut and height/coinbase information.
-    Coin(CTxOut&& outIn, int nHeightIn, bool fCoinBaseIn) : out(std::move(outIn)), fCoinBase(fCoinBaseIn), nHeight(nHeightIn) {}
-    Coin(const CTxOut& outIn, int nHeightIn, bool fCoinBaseIn) : out(outIn), fCoinBase(fCoinBaseIn),nHeight(nHeightIn) {}
+    Coin(CTxOut&& outIn, int nHeightIn, bool fCoinBaseIn, bool fWithdrawalIn) : out(std::move(outIn)), fCoinBase(fCoinBaseIn), nHeight(nHeightIn), fWithdrawal(fWithdrawalIn) {}
+    Coin(const CTxOut& outIn, int nHeightIn, bool fCoinBaseIn, bool fWithdrawalIn) : out(outIn), fCoinBase(fCoinBaseIn),nHeight(nHeightIn), fWithdrawal(fWithdrawalIn) {}
 
     void Clear() {
         out.SetNull();
@@ -50,16 +53,20 @@ public:
     }
 
     //! empty constructor
-    Coin() : fCoinBase(false), nHeight(0) { }
+    Coin() : fCoinBase(false), nHeight(0), fWithdrawal(false) { }
 
-    bool RequiresMaturing() const {
+    bool IsCoinBase() const {
         return fCoinBase;
+    }
+
+    bool IsWithdrawal() const {
+        return fWithdrawal;
     }
 
     template<typename Stream>
     void Serialize(Stream &s) const {
         assert(!IsSpent());
-        uint32_t code = nHeight * uint32_t{2} + fCoinBase;
+        uint32_t code = (uint32_t{fWithdrawal} << 31) + nHeight * uint32_t{2} + fCoinBase;
         ::Serialize(s, VARINT(code));
         ::Serialize(s, Using<TxOutCompression>(out));
     }
@@ -68,7 +75,8 @@ public:
     void Unserialize(Stream &s) {
         uint32_t code = 0;
         ::Unserialize(s, VARINT(code));
-        nHeight = code >> 1;
+        fWithdrawal = (code & 0x80000000);
+        nHeight = (code >> 1) & 0x7FFFFFFFu;
         fCoinBase = code & 1;
         ::Unserialize(s, Using<TxOutCompression>(out));
     }
