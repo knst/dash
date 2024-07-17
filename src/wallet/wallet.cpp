@@ -5345,11 +5345,13 @@ int CWalletTx::GetBlocksToMaturity() const
         return 0;
     int chain_depth = GetDepthInMainChain();
     assert(chain_depth >= 0); // coinbase tx should not be conflicted
+    // TODO make here condition for withdrawal
     return std::max(0, (COINBASE_MATURITY+1) - chain_depth);
 }
 
 bool CWalletTx::IsImmatureCoinBase() const
 {
+    // TODO make here withdrawal too! rename to IsImmatureTx() ??
     // note GetBlocksToMaturity is 0 for non-coinbase tx
     return GetBlocksToMaturity() > 0;
 }
