@@ -2168,7 +2168,7 @@ CAmount CWalletTx::GetDebit(const isminefilter& filter) const
 CAmount CWalletTx::GetCredit(const isminefilter& filter) const
 {
     // Must wait until coinbase is safely deep enough in the chain before valuing it
-    if (IsImmatureCoinBase())
+    if (IsImmature())
         return 0;
 
     CAmount credit = 0;
@@ -2184,7 +2184,7 @@ CAmount CWalletTx::GetCredit(const isminefilter& filter) const
 
 CAmount CWalletTx::GetImmatureCredit(bool fUseCache) const
 {
-    if (IsImmatureCoinBase() && IsInMainChain()) {
+    if (IsImmature() && IsInMainChain()) {
         return GetCachableAmount(IMMATURE_CREDIT, ISMINE_SPENDABLE, !fUseCache);
     }
 
@@ -2200,7 +2200,7 @@ CAmount CWalletTx::GetAvailableCredit(bool fUseCache, const isminefilter& filter
     bool allow_cache = (filter & ISMINE_ALL) && (filter & ISMINE_ALL) != ISMINE_ALL;
 
     // Must wait until coinbase is safely deep enough in the chain before valuing it
-    if (IsImmatureCoinBase())
+    if (IsImmature())
         return 0;
 
     if (fUseCache && allow_cache && m_amounts[AVAILABLE_CREDIT].m_cached[filter]) {
@@ -2231,7 +2231,7 @@ CAmount CWalletTx::GetAvailableCredit(bool fUseCache, const isminefilter& filter
 
 CAmount CWalletTx::GetImmatureWatchOnlyCredit(const bool fUseCache) const
 {
-    if (IsImmatureCoinBase() && IsInMainChain()) {
+    if (IsImmature() && IsInMainChain()) {
         return GetCachableAmount(IMMATURE_CREDIT, ISMINE_WATCH_ONLY, !fUseCache);
     }
 
@@ -2607,7 +2607,7 @@ void CWallet::AvailableCoins(std::vector<COutput> &vCoins, const CCoinControl* c
         if (!chain().checkFinalTx(*pcoin->tx))
             continue;
 
-        if (pcoin->IsImmatureCoinBase())
+        if (pcoin->IsImmature())
             continue;
 
         int nDepth = pcoin->GetDepthInMainChain();
@@ -4166,7 +4166,7 @@ std::map<CTxDestination, CAmount> CWallet::GetAddressBalances() const
             if (!IsTrusted(*pcoin, trusted_parents))
                 continue;
 
-            if (pcoin->IsImmatureCoinBase())
+            if (pcoin->IsImmature())
                 continue;
 
             int nDepth = pcoin->GetDepthInMainChain();
@@ -5345,14 +5345,17 @@ int CWalletTx::GetBlocksToMaturity() const
         return 0;
     int chain_depth = GetDepthInMainChain();
     assert(chain_depth >= 0); // coinbase tx should not be conflicted
-    // TODO make here condition for withdrawal
-    return std::max(0, (COINBASE_MATURITY+1) - chain_depth);
+    if (IsCoinBase()) {
+        return std::max(0, (COINBASE_MATURITY+1) - chain_depth);
+    }
+    if (IsWithdrawal()) {
+        return std::max(0, (WITHDRAWAL_MATURITY + 1) - chain_depth);
+    }
+    assert(false); // we should not get here
 }
 
-bool CWalletTx::IsImmatureCoinBase() const
+bool CWalletTx::IsImmature() const
 {
-    // TODO make here withdrawal too! rename to IsImmatureTx() ??
-    // note GetBlocksToMaturity is 0 for non-coinbase tx
     return GetBlocksToMaturity() > 0;
 }
 
