@@ -416,6 +416,9 @@ class AssetLocksTest(DashTestFramework):
         self.sync_all()
         self.validate_credit_pool_balance(locked - 2 * COIN)
 
+        self.log.info(f"TXX: {node.getrawtransaction(txid, 1)}")
+        self.log.info(f"blocks: {node.getblockcount()}")
+
         self.log.info("Generating many blocks to make quorum far behind (even still active)...")
         self.slowly_generate_batch(too_late_height - node.getblockcount() - 1)
         self.check_mempool_result(tx=asset_unlock_tx_too_late, result_expected={'allowed': True, 'fees': {'base': Decimal(str(tiny_amount / COIN))}})

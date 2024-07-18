@@ -308,6 +308,12 @@ BOOST_FIXTURE_TEST_CASE(evo_assetunlock, TestChain100Setup)
     std::string reason;
     BOOST_CHECK(IsStandardTx(CTransaction(tx), reason));
 
+    {
+        int height = 0;
+        Coin(tx.vout[0], height, CTransaction(tx).IsCoinBase(), CTransaction(tx).IsWithdrawal());
+        // TODO - make unit test for withdrawal!!1
+    }
+
     TxValidationState tx_state;
     std::string strTest;
     BOOST_CHECK_MESSAGE(CheckTransaction(CTransaction(tx), tx_state), strTest);
