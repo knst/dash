@@ -5356,6 +5356,7 @@ int CWalletTx::GetBlocksToMaturity() const
 
 bool CWalletTx::IsImmature() const
 {
+    // note GetBlocksToMaturity is 0 for non-coinbase tx
     return GetBlocksToMaturity() > 0;
 }
 
