@@ -75,6 +75,12 @@ class AssetLocksTest(DashTestFramework):
 
         tx_output_ret = CTxOut(amount, CScript([OP_RETURN, b""]))
         tx_output = CTxOut(remaining, CScript([pubkey, OP_CHECKSIG]))
+        #tx_output = CTxOut(remaining, CScript([node_wallet.getnewaddress(), OP_CHECKSIG]))
+        new_tx = node_wallet.createrawtransaction(inputs=[{'txid': coin['txid'], 'vout': coin['vout']}], outputs=[{node_wallet.getnewaddress(): coin['amount'] - Decimal(str((tiny_amount + amount) / COIN))}]),
+        self.log.info(f"new tx: {new_tx}")
+        # self.log.info(f"decode raw transaction: {node_wallet.decoderawtransaction(new_tx)}")
+#        tx_output = new_tx.vout
+
 
         lock_tx = CTransaction()
         lock_tx.vin = inputs
@@ -91,7 +97,11 @@ class AssetLocksTest(DashTestFramework):
         node_wallet = self.nodes[0]
         mninfo = self.mninfo
         assert_greater_than(int(withdrawal), fee)
-        tx_output = CTxOut(int(withdrawal) - fee, CScript([pubkey, OP_CHECKSIG]))
+        #tx_output = CTxOut(int(withdrawal) - fee, CScript([pubkey, OP_CHECKSIG]))
+        # tx_output = {node_wallet.getnewaddress(): 49.999}
+        #tx_output = CTxOut(int(withdrawal) - fee, ))
+#        tx_output = CTxOut(int(withdrawal) - fee, CScript([node_wallet.getnewaddress(), OP_CHECKSIG]))
+        tx_output = CTxOut(int(withdrawal) - fee, CScript([OP_DUP, OP_HASH160, hash160(pubkey), OP_EQUALVERIFY, OP_CHECKSIG]))
 
         # request ID = sha256("plwdtx", index)
         request_id_buf = ser_string(b"plwdtx") + struct.pack("<Q", index)
@@ -418,6 +428,22 @@ class AssetLocksTest(DashTestFramework):
 
         self.log.info(f"TXX: {node.getrawtransaction(txid, 1)}")
         self.log.info(f"blocks: {node.getblockcount()}")
+        for node in self.nodes:
+            try:
+                self.log.info(f"TXXW {node.gettransaction(txid)}")
+            except:
+                self.log.info(f"doesn't exist here")
+        for vout in node.getrawtransaction(txid, 1)['vout']:
+            node_wallet.importaddress(vout['scriptPubKey']['address'])
+        for node in self.nodes:
+            try:
+                self.log.info(f"2-TXXW {node.gettransaction(txid)}")
+            except:
+                self.log.info(f"2-doesn't exist here")
+
+
+        # TXX: {'txid': '6e79f6e6ce96d1366b1bf1354855a9c121f599353ca983ecd6af8ec02220f2a6', 'version': 3, 'type': 9, 'size': 190, 'locktime': 0, 'vin': [], 'vout': [{'value': Decimal('0.99930000'), 'valueSat': 99930000, 'n': 0, 'scriptPubKey': {'asm': 'OP_DUP OP_HASH160 2572164b16945a3e8487beb1849e803585b575c8 OP_EQUALVERIFY OP_CHECKSIG', 'hex': '76a9142572164b16945a3e8487beb1849e803585b575c888ac', 'address': 'yPjSXD9gegs79jxCWS4fCwBFis4mbC5Tuu', 'type': 'pubkeyhash'}}], 'extraPayloadSize': 145, 'extraPayload': '01650000000000000070110100db040000d32c5bfe737d0e52da5b2762070ace3da3e78fee44fbd2fb4515dc0057d61d56841f9e52f82f2adc769b902e1c4cb5f7124795ce7320b5eeab93d53e3ed90e59fbb54b8fccfef102e5b68e5b352facfa175da3d964469df8e0a521b7153c89e925f7887ce4be632d614f5f1b699c0bdd7dac73cff39a5406ed218f55756586f3', 'assetUnlockTx': {'version': 1, 'index': 101, 'fee': 70000, 'requestedHeight': 1243, 'quorumHash': '561dd65700dc1545fbd2fb44ee8fe7a33dce0a0762275bda520e7d73fe5b2cd3', 'quorumSig': '841f9e52f82f2adc769b902e1c4cb5f7124795ce7320b5eeab93d53e3ed90e59fbb54b8fccfef102e5b68e5b352facfa175da3d964469df8e0a521b7153c89e925f7887ce4be632d614f5f1b699c0bdd7dac73cff39a5406ed218f55756586f3'}, 'hex': '03000900000190cff405000000001976a9142572164b16945a3e8487beb1849e803585b575c888ac000000009101650000000000000070110100db040000d32c5bfe737d0e52da5b2762070ace3da3e78fee44fbd2fb4515dc0057d61d56841f9e52f82f2adc769b902e1c4cb5f7124795ce7320b5eeab93d53e3ed90e59fbb54b8fccfef102e5b68e5b352facfa175da3d964469df8e0a521b7153c89e925f7887ce4be632d614f5f1b699c0bdd7dac73cff39a5406ed218f55756586f3', 'blockhash': '64b9b3446b57bea0e2073d4c2da18b0397236aa3f9eddf36a43b05d51b37d8a5', 'height': 1244, 'confirmations': 25, 'time': 1417714093, 'blocktime': 1417714093, 'instantlock': False, 'instantlock_internal': False, 'chainlock': False}
+
 
         self.log.info("Generating many blocks to make quorum far behind (even still active)...")
         self.slowly_generate_batch(too_late_height - node.getblockcount() - 1)
@@ -475,6 +501,7 @@ class AssetLocksTest(DashTestFramework):
         self.log.info("Forcibly mine asset_unlock_tx_full and ensure block is invalid...")
         self.create_and_check_block([asset_unlock_tx_full], expected_error = "failed-creditpool-unlock-too-much")
 
+        self.ensure_tx_is_not_mined(txid_in_block)
         self.mempool_size += 1
         asset_unlock_tx_full = self.create_assetunlock(301, self.get_credit_pool_balance(), pubkey)
         self.check_mempool_result(tx=asset_unlock_tx_full, result_expected={'allowed': True, 'fees': {'base': Decimal(str(tiny_amount / COIN))}})
