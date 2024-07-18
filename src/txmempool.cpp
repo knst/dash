@@ -1046,7 +1046,7 @@ static void CheckInputsAndUpdateCoins(const CTransaction& tx, CCoinsViewCache& m
     CAmount txfee = 0;
     bool fCheckResult = tx.IsCoinBase() || Consensus::CheckTxInputs(tx, dummy_state, mempoolDuplicate, spendheight, txfee);
     assert(fCheckResult);
-    UpdateCoins(tx, mempoolDuplicate, std::numeric_limits<int>::max());
+    UpdateCoins(tx, mempoolDuplicate, MEMPOOL_HEIGHT);
 }
 
 void CTxMemPool::check(CChainState& active_chainstate) const
