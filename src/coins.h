@@ -76,7 +76,7 @@ public:
         uint32_t code = 0;
         ::Unserialize(s, VARINT(code));
         fWithdrawal = (code & 0x80000000);
-        nHeight = (code >> 1) & 0x7FFFFFFFu;
+        nHeight = (code & 0x7FFFFFFFu) >> 1;
         fCoinBase = code & 1;
         ::Unserialize(s, Using<TxOutCompression>(out));
     }

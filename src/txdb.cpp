@@ -464,8 +464,11 @@ public:
     //! at which height this transaction was included in the active block chain
     int nHeight;
 
+    //! whether transaction is a withdrawal
+    bool fWithdrawal;
+
     //! empty constructor
-    CCoins() : fCoinBase(false), vout(0), nHeight(0) { }
+    CCoins() : fCoinBase(false), vout(0), nHeight(0), fWithdrawal(false) { }
 
     template<typename Stream>
     void Unserialize(Stream &s) {
