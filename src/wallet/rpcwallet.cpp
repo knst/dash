@@ -167,6 +167,8 @@ static void WalletTxToJSON(interfaces::Chain& chain, const CWalletTx& wtx, UniVa
     entry.pushKV("chainlock", chainlock);
     if (wtx.IsCoinBase())
         entry.pushKV("generated", true);
+    if (wtx.IsWithdrawal())
+        entry.pushKV("withdrawal", true);
     if (confirms > 0)
     {
         entry.pushKV("blockhash", wtx.m_confirm.hashBlock.GetHex());
@@ -1414,10 +1416,17 @@ static void ListTransactions(const CWallet* const pwallet, const CWalletTx& wtx,
             {
                 if (wtx.GetDepthInMainChain() < 1)
                     entry.pushKV("category", "orphan");
-                else if (wtx.IsImmatureCoinBase())
+                else if (wtx.IsImmature())
                     entry.pushKV("category", "immature");
                 else
                     entry.pushKV("category", "generate");
+            }
+            else if (wtx.IsWithdrawal())
+            {
+                if (wtx.IsImmature())
+                    entry.pushKV("category", "immature-withdrawal");
+                else
+                    entry.pushKV("category", "withdrawal");
             }
             else
             {
@@ -1483,7 +1492,9 @@ static RPCHelpMan listtransactions()
                             "\"receive\"               Non-coinbase transactions received.\n"
                             "\"generate\"              Coinbase transactions received with more than 100 confirmations.\n"
                             "\"immature\"              Coinbase transactions received with 100 or fewer confirmations.\n"
-                            "\"orphan\"                Orphaned coinbase transactions received.\n"},
+                            "\"orphan\"                Orphaned coinbase transactions received.\n"
+                            "\"withdrawal\"            Withdrawal transactions received with more than 576 confirmations.\n"
+                            "\"immature-withdrawal\"   Withdrawal transactions received with 576 or fewer confirmations.\n"},
                         {RPCResult::Type::STR_AMOUNT, "amount", "The amount in " + CURRENCY_UNIT + ". This is negative for the 'send' category, and is positive\n"
                              "for all other categories"},
                         {RPCResult::Type::STR, "label", "A comment for the address/transaction, if any"},
@@ -1599,7 +1610,9 @@ static RPCHelpMan listsinceblock()
                             "\"receive\"               Non-coinbase transactions received.\n"
                             "\"generate\"              Coinbase transactions received with more than 100 confirmations.\n"
                             "\"immature\"              Coinbase transactions received with 100 or fewer confirmations.\n"
-                            "\"orphan\"                Orphaned coinbase transactions received.\n"},
+                            "\"orphan\"                Orphaned coinbase transactions received.\n"
+                            "\"withdrawal\"            Withdrawal transactions received with more than 576 confirmations.\n"
+                            "\"immature-withdrawal\"   Withdrawal transactions received with 576 or fewer confirmations.\n"},
                         {RPCResult::Type::STR_AMOUNT, "amount", "The amount in " + CURRENCY_UNIT + ". This is negative for the 'send' category, and is positive\n"
                             "for all other categories"},
                         {RPCResult::Type::NUM, "vout", "the vout value"},
@@ -1740,7 +1753,9 @@ static RPCHelpMan gettransaction()
                                         "\"receive\"               Non-coinbase transactions received.\n"
                                         "\"generate\"              Coinbase transactions received with more than 100 confirmations.\n"
                                         "\"immature\"              Coinbase transactions received with 100 or fewer confirmations.\n"
-                                        "\"orphan\"                Orphaned coinbase transactions received.\n"},
+                                        "\"orphan\"                Orphaned coinbase transactions received.\n"
+                                        "\"withdrawal\"            Withdrawal transactions received with more than 576 confirmations.\n"
+                                        "\"immature-withdrawal\"   Withdrawal transactions received with 576 or fewer confirmations.\n"},
                                     {RPCResult::Type::STR_AMOUNT, "amount", "The amount in " + CURRENCY_UNIT},
                                     {RPCResult::Type::STR, "label", "A comment for the address/transaction, if any"},
                                     {RPCResult::Type::NUM, "vout", "the vout value"},
@@ -2496,7 +2511,7 @@ static RPCHelpMan getbalances()
                             {
                                 {RPCResult::Type::STR_AMOUNT, "trusted", " trusted balance (outputs created by the wallet or confirmed outputs)"},
                                 {RPCResult::Type::STR_AMOUNT, "untrusted_pending", " untrusted pending balance (outputs created by others that are in the mempool)"},
-                                {RPCResult::Type::STR_AMOUNT, "immature", " balance from immature coinbase outputs"},
+                                {RPCResult::Type::STR_AMOUNT, "immature", " balance from immature coinbase and withdrawal outputs"},
                                 {RPCResult::Type::STR_AMOUNT, "used", "(only present if avoid_reuse is set) balance from coins sent to addresses that were previously spent from (potentially privacy violating)"},
                                 {RPCResult::Type::STR_AMOUNT, "coinjoin", " CoinJoin balance (outputs with enough rounds created by the wallet via mixing)"},
                         }},
@@ -2504,7 +2519,7 @@ static RPCHelpMan getbalances()
                             {
                                 {RPCResult::Type::STR_AMOUNT, "trusted", " trusted balance (outputs created by the wallet or confirmed outputs)"},
                                 {RPCResult::Type::STR_AMOUNT, "untrusted_pending", " untrusted pending balance (outputs created by others that are in the mempool)"},
-                                {RPCResult::Type::STR_AMOUNT, "immature", " balance from immature coinbase outputs"},
+                                {RPCResult::Type::STR_AMOUNT, "immature", " balance from immature coinbase and withdrawal outputs"},
                         }},
                     },
                 },
