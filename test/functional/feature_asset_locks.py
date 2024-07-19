@@ -276,6 +276,7 @@ class AssetLocksTest(DashTestFramework):
         self.test_asset_unlocks(node_wallet, node, pubkey)
         self.test_withdrawal_limits(node_wallet, node, pubkey)
         self.test_mn_rr(node_wallet, node, pubkey)
+        raise False
 
 
     def test_asset_locks(self, node_wallet, node, pubkey):
@@ -352,6 +353,10 @@ class AssetLocksTest(DashTestFramework):
         too_late_height = node.getblockcount() + 48
 
         self.check_mempool_result(tx=asset_unlock_tx, result_expected={'allowed': True, 'fees': {'base': Decimal(str(tiny_amount / COIN))}})
+
+        for vout in node.decoderawtransaction(asset_unlock_tx.serialize().hex())['vout']:
+            node_wallet.importaddress(vout['scriptPubKey']['address'])
+
         self.check_mempool_result(tx=asset_unlock_tx_too_big_fee,
                 result_expected={'allowed': False, 'reject-reason' : 'max-fee-exceeded'})
         self.check_mempool_result(tx=asset_unlock_tx_zero_fee,

@@ -1886,6 +1886,7 @@ void CWalletTx::GetAmounts(std::list<COutputEntry>& listReceived,
         // In either case, we need to get the destination address
         CTxDestination address;
 
+         MAYBE SOME FIXES inside GetAmount ? dunno
         if (!ExtractDestination(txout.scriptPubKey, address) && !txout.scriptPubKey.IsUnspendable())
         {
             pwallet->WalletLogPrintf("CWalletTx::GetAmounts: Unknown transaction type found, txid %s\n",
