@@ -426,10 +426,10 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_MN_RR].useEHF = true;
 
         // The best chain should have at least this much work.
-        consensus.nMinimumChainWork = uint256S("0x00000000000000000000000000000000000000000000000002ecd6cf5ad0f774"); // 960000
+        consensus.nMinimumChainWork = uint256S("0x000000000000000000000000000000000000000000000000031779511a7ed1ba"); // 1060000
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x0000000386cf5061ea16404c66deb83eb67892fa4f79b9e58e5eaab097ec2bd6"); // 960000
+        consensus.defaultAssumeValid = uint256S("0x000000a8b01eb8bc8fbea662cf17850cc8f4672000aee41010ea4b9bc5d712cc"); // 1060000
 
         pchMessageStart[0] = 0xce;
         pchMessageStart[1] = 0xe2;
@@ -512,6 +512,7 @@ public:
                 {851000, uint256S("0x0000014d3b875540ff75517b7fbb1714e25d50ce92f65d7086cfce357928bb02")},
                 {905100, uint256S("0x0000020c5e0f86f385cbf8e90210de9a9fd63633f01433bf47a6b3227a2851fd")},
                 {960000, uint256S("0x0000000386cf5061ea16404c66deb83eb67892fa4f79b9e58e5eaab097ec2bd6")},
+                {1060000, uint256S("0x000000a8b01eb8bc8fbea662cf17850cc8f4672000aee41010ea4b9bc5d712cc")},
             }
         };
 
@@ -519,12 +520,12 @@ public:
             // TODO to be specified in a future patch.
         };
 
-        // getchaintxstats 17280 0000000386cf5061ea16404c66deb83eb67892fa4f79b9e58e5eaab097ec2bd6
+        // getchaintxstats 17280 000000a8b01eb8bc8fbea662cf17850cc8f4672000aee41010ea4b9bc5d712cc
         chainTxData = ChainTxData{
-                1706545657, // * UNIX timestamp of last known number of transactions (Block 905100)
-                6159236,    // * total number of transactions between genesis and that timestamp
+                1720383891, // * UNIX timestamp of last known number of transactions (Block 905100)
+                6528165,    // * total number of transactions between genesis and that timestamp
                             //   (the tx=... number in the ChainStateFlushed debug.log lines)
-                0.02150786927638326,       // * estimated number of transactions per second after that timestamp
+                0.01646502679081289,       // * estimated number of transactions per second after that timestamp
         };
     }
 };
