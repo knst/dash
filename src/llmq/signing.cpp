@@ -878,8 +878,11 @@ void CSigningManager::UnregisterRecoveredSigsListener(CRecoveredSigsListener* l)
 
 bool CSigningManager::AsyncSignIfMember(Consensus::LLMQType llmqType, CSigSharesManager& shareman, const uint256& id, const uint256& msgHash, const uint256& quorumHash, bool allowReSign)
 {
+    LogPrintf("CSigningManager::AsyncSignIfMember id=%s\n", id.ToString());
     if (m_mn_activeman == nullptr) return false;
+    LogPrintf("CSigningManager::AsyncSignIfMember id=%s that's mn_activeman\n", id.ToString());
     if (m_mn_activeman->GetProTxHash().IsNull()) return false;
+    LogPrintf("CSigningManager::AsyncSignIfMember id=%s protx=%s\n", id.ToString(), m_mn_activeman->GetProTxHash().ToString());
 
     const CQuorumCPtr quorum = [&]() {
         if (quorumHash.IsNull()) {
@@ -902,6 +905,7 @@ bool CSigningManager::AsyncSignIfMember(Consensus::LLMQType llmqType, CSigShares
     }
 
     if (!quorum->IsValidMember(m_mn_activeman->GetProTxHash())) {
+        LogPrintf("CSigningManager::AsyncSignIfMember id=%s not a member of quorum=%s\n", id.ToString(), quorum->qc->quorumHash.ToString());
         return false;
     }
 
@@ -925,11 +929,14 @@ bool CSigningManager::AsyncSignIfMember(Consensus::LLMQType llmqType, CSigShares
         }
 
         if (db.HasRecoveredSigForId(llmqType, id)) {
+            LogPrintf("CSigningManager::AsyncSignIfMemeber hasRecoveredSig id=%s\n", id.ToString());
             // no need to sign it if we already have a recovered sig
             return true;
         }
         if (!hasVoted) {
             db.WriteVoteForId(llmqType, id, msgHash);
+        } else {
+            LogPrintf("CSigningManager::AsyncSignIfMemeber has voted id=%s\n", id.ToString());
         }
     }
 
@@ -937,6 +944,7 @@ bool CSigningManager::AsyncSignIfMember(Consensus::LLMQType llmqType, CSigShares
         // make us re-announce all known shares (other nodes might have run into a timeout)
         shareman.ForceReAnnouncement(quorum, llmqType, id, msgHash);
     }
+    LogPrintf("CSigningManager::AsyncSignIfMemeber call async sign for id=%s msgHash=%s\n", id.ToString(), msgHash.ToString());
     shareman.AsyncSign(quorum, id, msgHash);
 
     return true;
