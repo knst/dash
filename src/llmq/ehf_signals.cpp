@@ -94,7 +94,7 @@ void CEHFSignalsHandler::trySignEHFSignal(int bit, const CBlockIndex* const pind
     LogPrint(BCLog::EHF, "CEHFSignalsHandler::trySignEHFSignal: msgHash=%s quorum=%s id=%s\n", msgHash.ToString(), quorum->qc->quorumHash.ToString(), requestId.ToString());
 
     WITH_LOCK(cs, ids.insert(requestId));
-    sigman.AsyncSignIfMember(llmqType, shareman, requestId, msgHash);
+    sigman.AsyncSignIfMember(llmqType, shareman, requestId, msgHash, quorum->qc->quorumHash, false, true);
 }
 
 void CEHFSignalsHandler::HandleNewRecoveredSig(const CRecoveredSig& recoveredSig)
