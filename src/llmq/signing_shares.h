@@ -428,9 +428,9 @@ public:
 
     void ProcessMessage(const CNode& pnode, const CSporkManager& sporkman, const std::string& msg_type, CDataStream& vRecv);
 
-    int CountForSignHash(const uint256& msgHash) {
+    int CountForSignHash(const uint256& signHash) {
         LOCK(cs);
-        return sigShares.CountForSignHash(msgHash);
+        return sigShares.CountForSignHash(signHash);
     }
 
 
