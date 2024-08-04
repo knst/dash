@@ -884,6 +884,8 @@ bool CSigningManager::AsyncSignIfMember(Consensus::LLMQType llmqType, CSigShares
     if (m_mn_activeman->GetProTxHash().IsNull()) return false;
     LogPrintf("CSigningManager::AsyncSignIfMember id=%s protx=%s\n", id.ToString(), m_mn_activeman->GetProTxHash().ToString());
 
+    LogPrintf("CSigningManager::AsyncSignIfMember id=%s shares=%lld\n", id.ToString(), shareman.CountForSignHash(id));
+    LogPrintf("CSigningManager::AsyncSignIfMember id=%s msgHash=%s shares=%lld\n", id.ToString(), msgHash.ToString(), shareman.CountForSignHash(msgHash));
     const CQuorumCPtr quorum = [&]() {
         if (quorumHash.IsNull()) {
             // This might end up giving different results on different members
