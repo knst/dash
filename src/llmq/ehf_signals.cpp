@@ -50,8 +50,8 @@ void CEHFSignalsHandler::UpdatedBlockTip(const CBlockIndex* const pindexNew)
         return;
     }
 
-    if (Params().NetworkIDString() == CBaseChainParams::MAIN) {
-        // TODO: v20 will never attempt to create EHF messages on main net; if this is needed it will be done by v20.1 or v21 nodes
+    if (Params().NetworkIDString() != CBaseChainParams::MAIN) {
+
         return;
     }
     const auto ehfSignals = chainstate.GetMNHFSignalsStage(pindexNew);
