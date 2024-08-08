@@ -12,7 +12,7 @@ from test_framework.util import assert_equal, satoshi_round, set_node_times, wai
 
 class DashGovernanceTest (DashTestFramework):
     def set_test_params(self):
-        self.v20_start_time = 1417713500 + 15 * 10
+        self.v20_start_time = 1417713500 + 80
         # using adjusted v20 deployment params to test an edge case where superblock maturity window is equal to deployment window size
         self.set_dash_test_params(6, 5, [["-budgetparams=10:10:10", f"-vbparams=v20:{self.v20_start_time}:999999999999:0:10:8:6:5:0"]] * 6, fast_dip3_enforcement=True)
 
@@ -118,16 +118,18 @@ class DashGovernanceTest (DashTestFramework):
         self.expected_old_budget = satoshi_round("928.57142840")
         self.expected_v20_budget = satoshi_round("18.57142860")
 
-        self.activate_dip8()
-
         self.nodes[0].sporkupdate("SPORK_2_INSTANTSEND_ENABLED", 4070908800)
         self.nodes[0].sporkupdate("SPORK_9_SUPERBLOCKS_ENABLED", 0)
         self.wait_for_sporks_same()
 
         assert_equal(len(self.nodes[0].gobject("list-prepared")), 0)
 
-        self.nodes[0].generate(8)
-        self.bump_mocktime(8)
+        # TODO: drop these extra 80 blocks - doesn't work without them
+        self.nodes[0].generate(80)
+        self.bump_mocktime(80)
+
+        self.nodes[0].generate(3)
+        self.bump_mocktime(3)
         self.sync_blocks()
         assert_equal(self.nodes[0].getblockcount(), 210)
         assert_equal(self.nodes[0].getblockchaininfo()["softforks"]["v20"]["bip9"]["status"], "defined")
