@@ -1103,8 +1103,8 @@ class DashTestFramework(BitcoinTestFramework):
         # (MAX_BLOCKS_IN_TRANSIT_PER_PEER = 16 blocks) reorg error.
         self.log.info("Wait for dip0008 activation")
         while self.nodes[0].getblockcount() < self.dip8_activation_height:
-            self.bump_mocktime(10)
-            self.nodes[0].generate(10)
+            self.bump_mocktime(15)
+            self.nodes[0].generate(15)
             if slow_mode:
                 self.sync_blocks()
         self.sync_blocks()
@@ -1120,7 +1120,7 @@ class DashTestFramework(BitcoinTestFramework):
         self.wait_for_sporks_same()
 
         # mine blocks in batches
-        batch_size = 10
+        batch_size = 15
         if expected_activation_height is not None:
             height = self.nodes[0].getblockcount()
             assert height < expected_activation_height
@@ -1460,13 +1460,14 @@ class DashTestFramework(BitcoinTestFramework):
         required_balance += MASTERNODE_COLLATERAL * (self.mn_count - self.evo_count) + 100
         self.log.info("Generating %d coins" % required_balance)
         while self.nodes[0].getbalance() < required_balance:
-            self.bump_mocktime(1)
-            self.nodes[0].generate(10)
+            self.bump_mocktime(15)
+            self.nodes[0].generate(15)
 
         self.log.info("Activating DIP3")
         if not self.fast_dip3_enforcement:
             while self.nodes[0].getblockcount() < 500:
-                self.nodes[0].generate(10)
+                self.bump_mocktime(15)
+                self.nodes[0].generate(15)
         self.sync_all()
 
         # create masternodes
