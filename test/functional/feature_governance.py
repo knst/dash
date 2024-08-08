@@ -12,7 +12,7 @@ from test_framework.util import assert_equal, satoshi_round, set_node_times, wai
 
 class DashGovernanceTest (DashTestFramework):
     def set_test_params(self):
-        self.v20_start_time = 1417713500
+        self.v20_start_time = 1417713500 + 15 * 10
         # using adjusted v20 deployment params to test an edge case where superblock maturity window is equal to deployment window size
         self.set_dash_test_params(6, 5, [["-budgetparams=10:10:10", f"-vbparams=v20:{self.v20_start_time}:999999999999:0:10:8:6:5:0"]] * 6, fast_dip3_enforcement=True)
 
@@ -126,8 +126,8 @@ class DashGovernanceTest (DashTestFramework):
 
         assert_equal(len(self.nodes[0].gobject("list-prepared")), 0)
 
-        self.nodes[0].generate(3)
-        self.bump_mocktime(3)
+        self.nodes[0].generate(8)
+        self.bump_mocktime(8)
         self.sync_blocks()
         assert_equal(self.nodes[0].getblockcount(), 210)
         assert_equal(self.nodes[0].getblockchaininfo()["softforks"]["v20"]["bip9"]["status"], "defined")
