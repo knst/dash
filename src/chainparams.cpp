@@ -806,7 +806,6 @@ public:
         consensus.DIP0003EnforcementHeight = 501;
         consensus.DIP0003EnforcementHash = uint256();
         consensus.DIP0008Height = 1; // Always active unless overridden
-
         consensus.BRRHeight = 1000; // see block_reward_reallocation_tests
         consensus.DIP0020Height = 1;
         consensus.DIP0024Height = 900;
@@ -864,7 +863,6 @@ public:
 
         UpdateActivationParametersFromArgs(args);
         UpdateDIP3ParametersFromArgs(args);
-        UpdateDIP8ParametersFromArgs(args);
         UpdateBIP147ParametersFromArgs(args);
         UpdateBudgetParametersFromArgs(args);
 
@@ -985,12 +983,6 @@ public:
     /**
      * Allows modifying the DIP8 activation height
      */
-    void UpdateDIP8Parameters(int nActivationHeight)
-    {
-        consensus.DIP0008Height = nActivationHeight;
-    }
-    void UpdateDIP8ParametersFromArgs(const ArgsManager& args);
-
     void UpdateBIP147Parameters(int nActivationHeight)
     {
         consensus.BIP147Height = nActivationHeight;
@@ -1145,23 +1137,6 @@ void CRegTestParams::UpdateDIP3ParametersFromArgs(const ArgsManager& args)
     }
     LogPrintf("Setting DIP3 parameters to activation=%ld, enforcement=%ld\n", nDIP3ActivationHeight, nDIP3EnforcementHeight);
     UpdateDIP3Parameters(nDIP3ActivationHeight, nDIP3EnforcementHeight);
-}
-
-void CRegTestParams::UpdateDIP8ParametersFromArgs(const ArgsManager& args)
-{
-    if (!args.IsArgSet("-dip8params")) return;
-
-    std::string strParams = args.GetArg("-dip8params", "");
-    std::vector<std::string> vParams = SplitString(strParams, ':');
-    if (vParams.size() != 1) {
-        throw std::runtime_error("DIP8 parameters malformed, expecting <activation>");
-    }
-    int nDIP8ActivationHeight;
-    if (!ParseInt32(vParams[0], &nDIP8ActivationHeight)) {
-        throw std::runtime_error(strprintf("Invalid activation height (%s)", vParams[0]));
-    }
-    LogPrintf("Setting DIP8 parameters to activation=%ld\n", nDIP8ActivationHeight);
-    UpdateDIP8Parameters(nDIP8ActivationHeight);
 }
 
 void CRegTestParams::UpdateBIP147ParametersFromArgs(const ArgsManager& args)
