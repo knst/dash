@@ -343,9 +343,9 @@ TestChainSetup::TestChainSetup(int num_blocks, const std::vector<const char*>& e
             /* TestChainBRRBeforeActivationSetup */
             {  497, uint256S("0x626036f6adff51fbbdd0c609e827ef6a3730ce2498a3eb33edeb27092d006170") },
             /* TestChainV19BeforeActivationSetup */
-            {  894, uint256S("0x03cbf1871d7d915cda10aded00ced45f71a4e2acf6a3c7a77a1ff488267dd1cd") },
+            {  428, uint256S("0x0dc63431789124f9a7c5da9d0da9baa4b5cf8eac9c41f1b87438f87226ecd168") },
             /* TestChainV19Setup */
-            {  899, uint256S("0x405a630e16d0ca0efe3abb0e24c9a157a69ec2e07b04333cc5d004efa634ac89") },
+            {  431, uint256S("0x405a630e16d0ca0efe3abb0e24c9a157a69ec2e07b04333cc5d004efa634ac89") },
         }
     };
 
@@ -551,7 +551,7 @@ CBlock getBlock13b8a()
     return block;
 }
 
-TestChainV19Setup::TestChainV19Setup() : TestChainSetup(899)
+TestChainV19Setup::TestChainV19Setup() : TestChainSetup(431)
 {
     bool v19_just_activated{DeploymentActiveAfter(m_node.chainman->ActiveChain().Tip(), Params().GetConsensus(), Consensus::DEPLOYMENT_V19) &&
                             !DeploymentActiveAt(*m_node.chainman->ActiveChain().Tip(), Params().GetConsensus(), Consensus::DEPLOYMENT_V19)};
@@ -559,7 +559,7 @@ TestChainV19Setup::TestChainV19Setup() : TestChainSetup(899)
 }
 
 // 5 blocks earlier
-TestChainV19BeforeActivationSetup::TestChainV19BeforeActivationSetup() : TestChainSetup(894)
+TestChainV19BeforeActivationSetup::TestChainV19BeforeActivationSetup() : TestChainSetup(428)
 {
     bool v19_active{DeploymentActiveAfter(m_node.chainman->ActiveChain().Tip(), Params().GetConsensus(), Consensus::DEPLOYMENT_V19)};
     assert(!v19_active);

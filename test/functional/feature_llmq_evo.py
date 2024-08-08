@@ -74,7 +74,7 @@ class LLMQEvoNodesTest(DashTestFramework):
 
         self.test_masternode_count(expected_mns_count=4, expected_evo_count=0)
 
-        self.activate_v19(expected_activation_height=900)
+        self.activate_v19(expected_activation_height=432)
         self.log.info("Activated v19 at height:" + str(self.nodes[0].getblockcount()))
 
         self.nodes[0].sporkupdate("SPORK_2_INSTANTSEND_ENABLED", 0)

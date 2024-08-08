@@ -131,9 +131,6 @@ class MnehfTest(DashTestFramework):
         node = self.nodes[0]
 
         self.set_sporks()
-        self.activate_v19()
-        self.log.info(f"After v19 activation should be plenty of blocks: {node.getblockcount()}")
-        assert_greater_than(node.getblockcount(), 900)
         assert_equal(get_bip9_details(node, 'testdummy')['status'], 'defined')
 
         self.log.info("Mine a quorum...")
