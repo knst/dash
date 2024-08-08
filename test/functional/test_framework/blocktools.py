@@ -42,7 +42,7 @@ CSV_ACTIVATION_HEIGHT = 432
 
 NORMAL_GBT_REQUEST_PARAMS = {"rules": []} # type: ignore[var-annotated]
 
-VERSIONBITS_LAST_OLD_BLOCK_VERSION = 3
+VERSIONBITS_LAST_OLD_BLOCK_VERSION = 4
 
 def create_block(hashprev=None, coinbase=None, ntime=None, *, version=None, tmpl=None, txlist=None, dip4_activated=False, v20_activated=False):
     """Create a block (with regtest difficulty)."""
