@@ -1045,7 +1045,7 @@ static void MaybeUpdateHeights(const ArgsManager& args, Consensus::Params& conse
             throw std::runtime_error(strprintf("Invalid height value (%s) for -testactivationheight=name@height.", arg));
         }
         if (name == "bip147") {
-            consensus.SegwitHeight = int{height};
+            consensus.BIP147Height = int{height};
         } else {
             throw std::runtime_error(strprintf("Invalid name (%s) for -testactivationheight=name@height.", arg));
         }
