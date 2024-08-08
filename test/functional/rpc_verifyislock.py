@@ -32,8 +32,9 @@ class RPCVerifyISLockTest(DashTestFramework):
         node = self.nodes[0]
         node.sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
         self.wait_for_sporks_same()
-        node.generate(30)
 
+        self.activate_v19(expected_activation_height=900)
+        self.log.info("Activated v19 at height:" + str(self.nodes[0].getblockcount()))
         self.move_to_next_cycle()
         self.log.info("Cycle H height:" + str(self.nodes[0].getblockcount()))
         self.move_to_next_cycle()

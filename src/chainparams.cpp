@@ -808,9 +808,9 @@ public:
         consensus.DIP0008Height = 1; // Always active unless overridden
         consensus.BRRHeight = 1000; // see block_reward_reallocation_tests
         consensus.DIP0020Height = 1;
-        consensus.DIP0024Height = 432;
-        consensus.DIP0024QuorumsHeight = 432;
-        consensus.V19Height = 432;
+        consensus.DIP0024Height = 900;
+        consensus.DIP0024QuorumsHeight = 900;
+        consensus.V19Height = 900;
         consensus.MinBIP9WarningHeight = 0;
         consensus.powLimit = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"); // ~uint256(0) >> 1
         consensus.nPowTargetTimespan = 24 * 60 * 60; // Dash: 1 day
