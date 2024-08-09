@@ -794,15 +794,16 @@ public:
         consensus.nGovernanceMinQuorum = 1;
         consensus.nGovernanceFilterElements = 100;
         consensus.nMasternodeMinimumConfirmations = 1;
-        consensus.BIP34Height = 1; // Always active unless overridden
+        consensus.BIP34Height = 501; // BIP34 activated on regtest (Used in functional tests)
+        //consensus.BIP34Height = 1; // Always active unless overridden
         consensus.BIP34Hash = uint256();
         consensus.BIP65Height = 1;  // Always active unless overridden
         consensus.BIP66Height = 1;  // Always active unless overridden
         consensus.BIP147Height = 1; // Always active unless overridden
         consensus.CSVHeight = 1;    // Always active unless overridden
         consensus.DIP0001Height = 2000;
-        consensus.DIP0003Height = 2;
-        consensus.DIP0003EnforcementHeight = 2;
+        consensus.DIP0003Height = 432;
+        consensus.DIP0003EnforcementHeight = 501;
         consensus.DIP0003EnforcementHash = uint256();
         consensus.DIP0008Height = 1; // Always active unless overridden
         consensus.BRRHeight = 1000; // see block_reward_reallocation_tests
@@ -861,6 +862,7 @@ public:
         m_assumed_chain_state_size = 0;
 
         UpdateActivationParametersFromArgs(args);
+        UpdateDIP3ParametersFromArgs(args);
         UpdateBudgetParametersFromArgs(args);
 
         genesis = CreateGenesisBlock(1417713337, 1096447, 0x207fffff, 1, 50 * COIN);
@@ -966,6 +968,16 @@ public:
         }
     }
     void UpdateActivationParametersFromArgs(const ArgsManager& args);
+
+    /**
+     * Allows modifying the DIP3 activation and enforcement height
+     */
+    void UpdateDIP3Parameters(int nActivationHeight, int nEnforcementHeight)
+    {
+        consensus.DIP0003Height = nActivationHeight;
+        consensus.DIP0003EnforcementHeight = nEnforcementHeight;
+    }
+    void UpdateDIP3ParametersFromArgs(const ArgsManager& args);
 
     /**
      * Allows modifying the budget regtest parameters.
@@ -1095,6 +1107,26 @@ void CRegTestParams::UpdateActivationParametersFromArgs(const ArgsManager& args)
             throw std::runtime_error(strprintf("Invalid deployment (%s)", vDeploymentParams[0]));
         }
     }
+}
+
+void CRegTestParams::UpdateDIP3ParametersFromArgs(const ArgsManager& args)
+{
+    if (!args.IsArgSet("-dip3params")) return;
+
+    std::string strParams = args.GetArg("-dip3params", "");
+    std::vector<std::string> vParams = SplitString(strParams, ':');
+    if (vParams.size() != 2) {
+        throw std::runtime_error("DIP3 parameters malformed, expecting <activation>:<enforcement>");
+    }
+    int nDIP3ActivationHeight, nDIP3EnforcementHeight;
+    if (!ParseInt32(vParams[0], &nDIP3ActivationHeight)) {
+        throw std::runtime_error(strprintf("Invalid activation height (%s)", vParams[0]));
+    }
+    if (!ParseInt32(vParams[1], &nDIP3EnforcementHeight)) {
+        throw std::runtime_error(strprintf("Invalid enforcement height (%s)", vParams[1]));
+    }
+    LogPrintf("Setting DIP3 parameters to activation=%ld, enforcement=%ld\n", nDIP3ActivationHeight, nDIP3EnforcementHeight);
+    UpdateDIP3Parameters(nDIP3ActivationHeight, nDIP3EnforcementHeight);
 }
 
 void CRegTestParams::UpdateBudgetParametersFromArgs(const ArgsManager& args)
