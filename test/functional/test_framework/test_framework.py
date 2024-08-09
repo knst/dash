@@ -1074,10 +1074,6 @@ class DashTestFramework(BitcoinTestFramework):
         assert_equal(len(extra_args), num_nodes)
         self.extra_args = [copy.deepcopy(a) for a in extra_args]
         self.extra_args[0] += ["-sporkkey=cP4EKFyJsHT39LDqgdcB43Y3YXjNyjb5Fuas1GQSeAtjnZWmZEQK"]
-        self.fast_dip3_enforcement = fast_dip3_enforcement
-        if fast_dip3_enforcement:
-            for i in range(0, num_nodes):
-                self.extra_args[i].append("-dip3params=30:50")
 
         # LLMQ default test params (no need to pass -llmqtestparams)
         self.llmq_size = 3
@@ -1443,12 +1439,6 @@ class DashTestFramework(BitcoinTestFramework):
         while self.nodes[0].getbalance() < required_balance:
             self.bump_mocktime(1)
             self.nodes[0].generate(10)
-
-        self.log.info("Activating DIP3")
-        if not self.fast_dip3_enforcement:
-            while self.nodes[0].getblockcount() < 500:
-                self.nodes[0].generate(10)
-        self.sync_all()
 
         # create masternodes
         self.prepare_masternodes()
