@@ -67,7 +67,7 @@ class DIP3V19Test(DashTestFramework):
         mn_list_before = self.nodes[0].masternodelist()
         pubkeyoperator_list_before = set([mn_list_before[e]["pubkeyoperator"] for e in mn_list_before])
 
-        self.activate_v19(expected_activation_height=432)
+        self.activate_v19(expected_activation_height=900)
         self.log.info("Activated v19 at height:" + str(self.nodes[0].getblockcount()))
 
         mn_list_after = self.nodes[0].masternodelist()
