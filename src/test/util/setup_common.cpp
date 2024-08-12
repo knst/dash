@@ -352,6 +352,7 @@ TestChainSetup::TestChainSetup(int num_blocks, const std::vector<const char*>& e
     {
         LOCK(::cs_main);
         auto hash = checkpoints.mapCheckpoints.find(num_blocks);
+        std::cerr << hash->second  << std::endl << m_node.chainman->ActiveChain().Tip()->GetBlockHash() << std::endl << std::endl;
         assert(
             hash != checkpoints.mapCheckpoints.end() &&
             m_node.chainman->ActiveChain().Tip()->GetBlockHash() == hash->second);
