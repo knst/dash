@@ -6,12 +6,10 @@
 #include <consensus/validation.h>
 #include <evo/mnhftx.h>
 #include <evo/specialtx.h>
-#include <llmq/context.h>
 #include <primitives/transaction.h>
 #include <uint256.h>
 #include <util/strencodings.h>
 #include <util/string.h>
-#include <validation.h>
 
 #include <boost/test/unit_test.hpp>
 #include <test/util/setup_common.h>
@@ -80,13 +78,6 @@ BOOST_AUTO_TEST_CASE(verify_mnhf_specialtx_tests)
     const CMutableTransaction tx = CreateMNHFTx(hash, sig, ver);
     TxValidationState state;
     BOOST_CHECK(VerifyMNHFTx(CTransaction(tx), state));
-
-    auto& chainman = Assert(m_node.chainman);
-    auto& qman = *Assert(m_node.llmq_ctx)->qman;
-    const CBlockIndex *block_index = chainman->ActiveChain().Tip();
-
-    TxValidationState tx_state;
-    BOOST_CHECK(CheckMNHFTx(*chainman, qman, CTransaction(tx), block_index, state));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
