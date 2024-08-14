@@ -139,6 +139,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     const bool fDIP0001Active_context{DeploymentActiveAfter(pindexPrev, chainparams.GetConsensus(), Consensus::DEPLOYMENT_DIP0001)};
     const bool fDIP0003Active_context{DeploymentActiveAfter(pindexPrev, chainparams.GetConsensus(), Consensus::DEPLOYMENT_DIP0003)};
+    LogPrintf("dip0003: active: %d height: %d/%d\n", fDIP0003Active_context, nHeight, chainparams.GetConsensus().DIP0003Height);
     const bool fDIP0008Active_context{DeploymentActiveAfter(pindexPrev, chainparams.GetConsensus(), Consensus::DEPLOYMENT_DIP0008)};
     const bool fV20Active_context{DeploymentActiveAfter(pindexPrev, chainparams.GetConsensus(), Consensus::DEPLOYMENT_V20)};
 
@@ -245,7 +246,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                 cbTx.creditPoolBalance = creditPoolDiff->GetTotalLocked();
             }
         }
-
+        LogPrintf("dip0003: set cb tx!!!\n");
         SetTxPayload(coinbaseTx, cbTx);
     }
 

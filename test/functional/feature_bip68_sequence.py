@@ -288,7 +288,9 @@ class BIP68Test(BitcoinTestFramework):
         self.nodes[0].setmocktime(cur_time+600)
         # Save block template now to use for the reorg later
         tmpl = self.nodes[0].getblocktemplate(NORMAL_GBT_REQUEST_PARAMS)
+        self.log.info(f"tmpl: {tmpl}")
         self.nodes[0].generate(1)
+        self.log.info(f"block: {self.nodes[0].getblock(self.nodes[0].getbestblockhash())}")
         assert tx2.hash not in self.nodes[0].getrawmempool()
 
         # Now that tx2 is not in the mempool, a sequence locked spend should
