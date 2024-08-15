@@ -239,8 +239,8 @@ class AssetLocksTest(DashTestFramework):
 
         self.set_sporks()
 
-        self.activate_v19(expected_activation_height=900)
-        self.log.info("Activated v19 at height:" + str(node.getblockcount()))
+        self.activate_v20(expected_activation_height=900)
+        self.log.info("Activated v20 at height:" + str(node.getblockcount()))
 
         self.nodes[0].sporkupdate("SPORK_2_INSTANTSEND_ENABLED", 0)
         self.wait_for_sporks_same()
@@ -253,7 +253,6 @@ class AssetLocksTest(DashTestFramework):
             self.sync_blocks()
 
         self.set_sporks()
-        self.activate_v20()
         node.generate(1)
         self.sync_all()
         self.mempool_size = 0
