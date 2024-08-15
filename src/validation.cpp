@@ -1541,7 +1541,8 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
     AssertLockHeld(cs_main);
     assert(m_chain_helper);
 
-    if (!m_evoDb.VerifyBestBlock(pindex->GetBlockHash())) {
+    bool fDIP0003Active = pindex->nHeight >= Params().GetConsensus().DIP0003Height;
+    if (fDIP0003Active && !m_evoDb.VerifyBestBlock(pindex->GetBlockHash())) {
         // Nodes that upgraded after DIP3 activation will have to reindex to ensure evodb consistency
         AbortNode("Found EvoDB inconsistency, you must reindex to continue");
         return DISCONNECT_FAILED;
@@ -1855,7 +1856,8 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     assert(hashPrevBlock == view.GetBestBlock());
 
     if (pindex->pprev) {
-        if (!m_evoDb.VerifyBestBlock(pindex->pprev->GetBlockHash())) {
+        bool fDIP0003Active = pindex->nHeight >= m_params.GetConsensus().DIP0003Height;
+        if (fDIP0003Active && !m_evoDb.VerifyBestBlock(pindex->pprev->GetBlockHash())) {
             // Nodes that upgraded after DIP3 activation will have to reindex to ensure evodb consistency
             return AbortNode(state, "Found EvoDB inconsistency, you must reindex to continue");
         }
@@ -1865,10 +1867,8 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     // Special case for the genesis block, skipping connection of its transactions
     // (its coinbase is unspendable)
     if (block_hash == m_params.GetConsensus().hashGenesisBlock) {
-        if (!fJustCheck) {
+        if (!fJustCheck)
             view.SetBestBlock(pindex->GetBlockHash());
-            m_evoDb.WriteBestBlock(block_hash);
-        }
         return true;
     }
 
@@ -4278,7 +4278,8 @@ bool CChainState::ReplayBlocks()
         pindexOld = &(m_blockman.m_block_index[hashHeads[1]]);
         pindexFork = LastCommonAncestor(pindexOld, pindexNew);
         assert(pindexFork != nullptr);
-        if (!m_evoDb.VerifyBestBlock(pindexOld->GetBlockHash())) {
+        const bool fDIP0003Active = pindexOld->nHeight >= m_params.GetConsensus().DIP0003Height;
+        if (fDIP0003Active && !m_evoDb.VerifyBestBlock(pindexOld->GetBlockHash())) {
             return error("ReplayBlocks(DASH): Found EvoDB inconsistency");
         }
     }
@@ -5206,7 +5207,6 @@ bool ChainstateManager::PopulateAndValidateSnapshot(
     // It's okay to release cs_main before we're done using `coins_cache` because we know
     // that nothing else will be referencing the newly created snapshot_chainstate yet.
     CCoinsViewCache& coins_cache = WITH_LOCK(::cs_main, return snapshot_chainstate.CoinsTip());
-    CEvoDB& evoDb = WITH_LOCK(::cs_main, return snapshot_chainstate.m_evoDb);
 
     uint256 base_blockhash = metadata.m_base_blockhash;
 
@@ -5290,7 +5290,6 @@ bool ChainstateManager::PopulateAndValidateSnapshot(
                 // doesn't matter for the purposes of flushing the cache here. We'll set this
                 // to its correct value (`base_blockhash`) below after the coins are loaded.
                 coins_cache.SetBestBlock(GetRandHash());
-                evoDb.WriteBestBlock(GetRandHash());
 
                 coins_cache.Flush();
                 LogPrintf("done (%.2fms)\n", GetTimeMillis() - flush_now);
@@ -5304,7 +5303,6 @@ bool ChainstateManager::PopulateAndValidateSnapshot(
     // embed them in a snapshot-activation-specific CCoinsViewCache bulk load
     // method.
     coins_cache.SetBestBlock(base_blockhash);
-    evoDb.WriteBestBlock(base_blockhash);
 
     bool out_of_coins{false};
     try {
