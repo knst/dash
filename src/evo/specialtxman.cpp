@@ -50,9 +50,6 @@ static bool CheckSpecialTxInner(CDeterministicMNManager& dmnman, const Chainstat
         case TRANSACTION_MNHF_SIGNAL:
             return CheckMNHFTx(chainman, qman, tx, pindexPrev, state);
         case TRANSACTION_ASSET_LOCK:
-            if (!DeploymentActiveAfter(pindexPrev, consensusParams, Consensus::DEPLOYMENT_V20)) {
-                return state.Invalid(TxValidationResult::TX_CONSENSUS, "assetlocks-before-v20");
-            }
             return CheckAssetLockUnlockTx(chainman.m_blockman, qman, tx, pindexPrev, indexes, state);
         case TRANSACTION_ASSET_UNLOCK:
             if (Params().NetworkIDString() == CBaseChainParams::REGTEST && !DeploymentActiveAfter(pindexPrev, consensusParams, Consensus::DEPLOYMENT_V20)) {
