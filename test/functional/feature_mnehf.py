@@ -155,10 +155,6 @@ class MnehfTest(DashTestFramework):
         self.log.info("Checking correctness of requestId and quorumHash")
         assert_equal(mnehf_payload.quorumHash, int(self.mninfo[0].node.quorum("selectquorum", 100, 'a0eee872d7d3170dd20d5c5e8380c92b3aa887da5f63d8033289fafa35a90691')["quorumHash"], 16))
 
-        self.send_tx(ehf_tx, expected_error='mnhf-before-v20')
-
-        assert_equal(get_bip9_details(node, 'testdummy')['status'], 'defined')
-        self.activate_v20()
         assert_equal(get_bip9_details(node, 'testdummy')['status'], 'defined')
         assert_equal(get_bip9_details(node, 'mn_rr')['status'], 'defined')
 

@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <consensus/validation.h>
-#include <deploymentstatus.h>
 #include <evo/mnhftx.h>
 #include <evo/specialtx.h>
 #include <llmq/commitment.h>
@@ -317,13 +316,6 @@ std::optional<CMNHFManager::Signals> CMNHFManager::GetFromCache(const CBlockInde
             return signals;
         }
     }
-    {
-        LOCK(cs_cache);
-        if (ThresholdState::ACTIVE != v20_activation.State(pindex->pprev, Params().GetConsensus(), Consensus::DEPLOYMENT_V20)) {
-            mnhfCache.insert(blockHash, signals);
-            return signals;
-        }
-    }
     if (m_evoDb.Read(std::make_pair(DB_SIGNALS, blockHash), signals)) {
         LOCK(cs_cache);
         mnhfCache.insert(blockHash, signals);
@@ -339,10 +331,6 @@ void CMNHFManager::AddToCache(const Signals& signals, const CBlockIndex* const p
     {
         LOCK(cs_cache);
         mnhfCache.insert(blockHash, signals);
-    }
-    {
-        LOCK(cs_cache);
-        if (ThresholdState::ACTIVE != v20_activation.State(pindex->pprev, Params().GetConsensus(), Consensus::DEPLOYMENT_V20)) return;
     }
     m_evoDb.Write(std::make_pair(DB_SIGNALS, blockHash), signals);
 }
