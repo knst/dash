@@ -289,28 +289,25 @@ static bool ContextualCheckTransaction(const CTransaction& tx, TxValidationState
 {
     int nHeight = pindexPrev == nullptr ? 0 : pindexPrev->nHeight + 1;
     bool fDIP0001Active_context = nHeight >= consensusParams.DIP0001Height;
-    bool fDIP0003Active_context = nHeight >= consensusParams.DIP0003Height;
 
-    if (fDIP0003Active_context) {
-        // check version 3 transaction types
-        if (tx.IsSpecialTxVersion()) {
-            if (tx.nType != TRANSACTION_NORMAL &&
-                tx.nType != TRANSACTION_PROVIDER_REGISTER &&
-                tx.nType != TRANSACTION_PROVIDER_UPDATE_SERVICE &&
-                tx.nType != TRANSACTION_PROVIDER_UPDATE_REGISTRAR &&
-                tx.nType != TRANSACTION_PROVIDER_UPDATE_REVOKE &&
-                tx.nType != TRANSACTION_COINBASE &&
-                tx.nType != TRANSACTION_QUORUM_COMMITMENT &&
-                tx.nType != TRANSACTION_MNHF_SIGNAL &&
-                tx.nType != TRANSACTION_ASSET_LOCK &&
-                tx.nType != TRANSACTION_ASSET_UNLOCK) {
-                return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-type");
-            }
-            if (tx.IsCoinBase() && tx.nType != TRANSACTION_COINBASE)
-                return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-cb-type");
-        } else if (tx.nType != TRANSACTION_NORMAL) {
+    // check version 3 transaction types
+    if (tx.IsSpecialTxVersion()) {
+        if (tx.nType != TRANSACTION_NORMAL &&
+            tx.nType != TRANSACTION_PROVIDER_REGISTER &&
+            tx.nType != TRANSACTION_PROVIDER_UPDATE_SERVICE &&
+            tx.nType != TRANSACTION_PROVIDER_UPDATE_REGISTRAR &&
+            tx.nType != TRANSACTION_PROVIDER_UPDATE_REVOKE &&
+            tx.nType != TRANSACTION_COINBASE &&
+            tx.nType != TRANSACTION_QUORUM_COMMITMENT &&
+            tx.nType != TRANSACTION_MNHF_SIGNAL &&
+            tx.nType != TRANSACTION_ASSET_LOCK &&
+            tx.nType != TRANSACTION_ASSET_UNLOCK) {
             return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-type");
         }
+        if (tx.IsCoinBase() && tx.nType != TRANSACTION_COINBASE)
+            return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-cb-type");
+    } else if (tx.nType != TRANSACTION_NORMAL) {
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-txns-type");
     }
 
     // Size limits
