@@ -39,7 +39,7 @@ NORMAL_GBT_REQUEST_PARAMS = {"rules": []} # type: ignore[var-annotated]
 
 VERSIONBITS_LAST_OLD_BLOCK_VERSION = 4
 
-def create_block(hashprev=None, coinbase=None, ntime=None, *, version=None, tmpl=None, txlist=None, v20_activated=False):
+def create_block(hashprev=None, coinbase=None, ntime=None, *, version=None, tmpl=None, txlist=None, dip4_activated=False, v20_activated=False):
     """Create a block (with regtest difficulty)."""
     block = CBlock()
     if tmpl is None:
@@ -52,7 +52,7 @@ def create_block(hashprev=None, coinbase=None, ntime=None, *, version=None, tmpl
     else:
         block.nBits = 0x207fffff  # difficulty retargeting is disabled in REGTEST chainparams
     if coinbase is None:
-        coinbase = create_coinbase(height=tmpl['height'], v20_activated=v20_activated)
+        coinbase = create_coinbase(height=tmpl['height'], dip4_activated=dip4_activated, v20_activated=v20_activated)
     block.vtx.append(coinbase)
     if txlist:
         for tx in txlist:
@@ -164,7 +164,7 @@ def script_BIP34_coinbase_height(height):
     return CScript([CScriptNum(height)])
 
 
-def create_coinbase(height, pubkey=None, v20_activated=False, nValue=500):
+def create_coinbase(height, pubkey=None, dip4_activated=False, v20_activated=False, nValue=500):
     """Create a coinbase transaction, assuming no miner fees.
 
     If pubkey is passed in, the coinbase output will be a P2PK output;
@@ -181,11 +181,12 @@ def create_coinbase(height, pubkey=None, v20_activated=False, nValue=500):
     else:
         coinbaseoutput.scriptPubKey = CScript([OP_TRUE])
     coinbase.vout = [coinbaseoutput]
-    coinbase.nVersion = 3
-    coinbase.nType = 5
-    cbtx_version = 3 if v20_activated else 2
-    cbtx_payload = CCbTx(cbtx_version, height, 0, 0, 0)
-    coinbase.vExtraPayload = cbtx_payload.serialize()
+    if dip4_activated:
+        coinbase.nVersion = 3
+        coinbase.nType = 5
+        cbtx_version = 3 if v20_activated else 2
+        cbtx_payload = CCbTx(cbtx_version, height, 0, 0, 0)
+        coinbase.vExtraPayload = cbtx_payload.serialize()
     coinbase.calc_sha256()
     return coinbase
 

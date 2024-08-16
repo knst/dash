@@ -168,7 +168,7 @@ class AssetLocksTest(DashTestFramework):
         height = best_block["height"] + 1
         block_time = best_block["time"] + 1
 
-        cbb = create_coinbase(height, v20_activated=True)
+        cbb = create_coinbase(height, dip4_activated=True, v20_activated=True)
         gbt = node_wallet.getblocktemplate()
         cbb.vExtraPayload = hex_str_to_bytes(gbt["coinbase_payload"])
         cbb.rehash()
