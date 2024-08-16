@@ -182,7 +182,7 @@ struct TestChain100Setup : public TestChainSetup {
 
 struct TestChainDIP3Setup : public TestChainSetup
 {
-    TestChainDIP3Setup();
+    TestChainDIP3Setup() : TestChainSetup(431) {}
 };
 
 struct TestChainV19Setup : public TestChainSetup
@@ -192,7 +192,7 @@ struct TestChainV19Setup : public TestChainSetup
 
 struct TestChainDIP3BeforeActivationSetup : public TestChainSetup
 {
-    TestChainDIP3BeforeActivationSetup();
+    TestChainDIP3BeforeActivationSetup() : TestChainSetup(430) {}
 };
 
 struct TestChainV19BeforeActivationSetup : public TestChainSetup

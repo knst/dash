@@ -337,11 +337,11 @@ TestChainSetup::TestChainSetup(int num_blocks, const std::vector<const char*>& e
             /* TestChain100Setup */
             {  100, uint256S("0x6ffb83129c19ebdf1ae3771be6a67fe34b35f4c956326b9ba152fac1649f65ae") },
             /* TestChainDIP3BeforeActivationSetup */
-            {  430, uint256S("0x4bc97c8fc39857509e2aad9b7911ff36dbd7eceb1d05c9551c36c6517bba34be") },
+            {  430, uint256S("0x592b23a8882162ea48606e40c9ee00b2166ddae092c691d7f1b1758ec13647d9") },
             /* TestChainDIP3Setup */
             {  431, uint256S("0x49db248651517f3fc3725fbbc7087db90552d487d11e0962b0148fc4788aeb77") },
             /* TestChainBRRBeforeActivationSetup */
-            {  497, uint256S("0x38dbe47628a41d9b852cba13bafe1e256471fc8ead3e006a2a919c37e4ddaa4d") },
+            {  497, uint256S("0x626036f6adff51fbbdd0c609e827ef6a3730ce2498a3eb33edeb27092d006170") },
             /* TestChainV19BeforeActivationSetup */
             {  894, uint256S("0x03cbf1871d7d915cda10aded00ced45f71a4e2acf6a3c7a77a1ff488267dd1cd") },
             /* TestChainV19Setup */
@@ -564,12 +564,4 @@ TestChainV19BeforeActivationSetup::TestChainV19BeforeActivationSetup() : TestCha
 {
     bool v19_active{DeploymentActiveAfter(m_node.chainman->ActiveChain().Tip(), Params().GetConsensus(), Consensus::DEPLOYMENT_V19)};
     assert(!v19_active);
-}
-
-TestChainDIP3Setup::TestChainDIP3Setup() : TestChainSetup(431, {"-dip3params=432:500"})
-{
-}
-
-TestChainDIP3BeforeActivationSetup::TestChainDIP3BeforeActivationSetup() : TestChainSetup(430, {"-dip3params=432:500"})
-{
 }
