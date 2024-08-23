@@ -17,15 +17,18 @@
 
 bool LegacyScriptPubKeyMan::GetNewDestination(CTxDestination& dest, std::string& error)
 {
+    LogPrintf("benchmark getnewaddresss: LegacyScriptPubKeyMan::GetNewDestination: cp-1\n");
     LOCK(cs_KeyStore);
     error.clear();
 
     // Generate a new key that is added to wallet
     CPubKey new_key;
+    LogPrintf("benchmark getnewaddresss: LegacyScriptPubKeyMan::GetNewDestination: cp-2\n");
     if (!GetKeyFromPool(new_key, false)) {
         error = _("Error: Keypool ran out, please call keypoolrefill first").translated;
         return false;
     }
+    LogPrintf("benchmark getnewaddresss: LegacyScriptPubKeyMan::GetNewDestination: cp-3\n");
     //LearnRelatedScripts(new_key);
     dest = PKHash(new_key);
     return true;
@@ -1396,7 +1399,9 @@ bool LegacyScriptPubKeyMan::NewKeyPool()
 }
 
 bool LegacyScriptPubKeyMan::TopUp(unsigned int kpSize) {
+    LogPrintf("benchmark getnewaddresss: LegacyScriptPubKeyMan::TopUp: cp-1\n");
     LOCK(cs_KeyStore);
+    LogPrintf("benchmark getnewaddresss: LegacyScriptPubKeyMan::TopUp: cp-2\n");
     return TopUpInner(kpSize);
 }
 
@@ -1471,7 +1476,9 @@ bool LegacyScriptPubKeyMan::TopUpInner(unsigned int kpSize)
             m_storage.UpdateProgress("", 100);
         }
     }
+    LogPrintf("benchmark getnewaddresss: LegacyScriptPubKeyMan::TopUp: cp-3\n");
     NotifyCanGetAddressesChanged();
+    LogPrintf("benchmark getnewaddresss: LegacyScriptPubKeyMan::TopUp: cp-4\n");
     return true;
 }
 
@@ -1767,17 +1774,21 @@ void LegacyScriptPubKeyMan::SetInternal(bool internal) {}
 
 bool DescriptorScriptPubKeyMan::GetNewDestination(CTxDestination& dest, std::string& error)
 {
+    LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::GetNewDestination: cp-1\n");
     // Returns true if this descriptor supports getting new addresses. Conditions where we may be unable to fetch them (e.g. locked) are caught later
     if (!CanGetAddresses(m_internal)) {
         error = "No addresses available";
         return false;
     }
+    LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::GetNewDestination: cp-2\n");
     {
         LOCK(cs_desc_man);
         assert(m_wallet_descriptor.descriptor->IsSingleType()); // This is a combo descriptor which should not be an active descriptor
 
+        LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::GetNewDestination: cp-3\n");
         TopUp();
 
+        LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::GetNewDestination: cp-4\n");
         // Get the scriptPubKey from the descriptor
         FlatSigningProvider out_keys;
         std::vector<CScript> scripts_temp;
@@ -1786,6 +1797,7 @@ bool DescriptorScriptPubKeyMan::GetNewDestination(CTxDestination& dest, std::str
             error = "Error: Keypool ran out, please call keypoolrefill first";
             return false;
         }
+        LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::GetNewDestination: cp-5\n");
         if (!m_wallet_descriptor.descriptor->ExpandFromCache(m_wallet_descriptor.next_index, m_wallet_descriptor.cache, scripts_temp, out_keys)) {
             // We can't generate anymore keys
             error = "Error: Keypool ran out, please call keypoolrefill first";
@@ -1798,6 +1810,7 @@ bool DescriptorScriptPubKeyMan::GetNewDestination(CTxDestination& dest, std::str
         } else {
             throw std::runtime_error(std::string(__func__) + ": Types are inconsistent. Stored type does not match type of newly generated address");
         }
+        LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::GetNewDestination: cp-6\n");
         m_wallet_descriptor.next_index++;
         WalletBatch(m_storage.GetDatabase()).WriteDescriptor(GetID(), m_wallet_descriptor);
         return true;
@@ -1907,6 +1920,7 @@ std::map<CKeyID, CKey> DescriptorScriptPubKeyMan::GetKeys() const
 
 bool DescriptorScriptPubKeyMan::TopUp(unsigned int size)
 {
+    LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::TopUp: cp-1\n");
     LOCK(cs_desc_man);
     unsigned int target_size;
     if (size > 0) {
@@ -1915,6 +1929,7 @@ bool DescriptorScriptPubKeyMan::TopUp(unsigned int size)
         target_size = std::max(gArgs.GetArg("-keypool", DEFAULT_KEYPOOL_SIZE), (int64_t) 1);
     }
 
+    LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::TopUp: cp-2\n");
     // Calculate the new range_end
     int32_t new_range_end = std::max(m_wallet_descriptor.next_index + (int32_t)target_size, m_wallet_descriptor.range_end);
 
@@ -1925,11 +1940,14 @@ bool DescriptorScriptPubKeyMan::TopUp(unsigned int size)
         m_wallet_descriptor.range_start = 0;
     }
 
+    LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::TopUp: cp-3\n");
     FlatSigningProvider provider;
     provider.keys = GetKeys();
 
+    LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::TopUp: cp-4\n");
     WalletBatch batch(m_storage.GetDatabase());
     uint256 id = GetID();
+    LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::TopUp: cp-5\n");
     for (int32_t i = m_max_cached_index + 1; i < new_range_end; ++i) {
         FlatSigningProvider out_keys;
         std::vector<CScript> scripts_temp;
@@ -1958,13 +1976,16 @@ bool DescriptorScriptPubKeyMan::TopUp(unsigned int size)
         }
         m_max_cached_index++;
     }
+    LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::TopUp: cp-6\n");
     m_wallet_descriptor.range_end = new_range_end;
     batch.WriteDescriptor(GetID(), m_wallet_descriptor);
 
     // By this point, the cache size should be the size of the entire range
     assert(m_wallet_descriptor.range_end - 1 == m_max_cached_index);
 
+    LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::TopUp: cp-7\n");
     NotifyCanGetAddressesChanged();
+    LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::TopUp: cp-8\n");
     return true;
 }
 

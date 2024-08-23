@@ -4171,20 +4171,29 @@ bool CWallet::TopUpKeyPool(unsigned int kpSize)
 
 bool CWallet::GetNewDestination(const std::string label, CTxDestination& dest, std::string& error)
 {
+    LogPrintf("benchmark getnewaddresss: CWallet::GetNewDestination: cp-1\n");
     error.clear();
     bool result = false;
 
+    LogPrintf("benchmark getnewaddresss: CWallet::GetNewDestination: cp-2\n");
     LOCK(cs_wallet);
+    LogPrintf("benchmark getnewaddresss: CWallet::GetNewDestination: cp-3\n");
     auto spk_man = GetScriptPubKeyMan(false /* internal */);
+    LogPrintf("benchmark getnewaddresss: CWallet::GetNewDestination: cp-4\n");
     if (spk_man) {
+        LogPrintf("benchmark getnewaddresss: CWallet::GetNewDestination: cp-5\n");
         spk_man->TopUp();
+        LogPrintf("benchmark getnewaddresss: CWallet::GetNewDestination: cp-6\n");
         result = spk_man->GetNewDestination(dest, error);
+        LogPrintf("benchmark getnewaddresss: CWallet::GetNewDestination: cp-7\n");
     } else {
         error = strprintf("Error: No addresses available.");
     }
+    LogPrintf("benchmark getnewaddresss: CWallet::GetNewDestination: cp-8\n");
     if (result) {
         SetAddressBook(dest, label, "receive");
     }
+    LogPrintf("benchmark getnewaddresss: CWallet::GetNewDestination: cp-9\n");
 
     return result;
 }

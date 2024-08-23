@@ -254,25 +254,31 @@ RPCHelpMan getnewaddress()
         },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
+    LogPrintf("benchmark getnewaddresss: cp-1\n");
     std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
     if (!pwallet) return NullUniValue;
 
+    LogPrintf("benchmark getnewaddresss: cp-2\n");
     LOCK(pwallet->cs_wallet);
 
+    LogPrintf("benchmark getnewaddresss: cp-3\n");
     if (!pwallet->CanGetAddresses()) {
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: This wallet has no available keys");
     }
 
+    LogPrintf("benchmark getnewaddresss: cp-4\n");
     // Parse the label first so we don't generate a key if there's an error
     std::string label;
     if (!request.params[0].isNull())
         label = LabelFromValue(request.params[0]);
 
+    LogPrintf("benchmark getnewaddresss: cp-5\n");
     CTxDestination dest;
     std::string error;
     if (!pwallet->GetNewDestination(label, dest, error)) {
         throw JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, error);
     }
+    LogPrintf("benchmark getnewaddresss: cp-6\n");
     return EncodeDestination(dest);
 },
     };
