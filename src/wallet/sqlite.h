@@ -7,6 +7,8 @@
 
 #include <wallet/db.h>
 
+#include <logging.h>
+
 #include <sqlite3.h>
 
 struct bilingual_str;
@@ -35,7 +37,11 @@ private:
 
 public:
     explicit SQLiteBatch(SQLiteDatabase& database);
-    ~SQLiteBatch() override { Close(); }
+    ~SQLiteBatch() override {
+        LogPrintf("benchmark sqlitebatch cp-1\n");
+        Close();
+        LogPrintf("benchmark sqlitebatch cp-2\n");
+    }
 
     /* No-op. See comment on SQLiteDatabase::Flush */
     void Flush() override {}

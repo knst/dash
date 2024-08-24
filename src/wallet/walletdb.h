@@ -144,13 +144,19 @@ private:
     template <typename K, typename T>
     bool WriteIC(const K& key, const T& value, bool fOverwrite = true)
     {
+        LogPrintf("benchmark: write-ic cp-1\n");
         if (!m_batch->Write(key, value, fOverwrite)) {
+            LogPrintf("benchmark: write-ic cp-2\n");
             return false;
         }
+        LogPrintf("benchmark: write-ic cp-3\n");
         m_database.IncrementUpdateCounter();
+        LogPrintf("benchmark: write-ic cp-4\n");
         if (m_database.nUpdateCounter % 1000 == 0) {
+            LogPrintf("benchmark: write-ic cp-5\n");
             m_batch->Flush();
         }
+        LogPrintf("benchmark: write-ic cp-6\n");
         return true;
     }
 
@@ -172,6 +178,7 @@ public:
         m_batch(database.MakeBatch(_fFlushOnClose)),
         m_database(database)
     {
+        LogPrintf("benchmark WalletBatch\n");
     }
     WalletBatch(const WalletBatch&) = delete;
     WalletBatch& operator=(const WalletBatch&) = delete;
