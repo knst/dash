@@ -1946,6 +1946,7 @@ bool DescriptorScriptPubKeyMan::TopUp(unsigned int size)
 
     LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::TopUp: cp-4\n");
     WalletBatch batch(m_storage.GetDatabase());
+    LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::TopUp: cp-4.1\n");
     uint256 id = GetID();
     LogPrintf("benchmark getnewaddresss: DescriptorScriptPubKeyMan::TopUp: cp-5\n");
     for (int32_t i = m_max_cached_index + 1; i < new_range_end; ++i) {
@@ -2329,10 +2330,14 @@ std::unique_ptr<CKeyMetadata> DescriptorScriptPubKeyMan::GetMetadata(const CTxDe
 
 uint256 DescriptorScriptPubKeyMan::GetID() const
 {
+    LogPrintf("benchmark DescriptorScriptPubKeyMan::GetID cp-1\n");
     LOCK(cs_desc_man);
+    LogPrintf("benchmark DescriptorScriptPubKeyMan::GetID cp-2\n");
     std::string desc_str = m_wallet_descriptor.descriptor->ToString();
+    LogPrintf("benchmark DescriptorScriptPubKeyMan::GetID cp-3\n");
     uint256 id;
     CSHA256().Write((unsigned char*)desc_str.data(), desc_str.size()).Finalize(id.begin());
+    LogPrintf("benchmark DescriptorScriptPubKeyMan::GetID cp-4\n");
     return id;
 }
 

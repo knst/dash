@@ -10,6 +10,7 @@
 #include <fs.h>
 #include <streams.h>
 #include <support/allocators/secure.h>
+#include <logging.h>
 
 #include <atomic>
 #include <memory>
@@ -59,14 +60,17 @@ public:
     template <typename K, typename T>
     bool Write(const K& key, const T& value, bool fOverwrite = true)
     {
+        LogPrintf("benchmark write batch cp-1\n");
         CDataStream ssKey(SER_DISK, CLIENT_VERSION);
         ssKey.reserve(1000);
         ssKey << key;
 
+        LogPrintf("benchmark write batch cp-2\n");
         CDataStream ssValue(SER_DISK, CLIENT_VERSION);
         ssValue.reserve(10000);
         ssValue << value;
 
+        LogPrintf("benchmark write batch cp-3\n");
         return WriteKey(std::move(ssKey), std::move(ssValue), fOverwrite);
     }
 

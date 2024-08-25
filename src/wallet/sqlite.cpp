@@ -406,9 +406,12 @@ bool SQLiteBatch::ReadKey(CDataStream&& key, CDataStream& value)
 
 bool SQLiteBatch::WriteKey(CDataStream&& key, CDataStream&& value, bool overwrite)
 {
+    LogPrintf("benchmark sqlitebatch WriteKey cp-1 overwrite=%d\n", overwrite);
     if (!m_database.m_db) return false;
+    LogPrintf("benchmark sqlitebatch WriteKey cp-2\n");
     assert(m_insert_stmt && m_overwrite_stmt);
 
+    LogPrintf("benchmark sqlitebatch WriteKey cp-3\n");
     sqlite3_stmt* stmt;
     if (overwrite) {
         stmt = m_overwrite_stmt;
@@ -416,16 +419,21 @@ bool SQLiteBatch::WriteKey(CDataStream&& key, CDataStream&& value, bool overwrit
         stmt = m_insert_stmt;
     }
 
+    LogPrintf("benchmark sqlitebatch WriteKey cp-4\n");
     // Bind: leftmost parameter in statement is index 1
     // Insert index 1 is key, 2 is value
     int res = sqlite3_bind_blob(stmt, 1, key.data(), key.size(), SQLITE_STATIC);
+    LogPrintf("benchmark sqlitebatch WriteKey cp-5\n");
     if (res != SQLITE_OK) {
         LogPrintf("%s: Unable to bind key to statement: %s\n", __func__, sqlite3_errstr(res));
         sqlite3_clear_bindings(stmt);
         sqlite3_reset(stmt);
+        LogPrintf("benchmark sqlitebatch WriteKey cp-6\n");
         return false;
     }
+    LogPrintf("benchmark sqlitebatch WriteKey cp-7\n");
     res = sqlite3_bind_blob(stmt, 2, value.data(), value.size(), SQLITE_STATIC);
+    LogPrintf("benchmark sqlitebatch WriteKey cp-8\n");
     if (res != SQLITE_OK) {
         LogPrintf("%s: Unable to bind value to statement: %s\n", __func__, sqlite3_errstr(res));
         sqlite3_clear_bindings(stmt);
@@ -434,9 +442,13 @@ bool SQLiteBatch::WriteKey(CDataStream&& key, CDataStream&& value, bool overwrit
     }
 
     // Execute
+    LogPrintf("benchmark sqlitebatch WriteKey cp-9\n");
     res = sqlite3_step(stmt);
+    LogPrintf("benchmark sqlitebatch WriteKey cp-10\n");
     sqlite3_clear_bindings(stmt);
+    LogPrintf("benchmark sqlitebatch WriteKey cp-11\n");
     sqlite3_reset(stmt);
+    LogPrintf("benchmark sqlitebatch WriteKey cp-12\n");
     if (res != SQLITE_DONE) {
         LogPrintf("%s: Unable to execute statement: %s\n", __func__, sqlite3_errstr(res));
     }
