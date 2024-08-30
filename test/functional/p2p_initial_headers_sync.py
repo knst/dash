@@ -28,11 +28,8 @@ import random
 class HeadersSyncTest(BitcoinTestFramework):
     def set_test_params(self):
         self.setup_clean_chain = True
+        self.disable_mocktime = True
         self.num_nodes = 1
-
-    def setup_network(self):
-        self.disable_mocktime()
-        super().setup_network()
 
     def announce_random_block(self, peers):
         new_block_announcement = msg_inv(inv=[CInv(MSG_BLOCK, random.randrange(1<<256))])

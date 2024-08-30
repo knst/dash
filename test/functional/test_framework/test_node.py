@@ -103,9 +103,11 @@ class TestNode():
             "-debug",
             "-debugexclude=libevent",
             "-debugexclude=leveldb",
-            "-mocktime=" + str(mocktime),
-            "-uacomment=testnode%d" % i
+            "-uacomment=testnode%d" % i,
         ]
+        if self.mocktime != 0:
+            self.args.append("-mocktime={mocktime}")
+
         if use_valgrind:
             default_suppressions_file = os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
@@ -777,3 +779,7 @@ class RPCOverloadWrapper():
         for res in import_res:
             if not res['success']:
                 raise JSONRPCException(res['error'])
+
+    def setmocktime(self, mocktime):
+        self.mocktime = mocktime
+        return self.__getattr__('setmocktime')(mocktime)
