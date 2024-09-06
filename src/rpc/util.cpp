@@ -475,15 +475,19 @@ RPCHelpMan::RPCHelpMan(std::string name, std::string description, std::vector<RP
             const RPCArg::Type type = arg.m_type;
             switch (std::get<RPCArg::Default>(arg.m_fallback).getType()) {
             case UniValue::VOBJ:
+                assert(type == RPCArg::Type::OBJ);
                 CHECK_NONFATAL(type == RPCArg::Type::OBJ);
                 break;
             case UniValue::VARR:
+                assert(type == RPCArg::Type::ARR);
                 CHECK_NONFATAL(type == RPCArg::Type::ARR);
                 break;
             case UniValue::VSTR:
+                assert(type == RPCArg::Type::STR || type == RPCArg::Type::STR_HEX || type == RPCArg::Type::AMOUNT);
                 CHECK_NONFATAL(type == RPCArg::Type::STR || type == RPCArg::Type::STR_HEX || type == RPCArg::Type::AMOUNT);
                 break;
             case UniValue::VNUM:
+                assert(type == RPCArg::Type::NUM || type == RPCArg::Type::AMOUNT || type == RPCArg::Type::RANGE);
                 CHECK_NONFATAL(type == RPCArg::Type::NUM || type == RPCArg::Type::AMOUNT || type == RPCArg::Type::RANGE);
                 break;
             case UniValue::VBOOL:
