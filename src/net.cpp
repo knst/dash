@@ -4227,18 +4227,9 @@ void CConnman::StopNodes()
     // Delete peer connections.
     std::vector<CNode*> nodes;
     WITH_LOCK(m_nodes_mutex, nodes.swap(m_nodes));
-    for (CNode *pnode : nodes) {
+    for (CNode* pnode : nodes) {
         pnode->CloseSocketDisconnect(this);
         DeleteNode(pnode);
-    }
-
-    // Close listening sockets.
-    for (ListenSocket& hListenSocket : vhListenSocket) {
-        if (hListenSocket.sock) {
-            if (m_edge_trig_events && !m_edge_trig_events->RemoveSocket(hListenSocket.sock->Get())) {
-                LogPrintf("EdgeTriggeredEvents::RemoveSocket() failed\n");
-            }
-        }
     }
 
     for (CNode* pnode : m_nodes_disconnected) {
