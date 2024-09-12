@@ -219,11 +219,15 @@ class AssetLocksTest(DashTestFramework):
         except JSONRPCException as e:
             assert expected_error in e.error['message']
 
-    def generate_batch(self, count):
-        self.log.info(f"Generating batch of {count} blocks")
-        self.bump_mocktime(count)
-        self.nodes[1].generate(count)
-        self.sync_all()
+    def slowly_generate_batch(self, count):
+        self.log.info(f"Slowly generate {count} blocks")
+        while count > 0:
+            self.log.info(f"Generating batch of blocks {count} left")
+            batch = min(10, count)
+            count -= batch
+            self.bump_mocktime(batch)
+            self.nodes[1].generate(batch)
+            self.sync_all()
 
     def run_test(self):
         node_wallet = self.nodes[0]
@@ -415,7 +419,7 @@ class AssetLocksTest(DashTestFramework):
         self.validate_credit_pool_balance(locked - 2 * COIN)
 
         self.log.info("Generating many blocks to make quorum far behind (even still active)...")
-        self.generate_batch(too_late_height - node.getblockcount() - 1)
+        self.slowly_generate_batch(too_late_height - node.getblockcount() - 1)
         self.check_mempool_result(tx=asset_unlock_tx_too_late, result_expected={'allowed': True, 'fees': {'base': Decimal(str(tiny_amount / COIN))}})
         node.generate(1)
         self.sync_all()
@@ -433,7 +437,7 @@ class AssetLocksTest(DashTestFramework):
         for inode in self.nodes:
             inode.invalidateblock(block_asset_unlock)
         self.validate_credit_pool_balance(locked)
-        self.generate_batch(50)
+        self.slowly_generate_batch(50)
         self.validate_credit_pool_balance(locked)
         for inode in self.nodes:
             inode.reconsiderblock(block_to_reconsider)
@@ -499,7 +503,7 @@ class AssetLocksTest(DashTestFramework):
         assert spend_txid_in_block in block['tx']
 
         self.log.info("Fast forward to the next day to reset all current unlock limits...")
-        self.generate_batch(blocks_in_one_day)
+        self.slowly_generate_batch(blocks_in_one_day)
         self.mine_quorum(llmq_type_name="llmq_test_platform", llmq_type=106)
 
         total = self.get_credit_pool_balance()
@@ -574,7 +578,7 @@ class AssetLocksTest(DashTestFramework):
         assert pending_txid in node.getrawmempool()
 
         self.log.info("Fast forward to next day again...")
-        self.generate_batch(blocks_in_one_day - 1)
+        self.slowly_generate_batch(blocks_in_one_day - 1)
         self.log.info("Checking mempool is empty now...")
         self.mempool_size = 0
         self.check_mempool_size()
@@ -607,7 +611,7 @@ class AssetLocksTest(DashTestFramework):
 
 
         self.log.info("generate many blocks to be sure that mempool is empty after expiring txes...")
-        self.generate_batch(60)
+        self.slowly_generate_batch(60)
         self.log.info("Checking that credit pool is not changed...")
         assert_equal(new_total, self.get_credit_pool_balance())
         self.check_mempool_size()
