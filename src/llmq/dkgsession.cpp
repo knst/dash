@@ -259,6 +259,7 @@ bool CDKGSession::PreVerifyMessage(const CDKGContribution& qc, bool& retBan) con
     return true;
 }
 
+// TODO: remove duplicated code between all ReceiveMessage: CDKGContribution, CDKGComplaint, CDKGJustification, CDKGPrematureCommitment
 void CDKGSession::ReceiveMessage(const CDKGContribution& qc, bool& retBan)
 {
     CDKGLogger logger(*this, __func__, __LINE__);
