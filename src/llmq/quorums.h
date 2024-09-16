@@ -14,6 +14,7 @@
 #include <bls/bls.h>
 #include <bls/bls_worker.h>
 
+#include <ctpl_stl.h>
 #include <evo/evodb.h>
 #include <net_types.h>
 #include <gsl/pointers.h>
