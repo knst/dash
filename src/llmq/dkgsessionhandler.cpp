@@ -62,6 +62,7 @@ CDKGSessionHandler::~CDKGSessionHandler() = default;
 
 void CDKGPendingMessages::PushPendingMessage(NodeId from, PeerManager* peerman, CDataStream& vRecv)
 {
+    LogPrintf("dkk-single push-pedning message\n");
     // if peer is not -1 we should always pass valid peerman
     assert(from == -1 || peerman != nullptr);
     if (peerman != nullptr) {

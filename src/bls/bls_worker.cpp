@@ -102,6 +102,7 @@ bool CBLSWorker::GenerateContributions(int quorumThreshold, Span<CBLSId> ids, BL
         auto f = [&, start, count](int threadId) {
             for (size_t j = start; j < start + count; j++) {
                 if (!skSharesRet[j].SecretKeyShare(svec, ids[j])) {
+                    throw "abaa";
                     return false;
                 }
             }
