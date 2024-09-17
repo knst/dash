@@ -140,9 +140,9 @@ static constexpr std::array<LLMQParams, 14> available_llmqs = {
         .type = LLMQType::LLMQ_TEST,
         .name = "llmq_test",
         .useRotation = false,
-        .size = 3,
-        .minSize = 2,
-        .threshold = 2,
+        .size = 2,
+        .minSize = 1,
+        .threshold = 1,
 
         .dkgInterval = 24, // one DKG per hour
         .dkgPhaseBlocks = 2,
