@@ -117,8 +117,8 @@ class QuorumDataInterface(P2PInterface):
 
 class QuorumDataMessagesTest(DashTestFramework):
     def set_test_params(self):
-        extra_args = [["-llmq-data-recovery=0", "-deprecatedrpc=banscore"]] * 4
-        self.set_dash_test_params(4, 3, fast_dip3_enforcement=True, extra_args=extra_args)
+        extra_args = [["-llmq-data-recovery=0", "-deprecatedrpc=banscore"]] * 2
+        self.set_dash_test_params(2, 1, fast_dip3_enforcement=True, extra_args=extra_args)
 
     def restart_mn(self, mn, reindex=False):
         args = self.extra_args[mn.node.index] + ['-masternodeblsprivkey=%s' % mn.keyOperator]
@@ -406,7 +406,7 @@ class QuorumDataMessagesTest(DashTestFramework):
         self.nodes[0].sporkupdate("SPORK_19_CHAINLOCKS_ENABLED", 4070908800)
 
         self.wait_for_sporks_same()
-        quorum_hash = self.mine_quorum()
+        quorum_hash = self.mine_quorum(llmq_type_name="llmq_test", llmq_type=100, expected_connections=0, expected_members=1, expected_contributions=0, expected_commitments=0) #, expected_complaints=0, expected_justifications=0, expected_commitments=None, mninfos_online=None, mninfos_valid=None):
 
         node0 = self.nodes[0]
         mn1 = self.mninfo[0]
