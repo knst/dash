@@ -11,36 +11,38 @@
 
 BOOST_FIXTURE_TEST_SUITE(pow_tests, BasicTestingSetup)
 
-static const std::vector<std::pair<uint32_t, uint32_t>> g_mainnet_data = {
-    { 1408728124, 0x1b104be1U }, { 1408728332, 0x1b10e09eU }, { 1408728479, 0x1b11a33cU },
-    { 1408728495, 0x1b121cf3U }, { 1408728608, 0x1b11951eU }, { 1408728744, 0x1b11abacU },
-    { 1408728756, 0x1b118d9cU }, { 1408728950, 0x1b1123f9U }, { 1408729116, 0x1b1141bfU },
-    { 1408729179, 0x1b110764U }, { 1408729305, 0x1b107556U }, { 1408729474, 0x1b104297U },
-    { 1408729576, 0x1b1063d0U }, { 1408729587, 0x1b10e878U }, { 1408729647, 0x1b0dfaffU },
-    { 1408729678, 0x1b0c9ab8U }, { 1408730179, 0x1b0c03d6U }, { 1408730862, 0x1b0dd168U },
-    { 1408730914, 0x1b10b864U }, { 1408731242, 0x1b0fed89U }, { 1408731256, 0x1b113ff1U },
-    { 1408732229, 0x1b10460bU }, { 1408732257, 0x1b13b83fU }, { 1408732489, 0x1b1418d4U }
-};
-
 /* Test calculation of next difficulty target with DGW */
 BOOST_AUTO_TEST_CASE(get_next_work)
 {
     const auto chainParams = CreateChainParams(*m_node.args, CBaseChainParams::MAIN);
 
+    static const std::vector<std::pair<uint32_t, uint32_t>> mainnet_data = {
+        { 1408728124, 0x1b104be1U }, { 1408728332, 0x1b10e09eU }, { 1408728479, 0x1b11a33cU },
+        { 1408728495, 0x1b121cf3U }, { 1408728608, 0x1b11951eU }, { 1408728744, 0x1b11abacU },
+        { 1408728756, 0x1b118d9cU }, { 1408728950, 0x1b1123f9U }, { 1408729116, 0x1b1141bfU },
+        { 1408729179, 0x1b110764U }, { 1408729305, 0x1b107556U }, { 1408729474, 0x1b104297U },
+        { 1408729576, 0x1b1063d0U }, { 1408729587, 0x1b10e878U }, { 1408729647, 0x1b0dfaffU },
+        { 1408729678, 0x1b0c9ab8U }, { 1408730179, 0x1b0c03d6U }, { 1408730862, 0x1b0dd168U },
+        { 1408730914, 0x1b10b864U }, { 1408731242, 0x1b0fed89U }, { 1408731256, 0x1b113ff1U },
+        { 1408732229, 0x1b10460bU }, { 1408732257, 0x1b13b83fU }, { 1408732489, 0x1b1418d4U }
+    };
+
     // Construct a chain of block index entries
-    std::list<CBlockIndex> blockidx;
-    for (auto& [time, bits] : g_mainnet_data) {
-        auto* prev = blockidx.empty() ? nullptr : &blockidx.back();
+    std::vector<CBlockIndex> blockidx;
+    // Need to allocate memory for all items to be sure there's no re-allocation happens
+    blockidx.reserve(mainnet_data.size());
+
+    CBlockIndex* blockIndexLast{nullptr};
+    for (const auto& [time, bits] : mainnet_data) {
         blockidx.emplace_back();
-        auto& entry = blockidx.back();
+        CBlockIndex& entry = blockidx.back();
         entry.nTime = time;
         entry.nBits = bits;
-        entry.pprev = prev;
+        entry.pprev = blockIndexLast;
+        blockIndexLast = &entry;
     }
     blockidx.back().nHeight = 123456;
-    assert(g_mainnet_data.size() == blockidx.size());
-
-    const auto* blockIndexLast{&blockidx.back()};
+    assert(mainnet_data.size() == blockidx.size());
 
     CBlockHeader blockHeader;
     blockHeader.nTime = 1408732505; // Block #123457
