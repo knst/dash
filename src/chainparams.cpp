@@ -919,7 +919,8 @@ public:
         AddLLMQ(Consensus::LLMQType::LLMQ_TEST_V17);
         AddLLMQ(Consensus::LLMQType::LLMQ_TEST_DIP0024);
         AddLLMQ(Consensus::LLMQType::LLMQ_TEST_PLATFORM);
-        consensus.llmqTypeChainLocks = Consensus::LLMQType::LLMQ_TEST;
+        AddLLMQ(Consensus::LLMQType::LLMQ_SINGLE_NODE);
+        consensus.llmqTypeChainLocks = Consensus::LLMQType::LLMQ_SINGLE_NODE;
         consensus.llmqTypeDIP0024InstantSend = Consensus::LLMQType::LLMQ_TEST_DIP0024;
         consensus.llmqTypePlatform = Consensus::LLMQType::LLMQ_TEST_PLATFORM;
         consensus.llmqTypeMnhf = Consensus::LLMQType::LLMQ_TEST;

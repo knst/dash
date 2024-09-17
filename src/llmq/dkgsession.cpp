@@ -164,6 +164,17 @@ void CDKGSession::Contribute(CDKGPendingMessages& pendingMessages)
         return;
     }
 
+    assert(params.threshold > 1);
+//    if (memberIds == 1) {
+ //       return;
+        /*
+        m_sk_contributions.resize(1);
+//        CBLSSecretKey key;
+        m_sk_contributions[0].MakeNewKey();
+        vvecContribution.resize(0);
+*/
+  //  }
+
     cxxtimer::Timer t1(true);
     logger.Batch("generating contributions");
     if (!blsWorker.GenerateContributions(params.threshold, memberIds, vvecContribution, m_sk_contributions)) {
@@ -1235,6 +1246,7 @@ std::vector<CFinalCommitment> CDKGSession::FinalizeCommitments()
         fqc.quorumVvecHash = first.quorumVvecHash;
 
         const bool isQuorumRotationEnabled{IsQuorumRotationEnabled(params, m_quorum_base_block_index)};
+        // TODO: always put `true` here: so far as v19 is activated, we always write BASIC now
         fqc.nVersion = CFinalCommitment::GetVersion(isQuorumRotationEnabled, DeploymentActiveAfter(m_quorum_base_block_index, Params().GetConsensus(), Consensus::DEPLOYMENT_V19));
         fqc.quorumIndex = isQuorumRotationEnabled ? quorumIndex : 0;
 
@@ -1290,6 +1302,109 @@ std::vector<CFinalCommitment> CDKGSession::FinalizeCommitments()
     logger.Flush();
 
     return finalCommitments;
+}
+
+CFinalCommitment CDKGSession::FinalizeSingleCommitment()
+{
+    if (!AreWeMember()) {
+        return {};
+    }
+
+    CDKGLogger logger(*this, __func__, __LINE__);
+
+ //       const auto& cvec = p.second;
+
+    std::vector<CBLSId> signerIds;
+    std::vector<CBLSSignature> thresholdSigs;
+
+//        const auto& first = cvec[0];
+
+    CFinalCommitment fqc(params, m_quorum_base_block_index->GetBlockHash());
+
+
+    CBLSSecretKey sk1;
+    sk1.MakeNewKey();
+
+
+
+    fqc.signers = {true}; // TODO - that's me!
+    LogPrintf("fqc signers %d value %d\n", fqc.signers.size(), fqc.signers[0]);
+    fqc.validMembers = {true}; // TODO - that's me!
+    fqc.quorumPublicKey = sk1.GetPublicKey(); //first.quorumPublicKey;
+    fqc.quorumVvecHash = {}; // first.quorumVvecHash;
+
+    { // re-write quorumSig and quorumPublicKey temporary, that's a workaround!
+        fqc.quorumPublicKey = m_mn_activeman->GetPubKey();
+    }
+    const bool isQuorumRotationEnabled{false};
+//    fqc.nVersion = CFinalCommitment::GetVersion(isQuorumRotationEnabled, true);
+    fqc.nVersion = CFinalCommitment::GetVersion(isQuorumRotationEnabled, DeploymentActiveAfter(m_quorum_base_block_index, Params().GetConsensus(), Consensus::DEPLOYMENT_V19));
+    fqc.quorumIndex = 0;
+
+    uint256 commitmentHash = BuildCommitmentHash(fqc.llmqType, fqc.quorumHash, fqc.validMembers, fqc.quorumPublicKey, fqc.quorumVvecHash);
+    fqc.quorumSig = sk1.Sign(commitmentHash);
+
+    /*for (const auto i : irange::range(members.size())) */
+    {
+//        const auto& m = members[0];
+        //CBLSSecretKey skContrib = m_sk_contributions[0];
+
+        /*
+        if (!qc.contributions->Encrypt(i, m->dmn->pdmnState->pubKeyOperator.Get(), sk1, PROTOCOL_VERSION)) {
+            logger.Batch("failed to encrypt contribution for %s", m->dmn->proTxHash.ToString());
+            assert(false); // return;
+        }
+        */
+//        fqc.membersSig = members[i]->pdmnState->.Sign(commitmentHash);
+ //       fqc.membersSig = CBLSSignature::AggregateSecure(aggSigs, aggPks, commitmentHash);
+        fqc.membersSig = m_mn_activeman->Sign(commitmentHash);
+    }
+    { // re-write quorumSig and quorumPublicKey temporary, that's a workaround!
+        fqc.quorumSig = fqc.membersSig;
+    }
+
+    std::vector<CBLSSignature> aggSigs;
+    std::vector<CBLSPublicKey> aggPks;
+//        aggSigs.reserve(cvec.size());
+//        aggPks.reserve(cvec.size());
+
+        /*
+        for (const auto& qc : cvec) {
+            if (qc.quorumPublicKey != first.quorumPublicKey || qc.quorumVvecHash != first.quorumVvecHash) {
+                logger.Batch("quorumPublicKey or quorumVvecHash does not match, skipping");
+                continue;
+            }
+
+            size_t signerIndex = membersMap[qc.proTxHash];
+            const auto& m = members[signerIndex];
+
+            fqc.signers[signerIndex] = true;
+            aggSigs.emplace_back(qc.sig);
+            aggPks.emplace_back(m->dmn->pdmnState->pubKeyOperator.Get());
+
+            signerIds.emplace_back(m->id);
+            thresholdSigs.emplace_back(qc.quorumSig);
+        }
+        */
+/*
+        fqc.membersSig = CBLSSignature::AggregateSecure(aggSigs, aggPks, commitmentHash);
+
+        if (!fqc.quorumSig.Recover(thresholdSigs, signerIds)) {
+            logger.Batch("failed to recover quorum sig");
+            continue;
+        }
+*/
+    if (!fqc.Verify(m_dmnman, m_quorum_base_block_index, true)) {
+        logger.Batch("failed to verify final commitment");
+        assert(false);
+    }
+
+    logger.Batch("final commitment: validMembers=%d, signers=%d, quorumPublicKey=%s",
+                    fqc.CountValidMembers(), fqc.CountSigners(), fqc.quorumPublicKey.ToString());
+
+    logger.Flush();
+
+    return fqc;
 }
 
 CDKGMember* CDKGSession::GetMember(const uint256& proTxHash) const
