@@ -164,7 +164,7 @@ int CQuorum::GetMemberIndex(const uint256& proTxHash) const
     return -1;
 }
 
-void CQuorum::WriteContributions(const std::unique_ptr<CDBWrapper>& db) const
+void CQuorum::WriteContributions(CDBWrapper& db) const
 {
     uint256 dbKey = MakeQuorumKey(*this);
 
@@ -175,19 +175,19 @@ void CQuorum::WriteContributions(const std::unique_ptr<CDBWrapper>& db) const
         for (auto& pubkey : *quorumVvec) {
             s << CBLSPublicKeyVersionWrapper(pubkey, false);
         }
-        db->Write(std::make_pair(DB_QUORUM_QUORUM_VVEC, dbKey), s);
+        db.Write(std::make_pair(DB_QUORUM_QUORUM_VVEC, dbKey), s);
     }
     if (skShare.IsValid()) {
-        db->Write(std::make_pair(DB_QUORUM_SK_SHARE, dbKey), skShare);
+        db.Write(std::make_pair(DB_QUORUM_SK_SHARE, dbKey), skShare);
     }
 }
 
-bool CQuorum::ReadContributions(const std::unique_ptr<CDBWrapper>& db)
+bool CQuorum::ReadContributions(const CDBWrapper& db)
 {
     uint256 dbKey = MakeQuorumKey(*this);
     CDataStream s(SER_DISK, CLIENT_VERSION);
 
-    if (!db->ReadDataStream(std::make_pair(DB_QUORUM_QUORUM_VVEC, dbKey), s)) {
+    if (!db.ReadDataStream(std::make_pair(DB_QUORUM_QUORUM_VVEC, dbKey), s)) {
         return false;
     }
 
@@ -203,7 +203,7 @@ bool CQuorum::ReadContributions(const std::unique_ptr<CDBWrapper>& db)
     quorumVvec = std::make_shared<std::vector<CBLSPublicKey>>(std::move(qv));
     // We ignore the return value here as it is ok if this fails. If it fails, it usually means that we are not a
     // member of the quorum but observed the whole DKG process to have the quorum verification vector.
-    db->Read(std::make_pair(DB_QUORUM_SK_SHARE, dbKey), skShare);
+    db.Read(std::make_pair(DB_QUORUM_SK_SHARE, dbKey), skShare);
 
     return true;
 }
@@ -407,11 +407,11 @@ CQuorumPtr CQuorumManager::BuildQuorumFromCommitment(const Consensus::LLMQType l
     quorum->Init(std::move(qc), pQuorumBaseBlockIndex, minedBlockHash, members);
 
     bool hasValidVvec = false;
-    if (WITH_LOCK(cs_db, return quorum->ReadContributions(db))) {
+    if (WITH_LOCK(cs_db, return quorum->ReadContributions(*Assert(db)))) {
         hasValidVvec = true;
     } else {
         if (BuildQuorumContributions(quorum->qc, quorum)) {
-            WITH_LOCK(cs_db, quorum->WriteContributions(db));
+            WITH_LOCK(cs_db, quorum->WriteContributions(*Assert(db)));
             hasValidVvec = true;
         } else {
             LogPrint(BCLog::LLMQ, "CQuorumManager::%s -- llmqType[%d] quorumIndex[%d] quorum.ReadContributions and BuildQuorumContributions for quorumHash[%s] failed\n", __func__, ToUnderlying(llmqType), quorum->qc->quorumIndex, quorum->qc->quorumHash.ToString());
@@ -849,7 +849,7 @@ PeerMsgRet CQuorumManager::ProcessMessage(CNode& pfrom, const std::string& msg_t
                 return errorHandler("Invalid secret key share received");
             }
         }
-        WITH_LOCK(cs_db, pQuorum->WriteContributions(db));
+        WITH_LOCK(cs_db, pQuorum->WriteContributions(*Assert(db)));
         return {};
     }
     return {};
