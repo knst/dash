@@ -34,6 +34,7 @@ EXPECTED_CIRCULAR_DEPENDENCIES=(
     "llmq/chainlocks -> llmq/instantsend -> llmq/chainlocks"
     "llmq/dkgsessionhandler -> net_processing -> llmq/dkgsessionmgr -> llmq/dkgsessionhandler"
     "llmq/instantsend -> net_processing -> llmq/instantsend"
+    "llmq/dkgsession -> net_processing -> llmq/dkgsession"
     "llmq/instantsend -> txmempool -> llmq/instantsend"
     "llmq/instantsend -> validation -> llmq/instantsend"
     "llmq/signing -> llmq/signing_shares -> llmq/signing"
