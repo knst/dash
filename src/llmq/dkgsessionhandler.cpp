@@ -589,4 +589,15 @@ void CDKGSessionHandler::PhaseHandlerThread()
     }
 }
 
+bool CDKGSessionHandler::GetContribution(const uint256& hash, CDKGContribution& ret) const
+{
+    LOCK(curSession->invCs);
+    auto it = curSession->contributions.find(hash);
+    if (it != curSession->contributions.end()) {
+        ret = it->second;
+        return true;
+    }
+    return false;
+}
+
 } // namespace llmq

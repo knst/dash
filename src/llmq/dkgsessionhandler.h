@@ -25,6 +25,7 @@ class PeerManager;
 
 namespace llmq
 {
+class CDKGContribution;
 class CDKGDebugManager;
 class CDKGSession;
 class CDKGSessionManager;
@@ -160,6 +161,8 @@ public:
 
     void StartThread();
     void StopThread();
+
+    bool GetContribution(const uint256& hash, CDKGContribution& ret) const;
 
 private:
     bool InitNewQuorum(const CBlockIndex* pQuorumBaseBlockIndex);

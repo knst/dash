@@ -300,10 +300,7 @@ bool CDKGSessionManager::GetContribution(const uint256& hash, CDKGContribution& 
         if (dkgType.phase < QuorumPhase::Initialized || dkgType.phase > QuorumPhase::Contribute) {
             continue;
         }
-        LOCK(dkgType.curSession->invCs);
-        auto it = dkgType.curSession->contributions.find(hash);
-        if (it != dkgType.curSession->contributions.end()) {
-            ret = it->second;
+        if (dkgType.GetContribution(hash, ret)) {
             return true;
         }
     }
