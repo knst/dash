@@ -26,6 +26,9 @@ class PeerManager;
 namespace llmq
 {
 class CDKGContribution;
+class CDKGComplaint;
+class CDKGJustification;
+class CDKGPrematureCommitment;
 class CDKGDebugManager;
 class CDKGSession;
 class CDKGSessionManager;
@@ -154,7 +157,7 @@ public:
                        CDKGDebugManager& _dkgDebugManager, CDKGSessionManager& _dkgManager, CMasternodeMetaMan& mn_metaman,
                        CQuorumBlockProcessor& _quorumBlockProcessor, const CActiveMasternodeManager* const mn_activeman,
                        const CSporkManager& sporkman, const std::unique_ptr<PeerManager>& peerman, const Consensus::LLMQParams& _params, int _quorumIndex);
-    ~CDKGSessionHandler() = default;
+    ~CDKGSessionHandler();
 
     void UpdatedBlockTip(const CBlockIndex *pindexNew);
     void ProcessMessage(const CNode& pfrom, gsl::not_null<PeerManager*> peerman, const std::string& msg_type, CDataStream& vRecv);
@@ -163,6 +166,9 @@ public:
     void StopThread();
 
     bool GetContribution(const uint256& hash, CDKGContribution& ret) const;
+    bool GetComplaint(const uint256& hash, CDKGComplaint& ret) const;
+    bool GetJustification(const uint256& hash, CDKGJustification& ret) const;
+    bool GetPrematureCommitment(const uint256& hash, CDKGPrematureCommitment& ret) const;
 
 private:
     bool InitNewQuorum(const CBlockIndex* pQuorumBaseBlockIndex);

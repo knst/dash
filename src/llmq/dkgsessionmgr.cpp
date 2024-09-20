@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <llmq/debug.h>
-#include <llmq/dkgsession.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/options.h>
 #include <llmq/params.h>
@@ -318,10 +317,7 @@ bool CDKGSessionManager::GetComplaint(const uint256& hash, CDKGComplaint& ret) c
         if (dkgType.phase < QuorumPhase::Contribute || dkgType.phase > QuorumPhase::Complain) {
             continue;
         }
-        LOCK(dkgType.curSession->invCs);
-        auto it = dkgType.curSession->complaints.find(hash);
-        if (it != dkgType.curSession->complaints.end()) {
-            ret = it->second;
+        if (dkgType.GetComplaint(hash, ret)) {
             return true;
         }
     }
@@ -339,10 +335,7 @@ bool CDKGSessionManager::GetJustification(const uint256& hash, CDKGJustification
         if (dkgType.phase < QuorumPhase::Complain || dkgType.phase > QuorumPhase::Justify) {
             continue;
         }
-        LOCK(dkgType.curSession->invCs);
-        auto it = dkgType.curSession->justifications.find(hash);
-        if (it != dkgType.curSession->justifications.end()) {
-            ret = it->second;
+        if (dkgType.GetJustification(hash, ret)) {
             return true;
         }
     }
@@ -360,10 +353,7 @@ bool CDKGSessionManager::GetPrematureCommitment(const uint256& hash, CDKGPrematu
         if (dkgType.phase < QuorumPhase::Justify || dkgType.phase > QuorumPhase::Commit) {
             continue;
         }
-        LOCK(dkgType.curSession->invCs);
-        auto it = dkgType.curSession->prematureCommitments.find(hash);
-        if (it != dkgType.curSession->prematureCommitments.end() && dkgType.curSession->validCommitments.count(hash)) {
-            ret = it->second;
+        if (dkgType.GetPrematureCommitment(hash, ret)) {
             return true;
         }
     }
