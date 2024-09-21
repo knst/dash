@@ -96,7 +96,7 @@ void CEHFSignalsHandler::trySignEHFSignal(int bit, const CBlockIndex* const pind
     sigman.AsyncSignIfMember(llmqType, shareman, requestId, msgHash, quorum->qc->quorumHash, false, true);
 }
 
-void CEHFSignalsHandler::HandleNewRecoveredSig(const CRecoveredSig& recoveredSig)
+MessageProcessingResult CEHFSignalsHandler::HandleNewRecoveredSig(const CRecoveredSig& recoveredSig)
 {
     if (g_txindex) {
         g_txindex->BlockUntilSyncedToCurrentChain();
@@ -104,7 +104,7 @@ void CEHFSignalsHandler::HandleNewRecoveredSig(const CRecoveredSig& recoveredSig
 
     if (WITH_LOCK(cs, return ids.find(recoveredSig.getId()) == ids.end())) {
         // Do nothing, it's not for this handler
-        return;
+        return {};
     }
 
     const auto ehfSignals = mnhfman.GetSignalsStage(WITH_LOCK(cs_main, return chainstate.m_chain.Tip()));
@@ -139,5 +139,6 @@ void CEHFSignalsHandler::HandleNewRecoveredSig(const CRecoveredSig& recoveredSig
         }
         break;
     }
+    return {};
 }
 } // namespace llmq

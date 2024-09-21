@@ -154,7 +154,7 @@ class CRecoveredSigsListener
 public:
     virtual ~CRecoveredSigsListener() = default;
 
-    virtual void HandleNewRecoveredSig(const CRecoveredSig& recoveredSig) = 0;
+    virtual MessageProcessingResult HandleNewRecoveredSig(const CRecoveredSig& recoveredSig) = 0;
 };
 
 class CSigningManager

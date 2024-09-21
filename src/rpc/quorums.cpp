@@ -6,6 +6,7 @@
 #include <deploymentstatus.h>
 #include <index/txindex.h>
 #include <node/context.h>
+#include <net_processing.h>
 #include <rpc/blockchain.h>
 #include <rpc/server.h>
 #include <rpc/server_util.h>
@@ -1121,7 +1122,12 @@ static RPCHelpMan submitchainlock()
         throw JSONRPCError(RPC_INVALID_PARAMETER, "invalid signature");
     }
 
-    llmq_ctx.clhandler->ProcessNewChainLock(-1, clsig, ::SerializeHash(clsig));
+    auto msgRet = llmq_ctx.clhandler->ProcessNewChainLock(-1, clsig, ::SerializeHash(clsig));
+    if (msgRet.m_inventory) {
+        PeerManager& peerman = EnsurePeerman(node);
+        peerman.RelayInv(*msgRet.m_inventory);
+    }
+
     return llmq_ctx.clhandler->GetBestChainLock().getHeight();
 },
     };

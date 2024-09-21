@@ -432,7 +432,7 @@ public:
     std::optional<CSigShare> CreateSigShare(const CQuorumCPtr& quorum, const uint256& id, const uint256& msgHash) const;
     void ForceReAnnouncement(const CQuorumCPtr& quorum, Consensus::LLMQType llmqType, const uint256& id, const uint256& msgHash);
 
-    void HandleNewRecoveredSig(const CRecoveredSig& recoveredSig) override;
+    MessageProcessingResult HandleNewRecoveredSig(const CRecoveredSig& recoveredSig) override;
 
     static CDeterministicMNCPtr SelectMemberForRecovery(const CQuorumCPtr& quorum, const uint256& id, size_t attempt);
 

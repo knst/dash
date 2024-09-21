@@ -97,7 +97,7 @@ public:
     bool GetChainLockByHash(const uint256& hash, CChainLockSig& ret) const EXCLUSIVE_LOCKS_REQUIRED(!cs);
     CChainLockSig GetBestChainLock() const EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
-    MessageProcessingResult ProcessNewChainLock(NodeId from, const CChainLockSig& clsig, const uint256& hash) EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    [[nodiscard]] MessageProcessingResult ProcessNewChainLock(NodeId from, const CChainLockSig& clsig, const uint256& hash) EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
     void AcceptedBlockHeader(gsl::not_null<const CBlockIndex*> pindexNew) EXCLUSIVE_LOCKS_REQUIRED(!cs);
     void UpdatedBlockTip();
@@ -107,7 +107,7 @@ public:
     void CheckActiveState() EXCLUSIVE_LOCKS_REQUIRED(!cs);
     void TrySignChainTip() EXCLUSIVE_LOCKS_REQUIRED(!cs);
     void EnforceBestChainLock() EXCLUSIVE_LOCKS_REQUIRED(!cs);
-    void HandleNewRecoveredSig(const CRecoveredSig& recoveredSig) override EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    [[nodiscard]] MessageProcessingResult HandleNewRecoveredSig(const CRecoveredSig& recoveredSig) override EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
     bool HasChainLock(int nHeight, const uint256& blockHash) const EXCLUSIVE_LOCKS_REQUIRED(!cs);
     bool HasConflictingChainLock(int nHeight, const uint256& blockHash) const EXCLUSIVE_LOCKS_REQUIRED(!cs);

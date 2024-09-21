@@ -829,7 +829,11 @@ void CSigningManager::ProcessRecoveredSig(const std::shared_ptr<const CRecovered
 
     auto listeners = WITH_LOCK(cs_listeners, return recoveredSigsListeners);
     for (auto& l : listeners) {
-        l->HandleNewRecoveredSig(*recoveredSig);
+        const auto ret = l->HandleNewRecoveredSig(*recoveredSig);
+        if (ret.m_inventory) {
+            CInv inv = ret.m_inventory.value();
+            Assert(m_peerman)->RelayInv(inv);
+        }
     }
 
     GetMainSignals().NotifyRecoveredSig(recoveredSig);
