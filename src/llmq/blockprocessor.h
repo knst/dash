@@ -9,7 +9,7 @@
 
 #include <chain.h>
 #include <consensus/params.h>
-#include <net_types.h>
+#include <protocol.h>
 #include <primitives/block.h>
 #include <saltedhasher.h>
 #include <sync.h>

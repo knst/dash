@@ -581,8 +581,9 @@ public:
     bool IsInvInFilter(NodeId nodeid, const uint256& hash) const override EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex);
 
 private:
-    /** Helper to process result of external handlers of message */
+    /** Helpers to process result of external handlers of message */
     void ProcessPeerMsgRet(const PeerMsgRet& ret, CNode& pfrom) EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex);
+    void ProcessMsgProcessingResult(MessageProcessingResult ret, CNode& pfrom) EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex);
 
     /** Consider evicting an outbound peer based on the amount of time they've been behind our tip */
     void ConsiderEviction(CNode& pto, Peer& peer, std::chrono::seconds time_in_seconds) EXCLUSIVE_LOCKS_REQUIRED(cs_main, g_msgproc_mutex);
@@ -3281,6 +3282,17 @@ void PeerManagerImpl::ProcessPeerMsgRet(const PeerMsgRet& ret, CNode& pfrom)
     if (!ret) Misbehaving(pfrom.GetId(), ret.error().score, ret.error().message);
 }
 
+// TODO: add missing const
+void PeerManagerImpl::ProcessMsgProcessingResult(MessageProcessingResult ret, CNode& pfrom)
+{
+    if (ret.m_error) {
+        Misbehaving(pfrom.GetId(), ret.m_error->score, ret.m_error->message);
+    }
+    if (ret.m_inventory) {
+        RelayInv(ret.m_inventory.value(), MIN_PEER_PROTO_VERSION);
+    }
+}
+
 void PeerManagerImpl::ProcessMessage(
     CNode& pfrom,
     const std::string& msg_type,
@@ -4960,7 +4972,18 @@ void PeerManagerImpl::ProcessMessage(
         ProcessPeerMsgRet(m_llmq_ctx->qman->ProcessMessage(pfrom, msg_type, vRecv), pfrom);
         m_llmq_ctx->shareman->ProcessMessage(pfrom, m_sporkman, msg_type, vRecv);
         ProcessPeerMsgRet(m_llmq_ctx->sigman->ProcessMessage(pfrom, msg_type, vRecv), pfrom);
-        ProcessPeerMsgRet(m_llmq_ctx->clhandler->ProcessMessage(pfrom, msg_type, vRecv), pfrom);
+
+        if (msg_type == NetMsgType::CLSIG) {
+            if (llmq::AreChainLocksEnabled(m_sporkman)) {
+                llmq::CChainLockSig clsig;
+                vRecv >> clsig;
+                const uint256& hash = ::SerializeHash(clsig);
+                WITH_LOCK(::cs_main, EraseObjectRequest(pfrom.GetId(), CInv{MSG_CLSIG, hash}));
+                ProcessMsgProcessingResult(m_llmq_ctx->clhandler->ProcessNewChainLock(pfrom.GetId(), clsig, hash), pfrom);
+            }
+            return; // CLSIG
+        }
+
         ProcessPeerMsgRet(m_llmq_ctx->isman->ProcessMessage(pfrom, msg_type, vRecv), pfrom);
         return;
     }
