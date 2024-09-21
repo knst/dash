@@ -97,6 +97,7 @@ EXPECTED_CIRCULAR_DEPENDENCIES=(
     "governance/governance -> net_processing -> governance/governance"
     "llmq/blockprocessor -> net_processing -> llmq/context -> llmq/blockprocessor"
     "llmq/blockprocessor -> net_processing -> llmq/quorums -> llmq/blockprocessor"
+    "llmq/chainlocks -> llmq/instantsend -> net_processing -> llmq/chainlocks"
     "rpc/blockchain -> rpc/server -> rpc/blockchain"
 )
 
