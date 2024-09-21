@@ -1023,6 +1023,8 @@ void CSigningManager::InterruptWorkerThread()
     workInterrupt();
 }
 
+// TODO: create in NetProcessing new thread for async processing new messages;
+// Instead creating threads everyelse and calling PeerMan - better to do it from net_processing
 void CSigningManager::WorkThreadMain()
 {
     while (!workInterrupt) {
