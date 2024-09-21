@@ -1019,6 +1019,8 @@ void CSigningManager::InterruptWorkerThread()
     workInterrupt();
 }
 
+// TODO: create new thread directly in NetProcessing for async processing new messages;
+// It will reduce amount of circular dependencies and spreading PeerManager all over codebase
 void CSigningManager::WorkThreadMain()
 {
     while (!workInterrupt) {
