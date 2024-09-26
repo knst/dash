@@ -104,11 +104,11 @@ MessageProcessingResult CEHFSignalsHandler::HandleNewRecoveredSig(const CRecover
 
     MessageProcessingResult ret;
     const auto ehfSignals = mnhfman.GetSignalsStage(WITH_LOCK(cs_main, return chainstate.m_chain.Tip()));
-    MNHFTxPayload mnhfPayload;
     for (const auto& deployment : Params().GetConsensus().vDeployments) {
         // skip deployments that do not use dip0023 or that have already been mined
         if (!deployment.useEHF || ehfSignals.find(deployment.bit) != ehfSignals.end()) continue;
 
+        MNHFTxPayload mnhfPayload;
         mnhfPayload.signal.versionBit = deployment.bit;
         const uint256 expectedId = mnhfPayload.GetRequestId();
         LogPrint(BCLog::EHF, "CEHFSignalsHandler::HandleNewRecoveredSig expecting ID=%s received=%s\n", expectedId.ToString(), recoveredSig.getId().ToString());
@@ -133,7 +133,6 @@ MessageProcessingResult CEHFSignalsHandler::HandleNewRecoveredSig(const CRecover
                 LogPrintf("CEHFSignalsHandler::HandleNewRecoveredSig -- AcceptToMemoryPool failed: %s\n", result.m_state.ToString());
             }
         }
-        break;
     }
     return ret;
 }
