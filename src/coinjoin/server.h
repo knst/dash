@@ -35,6 +35,7 @@ private:
     CTxMemPool& mempool;
     const CActiveMasternodeManager* const m_mn_activeman;
     const CMasternodeSync& m_mn_sync;
+    std::unique_ptr<PeerManager>& m_peerman;
 
     // Mixing uses collateral transactions to trust parties entering the pool
     // to behave honestly. If they don't it takes their money.
@@ -43,22 +44,22 @@ private:
     bool fUnitTest;
 
     /// Add a clients entry to the pool
-    bool AddEntry(const CCoinJoinEntry& entry, PeerManager& peerman, PoolMessage& nMessageIDRet) EXCLUSIVE_LOCKS_REQUIRED(!cs_coinjoin);
+    bool AddEntry(const CCoinJoinEntry& entry, PoolMessage& nMessageIDRet) EXCLUSIVE_LOCKS_REQUIRED(!cs_coinjoin);
     /// Add signature to a txin
     bool AddScriptSig(const CTxIn& txin) EXCLUSIVE_LOCKS_REQUIRED(!cs_coinjoin);
 
     /// Charge fees to bad actors (Charge clients a fee if they're abusive)
     void ChargeFees() const EXCLUSIVE_LOCKS_REQUIRED(!cs_coinjoin);
     /// Rarely charge fees to pay miners
-    void ChargeRandomFees(PeerManager& peerman) const;
+    void ChargeRandomFees() const;
     /// Consume collateral in cases when peer misbehaved
-    void ConsumeCollateral(const CTransactionRef& txre, PeerManager& peermanf) const;
+    void ConsumeCollateral(const CTransactionRef& txref) const;
 
     /// Check for process
-    void CheckPool(PeerManager& peerman);
+    void CheckPool();
 
     void CreateFinalTransaction() EXCLUSIVE_LOCKS_REQUIRED(!cs_coinjoin);
-    void CommitFinalTransaction(PeerManager& peerman) EXCLUSIVE_LOCKS_REQUIRED(!cs_coinjoin);
+    void CommitFinalTransaction() EXCLUSIVE_LOCKS_REQUIRED(!cs_coinjoin);
 
     /// Is this nDenom and txCollateral acceptable?
     bool IsAcceptableDSA(const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet) const;
@@ -81,17 +82,18 @@ private:
     void RelayStatus(PoolStatusUpdate nStatusUpdate, PoolMessage nMessageID = MSG_NOERR) EXCLUSIVE_LOCKS_REQUIRED(cs_coinjoin);
     void RelayCompletedTransaction(PoolMessage nMessageID) EXCLUSIVE_LOCKS_REQUIRED(!cs_coinjoin);
 
-    void ProcessDSACCEPT(CNode& peer, PeerManager& peerman, CDataStream& vRecv) EXCLUSIVE_LOCKS_REQUIRED(!cs_vecqueue);
-    PeerMsgRet ProcessDSQUEUE(const CNode& peer, PeerManager& peerman, CDataStream& vRecv) EXCLUSIVE_LOCKS_REQUIRED(!cs_vecqueue);
-    void ProcessDSVIN(CNode& peer, PeerManager& peerman, CDataStream& vRecv) EXCLUSIVE_LOCKS_REQUIRED(!cs_coinjoin);
-    void ProcessDSSIGNFINALTX(PeerManager& peerman, CDataStream& vRecv) EXCLUSIVE_LOCKS_REQUIRED(!cs_coinjoin);
+    void ProcessDSACCEPT(CNode& peer, CDataStream& vRecv) EXCLUSIVE_LOCKS_REQUIRED(!cs_vecqueue);
+    PeerMsgRet ProcessDSQUEUE(const CNode& peer, CDataStream& vRecv) EXCLUSIVE_LOCKS_REQUIRED(!cs_vecqueue);
+    void ProcessDSVIN(CNode& peer, CDataStream& vRecv) EXCLUSIVE_LOCKS_REQUIRED(!cs_coinjoin);
+    void ProcessDSSIGNFINALTX(CDataStream& vRecv) EXCLUSIVE_LOCKS_REQUIRED(!cs_coinjoin);
 
     void SetNull() override EXCLUSIVE_LOCKS_REQUIRED(cs_coinjoin);
 
 public:
     explicit CCoinJoinServer(CChainState& chainstate, CConnman& _connman, CDeterministicMNManager& dmnman,
                              CDSTXManager& dstxman, CMasternodeMetaMan& mn_metaman, CTxMemPool& mempool,
-                             const CActiveMasternodeManager* const mn_activeman, const CMasternodeSync& mn_sync) :
+                             const CActiveMasternodeManager* const mn_activeman, const CMasternodeSync& mn_sync,
+                             std::unique_ptr<PeerManager>& peerman) :
         m_chainstate(chainstate),
         connman(_connman),
         m_dmnman(dmnman),
@@ -100,17 +102,18 @@ public:
         mempool(mempool),
         m_mn_activeman(mn_activeman),
         m_mn_sync(mn_sync),
+        m_peerman(peerman),
         vecSessionCollaterals(),
         fUnitTest(false)
     {}
 
-    PeerMsgRet ProcessMessage(CNode& pfrom, PeerManager& peerman, std::string_view msg_type, CDataStream& vRecv);
+    PeerMsgRet ProcessMessage(CNode& pfrom, std::string_view msg_type, CDataStream& vRecv);
 
     bool HasTimedOut() const;
     void CheckTimeout();
-    void CheckForCompleteQueue(PeerManager& peerman);
+    void CheckForCompleteQueue();
 
-    void DoMaintenance(PeerManager& peerman);
+    void DoMaintenance();
 
     void GetJsonInfo(UniValue& obj) const;
 };
