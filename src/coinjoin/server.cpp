@@ -25,24 +25,24 @@
 
 #include <univalue.h>
 
-PeerMsgRet CCoinJoinServer::ProcessMessage(CNode& peer, std::string_view msg_type, CDataStream& vRecv)
+PeerMsgRet CCoinJoinServer::ProcessMessage(CNode& peer, PeerManager& peerman, std::string_view msg_type, CDataStream& vRecv)
 {
     if (!m_mn_activeman) return {};
     if (!m_mn_sync.IsBlockchainSynced()) return {};
 
     if (msg_type == NetMsgType::DSACCEPT) {
-        ProcessDSACCEPT(peer, vRecv);
+        ProcessDSACCEPT(peer, peerman, vRecv);
     } else if (msg_type == NetMsgType::DSQUEUE) {
-        return ProcessDSQUEUE(peer, vRecv);
+        return ProcessDSQUEUE(peer, peerman, vRecv);
     } else if (msg_type == NetMsgType::DSVIN) {
-        ProcessDSVIN(peer, vRecv);
+        ProcessDSVIN(peer, peerman, vRecv);
     } else if (msg_type == NetMsgType::DSSIGNFINALTX) {
-        ProcessDSSIGNFINALTX(vRecv);
+        ProcessDSSIGNFINALTX(peerman, vRecv);
     }
     return {};
 }
 
-void CCoinJoinServer::ProcessDSACCEPT(CNode& peer, CDataStream& vRecv)
+void CCoinJoinServer::ProcessDSACCEPT(CNode& peer, PeerManager& peerman, CDataStream& vRecv)
 {
     assert(m_mn_activeman);
     assert(m_mn_metaman.IsValid());
@@ -111,7 +111,7 @@ void CCoinJoinServer::ProcessDSACCEPT(CNode& peer, CDataStream& vRecv)
     }
 }
 
-PeerMsgRet CCoinJoinServer::ProcessDSQUEUE(const CNode& peer, CDataStream& vRecv)
+PeerMsgRet CCoinJoinServer::ProcessDSQUEUE(const CNode& peer, PeerManager& peerman, CDataStream& vRecv)
 {
     assert(m_mn_metaman.IsValid());
 
@@ -120,7 +120,7 @@ PeerMsgRet CCoinJoinServer::ProcessDSQUEUE(const CNode& peer, CDataStream& vRecv
 
     {
         LOCK(cs_main);
-        Assert(m_peerman)->EraseObjectRequest(peer.GetId(), CInv(MSG_DSQ, dsq.GetHash()));
+        peerman.EraseObjectRequest(peer.GetId(), CInv(MSG_DSQ, dsq.GetHash()));
     }
 
     if (dsq.masternodeOutpoint.IsNull() && dsq.m_protxHash.IsNull()) {
@@ -186,12 +186,12 @@ PeerMsgRet CCoinJoinServer::ProcessDSQUEUE(const CNode& peer, CDataStream& vRecv
         TRY_LOCK(cs_vecqueue, lockRecv);
         if (!lockRecv) return {};
         vecCoinJoinQueue.push_back(dsq);
-        dsq.Relay(connman, *m_peerman);
+        dsq.Relay(connman, peerman);
     }
     return {};
 }
 
-void CCoinJoinServer::ProcessDSVIN(CNode& peer, CDataStream& vRecv)
+void CCoinJoinServer::ProcessDSVIN(CNode& peer, PeerManager& peerman, CDataStream& vRecv)
 {
     //do we have enough users in the current session?
     if (!IsSessionReady()) {
@@ -208,9 +208,9 @@ void CCoinJoinServer::ProcessDSVIN(CNode& peer, CDataStream& vRecv)
     PoolMessage nMessageID = MSG_NOERR;
 
     entry.addr = peer.addr;
-    if (AddEntry(entry, nMessageID)) {
+    if (AddEntry(entry, peerman, nMessageID)) {
         PushStatus(peer, STATUS_ACCEPTED, nMessageID);
-        CheckPool();
+        CheckPool(peerman);
         LOCK(cs_coinjoin);
         RelayStatus(STATUS_ACCEPTED);
     } else {
@@ -218,7 +218,7 @@ void CCoinJoinServer::ProcessDSVIN(CNode& peer, CDataStream& vRecv)
     }
 }
 
-void CCoinJoinServer::ProcessDSSIGNFINALTX(CDataStream& vRecv)
+void CCoinJoinServer::ProcessDSSIGNFINALTX(PeerManager& peerman, CDataStream& vRecv)
 {
     std::vector<CTxIn> vecTxIn;
     vRecv >> vecTxIn;
@@ -239,7 +239,7 @@ void CCoinJoinServer::ProcessDSSIGNFINALTX(CDataStream& vRecv)
         LogPrint(BCLog::COINJOIN, "DSSIGNFINALTX -- AddScriptSig() %d/%d success\n", nTxInIndex, nTxInsCount);
     }
     // all is good
-    CheckPool();
+    CheckPool(peerman);
 }
 
 void CCoinJoinServer::SetNull()
@@ -255,7 +255,7 @@ void CCoinJoinServer::SetNull()
 //
 // Check the mixing progress and send client updates if a Masternode
 //
-void CCoinJoinServer::CheckPool()
+void CCoinJoinServer::CheckPool(PeerManager& peerman)
 {
     if (!m_mn_activeman) return;
 
@@ -282,7 +282,7 @@ void CCoinJoinServer::CheckPool()
     // If we have all the signatures, try to compile the transaction
     if (nState == POOL_STATE_SIGNING && IsSignaturesComplete()) {
         LogPrint(BCLog::COINJOIN, "CCoinJoinServer::CheckPool -- SIGNING\n");
-        CommitFinalTransaction();
+        CommitFinalTransaction(peerman);
         return;
     }
 }
@@ -317,7 +317,7 @@ void CCoinJoinServer::CreateFinalTransaction()
     RelayFinalTransaction(CTransaction(finalMutableTransaction));
 }
 
-void CCoinJoinServer::CommitFinalTransaction()
+void CCoinJoinServer::CommitFinalTransaction(PeerManager& peerman)
 {
     AssertLockNotHeld(cs_coinjoin);
     if (!m_mn_activeman) return; // check and relay final tx only on masternode
@@ -355,13 +355,13 @@ void CCoinJoinServer::CommitFinalTransaction()
     LogPrint(BCLog::COINJOIN, "CCoinJoinServer::CommitFinalTransaction -- TRANSMITTING DSTX\n");
 
     CInv inv(MSG_DSTX, hashTx);
-    Assert(m_peerman)->RelayInv(inv);
+    peerman.RelayInv(inv);
 
     // Tell the clients it was successful
     RelayCompletedTransaction(MSG_SUCCESS);
 
     // Randomly charge clients
-    ChargeRandomFees();
+    ChargeRandomFees(peerman);
 
     // Reset
     LogPrint(BCLog::COINJOIN, "CCoinJoinServer::CommitFinalTransaction -- COMPLETED -- RESETTING\n");
@@ -449,18 +449,18 @@ void CCoinJoinServer::ChargeFees() const
     stop these kinds of attacks 1 in 10 successful transactions are charged. This
     adds up to a cost of 0.001DRK per transaction on average.
 */
-void CCoinJoinServer::ChargeRandomFees() const
+void CCoinJoinServer::ChargeRandomFees(PeerManager& peerman) const
 {
     if (!m_mn_activeman) return;
 
     for (const auto& txCollateral : vecSessionCollaterals) {
         if (GetRandInt(100) > 10) return;
         LogPrint(BCLog::COINJOIN, "CCoinJoinServer::ChargeRandomFees -- charging random fees, txCollateral=%s", txCollateral->ToString()); /* Continued */
-        ConsumeCollateral(txCollateral);
+        ConsumeCollateral(txCollateral, peerman);
     }
 }
 
-void CCoinJoinServer::ConsumeCollateral(const CTransactionRef& txref) const
+void CCoinJoinServer::ConsumeCollateral(const CTransactionRef& txref, PeerManager& peerman) const
 {
     LOCK(cs_main);
     if (!ATMPIfSaneFee(m_chainstate, mempool, txref, false /* bypass_limits */)) {
@@ -505,7 +505,7 @@ void CCoinJoinServer::CheckTimeout()
     After receiving multiple dsa messages, the queue will switch to "accepting entries"
     which is the active state right before merging the transaction
 */
-void CCoinJoinServer::CheckForCompleteQueue()
+void CCoinJoinServer::CheckForCompleteQueue(PeerManager& peerman)
 {
     if (!m_mn_activeman) return;
 
@@ -519,7 +519,7 @@ void CCoinJoinServer::CheckForCompleteQueue()
         LogPrint(BCLog::COINJOIN, "CCoinJoinServer::CheckForCompleteQueue -- queue is ready, signing and relaying (%s) " /* Continued */
                                      "with %d participants\n", dsq.ToString(), vecSessionCollaterals.size());
         dsq.Sign(*m_mn_activeman);
-        dsq.Relay(connman, *m_peerman);
+        dsq.Relay(connman, peerman);
     }
 }
 
@@ -571,7 +571,7 @@ bool CCoinJoinServer::IsInputScriptSigValid(const CTxIn& txin) const
 //
 // Add a client's transaction inputs/outputs to the pool
 //
-bool CCoinJoinServer::AddEntry(const CCoinJoinEntry& entry, PoolMessage& nMessageIDRet)
+bool CCoinJoinServer::AddEntry(const CCoinJoinEntry& entry, PeerManager& peerman, PoolMessage& nMessageIDRet)
 {
     AssertLockNotHeld(cs_coinjoin);
     if (!m_mn_activeman) return false;
@@ -894,14 +894,14 @@ void CCoinJoinServer::SetState(PoolState nStateNew)
     nState = nStateNew;
 }
 
-void CCoinJoinServer::DoMaintenance()
+void CCoinJoinServer::DoMaintenance(PeerManager& peerman)
 {
     if (!m_mn_activeman) return; // only run on masternodes
     if (!m_mn_sync.IsBlockchainSynced()) return;
     if (ShutdownRequested()) return;
 
     CheckForCompleteQueue();
-    CheckPool();
+    CheckPool(peerman);
     CheckTimeout();
 }
 

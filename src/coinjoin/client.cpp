@@ -30,18 +30,18 @@
 #include <memory>
 #include <univalue.h>
 
-PeerMsgRet CCoinJoinClientQueueManager::ProcessMessage(const CNode& peer, std::string_view msg_type, CDataStream& vRecv)
+PeerMsgRet CCoinJoinClientQueueManager::ProcessMessage(const CNode& peer, PeerManager& peerman, std::string_view msg_type, CDataStream& vRecv)
 {
     if (m_is_masternode) return {};
     if (!m_mn_sync.IsBlockchainSynced()) return {};
 
     if (msg_type == NetMsgType::DSQUEUE) {
-        return CCoinJoinClientQueueManager::ProcessDSQueue(peer, vRecv);
+        return CCoinJoinClientQueueManager::ProcessDSQueue(peer, peerman, vRecv);
     }
     return {};
 }
 
-PeerMsgRet CCoinJoinClientQueueManager::ProcessDSQueue(const CNode& peer, CDataStream& vRecv)
+PeerMsgRet CCoinJoinClientQueueManager::ProcessDSQueue(const CNode& peer, PeerManager& peerman, CDataStream& vRecv)
 {
     assert(m_mn_metaman.IsValid());
 
@@ -50,7 +50,7 @@ PeerMsgRet CCoinJoinClientQueueManager::ProcessDSQueue(const CNode& peer, CDataS
 
     {
         LOCK(cs_main);
-        Assert(peerman)->EraseObjectRequest(peer.GetId(), CInv(MSG_DSQ, dsq.GetHash()));
+        peerman.EraseObjectRequest(peer.GetId(), CInv(MSG_DSQ, dsq.GetHash()));
     }
 
     if (dsq.masternodeOutpoint.IsNull() && dsq.m_protxHash.IsNull()) {
@@ -132,7 +132,7 @@ PeerMsgRet CCoinJoinClientQueueManager::ProcessDSQueue(const CNode& peer, CDataS
             WITH_LOCK(cs_vecqueue, vecCoinJoinQueue.push_back(dsq));
         }
     } // cs_ProcessDSQueue
-    dsq.Relay(connman, *peerman);
+    dsq.Relay(connman, peerman);
     return {};
 }
 

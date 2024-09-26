@@ -2154,7 +2154,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     // ********************************************************* Step 7c: Setup CoinJoin
 
     node.cj_ctx = std::make_unique<CJContext>(chainman.ActiveChainstate(), *node.connman, *node.dmnman, *node.mn_metaman, *node.mempool,
-                                              node.mn_activeman.get(), *node.mn_sync, node.peerman, !ignores_incoming_txs);
+                                              node.mn_activeman.get(), *node.mn_sync, !ignores_incoming_txs);
 
 #ifdef ENABLE_WALLET
     node.coinjoin_loader = interfaces::MakeCoinJoinLoader(*node.cj_ctx->walletman);
@@ -2264,7 +2264,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     }
 
     if (node.mn_activeman) {
-        node.scheduler->scheduleEvery(std::bind(&CCoinJoinServer::DoMaintenance, std::ref(*node.cj_ctx->server)), std::chrono::seconds{1});
+        node.scheduler->scheduleEvery(std::bind(&CCoinJoinServer::DoMaintenance, std::ref(*node.cj_ctx->server)), std::ref(*node.peerman), std::chrono::seconds{1});
         node.scheduler->scheduleEvery(std::bind(&llmq::CDKGSessionManager::CleanupOldContributions, std::ref(*node.llmq_ctx->qdkgsman)), std::chrono::hours{1});
 #ifdef ENABLE_WALLET
     } else if (!ignores_incoming_txs) {
