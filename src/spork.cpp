@@ -128,17 +128,17 @@ void CSporkManager::CheckAndRemove()
     }
 }
 
-MessageProcessingResult CSporkManager::ProcessMessage(CNode& peer, CConnman& connman, std::string_view msg_type, CDataStream& vRecv)
+PeerMsgRet CSporkManager::ProcessMessage(CNode& peer, CConnman& connman, PeerManager& peerman, std::string_view msg_type, CDataStream& vRecv)
 {
     if (msg_type == NetMsgType::SPORK) {
-        return ProcessSpork(peer, vRecv);
+        return ProcessSpork(peer, peerman, vRecv);
     } else if (msg_type == NetMsgType::GETSPORKS) {
         ProcessGetSporks(peer, connman);
     }
     return {};
 }
 
-MessageProcessingResult CSporkManager::ProcessSpork(const CNode& peer, PeerManager& peerman, CDataStream& vRecv)
+PeerMsgRet CSporkManager::ProcessSpork(const CNode& peer, PeerManager& peerman, CDataStream& vRecv)
 {
     CSporkMessage spork;
     vRecv >> spork;
@@ -151,14 +151,14 @@ MessageProcessingResult CSporkManager::ProcessSpork(const CNode& peer, PeerManag
 
     if (spork.nTimeSigned > GetAdjustedTime() + 2 * 60 * 60) {
         LogPrint(BCLog::SPORK, "CSporkManager::ProcessSpork -- ERROR: too far into the future\n");
-        return MisbehavingError{100};
+        return tl::unexpected{100};
     }
 
     auto opt_keyIDSigner = spork.GetSignerKeyID();
 
     if (opt_keyIDSigner == std::nullopt || WITH_LOCK(cs, return !setSporkPubKeyIDs.count(*opt_keyIDSigner))) {
         LogPrint(BCLog::SPORK, "CSporkManager::ProcessSpork -- ERROR: invalid signature\n");
-        return MisbehavingError{100};
+        return tl::unexpected{100};
     }
 
     auto keyIDSigner = *opt_keyIDSigner;
@@ -190,8 +190,8 @@ MessageProcessingResult CSporkManager::ProcessSpork(const CNode& peer, PeerManag
         WITH_LOCK(cs_mapSporksCachedActive, mapSporksCachedActive.erase(spork.nSporkID));
         WITH_LOCK(cs_mapSporksCachedValues, mapSporksCachedValues.erase(spork.nSporkID));
     }
-
-    return CInv{MSG_SPORK, spork.GetHash()};
+    spork.Relay(peerman);
+    return {};
 }
 
 void CSporkManager::ProcessGetSporks(CNode& peer, CConnman& connman)
