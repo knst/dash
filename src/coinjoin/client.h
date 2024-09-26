@@ -220,7 +220,7 @@ class CCoinJoinClientQueueManager : public CCoinJoinBaseManager
 {
 private:
     CConnman& connman;
-    std::unique_ptr<PeerManager>& peerman;
+    PeerManager& m_peerman;
     CoinJoinWalletManager& m_walletman;
     CDeterministicMNManager& m_dmnman;
     CMasternodeMetaMan& m_mn_metaman;
@@ -230,12 +230,12 @@ private:
     const bool m_is_masternode;
 
 public:
-    explicit CCoinJoinClientQueueManager(CConnman& _connman, std::unique_ptr<PeerManager>& _peerman,
+    explicit CCoinJoinClientQueueManager(CConnman& _connman, PeerManager& peerman,
                                          CoinJoinWalletManager& walletman, CDeterministicMNManager& dmnman,
                                          CMasternodeMetaMan& mn_metaman, const CMasternodeSync& mn_sync,
                                          bool is_masternode) :
         connman(_connman),
-        peerman(_peerman),
+        m_peerman(peerman),
         m_walletman(walletman),
         m_dmnman(dmnman),
         m_mn_metaman(mn_metaman),
