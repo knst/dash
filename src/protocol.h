@@ -600,7 +600,6 @@ struct MessageProcessingResult
 
     //! @m_inventory will relay this inventory to connected peers if not nullopt
     std::optional<CInv> m_inventory;
-    std::optional<CInv> m_to_erase;
 
     //! @m_transactions will relay transactions to peers which is ready to accept it (some peers does not accept transactions)
     std::vector<uint256> m_transactions;

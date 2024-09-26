@@ -242,8 +242,8 @@ public:
         m_mn_sync(mn_sync),
         m_is_masternode{is_masternode} {};
 
-    [[nodiscard]] MessageProcessingResult ProcessMessage(const CNode& peer, std::string_view msg_type, CDataStream& vRecv) EXCLUSIVE_LOCKS_REQUIRED(!cs_vecqueue);
-    [[nodiscard]] MessageProcessingResult ProcessDSQueue(const CNode& peer, CDataStream& vRecv);
+    PeerMsgRet ProcessMessage(const CNode& peer, std::string_view msg_type, CDataStream& vRecv) EXCLUSIVE_LOCKS_REQUIRED(!cs_vecqueue);
+    PeerMsgRet ProcessDSQueue(const CNode& peer, CDataStream& vRecv);
     void DoMaintenance();
 };
 
