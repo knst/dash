@@ -1819,7 +1819,7 @@ class DashTestFramework(BitcoinTestFramework):
         # move forward to next DKG
         skip_count = 24 - (self.nodes[0].getblockcount() % 24)
         if skip_count != 0:
-            self.bump_mocktime(1, nodes=nodes)
+            self.bump_mocktime(skip_count, nodes=nodes)
             self.nodes[0].generate(skip_count)
         self.sync_blocks(nodes)
 
@@ -1906,8 +1906,10 @@ class DashTestFramework(BitcoinTestFramework):
 
         # move forward to next DKG
         skip_count = 24 - (self.nodes[0].getblockcount() % 24)
-
-        self.move_blocks(nodes, skip_count)
+        if skip_count != 0:
+            self.bump_mocktime(skip_count, nodes=nodes)
+            self.nodes[0].generate(skip_count)
+        self.sync_blocks(nodes)
 
         q_0 = self.nodes[0].getbestblockhash()
         self.log.info("Expected quorum_0 at:" + str(self.nodes[0].getblockcount()))
@@ -1931,55 +1933,36 @@ class DashTestFramework(BitcoinTestFramework):
         if spork23_active:
             self.wait_for_masternode_probes(q_1, mninfos_online, wait_proc=lambda: self.bump_mocktime(1, nodes=nodes), llmq_type_name=llmq_type_name)
 
-        self.move_blocks(nodes, 1)
-
+        self.move_blocks(nodes, 2)
         self.log.info("quorumIndex 0: Waiting for phase 2 (contribute)")
         self.wait_for_quorum_phase(q_0, 2, expected_members, "receivedContributions", expected_contributions, mninfos_online, llmq_type_name)
-
-        self.move_blocks(nodes, 1)
-
         self.log.info("quorumIndex 1: Waiting for phase 2 (contribute)")
         self.wait_for_quorum_phase(q_1, 2, expected_members, "receivedContributions", expected_contributions, mninfos_online, llmq_type_name)
 
-        self.move_blocks(nodes, 1)
-
+        self.move_blocks(nodes, 2)
         self.log.info("quorumIndex 0: Waiting for phase 3 (complain)")
         self.wait_for_quorum_phase(q_0, 3, expected_members, "receivedComplaints", expected_complaints, mninfos_online, llmq_type_name)
-
-        self.move_blocks(nodes, 1)
-
         self.log.info("quorumIndex 1: Waiting for phase 3 (complain)")
         self.wait_for_quorum_phase(q_1, 3, expected_members, "receivedComplaints", expected_complaints, mninfos_online, llmq_type_name)
 
-        self.move_blocks(nodes, 1)
-
+        self.move_blocks(nodes, 2)
         self.log.info("quorumIndex 0: Waiting for phase 4 (justify)")
         self.wait_for_quorum_phase(q_0, 4, expected_members, "receivedJustifications", expected_justifications, mninfos_online, llmq_type_name)
-
-        self.move_blocks(nodes, 1)
-
         self.log.info("quorumIndex 1: Waiting for phase 4 (justify)")
         self.wait_for_quorum_phase(q_1, 4, expected_members, "receivedJustifications", expected_justifications, mninfos_online, llmq_type_name)
 
-        self.move_blocks(nodes, 1)
-
+        self.move_blocks(nodes, 2)
         self.log.info("quorumIndex 0: Waiting for phase 5 (commit)")
         self.wait_for_quorum_phase(q_0, 5, expected_members, "receivedPrematureCommitments", expected_commitments, mninfos_online, llmq_type_name)
-
-        self.move_blocks(nodes, 1)
-
         self.log.info("quorumIndex 1: Waiting for phase 5 (commit)")
         self.wait_for_quorum_phase(q_1, 5, expected_members, "receivedPrematureCommitments", expected_commitments, mninfos_online, llmq_type_name)
 
-        self.move_blocks(nodes, 1)
-
+        self.move_blocks(nodes, 2)
         self.log.info("quorumIndex 0: Waiting for phase 6 (finalization)")
         self.wait_for_quorum_phase(q_0, 6, expected_members, None, 0, mninfos_online, llmq_type_name)
-
-        self.move_blocks(nodes, 1)
-
         self.log.info("quorumIndex 1: Waiting for phase 6 (finalization)")
         self.wait_for_quorum_phase(q_1, 6, expected_members, None, 0, mninfos_online, llmq_type_name)
+
         self.log.info("Mining final commitments")
         self.bump_mocktime(1, nodes=nodes)
         self.nodes[0].getblocktemplate() # this calls CreateNewBlock
