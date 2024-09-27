@@ -1706,6 +1706,8 @@ class DashTestFramework(BitcoinTestFramework):
                     if qstatus["phase"] != phase:
                         return False
                     if check_received_messages is not None:
+                        print(f"received messages: {qstatus[check_received_messages]} / {check_received_messages_count}")
+                        print(f"qstatus: {qstatus}")
                         if qstatus[check_received_messages] < check_received_messages_count:
                             return False
                     member_count += 1
@@ -1798,7 +1800,8 @@ class DashTestFramework(BitcoinTestFramework):
         self.log.info("Expected quorum_hash:"+str(q))
         self.log.info("Waiting for phase 1 (init)")
         self.wait_for_quorum_phase(q, 1, expected_members, None, 0, mninfos_online, llmq_type_name=llmq_type_name)
-        self.wait_for_quorum_connections(q, expected_connections, mninfos_online, wait_proc=lambda: self.bump_mocktime(1, nodes=nodes), llmq_type_name=llmq_type_name)
+        if expected_connections > 0:
+            self.wait_for_quorum_connections(q, expected_connections, mninfos_online, wait_proc=lambda: self.bump_mocktime(1, nodes=nodes), llmq_type_name=llmq_type_name)
         if spork23_active:
             self.wait_for_masternode_probes(q, mninfos_online, wait_proc=lambda: self.bump_mocktime(1, nodes=nodes))
 
