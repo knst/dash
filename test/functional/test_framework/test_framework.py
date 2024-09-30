@@ -1767,11 +1767,12 @@ class DashTestFramework(BitcoinTestFramework):
 
     def wait_for_quorum_list(self, nodes, quorum_hash_0, quorum_hash_1=None, timeout=15, sleep=2, llmq_type_name="llmq_test"):
         def wait_func():
-            self.log.info("h("+str(self.nodes[0].getblockcount())+") quorums: " + str(self.nodes[0].quorum("list")))
-            if quorum_hash_0 in self.nodes[0].quorum("list")[llmq_type_name]:
+            quorums = self.nodes[0].quorum("list")
+            self.log.info("h("+str(self.nodes[0].getblockcount())+") quorums: " + str(quorums))
+            if quorum_hash_0 in quorums[llmq_type_name]:
                 if quorum_hash_1 is None:
                     return True
-                if quorum_hash_1 in self.nodes[0].quorum("list")[llmq_type_name]:
+                if quorum_hash_1 in quorums[llmq_type_name]:
                     return True
             self.bump_mocktime(sleep, nodes=nodes)
             self.nodes[0].generate(1)
