@@ -145,7 +145,7 @@ class LLMQSimplePoSeTest(DashTestFramework):
         self.sync_blocks(nodes)
 
         self.log.info("Waiting for quorum to appear in the list")
-        self.wait_for_quorum_list(q, nodes)
+        self.wait_for_quorum_list(nodes, q)
 
         new_quorum = self.nodes[0].quorum("list", 1)["llmq_test"][0]
         assert_equal(q, new_quorum)

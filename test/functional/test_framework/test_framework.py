@@ -1765,21 +1765,12 @@ class DashTestFramework(BitcoinTestFramework):
 
         wait_until_helper(check_dkg_comitments, timeout=timeout, sleep=1)
 
-    def wait_for_quorum_list(self, quorum_hash, nodes, timeout=15, sleep=2, llmq_type_name="llmq_test"):
-        def wait_func():
-            self.log.info("quorums: " + str(self.nodes[0].quorum("list")))
-            if quorum_hash in self.nodes[0].quorum("list")[llmq_type_name]:
-                return True
-            self.bump_mocktime(sleep, nodes=nodes)
-            self.nodes[0].generate(1)
-            self.sync_blocks(nodes)
-            return False
-        wait_until_helper(wait_func, timeout=timeout, sleep=sleep)
-
-    def wait_for_quorums_list(self, quorum_hash_0, quorum_hash_1, nodes, llmq_type_name="llmq_test",  timeout=15, sleep=2):
+    def wait_for_quorum_list(self, nodes, quorum_hash_0, quorum_hash_1=None, timeout=15, sleep=2, llmq_type_name="llmq_test"):
         def wait_func():
             self.log.info("h("+str(self.nodes[0].getblockcount())+") quorums: " + str(self.nodes[0].quorum("list")))
             if quorum_hash_0 in self.nodes[0].quorum("list")[llmq_type_name]:
+                if quorum_hash_1 is None:
+                    return True
                 if quorum_hash_1 in self.nodes[0].quorum("list")[llmq_type_name]:
                     return True
             self.bump_mocktime(sleep, nodes=nodes)
@@ -1866,7 +1857,7 @@ class DashTestFramework(BitcoinTestFramework):
         self.sync_blocks(nodes)
 
         self.log.info("Waiting for quorum to appear in the list")
-        self.wait_for_quorum_list(q, nodes, llmq_type_name=llmq_type_name)
+        self.wait_for_quorum_list(nodes, q, llmq_type_name=llmq_type_name)
 
         new_quorum = self.nodes[0].quorum("list", 1)[llmq_type_name][0]
         assert_equal(q, new_quorum)
@@ -1970,7 +1961,7 @@ class DashTestFramework(BitcoinTestFramework):
         self.sync_blocks(nodes)
 
         self.log.info("Waiting for quorum(s) to appear in the list")
-        self.wait_for_quorums_list(q_0, q_1, nodes, llmq_type_name)
+        self.wait_for_quorum_list(nodes, q_0, q_1, llmq_type_name=llmq_type_name)
 
         quorum_info_0 = self.nodes[0].quorum("info", llmq_type, q_0)
         quorum_info_1 = self.nodes[0].quorum("info", llmq_type, q_1)
