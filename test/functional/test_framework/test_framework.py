@@ -790,7 +790,7 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
         timeout = int(timeout * self.options.timeout_factor)
         stop_time = time.time() + timeout
         if self.mocktime != 0 and wait_func is None:
-            wait_func = lambda: self.bump_mocktime(3, nodes=nodes)
+            wait_func = lambda: self.bump_mocktime(1)
         while time.time() <= stop_time:
             pool = [set(r.getrawmempool()) for r in rpc_connections]
             if pool.count(pool[0]) == len(rpc_connections):
@@ -1774,14 +1774,15 @@ class DashTestFramework(BitcoinTestFramework):
                     return True
                 if quorum_hash_1 in quorums[llmq_type_name]:
                     return True
-            self.bump_mocktime(sleep, nodes=nodes)
+            self.bump_mocktime(sleep)
             self.nodes[0].generate(1)
             self.sync_blocks(nodes)
             return False
         wait_until_helper(wait_func, timeout=timeout, sleep=sleep)
 
     def move_blocks(self, nodes, num_blocks):
-        self.bump_mocktime(1, nodes=nodes)
+        assert num_blocks > 0
+        self.bump_mocktime(num_blocks)
         self.nodes[0].generate(num_blocks)
         self.sync_blocks(nodes)
 
@@ -1811,7 +1812,7 @@ class DashTestFramework(BitcoinTestFramework):
         # move forward to next DKG
         skip_count = 24 - (self.nodes[0].getblockcount() % 24)
         if skip_count != 0:
-            self.bump_mocktime(skip_count, nodes=nodes)
+            self.bump_mocktime(skip_count)
             self.nodes[0].generate(skip_count)
         self.sync_blocks(nodes)
 
@@ -1819,9 +1820,9 @@ class DashTestFramework(BitcoinTestFramework):
         self.log.info("Expected quorum_hash:"+str(q))
         self.log.info("Waiting for phase 1 (init)")
         self.wait_for_quorum_phase(q, 1, expected_members, None, 0, mninfos_online, llmq_type_name=llmq_type_name)
-        self.wait_for_quorum_connections(q, expected_connections, mninfos_online, wait_proc=lambda: self.bump_mocktime(1, nodes=nodes), llmq_type_name=llmq_type_name)
+        self.wait_for_quorum_connections(q, expected_connections, mninfos_online, wait_proc=lambda: self.bump_mocktime(1), llmq_type_name=llmq_type_name)
         if spork23_active:
-            self.wait_for_masternode_probes(q, mninfos_online, wait_proc=lambda: self.bump_mocktime(1, nodes=nodes))
+            self.wait_for_masternode_probes(q, mninfos_online, wait_proc=lambda: self.bump_mocktime(1))
 
         self.move_blocks(nodes, 2)
 
@@ -1852,7 +1853,7 @@ class DashTestFramework(BitcoinTestFramework):
         self.wait_for_quorum_commitment(q, nodes, llmq_type=llmq_type)
 
         self.log.info("Mining final commitment")
-        self.bump_mocktime(1, nodes=nodes)
+        self.bump_mocktime(1)
         self.nodes[0].getblocktemplate() # this calls CreateNewBlock
         self.nodes[0].generate(1)
         self.sync_blocks(nodes)
@@ -1899,7 +1900,7 @@ class DashTestFramework(BitcoinTestFramework):
         # move forward to next DKG
         skip_count = 24 - (self.nodes[0].getblockcount() % 24)
         if skip_count != 0:
-            self.bump_mocktime(skip_count, nodes=nodes)
+            self.bump_mocktime(skip_count)
             self.nodes[0].generate(skip_count)
         self.sync_blocks(nodes)
 
@@ -1909,9 +1910,9 @@ class DashTestFramework(BitcoinTestFramework):
         self.log.info("quorumIndex 0: Waiting for phase 1 (init)")
         self.wait_for_quorum_phase(q_0, 1, expected_members, None, 0, mninfos_online, llmq_type_name)
         self.log.info("quorumIndex 0: Waiting for quorum connections (init)")
-        self.wait_for_quorum_connections(q_0, expected_connections, mninfos_online, llmq_type_name, wait_proc=lambda: self.bump_mocktime(1, nodes=nodes))
+        self.wait_for_quorum_connections(q_0, expected_connections, mninfos_online, llmq_type_name, wait_proc=lambda: self.bump_mocktime(1))
         if spork23_active:
-            self.wait_for_masternode_probes(q_0, mninfos_online, wait_proc=lambda: self.bump_mocktime(1, nodes=nodes), llmq_type_name=llmq_type_name)
+            self.wait_for_masternode_probes(q_0, mninfos_online, wait_proc=lambda: self.bump_mocktime(1), llmq_type_name=llmq_type_name)
 
         self.move_blocks(nodes, 1)
 
@@ -1921,9 +1922,9 @@ class DashTestFramework(BitcoinTestFramework):
         self.log.info("quorumIndex 1: Waiting for phase 1 (init)")
         self.wait_for_quorum_phase(q_1, 1, expected_members, None, 0, mninfos_online, llmq_type_name)
         self.log.info("quorumIndex 1: Waiting for quorum connections (init)")
-        self.wait_for_quorum_connections(q_1, expected_connections, mninfos_online, llmq_type_name, wait_proc=lambda: self.bump_mocktime(1, nodes=nodes))
+        self.wait_for_quorum_connections(q_1, expected_connections, mninfos_online, llmq_type_name, wait_proc=lambda: self.bump_mocktime(1))
         if spork23_active:
-            self.wait_for_masternode_probes(q_1, mninfos_online, wait_proc=lambda: self.bump_mocktime(1, nodes=nodes), llmq_type_name=llmq_type_name)
+            self.wait_for_masternode_probes(q_1, mninfos_online, wait_proc=lambda: self.bump_mocktime(1), llmq_type_name=llmq_type_name)
 
         self.move_blocks(nodes, 2)
         self.log.info("quorumIndex 0: Waiting for phase 2 (contribute)")
@@ -1956,7 +1957,7 @@ class DashTestFramework(BitcoinTestFramework):
         self.wait_for_quorum_phase(q_1, 6, expected_members, None, 0, mninfos_online, llmq_type_name)
 
         self.log.info("Mining final commitments")
-        self.bump_mocktime(1, nodes=nodes)
+        self.bump_mocktime(1)
         self.nodes[0].getblocktemplate() # this calls CreateNewBlock
         self.nodes[0].generate(1)
         self.sync_blocks(nodes)
@@ -1992,7 +1993,7 @@ class DashTestFramework(BitcoinTestFramework):
         # move forward to next DKG
         skip_count = cycle_length - (cur_block % cycle_length)
         if skip_count != 0:
-            self.bump_mocktime(1, nodes=nodes)
+            self.bump_mocktime(1)
             self.nodes[0].generate(skip_count)
         self.sync_blocks(nodes)
         self.log.info('Moved from block %d to %d' % (cur_block, self.nodes[0].getblockcount()))

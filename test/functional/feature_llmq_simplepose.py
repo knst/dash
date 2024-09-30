@@ -106,7 +106,7 @@ class LLMQSimplePoSeTest(DashTestFramework):
         # move forward to next DKG
         skip_count = 24 - (self.nodes[0].getblockcount() % 24)
         if skip_count != 0:
-            self.bump_mocktime(skip_count, nodes=nodes)
+            self.bump_mocktime(skip_count)
             self.nodes[0].generate(skip_count)
         self.sync_blocks(nodes)
 
@@ -139,7 +139,7 @@ class LLMQSimplePoSeTest(DashTestFramework):
         self.wait_for_quorum_commitment(q, nodes)
 
         self.log.info("Mining final commitment")
-        self.bump_mocktime(1, nodes=nodes)
+        self.bump_mocktime(1)
         self.nodes[0].getblocktemplate() # this calls CreateNewBlock
         self.nodes[0].generate(1)
         self.sync_blocks(nodes)
