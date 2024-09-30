@@ -147,16 +147,15 @@ class LLMQQuorumRotationTest(DashTestFramework):
 
         # At this point, we want to wait for CLs just before the self.mine_cycle_quorum to diversify the CLs in CbTx.
         # Although because here a new quorum cycle is starting, and we don't want to mine them now, mine 8 blocks (to skip all DKG phases)
-        nodes = [self.nodes[0]] + [mn.node for mn in self.mninfo.copy()]
         self.nodes[0].generate(8)
-        self.sync_blocks(nodes)
+        self.sync_blocks()
         self.wait_for_chainlocked_block_all_nodes(self.nodes[0].getbestblockhash())
 
         # And for the remaining blocks, enforce new CL in CbTx
         skip_count = 23 - (self.nodes[0].getblockcount() % 24)
         for _ in range(skip_count):
             self.nodes[0].generate(1)
-            self.sync_blocks(nodes)
+            self.sync_blocks()
             self.wait_for_chainlocked_block_all_nodes(self.nodes[0].getbestblockhash())
 
 
@@ -202,8 +201,7 @@ class LLMQQuorumRotationTest(DashTestFramework):
         quorumList = self.test_getmnlistdiff_quorums(b_1, b_2, quorumList, expectedDeleted, expectedNew)
 
         mninfos_online = self.mninfo.copy()
-        nodes = [self.nodes[0]] + [mn.node for mn in mninfos_online]
-        self.sync_blocks(nodes)
+        self.sync_blocks()
         quorum_list = self.nodes[0].quorum("list", llmq_type)
         quorum_blockhash = self.nodes[0].getbestblockhash()
         fallback_blockhash = self.nodes[0].generate(1)[0]
