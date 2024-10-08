@@ -666,8 +666,8 @@ void CNode::CloseSocketDisconnect(CConnman* connman)
         }
     }
 
-    if (connman->m_edge_trig_events && !connman->m_edge_trig_events->UnregisterEvents(m_sock->Get())) {
-        LogPrint(BCLog::NET, "EdgeTriggeredEvents::UnregisterEvents() failed\n");
+    if (connman->m_edge_trig_events) {
+        connman->m_edge_trig_events->UnregisterEvents(m_sock->Get());
     }
 
     LogPrint(BCLog::NET, "disconnecting peer=%d\n", id);
@@ -4233,10 +4233,10 @@ void CConnman::StopNodes()
     }
 
     // Close listening sockets.
-    for (ListenSocket& hListenSocket : vhListenSocket) {
-        if (hListenSocket.sock) {
-            if (m_edge_trig_events && !m_edge_trig_events->RemoveSocket(hListenSocket.sock->Get())) {
-                LogPrintf("EdgeTriggeredEvents::RemoveSocket() failed\n");
+    if (m_edge_trig_events) {
+        for (ListenSocket& hListenSocket : vhListenSocket) {
+            if (hListenSocket.sock) {
+                m_edge_trig_events->RemoveSocket(hListenSocket.sock->Get());
             }
         }
     }
