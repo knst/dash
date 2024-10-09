@@ -266,9 +266,8 @@ static bool ContextualCheckTransaction(const CTransaction& tx, TxValidationState
 {
     int nHeight = pindexPrev == nullptr ? 0 : pindexPrev->nHeight + 1;
     bool fDIP0001Active_context = nHeight >= consensusParams.DIP0001Height;
-    bool fDIP0003Active_context = nHeight >= consensusParams.DIP0003Height;
 
-    if (fDIP0003Active_context) {
+    if (true) {
         // check version 3 transaction types
         if (tx.IsSpecialTxVersion()) {
             if (tx.nType != TRANSACTION_NORMAL &&
