@@ -27,7 +27,7 @@ def notify_outputname(walletname, txid):
 
 class NotificationsTest(DashTestFramework):
     def set_test_params(self):
-        self.set_dash_test_params(6, 4)
+        self.set_dash_test_params(6, 4, [["-testactivationheight=v19@900"]] * 6)
 
     def setup_network(self):
         self.wallet = ''.join(chr(i) for i in range(FILE_CHAR_START, FILE_CHAR_END) if chr(i) not in FILE_CHARS_DISALLOWED)
