@@ -59,8 +59,8 @@ bool TransactionFilterProxy::filterAcceptsRow(int sourceRow, const QModelIndex &
 
 void TransactionFilterProxy::setDateRange(const std::optional<QDateTime>& from, const std::optional<QDateTime>& to)
 {
-    dateFrom = from.toTime_t();
-    dateTo = to.toTime_t();
+    dateFrom = from->toTime_t();
+    dateTo = to->toTime_t();
     invalidateFilter();
 }
 
