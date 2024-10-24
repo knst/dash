@@ -586,7 +586,7 @@ static void SeedPeriodic(CSHA512& hasher, RNGState& rng) noexcept
     // Add the events hasher into the mix
     rng.SeedEvents(hasher);
 
-    // Dynamic environment data (performance monitoring, ...)
+    // Dynamic environment data (clocks, resource usage, ...)
     auto old_size = hasher.Size();
     RandAddDynamicEnv(hasher);
     LogPrint(BCLog::RANDOM, "Feeding %i bytes of dynamic environment data into RNG\n", hasher.Size() - old_size);
@@ -603,7 +603,7 @@ static void SeedStartup(CSHA512& hasher, RNGState& rng) noexcept
     // Everything that the 'slow' seeder includes.
     SeedSlow(hasher, rng);
 
-    // Dynamic environment data (performance monitoring, ...)
+    // Dynamic environment data (clocks, resource usage, ...)
     auto old_size = hasher.Size();
     RandAddDynamicEnv(hasher);
 
