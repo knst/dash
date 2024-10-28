@@ -24,7 +24,7 @@ public:
     // Dash Specific WalletInitInterface
     virtual void AutoLockMasternodeCollaterals() const = 0;
     virtual void InitCoinJoinSettings(const CoinJoinWalletManager& cjwalletman) const = 0;
-    virtual bool InitAutoBackup() const = 0;
+    virtual void InitAutoBackup() const = 0;
 
     virtual ~WalletInitInterface() {}
 };

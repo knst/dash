@@ -47,7 +47,7 @@ public:
     // Dash Specific Wallet Init
     void AutoLockMasternodeCollaterals() const override;
     void InitCoinJoinSettings(const CoinJoinWalletManager& cjwalletman) const override;
-    bool InitAutoBackup() const override;
+    void InitAutoBackup() const override;
 };
 
 const WalletInitInterface& g_wallet_init_interface = WalletInit();
@@ -225,7 +225,7 @@ void WalletInit::InitCoinJoinSettings(const CoinJoinWalletManager& cjwalletman) 
               CCoinJoinClientOptions::GetDenomsHardCap());
 }
 
-bool WalletInit::InitAutoBackup() const
+void WalletInit::InitAutoBackup() const
 {
-    return CWallet::InitAutoBackup();
+    CWallet::InitAutoBackup();
 }
