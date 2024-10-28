@@ -114,7 +114,7 @@ void CMasternodeSync::ProcessMessage(const CNode& peer, std::string_view msg_typ
     LogPrint(BCLog::MNSYNC, "SYNCSTATUSCOUNT -- got inventory count: nItemID=%d  nCount=%d  peer=%d\n", nItemID, nCount, peer.GetId());
 }
 
-void CMasternodeSync::ProcessTick(const PeerManager& peerman, const CGovernanceManager& govman, bool isMasternodeMode)
+void CMasternodeSync::ProcessTick(const PeerManager& peerman, const CGovernanceManager& govman)
 {
     assert(m_netfulfilledman.IsValid());
 
@@ -126,7 +126,7 @@ void CMasternodeSync::ProcessTick(const PeerManager& peerman, const CGovernanceM
 
     // reset the sync process if the last call to this function was more than 60 minutes ago (client was in sleep mode)
     static int64_t nTimeLastProcess = GetTime();
-    if (!Params().IsMockableChain() && GetTime() - nTimeLastProcess > 60 * 60 && !isMasternodeMode) {
+    if (!Params().IsMockableChain() && GetTime() - nTimeLastProcess > 60 * 60 && !fMasternodeMode) {
         LogPrintf("CMasternodeSync::ProcessTick -- WARNING: no actions for too long, restarting sync...\n");
         Reset(true);
         nTimeLastProcess = GetTime();
@@ -143,7 +143,7 @@ void CMasternodeSync::ProcessTick(const PeerManager& peerman, const CGovernanceM
 
     // gradually request the rest of the votes after sync finished
     if(IsSynced()) {
-        govman.RequestGovernanceObjectVotes(snap.Nodes(), connman, peerman, isMasternodeMode);
+        govman.RequestGovernanceObjectVotes(snap.Nodes(), connman, peerman);
         return;
     }
 
@@ -159,7 +159,7 @@ void CMasternodeSync::ProcessTick(const PeerManager& peerman, const CGovernanceM
         // Don't try to sync any data from outbound non-relay "masternode" connections.
         // Inbound connection this early is most likely a "masternode" connection
         // initiated from another node, so skip it too.
-        if (!pnode->CanRelay() || (isMasternodeMode && pnode->IsInboundConn())) continue;
+        if (!pnode->CanRelay() || (fMasternodeMode && pnode->IsInboundConn())) continue;
 
         {
             if ((pnode->HasPermission(NetPermissionFlags::NoBan) || pnode->IsManualConn()) && !m_netfulfilledman.HasFulfilledRequest(pnode->addr, strAllow)) {
@@ -263,7 +263,7 @@ void CMasternodeSync::ProcessTick(const PeerManager& peerman, const CGovernanceM
         if(!m_netfulfilledman.HasFulfilledRequest(pnode->addr, "governance-sync")) {
             continue; // to early for this node
         }
-        int nObjsLeftToAsk = govman.RequestGovernanceObjectVotes(*pnode, connman, peerman, isMasternodeMode);
+        int nObjsLeftToAsk = govman.RequestGovernanceObjectVotes(*pnode, connman, peerman);
         // check for data
         if(nObjsLeftToAsk == 0) {
             static int64_t nTimeNoObjectsLeft = 0;
@@ -366,9 +366,9 @@ void CMasternodeSync::UpdatedBlockTip(const CBlockIndex *pindexTip, const CBlock
                 pindexNew->nHeight, pindexTip->nHeight, fInitialDownload, fReachedBestHeader);
 }
 
-void CMasternodeSync::DoMaintenance(const PeerManager& peerman, const CGovernanceManager& govman, bool isMasternodeMode)
+void CMasternodeSync::DoMaintenance(const PeerManager& peerman, const CGovernanceManager& govman)
 {
     if (ShutdownRequested()) return;
 
-    ProcessTick(peerman, govman, isMasternodeMode);
+    ProcessTick(peerman, govman);
 }
