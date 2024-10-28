@@ -145,7 +145,7 @@ void CCoinJoinClientManager::ProcessMessage(CNode& peer, CChainState& active_cha
     if (!CheckDiskSpace(gArgs.GetDataDirNet())) {
         ResetPool();
         StopMixing();
-        WalletCJLogPrint(m_wallet, "CCoinJoinClientManager::ProcessMessage -- Not enough disk space, disabling CoinJoin.\n");
+        WalletCJLogPrint(*m_pwallet, "CCoinJoinClientManager::ProcessMessage -- Not enough disk space, disabling CoinJoin.\n");
         return;
     }
 
@@ -160,12 +160,13 @@ void CCoinJoinClientManager::ProcessMessage(CNode& peer, CChainState& active_cha
     }
 }
 
-CCoinJoinClientSession::CCoinJoinClientSession(CWallet& wallet, CoinJoinWalletManager& walletman,
+CCoinJoinClientSession::CCoinJoinClientSession(std::shared_ptr<CWallet> pwallet, CoinJoinWalletManager& walletman,
                                                CCoinJoinClientManager& clientman, CDeterministicMNManager& dmnman,
                                                CMasternodeMetaMan& mn_metaman, const CMasternodeSync& mn_sync,
                                                const std::unique_ptr<CCoinJoinClientQueueManager>& queueman,
                                                bool is_masternode) :
-    m_wallet(wallet),
+    m_pwallet(Assert(pwallet)),
+    m_wallet(*m_pwallet),
     m_walletman(walletman),
     m_clientman(clientman),
     m_dmnman(dmnman),
@@ -1006,7 +1007,7 @@ bool CCoinJoinClientManager::DoAutomaticDenominating(ChainstateManager& chainman
     AssertLockNotHeld(cs_deqsessions);
     LOCK(cs_deqsessions);
     if (int(deqSessions.size()) < CCoinJoinClientOptions::GetSessions()) {
-        deqSessions.emplace_back(m_wallet, m_walletman, *this, m_dmnman, m_mn_metaman, m_mn_sync, m_queueman,
+        deqSessions.emplace_back(m_pwallet, m_walletman, *this, m_dmnman, m_mn_metaman, m_mn_sync, m_queueman,
                                  m_is_masternode);
     }
     for (auto& session : deqSessions) {
@@ -1395,12 +1396,7 @@ bool CCoinJoinClientSession::PrepareDenominate(int nMinRounds, int nMaxRounds, s
                 ++nSteps;
                 continue;
             }
-            const auto pwallet = GetWallet(m_wallet.GetName());
-            if (!pwallet) {
-                strErrorRet ="Couldn't get wallet pointer";
-                return false;
-            }
-            scriptDenom = keyHolderStorage.AddKey(pwallet.get());
+            scriptDenom = keyHolderStorage.AddKey(m_pwallet.get());
         }
         vecPSInOutPairsRet.emplace_back(entry, CTxOut(nDenomAmount, scriptDenom));
         // step is complete
@@ -1922,11 +1918,11 @@ void CCoinJoinClientManager::GetJsonInfo(UniValue& obj) const
     obj.pushKV("sessions", arrSessions);
 }
 
-void CoinJoinWalletManager::Add(CWallet& wallet)
+void CoinJoinWalletManager::Add(std::shared_ptr<CWallet> wallet)
 {
     {
         LOCK(cs_wallet_manager_map);
-        m_wallet_manager_map.try_emplace(wallet.GetName(),
+        m_wallet_manager_map.try_emplace(wallet->GetName(),
                                          std::make_unique<CCoinJoinClientManager>(wallet, *this, m_dmnman, m_mn_metaman,
                                                                                   m_mn_sync, m_queueman, m_is_masternode));
     }

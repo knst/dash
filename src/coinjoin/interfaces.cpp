@@ -67,7 +67,7 @@ public:
     explicit CoinJoinLoaderImpl(CoinJoinWalletManager& walletman)
         : m_walletman(walletman) {}
 
-    void AddWallet(CWallet& wallet) override
+    void AddWallet(std::shared_ptr<CWallet> wallet) override
     {
         m_walletman.Add(wallet);
     }

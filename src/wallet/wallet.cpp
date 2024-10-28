@@ -125,7 +125,7 @@ bool AddWallet(const std::shared_ptr<CWallet>& wallet)
     }
     wallet->ConnectScriptPubKeyManNotifiers();
     wallet->AutoLockMasternodeCollaterals();
-    wallet->coinjoin_loader().AddWallet(*wallet);
+    wallet->coinjoin_loader().AddWallet(wallet);
     wallet->NotifyCanGetAddressesChanged();
     return true;
 }
@@ -4966,7 +4966,7 @@ std::shared_ptr<CWallet> CWallet::Create(interfaces::Chain* chain, interfaces::C
     }
 
     if (coinjoin_loader) {
-        coinjoin_loader->AddWallet(*walletInstance);
+        coinjoin_loader->AddWallet(walletInstance);
     }
 
     {
