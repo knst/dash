@@ -47,7 +47,6 @@ public:
     // Dash Specific Wallet Init
     void AutoLockMasternodeCollaterals() const override;
     void InitCoinJoinSettings(const CoinJoinWalletManager& cjwalletman) const override;
-    void InitAutoBackup() const override;
 };
 
 const WalletInitInterface& g_wallet_init_interface = WalletInit();
@@ -190,6 +189,9 @@ void WalletInit::Construct(NodeContext& node) const
     auto wallet_loader = interfaces::MakeWalletLoader(*node.chain, node.coinjoin_loader, args);
     node.wallet_loader = wallet_loader.get();
     node.chain_clients.emplace_back(std::move(wallet_loader));
+
+    nWalletBackups = gArgs.GetArg("-createwalletbackups", 10);
+    nWalletBackups = std::max(0, std::min(10, nWalletBackups));
 }
 
 
@@ -223,9 +225,4 @@ void WalletInit::InitCoinJoinSettings(const CoinJoinWalletManager& cjwalletman) 
               CCoinJoinClientOptions::GetSessions(), CCoinJoinClientOptions::GetRounds(),
               CCoinJoinClientOptions::GetAmount(), CCoinJoinClientOptions::GetDenomsGoal(),
               CCoinJoinClientOptions::GetDenomsHardCap());
-}
-
-void WalletInit::InitAutoBackup() const
-{
-    CWallet::InitAutoBackup();
 }

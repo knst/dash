@@ -25,7 +25,6 @@ public:
     // Dash Specific WalletInitInterface InitCoinJoinSettings
     void AutoLockMasternodeCollaterals() const override {}
     void InitCoinJoinSettings(const CoinJoinWalletManager& cjwalletman) const override {}
-    void InitAutoBackup() const override {}
 };
 
 void DummyWalletInit::AddWalletOptions(ArgsManager& argsman) const

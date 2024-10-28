@@ -1539,7 +1539,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
 
     // ********************************************************* Step 5: verify wallet database integrity
 
-    g_wallet_init_interface.InitAutoBackup();
     for (const auto& client : node.chain_clients) {
         if (!client->verify()) {
             return false;
