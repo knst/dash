@@ -5181,15 +5181,13 @@ void CWallet::postInitProcess()
     chain().requestMempoolTransactions(*this);
 }
 
-bool CWallet::InitAutoBackup()
+void CWallet::InitAutoBackup()
 {
     if (gArgs.GetBoolArg("-disablewallet", DEFAULT_DISABLE_WALLET))
-        return true;
+        return;
 
     nWalletBackups = gArgs.GetArg("-createwalletbackups", 10);
     nWalletBackups = std::max(0, std::min(10, nWalletBackups));
-
-    return true;
 }
 
 bool CWallet::BackupWallet(const std::string& strDest) const
