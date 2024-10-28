@@ -71,13 +71,13 @@ public:
     void SwitchToNextAsset();
 
     void ProcessMessage(const CNode& peer, std::string_view msg_type, CDataStream& vRecv) const;
-    void ProcessTick(const PeerManager& peerman, const CGovernanceManager& govman);
+    void ProcessTick(const PeerManager& peerman, const CGovernanceManager& govman, bool isMasternodeMode);
 
     void AcceptedBlockHeader(const CBlockIndex *pindexNew);
     void NotifyHeaderTip(const CBlockIndex *pindexNew, bool fInitialDownload);
     void UpdatedBlockTip(const CBlockIndex *pindexTip, const CBlockIndex *pindexNew, bool fInitialDownload);
 
-    void DoMaintenance(const PeerManager& peerman, const CGovernanceManager& govman);
+    void DoMaintenance(const PeerManager& peerman, const CGovernanceManager& govman, bool isMasternodeMode);
 };
 
 #endif // BITCOIN_MASTERNODE_SYNC_H
