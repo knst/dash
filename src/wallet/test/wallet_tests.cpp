@@ -70,6 +70,7 @@ static void TestUnloadWallet(std::shared_ptr<CWallet>&& wallet)
     std::vector<bilingual_str> warnings;
     SyncWithValidationInterfaceQueue();
     wallet->m_chain_notifications_handler.reset();
+    wallet->coinjoin_loader().RemoveWallet(wallet->GetName());
     RemoveWallet(wallet, std::nullopt, warnings);
     UnloadWallet(std::move(wallet));
 }
