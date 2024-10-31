@@ -454,6 +454,11 @@ std::string CCbTx::ToString() const
 
 static std::optional<CCbTx> GetCoinbaseTx(const CBlockIndex* pindex)
 {
+    // There's no CbTx before DIP0003 activation
+    if (DeploymentActiveAfter(pindexPrev, chainparams.GetConsensus(), Consensus::DIP0003)) {
+        return std::nullopt;
+    }
+
     if (pindex == nullptr) {
         return std::nullopt;
     }
