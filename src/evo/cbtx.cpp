@@ -20,6 +20,10 @@
 #include <deploymentstatus.h>
 #include <validation.h>
 
+
+// Forward declarations
+static std::optional<CCbTx> GetCoinbaseTx(const CBlockIndex* pindex);
+
 bool CheckCbTx(const CTransaction& tx, const CBlockIndex* pindexPrev, TxValidationState& state)
 {
     if (tx.nType != TRANSACTION_COINBASE) {
@@ -448,7 +452,7 @@ std::string CCbTx::ToString() const
         creditPoolBalance / COIN, creditPoolBalance % COIN);
 }
 
-std::optional<CCbTx> GetCoinbaseTx(const CBlockIndex* pindex)
+static std::optional<CCbTx> GetCoinbaseTx(const CBlockIndex* pindex)
 {
     if (pindex == nullptr) {
         return std::nullopt;
