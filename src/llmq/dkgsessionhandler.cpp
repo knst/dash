@@ -562,6 +562,17 @@ void CDKGSessionHandler::HandleDKGRound()
         return changed;
     });
 
+    if (params.size == 1)
+    {
+        // TODO: make a single-quorum-commitment
+        auto finalCommitments = curSession->FinalizeCommitments();
+        for (const auto& fqc : finalCommitments) {
+            if (auto inv_opt = quorumBlockProcessor.AddMineableCommitment(fqc); inv_opt.has_value()) {
+                Assert(m_peerman.get())->RelayInv(inv_opt.value());
+            }
+        }
+    }
+
     const auto tip_mn_list = m_dmnman.GetListAtChainTip();
     utils::EnsureQuorumConnections(params, connman, m_dmnman, m_sporkman, tip_mn_list, pQuorumBaseBlockIndex, curSession->myProTxHash, /* is_masternode = */ m_mn_activeman != nullptr);
     if (curSession->AreWeMember()) {

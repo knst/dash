@@ -164,13 +164,17 @@ void CDKGSession::Contribute(CDKGPendingMessages& pendingMessages)
         return;
     }
 
-    if (memberIds == 1) {
+    assert(params.threshold > 1);
+//    if (memberIds == 1) {
+ //       return;
+        /*
         m_sk_contributions.resize(1);
 //        CBLSSecretKey key;
         m_sk_contributions[0].MakeNewKey();
         vvecContribution.resize(0);
+*/
+  //  }
 
-    } else {
     cxxtimer::Timer t1(true);
     logger.Batch("generating contributions");
     if (!blsWorker.GenerateContributions(params.threshold, memberIds, vvecContribution, m_sk_contributions)) {
@@ -181,7 +185,6 @@ void CDKGSession::Contribute(CDKGPendingMessages& pendingMessages)
     logger.Batch("generated contributions. time=%d", t1.count());
     logger.Flush();
 
-    }
     SendContributions(pendingMessages);
 }
 
