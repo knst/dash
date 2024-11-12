@@ -565,11 +565,10 @@ void CDKGSessionHandler::HandleDKGRound()
     if (params.size == 1)
     {
         // TODO: make a single-quorum-commitment
-        auto finalCommitments = curSession->FinalizeCommitments();
-        for (const auto& fqc : finalCommitments) {
-            if (auto inv_opt = quorumBlockProcessor.AddMineableCommitment(fqc); inv_opt.has_value()) {
-                Assert(m_peerman.get())->RelayInv(inv_opt.value());
-            }
+
+        auto finalCommitment = curSession->FinalizeSingleCommitment();
+        if (auto inv_opt = quorumBlockProcessor.AddMineableCommitment(finalCommitment); inv_opt.has_value()) {
+            Assert(m_peerman.get())->RelayInv(inv_opt.value());
         }
     }
 

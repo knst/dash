@@ -1246,6 +1246,7 @@ std::vector<CFinalCommitment> CDKGSession::FinalizeCommitments()
         fqc.quorumVvecHash = first.quorumVvecHash;
 
         const bool isQuorumRotationEnabled{IsQuorumRotationEnabled(params, m_quorum_base_block_index)};
+        // TODO: always put `true` here: so far as v19 is activated, we always write BASIC now
         fqc.nVersion = CFinalCommitment::GetVersion(isQuorumRotationEnabled, DeploymentActiveAfter(m_quorum_base_block_index, Params().GetConsensus(), Consensus::DEPLOYMENT_V19));
         fqc.quorumIndex = isQuorumRotationEnabled ? quorumIndex : 0;
 
@@ -1301,6 +1302,83 @@ std::vector<CFinalCommitment> CDKGSession::FinalizeCommitments()
     logger.Flush();
 
     return finalCommitments;
+}
+
+CFinalCommitment CDKGSession::FinalizeSingleCommitment()
+{
+    if (!AreWeMember()) {
+        return {};
+    }
+
+    CDKGLogger logger(*this, __func__, __LINE__);
+
+ //       const auto& cvec = p.second;
+
+    std::vector<CBLSId> signerIds;
+    std::vector<CBLSSignature> thresholdSigs;
+
+//        const auto& first = cvec[0];
+
+    CFinalCommitment fqc(params, m_quorum_base_block_index->GetBlockHash());
+
+
+    CBLSSecretKey sk1;
+    sk1.MakeNewKey();
+
+
+
+    fqc.validMembers = {}; // TODO - that's me!
+    fqc.quorumPublicKey = sk1.GetPublicKey(); //first.quorumPublicKey;
+    fqc.quorumVvecHash = {}; // irst.quorumVvecHash;
+
+    const bool isQuorumRotationEnabled{false};
+    fqc.nVersion = CFinalCommitment::GetVersion(isQuorumRotationEnabled, true);
+    fqc.quorumIndex = 0;
+
+    uint256 commitmentHash = BuildCommitmentHash(fqc.llmqType, fqc.quorumHash, fqc.validMembers, fqc.quorumPublicKey, fqc.quorumVvecHash);
+
+    std::vector<CBLSSignature> aggSigs;
+    std::vector<CBLSPublicKey> aggPks;
+//        aggSigs.reserve(cvec.size());
+//        aggPks.reserve(cvec.size());
+
+        /*
+        for (const auto& qc : cvec) {
+            if (qc.quorumPublicKey != first.quorumPublicKey || qc.quorumVvecHash != first.quorumVvecHash) {
+                logger.Batch("quorumPublicKey or quorumVvecHash does not match, skipping");
+                continue;
+            }
+
+            size_t signerIndex = membersMap[qc.proTxHash];
+            const auto& m = members[signerIndex];
+
+            fqc.signers[signerIndex] = true;
+            aggSigs.emplace_back(qc.sig);
+            aggPks.emplace_back(m->dmn->pdmnState->pubKeyOperator.Get());
+
+            signerIds.emplace_back(m->id);
+            thresholdSigs.emplace_back(qc.quorumSig);
+        }
+        */
+/*
+        fqc.membersSig = CBLSSignature::AggregateSecure(aggSigs, aggPks, commitmentHash);
+
+        if (!fqc.quorumSig.Recover(thresholdSigs, signerIds)) {
+            logger.Batch("failed to recover quorum sig");
+            continue;
+        }
+*/
+    if (!fqc.Verify(m_dmnman, m_quorum_base_block_index, true)) {
+        logger.Batch("failed to verify final commitment");
+        assert(false);
+    }
+
+    logger.Batch("final commitment: validMembers=%d, signers=%d, quorumPublicKey=%s",
+                    fqc.CountValidMembers(), fqc.CountSigners(), fqc.quorumPublicKey.ToString());
+
+    logger.Flush();
+
+    return fqc;
 }
 
 CDKGMember* CDKGSession::GetMember(const uint256& proTxHash) const
