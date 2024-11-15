@@ -19,9 +19,6 @@
 #include <string>
 #include <vector>
 
-#include <logging.h>
-#include <util/strencodings.h>
-
 typedef uint256 ChainCode;
 
 /* ----------- Bitcoin Hash ------------------------------------------------- */
@@ -110,7 +107,6 @@ private:
 public:
     void write(Span<const std::byte> src)
     {
-        LogPrintf("batch-write: %s\n", HexStr(src));
         ctx.Write(UCharCast(src.data()), src.size());
     }
 
