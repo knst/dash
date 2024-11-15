@@ -1329,10 +1329,11 @@ CFinalCommitment CDKGSession::FinalizeSingleCommitment()
 
     fqc.validMembers = {}; // TODO - that's me!
     fqc.quorumPublicKey = sk1.GetPublicKey(); //first.quorumPublicKey;
-    fqc.quorumVvecHash = {}; // irst.quorumVvecHash;
+    fqc.quorumVvecHash = {}; // first.quorumVvecHash;
 
     const bool isQuorumRotationEnabled{false};
-    fqc.nVersion = CFinalCommitment::GetVersion(isQuorumRotationEnabled, true);
+//    fqc.nVersion = CFinalCommitment::GetVersion(isQuorumRotationEnabled, true);
+    fqc.nVersion = CFinalCommitment::GetVersion(isQuorumRotationEnabled, DeploymentActiveAfter(m_quorum_base_block_index, Params().GetConsensus(), Consensus::DEPLOYMENT_V19));
     fqc.quorumIndex = 0;
 
     uint256 commitmentHash = BuildCommitmentHash(fqc.llmqType, fqc.quorumHash, fqc.validMembers, fqc.quorumPublicKey, fqc.quorumVvecHash);
