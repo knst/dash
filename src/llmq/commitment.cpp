@@ -155,6 +155,7 @@ bool CFinalCommitment::VerifyNull() const
 
 bool CFinalCommitment::VerifySizes(const Consensus::LLMQParams& params) const
 {
+    LogPrintf("CFinalCommitment::VerifySizes sizes: %d %d %d\n", signers.size(), validMembers.size(), params.size);
     if (signers.size() != size_t(params.size)) {
         LogPrint(BCLog::LLMQ, "CFinalCommitment -- q[%s] invalid signers.size=%d\n", quorumHash.ToString(), signers.size());
         return false;
