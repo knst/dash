@@ -17,6 +17,8 @@
 #include <univalue.h>
 #include <util/underlying.h>
 
+#include <logging.h>
+
 class CBlockIndex;
 class CCoinsViewCache;
 class TxValidationState;
@@ -330,6 +332,7 @@ template <typename ProTx>
 static bool CheckInputsHash(const CTransaction& tx, const ProTx& proTx, TxValidationState& state)
 {
     if (uint256 inputsHash = CalcTxInputsHash(tx); inputsHash != proTx.inputsHash) {
+        LogPrintf("inputs hashes: %s %s\n", inputsHash.ToString(), proTx.inputsHash.ToString());
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-inputs-hash");
     }
 
