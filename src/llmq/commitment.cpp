@@ -69,7 +69,7 @@ bool CFinalCommitment::Verify(CDeterministicMNManager& dmnman, gsl::not_null<con
         LogPrint(BCLog::LLMQ, "CFinalCommitment -- q[%s] invalid quorumPublicKey\n", quorumHash.ToString());
         return false;
     }
-    if (quorumVvecHash.IsNull()) {
+    if (llmq_params.size != 1 && quorumVvecHash.IsNull()) {
         LogPrint(BCLog::LLMQ, "CFinalCommitment -- q[%s] invalid quorumVvecHash\n", quorumHash.ToString());
         return false;
     }

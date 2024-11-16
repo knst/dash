@@ -1327,7 +1327,9 @@ CFinalCommitment CDKGSession::FinalizeSingleCommitment()
 
 
 
-    fqc.validMembers = {}; // TODO - that's me!
+    fqc.signers = {true}; // TODO - that's me!
+    LogPrintf("fqc signers %d value %d\n", fqc.signers.size(), fqc.signers[0]);
+    fqc.validMembers = {true}; // TODO - that's me!
     fqc.quorumPublicKey = sk1.GetPublicKey(); //first.quorumPublicKey;
     fqc.quorumVvecHash = {}; // first.quorumVvecHash;
 
@@ -1337,6 +1339,8 @@ CFinalCommitment CDKGSession::FinalizeSingleCommitment()
     fqc.quorumIndex = 0;
 
     uint256 commitmentHash = BuildCommitmentHash(fqc.llmqType, fqc.quorumHash, fqc.validMembers, fqc.quorumPublicKey, fqc.quorumVvecHash);
+    fqc.quorumSig = sk1.Sign(commitmentHash);
+    fqc.membersSig = sk1.Sign(commitmentHash);
 
     std::vector<CBLSSignature> aggSigs;
     std::vector<CBLSPublicKey> aggPks;
