@@ -1340,7 +1340,22 @@ CFinalCommitment CDKGSession::FinalizeSingleCommitment()
 
     uint256 commitmentHash = BuildCommitmentHash(fqc.llmqType, fqc.quorumHash, fqc.validMembers, fqc.quorumPublicKey, fqc.quorumVvecHash);
     fqc.quorumSig = sk1.Sign(commitmentHash);
-    fqc.membersSig = sk1.Sign(commitmentHash);
+
+    /*for (const auto i : irange::range(members.size())) */
+    {
+//        const auto& m = members[0];
+        //CBLSSecretKey skContrib = m_sk_contributions[0];
+
+        /*
+        if (!qc.contributions->Encrypt(i, m->dmn->pdmnState->pubKeyOperator.Get(), sk1, PROTOCOL_VERSION)) {
+            logger.Batch("failed to encrypt contribution for %s", m->dmn->proTxHash.ToString());
+            assert(false); // return;
+        }
+        */
+//        fqc.membersSig = members[i]->pdmnState->.Sign(commitmentHash);
+ //       fqc.membersSig = CBLSSignature::AggregateSecure(aggSigs, aggPks, commitmentHash);
+        fqc.membersSig = m_mn_activeman->Sign(commitmentHash);
+    }
 
     std::vector<CBLSSignature> aggSigs;
     std::vector<CBLSPublicKey> aggPks;
