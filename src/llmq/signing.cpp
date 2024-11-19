@@ -878,7 +878,9 @@ bool CSigningManager::AsyncSignIfMember(Consensus::LLMQType llmqType, CSigShares
                                         const uint256& msgHash, const uint256& quorumHash, bool allowReSign,
                                         bool allowDiffMsgHashSigning)
 {
+    LogPrintf("mn activeman: %lld\n", m_mn_activeman);
     if (m_mn_activeman == nullptr) return false;
+    LogPrintf("mn activemam protx: %s\n", m_mn_activeman->GetProTxHash().ToString());
     if (m_mn_activeman->GetProTxHash().IsNull()) return false;
 
     const CQuorumCPtr quorum = [&]() {

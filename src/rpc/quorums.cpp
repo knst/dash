@@ -432,6 +432,7 @@ static UniValue quorum_sign_helper(const JSONRPCRequest& request, Consensus::LLM
     const ChainstateManager& chainman = EnsureChainman(node);
     const LLMQContext& llmq_ctx = EnsureLLMQContext(node);
 
+    LogPrintf("s-helper-1\n");
     const auto llmq_params_opt = Params().GetLLMQ(llmqType);
     if (!llmq_params_opt.has_value()) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "invalid LLMQ type");
@@ -439,15 +440,18 @@ static UniValue quorum_sign_helper(const JSONRPCRequest& request, Consensus::LLM
 
     const uint256 id(ParseHashV(request.params[0], "id"));
     const uint256 msgHash(ParseHashV(request.params[1], "msgHash"));
+    LogPrintf("s-helper-2 id=%s msgHash=%s\n", id.ToString(), msgHash.ToString());
 
     uint256 quorumHash;
     if (!request.params[2].isNull() && !request.params[2].get_str().empty()) {
         quorumHash = ParseHashV(request.params[2], "quorumHash");
     }
+    LogPrintf("s-helper-2 quorumHash=%s\n", quorumHash.ToString());
     bool fSubmit{true};
     if (!request.params[3].isNull()) {
         fSubmit = ParseBoolV(request.params[3], "submit");
     }
+    LogPrintf("s-helper-2 fSubmit=%d\n", fSubmit);
     if (fSubmit) {
         return llmq_ctx.sigman->AsyncSignIfMember(llmqType, *llmq_ctx.shareman, id, msgHash, quorumHash);
     } else {

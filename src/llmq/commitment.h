@@ -15,6 +15,7 @@
 #include <gsl/pointers.h>
 
 #include <univalue.h>
+#include <logging.h>
 
 class CBlockIndex;
 class CDeterministicMNManager;
@@ -102,10 +103,18 @@ public:
 public:
     bool IsNull() const
     {
+        LogPrintf("signers count: %d\n", std::count(signers.begin(), signers.end(), true));
+        LogPrintf("valid Members count: %d\n", std::count(validMembers.begin(), validMembers.end(), true));
         if (std::count(signers.begin(), signers.end(), true) ||
             std::count(validMembers.begin(), validMembers.end(), true)) {
             return false;
         }
+        LogPrintf("quorum pubkey: %d vvec-hash %d membersSig %d quorumSig %d\n",
+            quorumPublicKey.IsValid(),
+            !quorumVvecHash.IsNull(),
+            membersSig.IsValid(),
+            quorumSig.IsValid());
+
         if (quorumPublicKey.IsValid() ||
             !quorumVvecHash.IsNull() ||
             membersSig.IsValid() ||

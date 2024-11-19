@@ -644,6 +644,7 @@ bool CQuorumBlockProcessor::HasMineableCommitment(const uint256& hash) const
 
 std::optional<CInv> CQuorumBlockProcessor::AddMineableCommitment(const CFinalCommitment& fqc)
 {
+    LogPrintf("add mineable commitment: signers count: %d\n", std::count(fqc.signers.begin(), fqc.signers.end(), true));
     const uint256 commitmentHash = ::SerializeHash(fqc);
 
     const bool relay = [&]() {

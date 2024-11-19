@@ -276,12 +276,14 @@ template bool CActiveMasternodeManager::Decrypt(const CBLSIESMultiRecipientObjec
 [[nodiscard]] CBLSSignature CActiveMasternodeManager::Sign(const uint256& hash) const
 {
     AssertLockNotHeld(cs);
+    LogPrintf("CActiveMasternodeManager::Sign key: %s hash:%s\n", m_info.blsPubKeyOperator.ToString(), hash.ToString());
     return WITH_READ_LOCK(cs, return m_info.blsKeyOperator.Sign(hash));
 }
 
 [[nodiscard]] CBLSSignature CActiveMasternodeManager::Sign(const uint256& hash, const bool is_legacy) const
 {
     AssertLockNotHeld(cs);
+    LogPrintf("CActiveMasternodeManager::Sign key: %s hash:%s is-legacy=%d\n", m_info.blsPubKeyOperator.ToString(), hash.ToString(), is_legacy);
     return WITH_READ_LOCK(cs, return m_info.blsKeyOperator.Sign(hash, is_legacy));
 }
 

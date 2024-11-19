@@ -540,6 +540,9 @@ UniValue CRPCTable::execute(const JSONRPCRequest &request) const
     if (it != mapCommands.end()) {
         UniValue result;
         const JSONRPCRequest new_request{subcommand.empty() ? request : request.squashed() };
+        if (!subcommand.empty()) {
+            LogPrintf("subcommand: %s\n", subcommand);
+        }
         if (ExecuteCommands(it->second, new_request, result, mapPlatformRestrictions)) {
             return result;
         }
