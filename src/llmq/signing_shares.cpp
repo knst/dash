@@ -767,6 +767,22 @@ void CSigSharesManager::TryRecoverSig(const CQuorumCPtr& quorum, const uint256& 
             return;
         }
 
+        if (quorum->params.size == 1) {
+            if (sigSharesForSignHash->empty()) {
+                LogPrint(BCLog::LLMQ_SIGS, "CSigSharesManager::%s -- impossible to recover single-node signature - no shares yet. id=%s, msgHash=%s\n", __func__,
+                          id.ToString(), msgHash.ToString());
+                return;
+            }
+            const auto& sigShare = sigSharesForSignHash->begin()->second;
+            CBLSSignature recoveredSig = sigShare.sigShare.Get();
+            LogPrint(BCLog::LLMQ_SIGS, "CSigSharesManager::%s -- recover single-node signature. id=%s, msgHash=%s\n", __func__,
+                      id.ToString(), msgHash.ToString());
+
+            auto rs = std::make_shared<CRecoveredSig>(quorum->params.type, quorum->qc->quorumHash, id, msgHash, recoveredSig);
+            sigman.ProcessRecoveredSig(rs);
+            return; // end of single-quorum processing
+        }
+
         sigSharesForRecovery.reserve((size_t) quorum->params.threshold);
         idsForRecovery.reserve((size_t) quorum->params.threshold);
         for (auto it = sigSharesForSignHash->begin(); it != sigSharesForSignHash->end() && sigSharesForRecovery.size() < size_t(quorum->params.threshold); ++it) {
@@ -784,6 +800,7 @@ void CSigSharesManager::TryRecoverSig(const CQuorumCPtr& quorum, const uint256& 
     // now recover it
     cxxtimer::Timer t(true);
     CBLSSignature recoveredSig;
+    LogPrintf("recover signature shares: %d ids: %d\n", sigSharesForRecovery.size(), idsForRecovery.size());
     if (!recoveredSig.Recover(sigSharesForRecovery, idsForRecovery)) {
         LogPrint(BCLog::LLMQ_SIGS, "CSigSharesManager::%s -- failed to recover signature. id=%s, msgHash=%s, time=%d\n", __func__,
                   id.ToString(), msgHash.ToString(), t.count());
