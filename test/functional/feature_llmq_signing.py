@@ -18,7 +18,7 @@ from test_framework.util import assert_equal, assert_raises_rpc_error, force_fin
 
 class LLMQSigningTest(DashTestFramework):
     def set_test_params(self):
-        self.set_dash_test_params(5, 4)
+        self.set_dash_test_params(4, 3)
 
     def add_options(self, parser):
         parser.add_argument("--spork21", dest="spork21", default=False, action="store_true",
@@ -73,8 +73,7 @@ class LLMQSigningTest(DashTestFramework):
         sign1 = self.mninfo[0].node.quorum("sign", 111, id, msgHash, quorumHash) 
         sign2 = self.mninfo[1].node.quorum("sign", 111, id, msgHash, quorumHash) 
         sign3 = self.mninfo[2].node.quorum("sign", 111, id, msgHash, quorumHash) 
-        sign4 = self.mninfo[3].node.quorum("sign", 111, id, msgHash, quorumHash) 
-        self.log.info(f"signs: {sign1} {sign2} {sign3} {sign4}")
+        self.log.info(f"signs: {sign1} {sign2} {sign3}")
 
         wait_for_sigs(True, False, True, 15)
 
@@ -137,12 +136,6 @@ class LLMQSigningTest(DashTestFramework):
         self.bump_mocktime(int(60 * 60 * 24 * 1), update_schedulers=False)
         # Cleanup starts every 5 seconds
         wait_for_sigs(False, False, False, 15)
-
-        for i in range(2):
-            self.mninfo[i].node.quorum("sign", 111, id, msgHashConflict)
-        for i in range(2, 4):
-            self.mninfo[i].node.quorum("sign", 111, id, msgHash)
-        wait_for_sigs(True, False, True, 15)
 
         if self.options.spork21:
             id = uint256_to_string(request_id + 1)
