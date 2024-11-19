@@ -18,7 +18,7 @@ from test_framework.util import assert_equal, assert_raises_rpc_error, force_fin
 
 class LLMQSigningTest(DashTestFramework):
     def set_test_params(self):
-        self.set_dash_test_params(6, 5)
+        self.set_dash_test_params(5, 4)
 
     def add_options(self, parser):
         parser.add_argument("--spork21", dest="spork21", default=False, action="store_true",
@@ -75,8 +75,7 @@ class LLMQSigningTest(DashTestFramework):
         sign2 = self.mninfo[1].node.quorum("sign", 111, id, msgHash, quorumHash) 
         sign3 = self.mninfo[2].node.quorum("sign", 111, id, msgHash, quorumHash) 
         sign4 = self.mninfo[3].node.quorum("sign", 111, id, msgHash, quorumHash) 
-        sign5 = self.mninfo[4].node.quorum("sign", 111, id, msgHash, quorumHash) 
-        self.log.info(f"signs: {sign1} {sign2} {sign3} {sign4} {sign5}")
+        self.log.info(f"signs: {sign1} {sign2} {sign3} {sign4}")
 
         wait_for_sigs(True, False, True, 15)
 
@@ -142,7 +141,7 @@ class LLMQSigningTest(DashTestFramework):
 
         for i in range(2):
             self.mninfo[i].node.quorum("sign", 111, id, msgHashConflict)
-        for i in range(2, 5):
+        for i in range(2, 4):
             self.mninfo[i].node.quorum("sign", 111, id, msgHash)
         wait_for_sigs(True, False, True, 15)
 
