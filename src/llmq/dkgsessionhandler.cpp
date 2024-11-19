@@ -562,11 +562,16 @@ void CDKGSessionHandler::HandleDKGRound()
         return changed;
     });
 
-    if (params.size == 1)
+    if (params.size == 1) // add here check AreWeMember instead checking is-null for final-commitment
     {
         // TODO: make a single-quorum-commitment
 
         auto finalCommitment = curSession->FinalizeSingleCommitment();
+        if (finalCommitment.IsNull()) {
+            LogPrintf("final commitment is null here -- is-member=%d\n", curSession->AreWeMember());
+            return;
+        }
+
         if (auto inv_opt = quorumBlockProcessor.AddMineableCommitment(finalCommitment); inv_opt.has_value()) {
             Assert(m_peerman.get())->RelayInv(inv_opt.value());
         }
@@ -622,8 +627,10 @@ void CDKGSessionHandler::HandleDKGRound()
     };
     HandlePhase(QuorumPhase::Commit, QuorumPhase::Finalize, curQuorumHash, 0.1, fCommitStart, fCommitWait);
 
+    LogPrintf("Finalize commitments\n");
     auto finalCommitments = curSession->FinalizeCommitments();
     for (const auto& fqc : finalCommitments) {
+        LogPrintf("Finalize commitments -- add mineable commitment\n");
         if (auto inv_opt = quorumBlockProcessor.AddMineableCommitment(fqc); inv_opt.has_value()) {
             Assert(m_peerman.get())->RelayInv(inv_opt.value());
         }
