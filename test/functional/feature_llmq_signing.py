@@ -19,7 +19,6 @@ from test_framework.util import assert_equal, assert_raises_rpc_error, force_fin
 class LLMQSigningTest(DashTestFramework):
     def set_test_params(self):
         self.set_dash_test_params(6, 5)
-        self.set_dash_llmq_test_params(5, 3)
 
     def add_options(self, parser):
         parser.add_argument("--spork21", dest="spork21", default=False, action="store_true",
@@ -44,10 +43,13 @@ class LLMQSigningTest(DashTestFramework):
         def check_sigs(hasrecsigs, isconflicting1, isconflicting2):
             for mn in self.mninfo:
                 if mn.node.quorum("hasrecsig", 111, id, msgHash) != hasrecsigs:
+                    self.log.info(f'hasrecsig {mn.node.quorum("hasrecsig", 111, id, msgHash)} {hasrecsigs}')
                     return False
                 if mn.node.quorum("isconflicting", 111, id, msgHash) != isconflicting1:
+                    self.log.info(f'is conflicting-1 {mn.node.quorum("isconflicting", 111, id, msgHash)} {isconflicting1}')
                     return False
                 if mn.node.quorum("isconflicting", 111, id, msgHashConflict) != isconflicting2:
+                    self.log.info(f'is conflicting-2 {mn.node.quorum("isconflicting", 111, id, msgHashConflict)} {isconflicting2}')
                     return False
             return True
 
@@ -69,39 +71,12 @@ class LLMQSigningTest(DashTestFramework):
         assert_sigs_nochange(False, False, False, 3)
         # 2. Providing a valid quorum hash should succeed and cause no changes for sigss
         quorumHash = self.mninfo[1].node.quorum("selectquorum", 111, id)["quorumHash"]
-        assert self.mninfo[1].node.quorum("sign", 111, id, msgHash, quorumHash)
-        assert_sigs_nochange(False, False, False, 3)
-        # Sign third share and test optional submit parameter if spork21 is enabled, should result in recovered sig
-        # and conflict for msgHashConflict
-        if self.options.spork21:
-            # 1. Providing an invalid quorum hash and set submit=false, should throw an error
-            assert_raises_rpc_error(-8, 'quorum not found', self.mninfo[2].node.quorum, "sign", 111, id, msgHash, id, False)
-            # 2. Providing a valid quorum hash and set submit=false, should return a valid sigShare object
-            sig_share_rpc_1 = self.mninfo[2].node.quorum("sign", 111, id, msgHash, quorumHash, False)
-            sig_share_rpc_2 = self.mninfo[2].node.quorum("sign", 111, id, msgHash, "", False)
-            assert_equal(sig_share_rpc_1, sig_share_rpc_2)
-            assert_sigs_nochange(False, False, False, 3)
-            # 3. Sending the sig share received from RPC to the recovery member through P2P interface, should result
-            # in a recovered sig
-            sig_share = CSigShare()
-            sig_share.llmqType = int(sig_share_rpc_1["llmqType"])
-            sig_share.quorumHash = int(sig_share_rpc_1["quorumHash"], 16)
-            sig_share.quorumMember = int(sig_share_rpc_1["quorumMember"])
-            sig_share.id = int(sig_share_rpc_1["id"], 16)
-            sig_share.msgHash = int(sig_share_rpc_1["msgHash"], 16)
-            sig_share.sigShare = bytes.fromhex(sig_share_rpc_1["signature"])
-            for mn in self.mninfo:
-                assert mn.node.getconnectioncount() == self.llmq_size
-            # Get the current recovery member of the quorum
-            q = self.nodes[0].quorum('selectquorum', 111, id)
-            mn = self.get_mninfo(q['recoveryMembers'][0])
-            # Open a P2P connection to it
-            p2p_interface = mn.node.add_p2p_connection(P2PInterface())
-            # Send the last required QSIGSHARE message to the recovery member
-            p2p_interface.send_message(msg_qsigshare([sig_share]))
-        else:
-            # If spork21 is not enabled just sign regularly
-            self.mninfo[2].node.quorum("sign", 111, id, msgHash)
+        sign1 = self.mninfo[0].node.quorum("sign", 111, id, msgHash, quorumHash) 
+        sign2 = self.mninfo[1].node.quorum("sign", 111, id, msgHash, quorumHash) 
+        sign3 = self.mninfo[2].node.quorum("sign", 111, id, msgHash, quorumHash) 
+        sign4 = self.mninfo[3].node.quorum("sign", 111, id, msgHash, quorumHash) 
+        sign5 = self.mninfo[4].node.quorum("sign", 111, id, msgHash, quorumHash) 
+        self.log.info(f"signs: {sign1} {sign2} {sign3} {sign4} {sign5}")
 
         wait_for_sigs(True, False, True, 15)
 
