@@ -160,10 +160,9 @@ void CDKGSession::Contribute(CDKGPendingMessages& pendingMessages)
 {
     CDKGLogger logger(*this, __func__, __LINE__);
 
-    if (!AreWeMember()) {
+    if (!AreWeMember() || params.size == 1) {
         return;
     }
-
     assert(params.threshold > 1);
 //    if (memberIds == 1) {
  //       return;
@@ -431,7 +430,7 @@ void CDKGSession::VerifyPendingContributions()
 
 void CDKGSession::VerifyAndComplain(CDKGPendingMessages& pendingMessages)
 {
-    if (!AreWeMember()) {
+    if (!AreWeMember() || params.size == 1) {
         return;
     }
 
@@ -659,7 +658,7 @@ std::optional<CInv> CDKGSession::ReceiveMessage(const CDKGComplaint& qc)
 
 void CDKGSession::VerifyAndJustify(CDKGPendingMessages& pendingMessages)
 {
-    if (!AreWeMember()) {
+    if (!AreWeMember() || params.size == 1) {
         return;
     }
 
@@ -899,7 +898,7 @@ std::optional<CInv> CDKGSession::ReceiveMessage(const CDKGJustification& qj)
 
 void CDKGSession::VerifyAndCommit(CDKGPendingMessages& pendingMessages)
 {
-    if (!AreWeMember()) {
+    if (!AreWeMember() || params.size == 1) {
         return;
     }
 
@@ -1354,6 +1353,7 @@ CFinalCommitment CDKGSession::FinalizeSingleCommitment()
         */
 //        fqc.membersSig = members[i]->pdmnState->.Sign(commitmentHash);
  //       fqc.membersSig = CBLSSignature::AggregateSecure(aggSigs, aggPks, commitmentHash);
+        LogPrintf("fqc signers commitmentHash: %s\n", commitmentHash.ToString());
         fqc.membersSig = m_mn_activeman->Sign(commitmentHash);
     }
 
