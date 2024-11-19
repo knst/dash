@@ -1511,6 +1511,34 @@ std::optional<CSigShare> CSigSharesManager::CreateSigShare(const CQuorumCPtr& qu
         return std::nullopt;
     }
 
+    if (quorum->params.size == 1) {
+        int memberIdx = quorum->GetMemberIndex(activeMasterNodeProTxHash);
+        if (memberIdx == -1) {
+            // this should really not happen (IsValidMember gave true)
+            return std::nullopt;
+        }
+
+        CSigShare sigShare(quorum->params.type, quorum->qc->quorumHash, id, msgHash, uint16_t(memberIdx), {});
+        uint256 signHash = sigShare.buildSignHash();
+
+        sigShare.sigShare.Set(m_mn_activeman->Sign(signHash), bls::bls_legacy_scheme.load());
+
+//        sigShare.sigShare.Set(skShare.Sign(signHash), bls::bls_legacy_scheme.load());
+        if (!sigShare.sigShare.Get().IsValid()) {
+            LogPrintf("CSigSharesManager::%s -- failed to sign sigShare. signHash=%s, id=%s, msgHash=%s, time=%s\n", __func__,
+                      signHash.ToString(), sigShare.getId().ToString(), sigShare.getMsgHash().ToString(), t.count());
+            return std::nullopt;
+        }
+
+        sigShare.UpdateKey();
+
+        LogPrint(BCLog::LLMQ_SIGS, "CSigSharesManager::%s -- created sigShare. signHash=%s, id=%s, msgHash=%s, llmqType=%d, quorum=%s, time=%s\n", __func__,
+                  signHash.ToString(), sigShare.getId().ToString(), sigShare.getMsgHash().ToString(), ToUnderlying(quorum->params.type), quorum->qc->quorumHash.ToString(), t.count());
+
+        return sigShare;
+
+
+    }
     const CBLSSecretKey& skShare = quorum->GetSkShare();
     if (!skShare.IsValid()) {
         LogPrint(BCLog::LLMQ_SIGS, "CSigSharesManager::%s -- we don't have our skShare for quorum %s\n", __func__, quorum->qc->quorumHash.ToString());
