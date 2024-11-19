@@ -63,14 +63,13 @@ class LLMQSigningTest(DashTestFramework):
         wait_for_sigs(False, False, False, 1)
 
         # Sign first share without any optional parameter, should not result in recovered sig
-        self.mninfo[0].node.quorum("sign", 111, id, msgHash)
-        assert_sigs_nochange(False, False, False, 3)
         # Sign second share and test optional quorumHash parameter, should not result in recovered sig
         # 1. Providing an invalid quorum hash should fail and cause no changes for sigs
         assert not self.mninfo[1].node.quorum("sign", 111, id, msgHash, msgHash)
         assert_sigs_nochange(False, False, False, 3)
         # 2. Providing a valid quorum hash should succeed and cause no changes for sigss
         quorumHash = self.mninfo[1].node.quorum("selectquorum", 111, id)["quorumHash"]
+        self.mninfo[0].node.quorum("sign", 111, id, msgHash)
         sign1 = self.mninfo[0].node.quorum("sign", 111, id, msgHash, quorumHash) 
         sign2 = self.mninfo[1].node.quorum("sign", 111, id, msgHash, quorumHash) 
         sign3 = self.mninfo[2].node.quorum("sign", 111, id, msgHash, quorumHash) 
