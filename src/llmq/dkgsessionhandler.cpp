@@ -570,6 +570,7 @@ void CDKGSessionHandler::HandleDKGRound()
         if (auto inv_opt = quorumBlockProcessor.AddMineableCommitment(finalCommitment); inv_opt.has_value()) {
             Assert(m_peerman.get())->RelayInv(inv_opt.value());
         }
+        return;
     }
 
     const auto tip_mn_list = m_dmnman.GetListAtChainTip();
