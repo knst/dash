@@ -1333,6 +1333,9 @@ CFinalCommitment CDKGSession::FinalizeSingleCommitment()
     fqc.quorumPublicKey = sk1.GetPublicKey(); //first.quorumPublicKey;
     fqc.quorumVvecHash = {}; // first.quorumVvecHash;
 
+    { // re-write quorumSig and quorumPublicKey temporary, that's a workaround!
+        fqc.quorumPublicKey = m_mn_activeman->GetPubKey();
+    }
     const bool isQuorumRotationEnabled{false};
 //    fqc.nVersion = CFinalCommitment::GetVersion(isQuorumRotationEnabled, true);
     fqc.nVersion = CFinalCommitment::GetVersion(isQuorumRotationEnabled, DeploymentActiveAfter(m_quorum_base_block_index, Params().GetConsensus(), Consensus::DEPLOYMENT_V19));
@@ -1355,6 +1358,9 @@ CFinalCommitment CDKGSession::FinalizeSingleCommitment()
 //        fqc.membersSig = members[i]->pdmnState->.Sign(commitmentHash);
  //       fqc.membersSig = CBLSSignature::AggregateSecure(aggSigs, aggPks, commitmentHash);
         fqc.membersSig = m_mn_activeman->Sign(commitmentHash);
+    }
+    { // re-write quorumSig and quorumPublicKey temporary, that's a workaround!
+        fqc.quorumSig = fqc.membersSig;
     }
 
     std::vector<CBLSSignature> aggSigs;
