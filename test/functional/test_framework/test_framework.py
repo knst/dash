@@ -1799,7 +1799,7 @@ class DashTestFramework(BitcoinTestFramework):
         def check_dkg_session():
             member_count = 0
             for mn in mninfos:
-                self.log.info(f'dkgstatus: {mn.node.quorum("dkgstatus")}')
+#                self.log.info(f'dkgstatus: {mn.node.quorum("dkgstatus")}')
                 s = mn.node.quorum("dkgstatus")["session"]
                 for qs in s:
                     if qs["llmqType"] != llmq_type_name:
@@ -1822,21 +1822,21 @@ class DashTestFramework(BitcoinTestFramework):
 
     def wait_for_quorum_commitment(self, quorum_hash, nodes, llmq_type=100, timeout=15):
         def check_dkg_comitments():
-            for node in nodes:
-                s = node.quorum("dkgstatus")
-                self.log.info(f'dkgstatus: {s}')
-                if "minableCommitments" in s:
-                    self.log.info("no minable!")
-                else:
-                    self.log.info(f'commitment: {s["minableCommitments"]}')
-
-            self.log.info(f'expecting: {llmq_type} {quorum_hash}')
+#            for node in nodes:
+#                s = node.quorum("dkgstatus")
+#                self.log.info(f'dkgstatus: {s}')
+#                if "minableCommitments" in s:
+#                    self.log.info("no minable!")
+#                else:
+#                    self.log.info(f'commitment: {s["minableCommitments"]}')
+#
+#            self.log.info(f'expecting: {llmq_type} {quorum_hash}')
             for node in nodes:
                 s = node.quorum("dkgstatus")
                 if "minableCommitments" not in s:
                     return False
                 commits = s["minableCommitments"]
-                self.log.info(f'minable: {s["minableCommitments"]}')
+#                self.log.info(f'minable: {s["minableCommitments"]}')
                 c_ok = False
                 for c in commits:
                     if c["llmqType"] != llmq_type:
@@ -1853,7 +1853,7 @@ class DashTestFramework(BitcoinTestFramework):
 
     def wait_for_quorum_list(self, quorum_hash, nodes, timeout=15, sleep=2, llmq_type_name="llmq_test"):
         def wait_func():
-            self.log.info("quorums: " + str(self.nodes[0].quorum("list")))
+#            self.log.info("quorums: " + str(self.nodes[0].quorum("list")))
             if quorum_hash in self.nodes[0].quorum("list")[llmq_type_name]:
                 return True
             self.bump_mocktime(sleep, nodes=nodes)
@@ -1863,7 +1863,7 @@ class DashTestFramework(BitcoinTestFramework):
 
     def wait_for_quorums_list(self, quorum_hash_0, quorum_hash_1, nodes, llmq_type_name="llmq_test",  timeout=15, sleep=2):
         def wait_func():
-            self.log.info("h("+str(self.nodes[0].getblockcount())+") quorums: " + str(self.nodes[0].quorum("list")))
+#            self.log.info("h("+str(self.nodes[0].getblockcount())+") quorums: " + str(self.nodes[0].quorum("list")))
             if quorum_hash_0 in self.nodes[0].quorum("list")[llmq_type_name]:
                 if quorum_hash_1 in self.nodes[0].quorum("list")[llmq_type_name]:
                     return True
