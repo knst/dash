@@ -1539,9 +1539,11 @@ std::optional<CSigShare> CSigSharesManager::CreateSigShare(const CQuorumCPtr& qu
         uint256 signHash = sigShare.buildSignHash();
 
         // TODO:: This one should be SIGN by QUORUM key, not by OPERATOR key
-        sigShare.sigShare.Set(m_mn_activeman->Sign(signHash), bls::bls_legacy_scheme.load());
+//        sigShare.sigShare.Set(m_mn_activeman->Sign(signHash), bls::bls_legacy_scheme.load());
 
-//        sigShare.sigShare.Set(skShare.Sign(signHash), bls::bls_legacy_scheme.load());
+
+        const CBLSSecretKey& skShare = quorum->GetSkShare();
+        sigShare.sigShare.Set(skShare.Sign(signHash), bls::bls_legacy_scheme.load());
         if (!sigShare.sigShare.Get().IsValid()) {
             LogPrintf("CSigSharesManager::%s -- failed to sign sigShare. signHash=%s, id=%s, msgHash=%s, time=%s\n", __func__,
                       signHash.ToString(), sigShare.getId().ToString(), sigShare.getMsgHash().ToString(), t.count());

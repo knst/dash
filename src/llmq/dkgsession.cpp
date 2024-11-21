@@ -1333,7 +1333,9 @@ CFinalCommitment CDKGSession::FinalizeSingleCommitment()
     fqc.quorumPublicKey = sk1.GetPublicKey(); //first.quorumPublicKey;
     fqc.quorumVvecHash = {}; // first.quorumVvecHash;
 
-    { // re-write quorumSig and quorumPublicKey temporary, that's a workaround!
+    //dkgManager.WriteVerifiedSkContribution(params.type, m_quorum_base_block_index, members[memberIdx]->dmn->proTxHash, skContributions[i]);
+    dkgManager.WriteVerifiedSkContribution(params.type, m_quorum_base_block_index, members[0]->dmn->proTxHash, sk1);
+    if (0) { // re-write quorumSig and quorumPublicKey temporary, that's a workaround!
         fqc.quorumPublicKey = m_mn_activeman->GetPubKey();
     }
     const bool isQuorumRotationEnabled{false};
@@ -1359,7 +1361,7 @@ CFinalCommitment CDKGSession::FinalizeSingleCommitment()
  //       fqc.membersSig = CBLSSignature::AggregateSecure(aggSigs, aggPks, commitmentHash);
         fqc.membersSig = m_mn_activeman->Sign(commitmentHash);
     }
-    { // re-write quorumSig and quorumPublicKey temporary, that's a workaround!
+    if (0) { // re-write quorumSig and quorumPublicKey temporary, that's a workaround!
         fqc.quorumSig = fqc.membersSig;
     }
 
