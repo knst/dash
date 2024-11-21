@@ -18,7 +18,7 @@ from test_framework.util import assert_equal, assert_raises_rpc_error, force_fin
 
 class LLMQSigningTest(DashTestFramework):
     def set_test_params(self):
-        self.set_dash_test_params(3, 2)
+        self.set_dash_test_params(4, 3)
 
     def add_options(self, parser):
         parser.add_argument("--spork21", dest="spork21", default=False, action="store_true",
@@ -31,7 +31,7 @@ class LLMQSigningTest(DashTestFramework):
             self.nodes[0].sporkupdate("SPORK_21_QUORUM_ALL_CONNECTED", 0)
         self.wait_for_sporks_same()
 
-        self.mine_single_node_quorum()
+        self.mine_quorum()
 
         if self.options.spork21:
             assert self.mninfo[0].node.getconnectioncount() == self.llmq_size
@@ -97,7 +97,7 @@ class LLMQSigningTest(DashTestFramework):
         assert_raises_rpc_error(-8, "quorum not found", node.quorum, "verify", 111, id, msgHash, recsig["sig"], hash_bad)
 
         # Mine one more quorum, so that we have 2 active ones, nothing should change
-        self.mine_single_node_quorum()
+        self.mine_quorum()
         assert_sigs_nochange(True, False, True, 3)
 
         # Create a recovered sig for the oldest quorum i.e. the active quorum which will be moved
@@ -116,7 +116,7 @@ class LLMQSigningTest(DashTestFramework):
         for mn in self.mninfo:
             mn.node.quorum("sign", 111, id, msgHash)
         # And mine a quorum to move the quorum which signed out of the active set
-        self.mine_single_node_quorum()
+        self.mine_quorum()
         # Verify the recovered sig. This triggers the "signHeight + dkgInterval" verification
         recsig = node.quorum("getrecsig", 111, id, msgHash)
         assert node.quorum("verify", 111, id, msgHash, recsig["sig"], "", node.getblockcount())
@@ -124,8 +124,8 @@ class LLMQSigningTest(DashTestFramework):
         recsig_time = self.mocktime
 
         # Mine 2 more quorums, so that the one used for the the recovered sig should become inactive, nothing should change
-        self.mine_single_node_quorum()
-        self.mine_single_node_quorum()
+        self.mine_quorum()
+        self.mine_quorum()
         assert_sigs_nochange(True, False, True, 3)
 
         # fast forward until 0.5 days before cleanup is expected, recovered sig should still be valid
