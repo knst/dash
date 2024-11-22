@@ -1822,7 +1822,6 @@ RPCHelpMan getblockchaininfo()
                          Consensus::DEPLOYMENT_HEIGHTINCB,
                          Consensus::DEPLOYMENT_DERSIG,
                          Consensus::DEPLOYMENT_CLTV,
-                         Consensus::DEPLOYMENT_BIP147,
                          Consensus::DEPLOYMENT_CSV,
                          Consensus::DEPLOYMENT_DIP0001,
                          Consensus::DEPLOYMENT_DIP0003,

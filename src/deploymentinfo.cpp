@@ -27,8 +27,6 @@ std::string DeploymentName(Consensus::BuriedDeployment dep)
         return "bip65";
     case Consensus::DEPLOYMENT_DERSIG:
         return "bip66";
-    case Consensus::DEPLOYMENT_BIP147:
-        return "bip147";
     case Consensus::DEPLOYMENT_CSV:
         return "csv";
     case Consensus::DEPLOYMENT_DIP0001:

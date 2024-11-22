@@ -23,7 +23,6 @@ enum BuriedDeployment : int16_t {
     DEPLOYMENT_HEIGHTINCB = std::numeric_limits<int16_t>::min(),
     DEPLOYMENT_DERSIG,
     DEPLOYMENT_CLTV,
-    DEPLOYMENT_BIP147,
     DEPLOYMENT_CSV,
     DEPLOYMENT_DIP0001,
     DEPLOYMENT_DIP0003,
@@ -120,8 +119,6 @@ struct Params {
     int BIP65Height;
     /** Block height at which BIP66 becomes active */
     int BIP66Height;
-    // Deployment of BIP147 (NULLDUMMY)
-    int BIP147Height;
     /** Block height at which CSV (BIP68, BIP112 and BIP113) becomes active */
     int CSVHeight;
     /** Block height at which DIP0001 becomes active */
@@ -192,8 +189,6 @@ struct Params {
             return BIP66Height;
         case DEPLOYMENT_CLTV:
             return BIP65Height;
-        case DEPLOYMENT_BIP147:
-            return BIP147Height;
         case DEPLOYMENT_CSV:
             return CSVHeight;
         case DEPLOYMENT_DIP0001:
