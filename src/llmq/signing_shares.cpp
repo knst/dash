@@ -1543,6 +1543,7 @@ std::optional<CSigShare> CSigSharesManager::CreateSigShare(const CQuorumCPtr& qu
 
 
         const CBLSSecretKey& skShare = quorum->GetSkShare();
+        LogPrintf("skshare: %s\n", skShare.ToString());
         sigShare.sigShare.Set(skShare.Sign(signHash), bls::bls_legacy_scheme.load());
         if (!sigShare.sigShare.Get().IsValid()) {
             LogPrintf("CSigSharesManager::%s -- failed to sign sigShare. signHash=%s, id=%s, msgHash=%s, time=%s\n", __func__,

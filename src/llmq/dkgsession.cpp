@@ -1331,6 +1331,7 @@ CFinalCommitment CDKGSession::FinalizeSingleCommitment()
     LogPrintf("fqc signers %d value %d\n", fqc.signers.size(), fqc.signers[0]);
     fqc.validMembers = {true}; // TODO - that's me!
     fqc.quorumPublicKey = sk1.GetPublicKey(); //first.quorumPublicKey;
+    LogPrintf("quorum public key: %s private key: %s\n", fqc.quorumPublicKey.ToString(), sk1.ToString());
     fqc.quorumVvecHash = {}; // first.quorumVvecHash;
 
     //dkgManager.WriteVerifiedSkContribution(params.type, m_quorum_base_block_index, members[memberIdx]->dmn->proTxHash, skContributions[i]);
