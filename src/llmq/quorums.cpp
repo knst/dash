@@ -187,22 +187,25 @@ void CQuorum::WriteContributions(CDBWrapper& db) const
 bool CQuorum::ReadContributions(const CDBWrapper& db)
 {
     uint256 dbKey = MakeQuorumKey(*this);
-    CDataStream s(SER_DISK, CLIENT_VERSION);
+    if (members.size() != 1) {
+        CDataStream s(SER_DISK, CLIENT_VERSION);
 
-    if (!db.ReadDataStream(std::make_pair(DB_QUORUM_QUORUM_VVEC, dbKey), s)) {
-        return false;
+        if (!db.ReadDataStream(std::make_pair(DB_QUORUM_QUORUM_VVEC, dbKey), s)) {
+            return false;
+        }
+
+        size_t vvec_size = ReadCompactSize(s);
+        CBLSPublicKey pubkey;
+        std::vector<CBLSPublicKey> qv;
+        for ([[maybe_unused]] size_t _ : irange::range(vvec_size)) {
+            s >> CBLSPublicKeyVersionWrapper(pubkey, false);
+            qv.emplace_back(pubkey);
+        }
+
+        LOCK(cs_vvec_shShare);
+        quorumVvec = std::make_shared<std::vector<CBLSPublicKey>>(std::move(qv));
     }
 
-    size_t vvec_size = ReadCompactSize(s);
-    CBLSPublicKey pubkey;
-    std::vector<CBLSPublicKey> qv;
-    for ([[maybe_unused]] size_t _ : irange::range(vvec_size)) {
-        s >> CBLSPublicKeyVersionWrapper(pubkey, false);
-        qv.emplace_back(pubkey);
-    }
-
-    LOCK(cs_vvec_shShare);
-    quorumVvec = std::make_shared<std::vector<CBLSPublicKey>>(std::move(qv));
     // We ignore the return value here as it is ok if this fails. If it fails, it usually means that we are not a
     // member of the quorum but observed the whole DKG process to have the quorum verification vector.
     db.Read(std::make_pair(DB_QUORUM_SK_SHARE, dbKey), skShare);
