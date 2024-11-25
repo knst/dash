@@ -651,13 +651,17 @@ std::optional<CInv> CQuorumBlockProcessor::AddMineableCommitment(const CFinalCom
         LOCK(minableCommitmentsCs);
 
         auto k = std::make_pair(fqc.llmqType, fqc.quorumHash);
+        LogPrintf("key: %d hash: %s\n", ToUnderlying(fqc.llmqType), fqc.quorumHash.ToString());
         auto [itInserted, successfullyInserted] = minableCommitmentsByQuorum.try_emplace(k, commitmentHash);
         if (successfullyInserted) {
+            LogPrintf("successfully insert\n");
             minableCommitments.try_emplace(commitmentHash, fqc);
             return true;
         } else {
+            LogPrintf("already exists\n");
             auto& insertedQuorumHash = itInserted->second;
             const auto& oldFqc = minableCommitments.at(insertedQuorumHash);
+            LogPrintf("signers: %d %d\n", fqc.CountSigners(), oldFqc.CountSigners());
             if (fqc.CountSigners() > oldFqc.CountSigners()) {
                 // new commitment has more signers, so override the known one
                 insertedQuorumHash = commitmentHash;
