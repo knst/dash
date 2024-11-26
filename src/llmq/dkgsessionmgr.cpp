@@ -391,6 +391,18 @@ bool CDKGSessionManager::GetVerifiedContributions(Consensus::LLMQType llmqType, 
     vvecsRet.reserve(members.size());
     skContributionsRet.reserve(members.size());
 
+    if (members.size() == 1) {
+        CBLSSecretKey skContribution;
+        const uint256& proTxHash = members[0]->proTxHash;
+        db->Read(std::make_tuple(DB_SKCONTRIB, llmqType, pQuorumBaseBlockIndex->GetBlockHash(), proTxHash), skContribution);
+
+        memberIndexesRet.emplace_back(0);
+//        vvecsRet.emplace_back(it->second.vvec);
+        LogPrintf("emplace contribution: %s\n", skContribution.ToString());
+        skContributionsRet.emplace_back(skContribution);
+        return true;
+
+    }
     // NOTE: the `cs_main` should not be locked under scope of `contributionsCacheCs`
     LOCK(contributionsCacheCs);
     for (const auto i : irange::range(members.size())) {
@@ -401,6 +413,7 @@ bool CDKGSessionManager::GetVerifiedContributions(Consensus::LLMQType llmqType, 
             if (it == contributionsCache.end()) {
                 CDataStream s(SER_DISK, CLIENT_VERSION);
                 if (!db->ReadDataStream(std::make_tuple(DB_VVEC, llmqType, pQuorumBaseBlockIndex->GetBlockHash(), proTxHash), s)) {
+                    LogPrintf("build quorum failed to read vvec contribution - %s\n", pQuorumBaseBlockIndex->GetBlockHash().ToString());
                     return false;
                 }
                 size_t vvec_size = ReadCompactSize(s);

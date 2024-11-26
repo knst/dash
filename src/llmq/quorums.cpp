@@ -104,6 +104,8 @@ bool CQuorum::SetVerificationVector(const std::vector<CBLSPublicKey>& quorumVecI
 bool CQuorum::SetSecretKeyShare(const CBLSSecretKey& secretKeyShare, const CActiveMasternodeManager& mn_activeman)
 {
     if (!secretKeyShare.IsValid() || (secretKeyShare.GetPublicKey() != GetPubKeyShare(GetMemberIndex(mn_activeman.GetProTxHash())))) {
+        LogPrintf("secret key: %s\n", secretKeyShare.ToString());
+//        LogPrintf("set secret key share failed %s %s\n",secretKeyShare.GetPublicKey().ToString(), GetPubKeyShare(GetMemberIndex(mn_activeman.GetProTxHash())).ToString());
         return false;
     }
     LOCK(cs_vvec_shShare);
@@ -187,7 +189,8 @@ void CQuorum::WriteContributions(CDBWrapper& db) const
 bool CQuorum::ReadContributions(const CDBWrapper& db)
 {
     uint256 dbKey = MakeQuorumKey(*this);
-    if (members.size() != 1) {
+//    if (members.size() != 1)
+    {
         CDataStream s(SER_DISK, CLIENT_VERSION);
 
         if (!db.ReadDataStream(std::make_pair(DB_QUORUM_QUORUM_VVEC, dbKey), s)) {
@@ -443,10 +446,22 @@ bool CQuorumManager::BuildQuorumContributions(const CFinalCommitmentPtr& fqc, co
     std::vector<uint16_t> memberIndexes;
     std::vector<BLSVerificationVectorPtr> vvecs;
     std::vector<CBLSSecretKey> skContributions;
+    LogPrintf("build quorum contribution -  %s\n", quorum->m_quorum_base_block_index->GetBlockHash().ToString());
     if (!dkgManager.GetVerifiedContributions((Consensus::LLMQType)fqc->llmqType, quorum->m_quorum_base_block_index, fqc->validMembers, memberIndexes, vvecs, skContributions)) {
         return false;
     }
 
+    if (quorum->members.size() == 1) {
+
+        LogPrintf("CQorum manager contributions: %d\n", skContributions.size());
+        if (skContributions.size() == 0) {
+            LogPrintf("CQorum empty skContribution");
+            return false;
+        }
+        bool ret = quorum->SetSecretKeyShare(skContributions[0], *m_mn_activeman);
+        LogPrintf("CQorum manager set secret share %d\n", ret);
+        return ret;
+    }
     cxxtimer::Timer t2(true);
     quorum->SetVerificationVector(blsWorker.BuildQuorumVerificationVector(vvecs));
     if (!quorum->HasVerificationVector()) {
