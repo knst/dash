@@ -1756,8 +1756,6 @@ class DashTestFramework(BitcoinTestFramework):
                     if qstatus["phase"] != phase:
                         return False
                     if check_received_messages is not None:
-                        print(f"received messages: {qstatus[check_received_messages]} / {check_received_messages_count}")
-                        print(f"qstatus: {qstatus}")
                         if qstatus[check_received_messages] < check_received_messages_count:
                             return False
                     member_count += 1
@@ -1789,7 +1787,7 @@ class DashTestFramework(BitcoinTestFramework):
 
     def wait_for_quorum_list(self, quorum_hash, nodes, timeout=15, sleep=2, llmq_type_name="llmq_test"):
         def wait_func():
-#            self.log.info("quorums: " + str(self.nodes[0].quorum("list")))
+            self.log.info("quorums: " + str(self.nodes[0].quorum("list")))
             if quorum_hash in self.nodes[0].quorum("list")[llmq_type_name]:
                 return True
             self.bump_mocktime(sleep, nodes=nodes)
@@ -1799,7 +1797,7 @@ class DashTestFramework(BitcoinTestFramework):
 
     def wait_for_quorums_list(self, quorum_hash_0, quorum_hash_1, nodes, llmq_type_name="llmq_test",  timeout=15, sleep=2):
         def wait_func():
-#            self.log.info("h("+str(self.nodes[0].getblockcount())+") quorums: " + str(self.nodes[0].quorum("list")))
+            self.log.info("h("+str(self.nodes[0].getblockcount())+") quorums: " + str(self.nodes[0].quorum("list")))
             if quorum_hash_0 in self.nodes[0].quorum("list")[llmq_type_name]:
                 if quorum_hash_1 in self.nodes[0].quorum("list")[llmq_type_name]:
                     return True
@@ -1846,8 +1844,7 @@ class DashTestFramework(BitcoinTestFramework):
         self.log.info("Expected quorum_hash:"+str(q))
         self.log.info("Waiting for phase 1 (init)")
         self.wait_for_quorum_phase(q, 1, expected_members, None, 0, mninfos_online, llmq_type_name=llmq_type_name)
-        if expected_connections > 0:
-            self.wait_for_quorum_connections(q, expected_connections, mninfos_online, wait_proc=lambda: self.bump_mocktime(1, nodes=nodes), llmq_type_name=llmq_type_name)
+        self.wait_for_quorum_connections(q, expected_connections, mninfos_online, wait_proc=lambda: self.bump_mocktime(1, nodes=nodes), llmq_type_name=llmq_type_name)
         if spork23_active:
             self.wait_for_masternode_probes(q, mninfos_online, wait_proc=lambda: self.bump_mocktime(1, nodes=nodes))
 

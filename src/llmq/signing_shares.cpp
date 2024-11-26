@@ -808,7 +808,6 @@ void CSigSharesManager::TryRecoverSig(const CQuorumCPtr& quorum, const uint256& 
     // now recover it
     cxxtimer::Timer t(true);
     CBLSSignature recoveredSig;
-    LogPrintf("recover signature shares: %d ids: %d\n", sigSharesForRecovery.size(), idsForRecovery.size());
     if (!recoveredSig.Recover(sigSharesForRecovery, idsForRecovery)) {
         LogPrint(BCLog::LLMQ_SIGS, "CSigSharesManager::%s -- failed to recover signature. id=%s, msgHash=%s, time=%d\n", __func__,
                   id.ToString(), msgHash.ToString(), t.count());
@@ -1548,10 +1547,10 @@ std::optional<CSigShare> CSigSharesManager::CreateSigShare(const CQuorumCPtr& qu
         CSigShare sigShare(quorum->params.type, quorum->qc->quorumHash, id, msgHash, uint16_t(memberIdx), {});
         uint256 signHash = sigShare.buildSignHash();
 
-        // TODO:: This one should be SIGN by QUORUM key, not by OPERATOR key
+        // TODO: This one should be SIGN by QUORUM key, not by OPERATOR key
+        // see TODO in CDKGSession::FinalizeSingleCommitment for details
         sigShare.sigShare.Set(m_mn_activeman->Sign(signHash), bls::bls_legacy_scheme.load());
 
-//        sigShare.sigShare.Set(skShare.Sign(signHash), bls::bls_legacy_scheme.load());
         if (!sigShare.sigShare.Get().IsValid()) {
             LogPrintf("CSigSharesManager::%s -- failed to sign sigShare. signHash=%s, id=%s, msgHash=%s, time=%s\n", __func__,
                       signHash.ToString(), sigShare.getId().ToString(), sigShare.getMsgHash().ToString(), t.count());
