@@ -18,20 +18,18 @@ from test_framework.util import assert_equal, assert_raises_rpc_error, force_fin
 
 class LLMQSigningTest(DashTestFramework):
     def set_test_params(self):
-        self.set_dash_test_params(5, 4)
-
-    def add_options(self, parser):
-        parser.add_argument("--spork21", dest="spork21", default=False, action="store_true",
-                            help="Test with spork21 enabled")
+        self.set_dash_test_params(1, 0, [["-llmqtestplatform=llmq_1_100"]] * 1, evo_count=1)
 
     def run_test(self):
 
         self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
-        if self.options.spork21:
-            self.nodes[0].sporkupdate("SPORK_21_QUORUM_ALL_CONNECTED", 0)
         self.wait_for_sporks_same()
 
-        self.mine_quorum()
+        evo_info = self.dynamically_add_masternode(evo=True)
+        self.log.info(f"evo info: {evo_info}")
+
+        self.log.info(f"quorums: {self.nodes[0].quorum('list')}")
+#        self.mine_quorum()
 
         id = "0000000000000000000000000000000000000000000000000000000000000001"
         msgHash = "0000000000000000000000000000000000000000000000000000000000000002"
