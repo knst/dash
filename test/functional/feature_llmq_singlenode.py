@@ -20,6 +20,14 @@ class LLMQSigningTest(DashTestFramework):
     def set_test_params(self):
         self.set_dash_test_params(1, 0, [["-llmqtestplatform=llmq_1_100"]] * 1, evo_count=2)
 
+
+    def mine_single_node_quorum(self):
+        node = self.nodes[0]
+        quorums = node.quorum('list')['llmq_1_100']
+        while node.quorum('list')['llmq_1_100'] == quorums:
+            self.bump_mocktime(1)
+            self.generate(node, 2)
+
     def run_test(self):
 
         self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
@@ -109,14 +117,13 @@ class LLMQSigningTest(DashTestFramework):
         assert_raises_rpc_error(-8, "quorum not found", node.quorum, "verify", 111, id, msgHash, recsig["sig"], hash_bad)
 
         # Mine one more quorum, so that we have 2 active ones, nothing should change
-        self.log.info(f"quorums: {node.quorum('list')}")
-        self.mine_quorum()
+        self.mine_single_node_quorum()
         assert_sigs_nochange(True, False, True, 3)
 
         # Create a recovered sig for the oldest quorum i.e. the active quorum which will be moved
         # out of the active set when a new quorum appears
         request_id = 2
-        oldest_quorum_hash = node.quorum("list")["llmq_test_instantsend"][-1]
+        oldest_quorum_hash = node.quorum("list")["llmq_1_100"][-1]
         # Search for a request id which selects the last active quorum
         while True:
             selected_hash = node.quorum('selectquorum', 111, uint256_to_string(request_id))["quorumHash"]
@@ -137,8 +144,8 @@ class LLMQSigningTest(DashTestFramework):
         recsig_time = self.mocktime
 
         # Mine 2 more quorums, so that the one used for the the recovered sig should become inactive, nothing should change
-        self.mine_quorum()
-        self.mine_quorum()
+        self.mine_single_node_quorum()
+        self.mine_single_node_quorum()
         assert_sigs_nochange(True, False, True, 3)
 
         # fast forward until 0.5 days before cleanup is expected, recovered sig should still be valid
