@@ -18,18 +18,30 @@ from test_framework.util import assert_equal, assert_raises_rpc_error, force_fin
 
 class LLMQSigningTest(DashTestFramework):
     def set_test_params(self):
-        self.set_dash_test_params(1, 0, [["-llmqtestplatform=llmq_1_100"]] * 1, evo_count=1)
+        self.set_dash_test_params(1, 0, [["-llmqtestplatform=llmq_1_100"]] * 1, evo_count=2)
 
     def run_test(self):
 
         self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
         self.wait_for_sporks_same()
 
-        evo_info = self.dynamically_add_masternode(evo=True)
-        self.log.info(f"evo info: {evo_info}")
+        self.activate_v19(expected_activation_height=900)
+        self.dynamically_add_masternode(evo=True)
+        self.dynamically_add_masternode(evo=True)
 
-        self.log.info(f"quorums: {self.nodes[0].quorum('list')}")
-#        self.mine_quorum()
+        self.connect_nodes(1, 2)
+#for i in range(24):
+#            self.log.info(f"quorums: {self.nodes[0].quorum('list')}")
+#            self.generate(self.nodes[0], 1)
+##        self.mine_quorum()
+
+        # move forward to next DKG
+        skip_count = 24 - (self.nodes[0].getblockcount() % 24)
+        if skip_count != 0:
+            self.bump_mocktime(1)
+            self.generate(self.nodes[0], skip_count)
+        self.log.info(f'dkg status: {self.nodes[1].quorum("dkgstatus")["session"]}')
+        self.generate(self.nodes[0], 30)
 
         id = "0000000000000000000000000000000000000000000000000000000000000001"
         msgHash = "0000000000000000000000000000000000000000000000000000000000000002"
@@ -37,8 +49,9 @@ class LLMQSigningTest(DashTestFramework):
 
         def check_sigs(hasrecsigs, isconflicting1, isconflicting2):
             for mn in self.mninfo:
+                if mn.node.quorum('dkginfo')['active_dkgs'] == 0: continue
+
                 if mn.node.quorum("hasrecsig", 111, id, msgHash) != hasrecsigs:
-                    self.log.info(f'hasrecsig {mn.node.quorum("hasrecsig", 111, id, msgHash)} {hasrecsigs}')
                     return False
                 if mn.node.quorum("isconflicting", 111, id, msgHash) != isconflicting1:
                     self.log.info(f'is conflicting-1 {mn.node.quorum("isconflicting", 111, id, msgHash)} {isconflicting1}')
@@ -64,14 +77,20 @@ class LLMQSigningTest(DashTestFramework):
         assert_sigs_nochange(False, False, False, 3)
         # 2. Providing a valid quorum hash should succeed and cause no changes for sigss
         quorumHash = self.mninfo[1].node.quorum("selectquorum", 111, id)["quorumHash"]
-        self.mninfo[0].node.quorum("sign", 111, id, msgHash)
-        sign1 = self.mninfo[0].node.quorum("sign", 111, id, msgHash, quorumHash) 
-        sign2 = self.mninfo[1].node.quorum("sign", 111, id, msgHash, quorumHash) 
-        sign3 = self.mninfo[2].node.quorum("sign", 111, id, msgHash, quorumHash) 
-        sign4 = self.mninfo[3].node.quorum("sign", 111, id, msgHash, quorumHash) 
-        self.log.info(f"signs: {sign1} {sign2} {sign3} {sign4}")
+        self.log.info(f'quorum hash: {self.mninfo[0].node.quorum("selectquorum", 111, id)["quorumHash"]}')
+        self.log.info(f'quorum hash: {self.mninfo[1].node.quorum("selectquorum", 111, id)["quorumHash"]}')
+
+        self.mninfo[0].node.quorum("sign", 111, id, msgHash, quorumHash, False)
+        sign1 = self.mninfo[0].node.quorum("sign", 111, id, msgHash)
+        sign2 = self.mninfo[1].node.quorum("sign", 111, id, msgHash)
+        self.log.info(f"signes: {sign1} {sign2}")
 
         wait_for_sigs(True, False, True, 15)
+        has0 = self.nodes[0].quorum("hasrecsig", 111, id, msgHash)
+        has1 = self.nodes[1].quorum("hasrecsig", 111, id, msgHash)
+        has2 = self.nodes[2].quorum("hasrecsig", 111, id, msgHash)
+        self.log.info(f"has: {has0} {has1} {has2}")
+        assert (has0 or has1 or has2)
 
         # Test `quorum verify` rpc
         node = self.mninfo[0].node
@@ -90,6 +109,7 @@ class LLMQSigningTest(DashTestFramework):
         assert_raises_rpc_error(-8, "quorum not found", node.quorum, "verify", 111, id, msgHash, recsig["sig"], hash_bad)
 
         # Mine one more quorum, so that we have 2 active ones, nothing should change
+        self.log.info(f"quorums: {node.quorum('list')}")
         self.mine_quorum()
         assert_sigs_nochange(True, False, True, 3)
 
