@@ -64,6 +64,7 @@ bool CRecoveredSigsDb::HasRecoveredSigForId(Consensus::LLMQType llmqType, const 
         LOCK(cs_cache);
         LogPrintf("has recovered sig - cache? %d %s\n", int(llmqType), id.ToString());
         if (hasSigForIdCache.get(cacheKey, ret)) {
+            LogPrintf("has recovered sig - cache? ret -- %d %s\n", int(llmqType), id.ToString(), ret);
             return ret;
         }
     }
