@@ -62,17 +62,20 @@ bool CRecoveredSigsDb::HasRecoveredSigForId(Consensus::LLMQType llmqType, const 
     bool ret;
     {
         LOCK(cs_cache);
+        LogPrintf("has recovered sig - cache? %d %s\n", int(llmqType), id.ToString());
         if (hasSigForIdCache.get(cacheKey, ret)) {
             return ret;
         }
     }
 
 
+    LogPrintf("has recovered sig? %d %s\n", int(llmqType), id.ToString());
     auto k = std::make_tuple(std::string("rs_r"), llmqType, id);
     ret = db->Exists(k);
 
     LOCK(cs_cache);
     hasSigForIdCache.insert(cacheKey, ret);
+    LogPrintf("has recovered sig? %d %s --- %d\n", int(llmqType), id.ToString(), ret);
     return ret;
 }
 
@@ -151,6 +154,7 @@ void CRecoveredSigsDb::WriteRecoveredSig(const llmq::CRecoveredSig& recSig)
 
     uint32_t curTime = GetTime<std::chrono::seconds>().count();
 
+    LogPrintf("write recovered sig: %s %s %s %s\n", int(recSig.getLlmqType()), recSig.getId().ToString(), recSig.getMsgHash().ToString(), recSig.GetHash().ToString());
     // we put these close to each other to leverage leveldb's key compaction
     // this way, the second key can be used for fast HasRecoveredSig checks while the first key stores the recSig
     auto k1 = std::make_tuple(std::string("rs_r"), recSig.getLlmqType(), recSig.getId());
@@ -172,6 +176,7 @@ void CRecoveredSigsDb::WriteRecoveredSig(const llmq::CRecoveredSig& recSig)
     auto k5 = std::make_tuple(std::string("rs_t"), (uint32_t)htobe32(curTime), recSig.getLlmqType(), recSig.getId());
     batch.Write(k5, (uint8_t)1);
 
+    LogPrintf("write recovered sig - batch is done\n");
     db->WriteBatch(batch);
 
     {
@@ -179,6 +184,7 @@ void CRecoveredSigsDb::WriteRecoveredSig(const llmq::CRecoveredSig& recSig)
         hasSigForIdCache.insert(std::make_pair(recSig.getLlmqType(), recSig.getId()), true);
         hasSigForSessionCache.insert(signHash, true);
         hasSigForHashCache.insert(recSig.GetHash(), true);
+        LogPrintf("write recovered sig - cache is updated\n");
     }
 }
 
