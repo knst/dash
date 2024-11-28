@@ -2347,6 +2347,7 @@ void PeerManagerImpl::RelayRecoveredSig(const uint256& sigHash)
     const CInv inv{MSG_QUORUM_RECOVERED_SIG, sigHash};
     LOCK(m_peer_mutex);
     for (const auto& [_, peer] : m_peer_map) {
+        LogPrintf("Peer %d m_wants_recsigs? %d\n", peer->m_id, peer->m_wants_recsigs);
         if (peer->m_wants_recsigs) {
             PushInv(*peer, inv);
         }
@@ -3962,6 +3963,7 @@ void PeerManagerImpl::ProcessMessage(
     if (msg_type == NetMsgType::QSENDRECSIGS) {
         bool b;
         vRecv >> b;
+        LogPrintf("Peer %d m_wants_recsigs send-recsigs - want it %d\n", peer->m_id, peer->m_wants_recsigs);
         peer->m_wants_recsigs = b;
         return;
     }
