@@ -588,6 +588,7 @@ static RPCHelpMan quorum_verify()
         if (!request.params[5].isNull()) {
             signHeight = ParseInt32V(request.params[5], "signHeight");
         }
+        LogPrintf("latest-quorum: %d id %s msgHash %s\n", (int)llmqType, id.ToString(), msgHash.ToString());
         return VerifyRecoveredSigLatestQuorums(*llmq_params_opt, chainman.ActiveChain(), *llmq_ctx.qman, signHeight, id, msgHash, sig);
     }
 
@@ -598,6 +599,7 @@ static RPCHelpMan quorum_verify()
         throw JSONRPCError(RPC_INVALID_PARAMETER, "quorum not found");
     }
 
+    LogPrintf("quorum: %d hash: %s id %s msgHash %s %s\n", (int)llmqType, quorum->qc->quorumHash.ToString(), id.ToString(), msgHash.ToString(), quorum->qc->quorumPublicKey.ToString());
     uint256 signHash = llmq::BuildSignHash(llmqType, quorum->qc->quorumHash, id, msgHash);
     return sig.VerifyInsecure(quorum->qc->quorumPublicKey, signHash);
 },
