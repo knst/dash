@@ -64,7 +64,7 @@ bool CRecoveredSigsDb::HasRecoveredSigForId(Consensus::LLMQType llmqType, const 
         LOCK(cs_cache);
         LogPrintf("has recovered sig - cache? %d %s\n", int(llmqType), id.ToString());
         if (hasSigForIdCache.get(cacheKey, ret)) {
-            LogPrintf("has recovered sig - cache? ret -- %d %s\n", int(llmqType), id.ToString(), ret);
+            LogPrintf("has recovered sig - cache?  %d %s -- ret %d\n", int(llmqType), id.ToString(), ret);
             return ret;
         }
     }
@@ -182,15 +182,20 @@ void CRecoveredSigsDb::WriteRecoveredSig(const llmq::CRecoveredSig& recSig)
 
     {
         LOCK(cs_cache);
+        bool ret1;
+        bool ret2 = hasSigForIdCache.get(std::make_pair(recSig.getLlmqType(), recSig.getId()), ret1);
+        LogPrintf("write recovered sig - get cache -- inserted %d %d\n", ret1, ret2);
         hasSigForIdCache.insert(std::make_pair(recSig.getLlmqType(), recSig.getId()), true);
+        ret2 = hasSigForIdCache.get(std::make_pair(recSig.getLlmqType(), recSig.getId()), ret1);
+        LogPrintf("write recovered sig - get cache-2 -- inserted %d %d\n", ret1, ret2);
         hasSigForSessionCache.insert(signHash, true);
         hasSigForHashCache.insert(recSig.GetHash(), true);
-        LogPrintf("write recovered sig - cache is updated\n");
     }
 }
 
 void CRecoveredSigsDb::RemoveRecoveredSig(CDBBatch& batch, Consensus::LLMQType llmqType, const uint256& id, bool deleteHashKey, bool deleteTimeKey)
 {
+    LogPrintf("remove recovered sig %d %s\n", int(llmqType), id.ToString());
     CRecoveredSig recSig;
     if (!ReadRecoveredSig(llmqType, id, recSig)) {
         return;
@@ -221,6 +226,7 @@ void CRecoveredSigsDb::RemoveRecoveredSig(CDBBatch& batch, Consensus::LLMQType l
     }
 
     LOCK(cs_cache);
+    LogPrintf("remove recovered sig from cache %d %s\n", int(llmqType), id.ToString());
     hasSigForIdCache.erase(std::make_pair(recSig.getLlmqType(), recSig.getId()));
     hasSigForSessionCache.erase(signHash);
     if (deleteHashKey) {
@@ -766,12 +772,16 @@ bool CSigningManager::AsyncSignIfMember(Consensus::LLMQType llmqType, CSigShares
 
 bool CSigningManager::HasRecoveredSig(Consensus::LLMQType llmqType, const uint256& id, const uint256& msgHash) const
 {
-    return db.HasRecoveredSig(llmqType, id, msgHash);
+    bool ret = db.HasRecoveredSig(llmqType, id, msgHash);
+    LogPrintf("signing manager - has recovered sig %d %s %s - %d\n", (int)llmqType, id.ToString(), msgHash.ToString(), ret);
+    return ret;
 }
 
 bool CSigningManager::HasRecoveredSigForId(Consensus::LLMQType llmqType, const uint256& id) const
 {
-    return db.HasRecoveredSigForId(llmqType, id);
+    bool ret = db.HasRecoveredSigForId(llmqType, id);
+    LogPrintf("signing manager - has recovered sig %d %s - %d\n", (int)llmqType, id.ToString(), ret);
+    return ret;
 }
 
 bool CSigningManager::HasRecoveredSigForSession(const uint256& signHash) const

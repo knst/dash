@@ -1213,6 +1213,7 @@ CQuorumCPtr SelectQuorumForSigning(const Consensus::LLMQParams& llmq_params, con
         }
         int startBlockHeight = signHeight - signOffset;
         if (startBlockHeight > active_chain.Height() || startBlockHeight < 0) {
+            LogPrintf("no quorum-2\n");
             return {};
         }
         pindexStart = active_chain[startBlockHeight];
@@ -1245,6 +1246,7 @@ CQuorumCPtr SelectQuorumForSigning(const Consensus::LLMQParams& llmq_params, con
     } else {
         auto quorums = qman.ScanQuorums(llmq_params.type, pindexStart, poolSize);
         if (quorums.empty()) {
+            LogPrintf("no quorum-1\n");
             return nullptr;
         }
 

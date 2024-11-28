@@ -782,12 +782,14 @@ bool EnsureQuorumConnections(const Consensus::LLMQParams& llmqParams, CConnman& 
     if (isMember) {
         connections = GetQuorumConnections(llmqParams, dmnman, sporkman, pQuorumBaseBlockIndex, myProTxHash, true);
         relayMembers = GetQuorumRelayMembers(llmqParams, dmnman, pQuorumBaseBlockIndex, myProTxHash, true);
+        LogPrintf("connections: %d relay members: %d\n", connections.size(), relayMembers.size());
     } else {
         auto cindexes = CalcDeterministicWatchConnections(llmqParams.type, pQuorumBaseBlockIndex, members.size(), 1);
         for (auto idx : cindexes) {
             connections.emplace(members[idx]->proTxHash);
         }
         relayMembers = connections;
+        LogPrintf("watch-only connections: %d relay members: %d\n", connections.size(), relayMembers.size());
     }
     if (!connections.empty()) {
         if (!connman.HasMasternodeQuorumNodes(llmqParams.type, pQuorumBaseBlockIndex->GetBlockHash()) && LogAcceptCategory(BCLog::LLMQ)) {

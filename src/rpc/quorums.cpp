@@ -628,7 +628,10 @@ static RPCHelpMan quorum_hasrecsig()
     const uint256 id(ParseHashV(request.params[1], "id"));
     const uint256 msgHash(ParseHashV(request.params[2], "msgHash"));
 
-    return llmq_ctx.sigman->HasRecoveredSig(llmqType, id, msgHash);
+    LogPrintf("rpc - has rec sig %d %s %s\n", (int)llmqType, id.ToString(), msgHash.ToString());
+    auto ret = llmq_ctx.sigman->HasRecoveredSig(llmqType, id, msgHash);
+    LogPrintf("rpc - has rec sig %d %s %s -- ret %d\n", (int)llmqType, id.ToString(), msgHash.ToString(), ret);
+    return ret;
 },
     };
 }
