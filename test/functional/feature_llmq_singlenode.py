@@ -56,17 +56,24 @@ class LLMQSigningTest(DashTestFramework):
         msgHashConflict = "0000000000000000000000000000000000000000000000000000000000000003"
 
         def check_sigs(hasrecsigs, isconflicting1, isconflicting2):
-            for mn in self.mninfo:
-                if mn.node.quorum('dkginfo')['active_dkgs'] == 0: continue
+            has_sig = False
+            conflicting_1 = False
+            conflicting_2 = False
 
-                if mn.node.quorum("hasrecsig", 111, id, msgHash) != hasrecsigs:
-                    return False
-                if mn.node.quorum("isconflicting", 111, id, msgHash) != isconflicting1:
-                    self.log.info(f'is conflicting-1 {mn.node.quorum("isconflicting", 111, id, msgHash)} {isconflicting1}')
-                    return False
-                if mn.node.quorum("isconflicting", 111, id, msgHashConflict) != isconflicting2:
-                    self.log.info(f'is conflicting-2 {mn.node.quorum("isconflicting", 111, id, msgHashConflict)} {isconflicting2}')
-                    return False
+            for mn in self.mninfo:
+                if mn.node.quorum("hasrecsig", 111, id, msgHash):
+                    has_sig = True
+                if mn.node.quorum("isconflicting", 111, id, msgHash):
+                    conflicting_1 = True
+                if mn.node.quorum("isconflicting", 111, id, msgHashConflict):
+                    conflicting_2 = True
+            if has_sig != hasrecsigs:
+                return False
+            if conflicting_1 != isconflicting1:
+                return False
+            if conflicting_2 != isconflicting2:
+                return False
+
             return True
 
         def wait_for_sigs(hasrecsigs, isconflicting1, isconflicting2, timeout):
@@ -136,7 +143,7 @@ class LLMQSigningTest(DashTestFramework):
         for mn in self.mninfo:
             mn.node.quorum("sign", 111, id, msgHash)
         # And mine a quorum to move the quorum which signed out of the active set
-        self.mine_quorum()
+        self.mine_single_node_quorum()
         # Verify the recovered sig. This triggers the "signHeight + dkgInterval" verification
         recsig = node.quorum("getrecsig", 111, id, msgHash)
         assert node.quorum("verify", 111, id, msgHash, recsig["sig"], "", node.getblockcount())
