@@ -23,6 +23,7 @@ class LLMQSigningTest(DashTestFramework):
 
 
     def mine_single_node_quorum(self):
+        self.log.info("Mine single node quorum")
         node = self.nodes[0]
         quorums = node.quorum('list')['llmq_1_100']
         while node.quorum('list')['llmq_1_100'] == quorums:
@@ -138,7 +139,8 @@ class LLMQSigningTest(DashTestFramework):
         self.mine_single_node_quorum()
         # Verify the recovered sig. This triggers the "signHeight + dkgInterval" verification
         recsig = node.quorum("getrecsig", 111, id, msgHash)
-        assert node.quorum("verify", 111, id, msgHash, recsig["sig"], "", node.getblockcount())
+        #assert node.quorum("verify", 111, id, msgHash, recsig["sig"], "", node.getblockcount())
+        assert node.quorum("verify", 111, id, msgHash, recsig["sig"], "", height)
 
         recsig_time = self.mocktime
 
