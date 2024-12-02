@@ -1721,7 +1721,6 @@ static RPCHelpMan bls_generate()
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
     const NodeContext& node = EnsureAnyNodeContext(request.context);
-    const ChainstateManager& chainman = EnsureChainman(node);
 
     CBLSSecretKey sk;
     sk.MakeNewKey();
@@ -1760,7 +1759,6 @@ static RPCHelpMan bls_fromsecret()
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
     const NodeContext& node = EnsureAnyNodeContext(request.context);
-    const ChainstateManager& chainman = EnsureChainman(node);
 
     bool bls_legacy_scheme{false};
     if (!request.params[1].isNull()) {
