@@ -1720,8 +1720,6 @@ static RPCHelpMan bls_generate()
         },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    const NodeContext& node = EnsureAnyNodeContext(request.context);
-
     CBLSSecretKey sk;
     sk.MakeNewKey();
     bool bls_legacy_scheme{false};
@@ -1758,8 +1756,6 @@ static RPCHelpMan bls_fromsecret()
         },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    const NodeContext& node = EnsureAnyNodeContext(request.context);
-
     bool bls_legacy_scheme{false};
     if (!request.params[1].isNull()) {
         bls_legacy_scheme = request.params[1].get_bool();
