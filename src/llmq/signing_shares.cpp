@@ -817,7 +817,7 @@ void CSigSharesManager::TryRecoverSig(const CQuorumCPtr& quorum, const uint256& 
         }
     }
 
-    sigman.ProcessRecoveredSig(rs);
+    sigman.ProcessRecoveredSig(*m_peerman, rs);
 }
 
 CDeterministicMNCPtr CSigSharesManager::SelectMemberForRecovery(const CQuorumCPtr& quorum, const uint256 &id, int attempt)
