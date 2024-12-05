@@ -30,7 +30,6 @@ class CBlock;
 class CBlockIndex;
 class CChainState;
 class CCoinsViewCache;
-class CConnman;
 class CEvoDB;
 class TxValidationState;
 
