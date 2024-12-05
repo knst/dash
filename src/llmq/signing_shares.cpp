@@ -1033,7 +1033,7 @@ void CSigSharesManager::CollectSigSharesToSendConcentrated(std::unordered_map<No
 }
 
 void CSigSharesManager::CollectSigSharesToAnnounce(
-    CConnman& connman,
+    const CConnman& connman,
     std::unordered_map<NodeId, std::unordered_map<uint256, CSigSharesInv, StaticSaltedHasher>>& sigSharesToAnnounce)
 {
     AssertLockHeld(cs);
@@ -1261,7 +1261,7 @@ CSigShare CSigSharesManager::RebuildSigShare(const CSigSharesNodeState::SessionI
     return sigShare;
 }
 
-void CSigSharesManager::Cleanup(CConnman& connman)
+void CSigSharesManager::Cleanup(const CConnman& connman)
 {
     int64_t now = GetTime<std::chrono::seconds>().count();
     if (now - lastCleanupTime < 5) {
@@ -1491,7 +1491,7 @@ void CSigSharesManager::AsyncSign(const CQuorumCPtr& quorum, const uint256& id, 
     pendingSigns.emplace_back(quorum, id, msgHash);
 }
 
-void CSigSharesManager::SignPendingSigShares(CConnman& connman, PeerManager& peerman)
+void CSigSharesManager::SignPendingSigShares(const CConnman& connman, PeerManager& peerman)
 {
     std::vector<PendingSignatureData> v;
     WITH_LOCK(cs_pendingSigns, v.swap(pendingSigns));

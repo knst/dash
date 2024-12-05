@@ -471,7 +471,7 @@ private:
     bool GetSessionInfoByRecvId(NodeId nodeId, uint32_t sessionId, CSigSharesNodeState::SessionInfo& retInfo);
     static CSigShare RebuildSigShare(const CSigSharesNodeState::SessionInfo& session, const std::pair<uint16_t, CBLSLazySignature>& in);
 
-    void Cleanup(CConnman& connman);
+    void Cleanup(const CConnman& connman);
     void RemoveSigSharesForSession(const uint256& signHash) EXCLUSIVE_LOCKS_REQUIRED(cs);
     void RemoveBannedNodeStates(PeerManager& peerman);
 
@@ -482,10 +482,10 @@ private:
     void CollectSigSharesToSend(std::unordered_map<NodeId, std::unordered_map<uint256, CBatchedSigShares, StaticSaltedHasher>>& sigSharesToSend) EXCLUSIVE_LOCKS_REQUIRED(cs);
     void CollectSigSharesToSendConcentrated(std::unordered_map<NodeId, std::vector<CSigShare>>& sigSharesToSend, const std::vector<CNode*>& vNodes) EXCLUSIVE_LOCKS_REQUIRED(cs);
     void CollectSigSharesToAnnounce(
-        CConnman& connman,
+        const CConnman& connman,
         std::unordered_map<NodeId, std::unordered_map<uint256, CSigSharesInv, StaticSaltedHasher>>& sigSharesToAnnounce)
         EXCLUSIVE_LOCKS_REQUIRED(cs);
-    void SignPendingSigShares(CConnman& connman, PeerManager& peerman);
+    void SignPendingSigShares(const CConnman& connman, PeerManager& peerman);
     void WorkThreadMain(CConnman& connman, PeerManager& peerman);
 };
 } // namespace llmq
