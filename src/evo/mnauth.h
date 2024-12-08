@@ -50,8 +50,7 @@ public:
         READWRITE(obj.proRegTxHash, obj.sig);
     }
 
-    static void PushMNAUTH(CNode& peer, CConnman& connman, const CActiveMasternodeManager& mn_activeman,
-                           const CBlockIndex* tip);
+    static void PushMNAUTH(CNode& peer, CConnman& connman, const CActiveMasternodeManager& mn_activeman);
 
     /**
      * @pre CMasternodeMetaMan's database must be successfully loaded before

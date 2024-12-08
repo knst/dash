@@ -3784,7 +3784,7 @@ void PeerManagerImpl::ProcessMessage(
         }
 
         if (is_masternode && !pfrom.m_masternode_probe_connection) {
-            CMNAuth::PushMNAUTH(pfrom, m_connman, *m_mn_activeman, m_chainman.ActiveChain().Tip());
+            CMNAuth::PushMNAUTH(pfrom, m_connman, *m_mn_activeman);
         }
 
         // Tell our peer we prefer to receive headers rather than inv's
