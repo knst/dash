@@ -1724,7 +1724,7 @@ static RPCHelpMan bls_generate()
     sk.MakeNewKey();
     bool bls_legacy_scheme{false};
     if (!request.params[0].isNull()) {
-        bls_legacy_scheme = request.params[0].get_bool();
+        bls_legacy_scheme = ParseBoolV(request.params[0], "bls_legacy_scheme");
     }
     UniValue ret(UniValue::VOBJ);
     ret.pushKV("secret", sk.ToString());
@@ -1758,7 +1758,7 @@ static RPCHelpMan bls_fromsecret()
 {
     bool bls_legacy_scheme{false};
     if (!request.params[1].isNull()) {
-        bls_legacy_scheme = request.params[1].get_bool();
+        bls_legacy_scheme = ParseBoolV(request.params[1], "bls_legacy_scheme");
     }
     CBLSSecretKey sk = ParseBLSSecretKey(request.params[0].get_str(), "secretKey", bls_legacy_scheme);
     UniValue ret(UniValue::VOBJ);
