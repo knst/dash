@@ -7,7 +7,6 @@
 #include <addressindex.h>
 #include <chainparams.h>
 #include <consensus/consensus.h>
-#include <deploymentstatus.h>
 #include <evo/mnauth.h>
 #include <httpserver.h>
 #include <index/blockfilterindex.h>
@@ -634,7 +633,7 @@ static RPCHelpMan mnauth()
     }
 
     CBLSPublicKey publicKey;
-    publicKey.SetHexStr(request.params[2].get_str(), false);
+    publicKey.SetHexStr(request.params[2].get_str(), /*bls_legacy_scheme=*/false);
     if (!publicKey.IsValid()) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "publicKey invalid");
     }
