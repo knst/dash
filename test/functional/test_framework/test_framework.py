@@ -1517,8 +1517,15 @@ class DashTestFramework(BitcoinTestFramework):
 
         self.start_masternodes()
 
-        self.bump_mocktime(1)
-        self.generate(self.nodes[0], 1)
+        self.bump_mocktime(10 * 60 + 1)
+        self.log.info(f"mempool-0: {self.nodes[0].getrawmempool()}")
+        self.log.info(f"mempool-1: {self.nodes[1].getrawmempool()}")
+        for s in self.nodes[0].getrawmempool():
+            self.log.info(f"n0: {self.nodes[0].getrawtransaction(s)}")
+
+        for s in self.nodes[1].getrawmempool():
+            self.log.info(f"n1: {self.nodes[1].getrawtransaction(s)}")
+        self.generate(self.nodes[0], 1, sync_fun=lambda: self.sync_blocks(self.nodes))
         for i in range(1, num_simple_nodes):
             force_finish_mnsync(self.nodes[i])
 

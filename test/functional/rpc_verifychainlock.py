@@ -26,6 +26,15 @@ class RPCVerifyChainLockTest(DashTestFramework):
         return {'height': height, 'chainlock': chainlock, 'mempool': mempool}
 
     def run_test(self):
+        self.log.info("in-test")
+        self.log.info(f"mempool-0: {self.nodes[0].getrawmempool()}")
+        self.log.info(f"mempool-1: {self.nodes[1].getrawmempool()}")
+        for s in self.nodes[0].getrawmempool():
+            self.log.info(f"n0: {self.nodes[0].getrawtransaction(s)}")
+
+        for s in self.nodes[1].getrawmempool():
+            self.log.info(f"n1: {self.nodes[1].getrawtransaction(s)}")
+
         node0 = self.nodes[0]
         node1 = self.nodes[1]
         self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
