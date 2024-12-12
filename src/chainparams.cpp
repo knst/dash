@@ -926,8 +926,10 @@ public:
 
         UpdateLLMQTestParametersFromArgs(args, Consensus::LLMQType::LLMQ_TEST);
         UpdateLLMQTestParametersFromArgs(args, Consensus::LLMQType::LLMQ_TEST_INSTANTSEND);
-        UpdateLLMQInstantSendDIP0024FromArgs(args);
-        UpdateLLMQTestPlatformFromArgs(args);
+
+        UpdateLLMQTypeFromArgs(args, "-llmqtestchainlocks", consensus.llmqTypeChainLocks);
+        UpdateLLMQTypeFromArgs(args, "-llmqtestinstantsenddip0024", consensus.llmqTypeDIP0024InstantSend);
+        UpdateLLMQTypeFromArgs(args, "-llmqtestplatform", consensus.llmqTypePlatform);
     }
 
     /**
@@ -991,8 +993,7 @@ public:
     }
 
     void UpdateLLMQTestParametersFromArgs(const ArgsManager& args, const Consensus::LLMQType llmqType);
-    void UpdateLLMQInstantSendDIP0024FromArgs(const ArgsManager& args);
-    void UpdateLLMQTestPlatformFromArgs(const ArgsManager& args);
+    void UpdateLLMQTypeFromArgs(const ArgsManager& args, const std::string& arg_name, Consensus::LLMQType& llmqTypeToSet);
 };
 
 static void MaybeUpdateHeights(const ArgsManager& args, Consensus::Params& consensus)
@@ -1170,15 +1171,11 @@ void CRegTestParams::UpdateLLMQTestParametersFromArgs(const ArgsManager& args, c
     UpdateLLMQTestParameters(size, threshold, llmqType);
 }
 
-void CRegTestParams::UpdateLLMQInstantSendDIP0024FromArgs(const ArgsManager& args)
+void CRegTestParams::UpdateLLMQTypeFromArgs(const ArgsManager& args, const std::string& arg_name, Consensus::LLMQType& llmqTypeToSet)
 {
-    if (!args.IsArgSet("-llmqtestinstantsenddip0024")) return;
+    if (!args.IsArgSet(arg_name)) return;
 
-    const auto& llmq_params_opt = GetLLMQ(consensus.llmqTypeDIP0024InstantSend);
-    assert(llmq_params_opt.has_value());
-
-    std::string strLLMQType = gArgs.GetArg("-llmqtestinstantsenddip0024", std::string(llmq_params_opt->name));
-
+    const std::string strLLMQType = gArgs.GetArg(arg_name, "");
     Consensus::LLMQType llmqType = Consensus::LLMQType::LLMQ_NONE;
     for (const auto& params : consensus.llmqs) {
         if (params.name == strLLMQType) {
@@ -1186,33 +1183,11 @@ void CRegTestParams::UpdateLLMQInstantSendDIP0024FromArgs(const ArgsManager& arg
         }
     }
     if (llmqType == Consensus::LLMQType::LLMQ_NONE) {
-        throw std::runtime_error("Invalid LLMQ type specified for -llmqtestinstantsenddip0024.");
+        throw std::runtime_error(strprintf("Invalid LLMQ type specified for %s", arg_name));
     }
-    LogPrintf("Setting llmqtestinstantsenddip0024 to %ld\n", ToUnderlying(llmqType));
 
-    consensus.llmqTypeDIP0024InstantSend = llmqType;
-}
-
-void CRegTestParams::UpdateLLMQTestPlatformFromArgs(const ArgsManager& args)
-{
-    if (!args.IsArgSet("-llmqtestplatform")) return;
-
-    const auto& llmq_params_opt = GetLLMQ(consensus.llmqTypePlatform);
-    assert(llmq_params_opt.has_value());
-
-    std::string strLLMQType = gArgs.GetArg("-llmqtestplatform", std::string(llmq_params_opt->name));
-
-    Consensus::LLMQType llmqType = Consensus::LLMQType::LLMQ_NONE;
-    for (const auto& params : consensus.llmqs) {
-        if (params.name == strLLMQType) {
-            llmqType = params.type;
-        }
-    }
-    if (llmqType == Consensus::LLMQType::LLMQ_NONE) {
-        throw std::runtime_error("Invalid LLMQ type specified for -llmqtestplatform.");
-    }
-    LogPrintf("Setting llmqtestplatform to size=%ld\n", static_cast<uint8_t>(llmqType));
-    consensus.llmqTypePlatform = llmqType;
+    LogPrintf("Setting %s to %ld\n", arg_name, ToUnderlying(llmqType));
+    llmqTypeToSet = llmqType;
 }
 
 void CDevNetParams::UpdateDevnetSubsidyAndDiffParametersFromArgs(const ArgsManager& args)
@@ -1401,6 +1376,7 @@ void SetupChainParamsOptions(ArgsManager& argsman)
     argsman.AddArg("-llmqmnhf=<quorum name>", "Override the default LLMQ type used for EHF. (default: llmq_devnet, devnet-only)", ArgsManager::ALLOW_ANY, OptionsCategory::CHAINPARAMS);
     argsman.AddArg("-llmqtestinstantsenddip0024=<quorum name>", "Override the default LLMQ type used for InstantSendDIP0024. Used mainly to test Platform. (default: llmq_test_dip0024, regtest-only)", ArgsManager::ALLOW_ANY | ArgsManager::DEBUG_ONLY, OptionsCategory::CHAINPARAMS);
     argsman.AddArg("-llmqtestplatform=<quorum name>", "Override the default LLMQ type used for Platform. (default: llmq_test_platform, regtest-only)", ArgsManager::ALLOW_ANY, OptionsCategory::CHAINPARAMS);
+    argsman.AddArg("-llmqtestchainlocks=<quorum name>", "Override the default LLMQ type used for Chainlocks. (default: llmq_test_test, regtest-only)", ArgsManager::ALLOW_ANY, OptionsCategory::CHAINPARAMS);
     argsman.AddArg("-llmqtestinstantsendparams=<size>:<threshold>", "Override the default LLMQ size for the LLMQ_TEST_INSTANTSEND quorums (default: 3:2, regtest-only)", ArgsManager::ALLOW_ANY | ArgsManager::DEBUG_ONLY, OptionsCategory::CHAINPARAMS);
     argsman.AddArg("-llmqtestparams=<size>:<threshold>", "Override the default LLMQ size for the LLMQ_TEST quorum (default: 3:2, regtest-only)", ArgsManager::ALLOW_ANY | ArgsManager::DEBUG_ONLY, OptionsCategory::CHAINPARAMS);
     argsman.AddArg("-minimumdifficultyblocks=<n>", "The number of blocks that can be mined with the minimum difficulty at the start of a chain (default: 0, devnet-only)", ArgsManager::ALLOW_ANY, OptionsCategory::CHAINPARAMS);
