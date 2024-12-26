@@ -8,13 +8,10 @@ export LC_ALL=C.UTF-8
 
 export CONTAINER_NAME=ci_macos_cross
 export HOST=x86_64-apple-darwin
-export PACKAGES="cmake libz-dev python3-setuptools xorriso"
+export PACKAGES="cmake libz-dev libtinfo5 python3-setuptools"
 export XCODE_VERSION=12.2
 export XCODE_BUILD_ID=12B45b
 export RUN_UNIT_TESTS=false
 export RUN_FUNCTIONAL_TESTS=false
 export GOAL="all deploy"
-
-# False-positive warning is fixed with clang 17, remove this when that version
-# can be used.
-export BITCOIN_CONFIG="--with-gui --enable-reduce-exports --disable-miner --with-boost-process LDFLAGS=-Wno-error=unused-command-line-argument"
+export BITCOIN_CONFIG="--with-gui --enable-reduce-exports --disable-miner --with-boost-process"
