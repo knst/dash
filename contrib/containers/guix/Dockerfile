@@ -31,7 +31,7 @@ ENV PATH="/usr/local/bin:/usr/local/guix/current/bin:$PATH"
 # Application Setup
 # https://guix.gnu.org/manual/en/html_node/Application-Setup.html
 ENV GUIX_LOCPATH="/usr/local/guix/profile" \
-    LC_ALL="en_US.UTF-8"
+    LC_ALL="C"
 
 RUN guix_file_name=guix-binary-${guix_version}.$(uname -m)-linux.tar.xz          && \
     eval "guix_checksum=\${guix_checksum_$(uname -m)}"                           && \
