@@ -1815,9 +1815,7 @@ static unsigned int GetBlockScriptFlags(const CBlockIndex* pindex, const Consens
     }
 
     // Enforce CHECKSEQUENCEVERIFY (BIP112)
-    if (DeploymentActiveAt(*pindex, consensusparams, Consensus::DEPLOYMENT_CSV)) {
-        flags |= SCRIPT_VERIFY_CHECKSEQUENCEVERIFY;
-    }
+    flags |= SCRIPT_VERIFY_CHECKSEQUENCEVERIFY;
 
     // Enforce BIP147 NULLDUMMY
     if (DeploymentActiveAt(*pindex, consensusparams, Consensus::DEPLOYMENT_BIP147)) {
@@ -1995,9 +1993,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
 
     // Enforce BIP68 (sequence locks)
     int nLockTimeFlags = 0;
-    if (DeploymentActiveAt(*pindex, m_params.GetConsensus(), Consensus::DEPLOYMENT_CSV)) {
-        nLockTimeFlags |= LOCKTIME_VERIFY_SEQUENCE;
-    }
+    nLockTimeFlags |= LOCKTIME_VERIFY_SEQUENCE;
 
     // Get the script flags for this block
     unsigned int flags = GetBlockScriptFlags(pindex, m_params.GetConsensus());
@@ -3681,7 +3677,7 @@ static bool ContextualCheckBlock(const CBlock& block, BlockValidationState& stat
 
     // Enforce BIP113 (Median Time Past).
     bool enforce_locktime_median_time_past{false};
-    if (DeploymentActiveAfter(pindexPrev, consensusParams, Consensus::DEPLOYMENT_CSV)) {
+    if (pindexPrev != nullptr) {
         assert(pindexPrev != nullptr);
         enforce_locktime_median_time_past = true;
     }

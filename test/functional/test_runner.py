@@ -152,7 +152,6 @@ BASE_SCRIPTS = [
     'wallet_listreceivedby.py --descriptors',
     'wallet_abandonconflict.py --legacy-wallet',
     'wallet_abandonconflict.py --descriptors',
-    'feature_csv_activation.py',
     'feature_reindex.py',
     'feature_abortnode.py',
     # vv Tests less than 30s vv
