@@ -20,5 +20,5 @@ export GOAL="install"
 # _FORTIFY_SOURCE is not compatible with MSAN.
 export BITCOIN_CONFIG="--with-sanitizers=memory CPPFLAGS='-U_FORTIFY_SOURCE'"
 export USE_MEMORY_SANITIZER="true"
-export RUN_FUNCTIONAL_TESTS="false"
+export RUN_FUNCTIONAL_TESTS="true"
 export CCACHE_MAXSIZE=250M
