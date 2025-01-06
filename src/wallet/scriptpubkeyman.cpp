@@ -1813,7 +1813,7 @@ bool DescriptorScriptPubKeyMan::GetNewDestination(CTxDestination& dest, bilingua
             throw std::runtime_error(std::string(__func__) + ": Types are inconsistent. Stored type does not match type of newly generated address");
         }
         m_wallet_descriptor.next_index++;
-        WalletBatch(m_storage.GetDatabase()).WriteDescriptor(GetID(), m_wallet_descriptor);
+        WalletBatch(m_storage.GetDatabase()).WriteDescriptor(GetID(), m_wallet_descriptor, m_mnemonic, m_mnemonic_passphrase);
         return true;
     }
 }
@@ -1877,11 +1877,27 @@ bool DescriptorScriptPubKeyMan::Encrypt(const CKeyingMaterial& master_key, Walle
         }
         m_map_crypted_keys[pubkey.GetID()] = make_pair(pubkey, crypted_secret);
         batch->WriteCryptedDescriptorKey(GetID(), pubkey, crypted_secret);
+
     }
+    // TODO encrypt mnemonic
     m_map_keys.clear();
     return true;
 }
-
+/*
+    if (m_storage.HasEncryptionKeys() && !m_storage.IsLocked(true)) {
+        KeyMap keys;
+        for (auto key_pair : m_map_crypted_keys) {
+            const CPubKey& pubkey = key_pair.second.first;
+            const std::vector<unsigned char>& crypted_secret = key_pair.second.second;
+            CKey key;
+            m_storage.WithEncryptionKey([&](const CKeyingMaterial& encryption_key) {
+                return DecryptKey(encryption_key, crypted_secret, pubkey, key);
+            });
+            keys[pubkey.GetID()] = key;
+        }
+        return keys;
+    }
+*/
 bool DescriptorScriptPubKeyMan::GetReservedDestination(bool internal, CTxDestination& address, int64_t& index, CKeyPool& keypool)
 {
     LOCK(cs_desc_man);
@@ -1898,7 +1914,7 @@ void DescriptorScriptPubKeyMan::ReturnDestination(int64_t index, bool internal, 
     if (m_wallet_descriptor.next_index - 1 == index) {
         m_wallet_descriptor.next_index--;
     }
-    WalletBatch(m_storage.GetDatabase()).WriteDescriptor(GetID(), m_wallet_descriptor);
+    WalletBatch(m_storage.GetDatabase()).WriteDescriptor(GetID(), m_wallet_descriptor, m_mnemonic, m_mnemonic_passphrase);
     NotifyCanGetAddressesChanged();
 }
 
@@ -1975,7 +1991,7 @@ bool DescriptorScriptPubKeyMan::TopUp(unsigned int size)
         m_max_cached_index++;
     }
     m_wallet_descriptor.range_end = new_range_end;
-    batch.WriteDescriptor(GetID(), m_wallet_descriptor);
+    batch.WriteDescriptor(GetID(), m_wallet_descriptor, m_mnemonic, m_mnemonic_passphrase);
 
     // By this point, the cache size should be the size of the entire range
     assert(m_wallet_descriptor.range_end - 1 == m_max_cached_index);
@@ -2040,7 +2056,7 @@ bool DescriptorScriptPubKeyMan::AddDescriptorKeyWithDB(WalletBatch& batch, const
     }
 }
 
-bool DescriptorScriptPubKeyMan::SetupDescriptorGeneration(const CExtKey& master_key, bool internal)
+bool DescriptorScriptPubKeyMan::SetupDescriptorGeneration(const CExtKey& master_key, const SecureString& secure_mnemonic, const SecureString& secure_mnemonic_passphrase, bool internal)
 {
     LOCK(cs_desc_man);
     assert(m_storage.IsWalletFlagSet(WALLET_FLAG_DESCRIPTORS));
@@ -2049,6 +2065,14 @@ bool DescriptorScriptPubKeyMan::SetupDescriptorGeneration(const CExtKey& master_
     if (m_wallet_descriptor.descriptor) {
         return false;
     }
+
+    if (!secure_mnemonic.empty()) {
+        // TODO : add validation
+//        assert(GenerateKey(secure_mnemonic, secure_mnemonic_passphrase) == master_key);
+    }
+
+    m_mnemonic = secure_mnemonic;
+    m_mnemonic_passphrase = secure_mnemonic_passphrase;
 
     int64_t creation_time = GetTime();
 
@@ -2073,7 +2097,7 @@ bool DescriptorScriptPubKeyMan::SetupDescriptorGeneration(const CExtKey& master_
     if (!AddDescriptorKeyWithDB(batch, master_key.key, master_key.key.GetPubKey())) {
         throw std::runtime_error(std::string(__func__) + ": writing descriptor master private key failed");
     }
-    if (!batch.WriteDescriptor(GetID(), m_wallet_descriptor)) {
+    if (!batch.WriteDescriptor(GetID(), m_wallet_descriptor, m_mnemonic, m_mnemonic_passphrase)) {
         throw std::runtime_error(std::string(__func__) + ": writing descriptor failed");
     }
 
@@ -2382,7 +2406,7 @@ void DescriptorScriptPubKeyMan::WriteDescriptor()
 {
     LOCK(cs_desc_man);
     WalletBatch batch(m_storage.GetDatabase());
-    if (!batch.WriteDescriptor(GetID(), m_wallet_descriptor)) {
+    if (!batch.WriteDescriptor(GetID(), m_wallet_descriptor, m_mnemonic, m_mnemonic_passphrase)) {
         throw std::runtime_error(std::string(__func__) + ": writing descriptor failed");
     }
 }
@@ -2419,6 +2443,16 @@ bool DescriptorScriptPubKeyMan::GetDescriptorString(std::string& out, const bool
     }
 
     return m_wallet_descriptor.descriptor->ToNormalizedString(provider, out, &m_wallet_descriptor.cache);
+}
+
+bool DescriptorScriptPubKeyMan::GetMnemonicString(std::string& mnemonic) const
+{
+    LOCK(cs_desc_man);
+
+    if (m_storage.IsLocked(false)) return false;
+    mnemonic = m_mnemonic;
+    return true;
+    // TODO: return m_mnemonic_passphrase;
 }
 
 void DescriptorScriptPubKeyMan::UpgradeDescriptorCache()
