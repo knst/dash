@@ -19,13 +19,15 @@ Tests automated recovery of DKG data and the related command line parameters:
 # LLMQ types available in regtest
 llmq_test = 100
 llmq_test_v17 = 102
-llmq_type_strings = {llmq_test: 'llmq_test', llmq_test_v17: 'llmq_test_v17'}
+llmq_test_single = 111
+llmq_type_strings = {llmq_test: 'llmq_test', llmq_test_v17: 'llmq_test_v17', llmq_test_single : 'llmq_1_100'}
 
 
 class QuorumDataRecoveryTest(DashTestFramework):
     def set_test_params(self):
-        extra_args = [["-vbparams=testdummy:0:999999999999:0:10:8:6:5:-1"] for _ in range(9)]
-        self.set_dash_test_params(9, 7, extra_args=extra_args)
+        extra_args = [["-vbparams=testdummy:0:999999999999:0:10:8:6:5:-1", "-llmqtestchainlocks=llmq_1_100"]] * 9
+        extra_args = [["-vbparams=testdummy:0:999999999999:0:10:8:6:5:-1"]] * 9
+        self.set_dash_test_params(9, 7, extra_args=extra_args, evo_count=1)
         self.set_dash_llmq_test_params(4, 3)
 
     def restart_mn(self, mn, reindex=False, qvvec_sync=None, qdata_recovery_enabled=True):
@@ -137,13 +139,23 @@ class QuorumDataRecoveryTest(DashTestFramework):
                 # Members which are only in quorum 1 should request the qvvec from quorum 2 from the members of quorum 2
                 self.test_mns(llmq_type, quorum_hash_2, valid_mns=members_only_in_1, expect_secret=False, recover=True)
 
+    def mine_single_node_quorum(self):
+        node = self.nodes[0]
+        quorums = node.quorum('list')['llmq_1_100']
+        while node.quorum('list')['llmq_1_100'] == quorums:
+            self.bump_mocktime(1)
+            self.generate(node, 2)
 
     def run_test(self):
+
+        self.activate_v19(expected_activation_height=900)
 
         node = self.nodes[0]
         node.sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
         node.sporkupdate("SPORK_21_QUORUM_ALL_CONNECTED", 0)
         self.wait_for_sporks_same()
+
+        self.dynamically_add_masternode(evo=True)
 
         logger.info("Test automated DGK data recovery")
         # This two nodes will remain the only ones with valid DKG data
