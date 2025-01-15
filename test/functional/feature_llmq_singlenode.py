@@ -75,7 +75,6 @@ class LLMQSigningTest(DashTestFramework):
         self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
         self.wait_for_sporks_same()
 
-        self.activate_v19(expected_activation_height=900)
         self.dynamically_add_masternode(evo=True)
         self.dynamically_add_masternode(evo=True)
         self.connect_nodes(1, 2)
