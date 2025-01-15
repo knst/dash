@@ -111,7 +111,16 @@ class LLMQSigningTest(DashTestFramework):
         # 2. Providing a valid quorum hash should succeed and cause no changes for sigss
         quorumHash = self.mninfo[1].node.quorum("selectquorum", 111, id)["quorumHash"]
 
-        self.mninfo[0].node.quorum("sign", 111, id, msgHash, quorumHash, False)
+        self.log.info(f"quorum dkginfo: {self.nodes[1].quorum('dkginfo')}")
+        self.log.info(f"list of quorum: {self.nodes[1].quorum('list')}")
+        self.log.info(f"quorum info: {self.nodes[0].quorum('info', 111, self.nodes[1].quorum('list')['llmq_1_100'][0])}")
+        self.log.info(f"list of mn-0: {self.nodes[1].masternode('list')}")
+        self.log.info(f"list of mn-1: {self.nodes[2].masternode('list')}")
+        self.log.info(f"mn status-0: {self.nodes[1].masternode('status')}")
+        self.log.info(f"mn status-1: {self.nodes[2].masternode('status')}")
+
+        qnode = self.mninfo[0].node if self.mninfo[0].node.quorum('dkginfo')['active_dkgs'] > 0 else self.mninfo[1].node
+        qnode.quorum("sign", 111, id, msgHash, quorumHash, False)
         self.mninfo[0].node.quorum("sign", 111, id, msgHash)
         self.mninfo[1].node.quorum("sign", 111, id, msgHash)
 
