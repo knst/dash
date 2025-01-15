@@ -147,9 +147,6 @@ class QuorumDataRecoveryTest(DashTestFramework):
             self.generate(node, 2)
 
     def run_test(self):
-
-        self.activate_v19(expected_activation_height=900)
-
         node = self.nodes[0]
         node.sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
         node.sporkupdate("SPORK_21_QUORUM_ALL_CONNECTED", 0)
