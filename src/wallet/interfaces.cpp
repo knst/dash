@@ -395,6 +395,9 @@ public:
             result.immature_watch_only_balance = bal.m_watchonly_immature;
         }
 
+        result.denominated_untrusted_peding = bal.m_denominated_untrusted_pending;
+        result.denominated_trusted = bal.m_denominated_trusted;
+
         LogPrintf("knst getBalances() %.2fms\n", (GetTimeMicros() - time) * MICRO);
         return result;
     }
@@ -421,17 +424,6 @@ public:
         auto ret = m_wallet->GetAnonymizableBalance(fSkipDenominated, fSkipUnconfirmed);
         LogPrintf("knst getAnonymizableBalance() %.2fms\n", (GetTimeMicros() - time) * MICRO);
         return ret;
-    }
-    CAmount getDenominatedBalance(bool unconfirmed) override
-    {
-        int64_t time = GetTimeMicros();
-        const auto bal = m_wallet->GetBalance();
-        LogPrintf("knst getDenominatedBalance() %.2fms\n", (GetTimeMicros() - time) * MICRO);
-        if (unconfirmed) {
-            return bal.m_denominated_untrusted_pending;
-        } else {
-            return bal.m_denominated_trusted;
-        }
     }
     CAmount getNormalizedAnonymizedBalance() override
     {
