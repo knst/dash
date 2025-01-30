@@ -454,7 +454,7 @@ public:
     {
         int64_t time = GetTimeMicros();
         if (coin_control.IsUsingCoinJoin()) {
-            auto ret = m_wallet->GetBalanceAnonymized(coin_control);
+            auto ret = m_wallet->GetBalance(0, coin_control.m_avoid_address_reuse, false, &coin_control).m_anonymized;
             LogPrintf("knst getAvailableBalance-1() %.2fms\n", (GetTimeMicros() - time) * MICRO);
             return ret;
         } else {
