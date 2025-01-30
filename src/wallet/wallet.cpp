@@ -2342,7 +2342,42 @@ CAmount CWalletTx::GetAnonymizedCredit(const CCoinControl& coinControl) const
     return nCredit;
 }
 
-CWalletTx::BalanceAnonymized CWalletTx::GetAnonymizedBalance() const
+CAmount CWalletTx::GetAnonymizedCredit() const
+{
+    if (!pwallet)
+        return 0;
+
+    AssertLockHeld(pwallet->cs_wallet);
+
+    // Exclude coinbase and conflicted txes
+    if (IsCoinBase() || GetDepthInMainChain() < 0)
+        return 0;
+
+    if (m_amounts[ANON_CREDIT].m_cached[ISMINE_SPENDABLE])
+        return m_amounts[ANON_CREDIT].m_value[ISMINE_SPENDABLE];
+
+    CAmount nCredit = 0;
+    uint256 hashTx = GetHash();
+    for (unsigned int i = 0; i < tx->vout.size(); i++)
+    {
+        const CTxOut &txout = tx->vout[i];
+        const COutPoint outpoint = COutPoint(hashTx, i);
+
+        if (pwallet->IsSpent(hashTx, i) || !CoinJoin::IsDenominatedAmount(txout.nValue)) continue;
+
+        if (pwallet->IsFullyMixed(outpoint)) {
+            nCredit += pwallet->GetCredit(txout, ISMINE_SPENDABLE);
+            if (!MoneyRange(nCredit))
+                throw std::runtime_error(std::string(__func__) + ": value out of range");
+        }
+    }
+
+    m_amounts[ANON_CREDIT].Set(ISMINE_SPENDABLE, nCredit);
+
+    return nCredit;
+}
+
+CWalletTx::BalanceAnonymized CWalletTx::GetDenominatedCredit() const
 {
     CWalletTx::BalanceAnonymized ret{0, false};
     if (pwallet == nullptr)
@@ -2359,34 +2394,24 @@ CWalletTx::BalanceAnonymized CWalletTx::GetAnonymizedBalance() const
 
     ret.is_unconfirmed = IsTrusted() && nDepth == 0;
 
-    if (m_amounts[ANON_CREDIT].m_cached[ISMINE_SPENDABLE]) {
-        if (ret.is_unconfirmed && m_amounts[DENOM_UCREDIT].m_cached[ISMINE_SPENDABLE]) {
-            return {m_amounts[ANON_CREDIT].m_value[ISMINE_SPENDABLE], m_amounts[DENOM_UCREDIT].m_value[ISMINE_SPENDABLE], ret.is_unconfirmed};
-        } else if (!ret.is_unconfirmed && m_amounts[DENOM_CREDIT].m_cached[ISMINE_SPENDABLE]) {
-            return {m_amounts[ANON_CREDIT].m_value[ISMINE_SPENDABLE], m_amounts[DENOM_CREDIT].m_value[ISMINE_SPENDABLE], ret.is_unconfirmed};
-        }
+    if(ret.is_unconfirmed && m_amounts[DENOM_UCREDIT].m_cached[ISMINE_SPENDABLE]) {
+        return {m_amounts[DENOM_UCREDIT].m_value[ISMINE_SPENDABLE], ret.is_unconfirmed};
+    } else if (!ret.is_unconfirmed && m_amounts[DENOM_CREDIT].m_cached[ISMINE_SPENDABLE]) {
+        return {m_amounts[DENOM_CREDIT].m_value[ISMINE_SPENDABLE], ret.is_unconfirmed};
     }
 
     uint256 hashTx = GetHash();
-    for (unsigned int i = 0; i < tx->vout.size(); i++) {
+    for (unsigned int i = 0; i < tx->vout.size(); i++)
+    {
         const CTxOut &txout = tx->vout[i];
-        const COutPoint outpoint = COutPoint(hashTx, i);
 
         if (pwallet->IsSpent(hashTx, i) || !CoinJoin::IsDenominatedAmount(txout.nValue)) continue;
-        const CAmount credit = pwallet->GetCredit(txout, ISMINE_SPENDABLE);
 
-        if (pwallet->IsFullyMixed(outpoint)) {
-            ret.m_anonymized += credit;
-            if (!MoneyRange(ret.m_anonymized))
-                throw std::runtime_error(std::string(__func__) + ": value out of range");
-        }
-
-        ret.m_denom_credit += credit;
+        ret.m_denom_credit += pwallet->GetCredit(txout, ISMINE_SPENDABLE);
         if (!MoneyRange(ret.m_denom_credit))
             throw std::runtime_error(std::string(__func__) + ": value out of range");
     }
 
-    m_amounts[ANON_CREDIT].Set(ISMINE_SPENDABLE, ret.m_anonymized);
     if (ret.is_unconfirmed) {
         m_amounts[DENOM_UCREDIT].Set(ISMINE_SPENDABLE, ret.m_denom_credit);
     } else {
@@ -2575,8 +2600,8 @@ CWallet::Balance CWallet::GetBalance(const int min_depth, const bool avoid_reuse
             ret.m_mine_immature += pcoin->GetImmatureCredit();
             ret.m_watchonly_immature += pcoin->GetImmatureWatchOnlyCredit();
             if (CCoinJoinClientOptions::IsEnabled()) {
-                const auto balance_anonymized = pcoin->GetAnonymizedBalance();
-                ret.m_anonymized += balance_anonymized.m_anonymized;
+                ret.m_anonymized += pcoin->GetAnonymizedCredit();
+                const auto balance_anonymized = pcoin->GetDenominatedCredit();
                 if (balance_anonymized.is_unconfirmed) {
                     ret.m_denominated_untrusted_pending += balance_anonymized.m_denom_credit;
                 } else {
