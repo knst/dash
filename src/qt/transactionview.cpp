@@ -185,11 +185,14 @@ TransactionView::TransactionView(QWidget* parent) :
 
 void TransactionView::setModel(WalletModel *_model)
 {
+    LogPrintf("knst TransactionView::setModel-1\n");
     QSettings settings;
     this->model = _model;
+    LogPrintf("knst TransactionView::setModel-2\n");
     if(_model)
     {
         transactionProxyModel = new TransactionFilterProxy(this);
+        LogPrintf("knst TransactionView::setModel-3\n");
         transactionProxyModel->setSourceModel(_model->getTransactionTableModel());
         transactionProxyModel->setDynamicSortFilter(true);
         transactionProxyModel->setSortCaseSensitivity(Qt::CaseInsensitive);
@@ -197,7 +200,9 @@ void TransactionView::setModel(WalletModel *_model)
 
         transactionProxyModel->setSortRole(Qt::EditRole);
 
+        LogPrintf("knst TransactionView::setModel-4\n");
         transactionView->setModel(transactionProxyModel);
+        LogPrintf("knst TransactionView::setModel-5\n");
         transactionView->setAlternatingRowColors(true);
         transactionView->setSelectionBehavior(QAbstractItemView::SelectRows);
         transactionView->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -222,6 +227,7 @@ void TransactionView::setModel(WalletModel *_model)
         transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::ToAddress, QHeaderView::Stretch);
         transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::Amount, QHeaderView::Fixed);
 
+        LogPrintf("knst TransactionView::setModel-6\n");
         if (_model->getOptionsModel())
         {
             // Add third party transaction URLs to context menu
@@ -242,6 +248,7 @@ void TransactionView::setModel(WalletModel *_model)
 
             connect(_model->getOptionsModel(), &OptionsModel::coinJoinEnabledChanged, this, &TransactionView::updateCoinJoinVisibility);
         }
+        LogPrintf("knst TransactionView::setModel-7\n");
 
         // show/hide column Watch-only
         updateWatchOnlyColumn(_model->wallet().haveWatchOnly());
@@ -253,8 +260,11 @@ void TransactionView::setModel(WalletModel *_model)
         chooseType(settings.value("transactionType").toInt());
         chooseDate(settings.value("transactionDate").toInt());
 
+        LogPrintf("knst TransactionView::setModel-8\n");
         updateCoinJoinVisibility();
+        LogPrintf("knst TransactionView::setModel-9\n");
     }
+    LogPrintf("knst TransactionView::setModel-end\n");
 }
 
 void TransactionView::chooseDate(int idx)

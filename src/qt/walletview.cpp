@@ -155,20 +155,30 @@ void WalletView::setClientModel(ClientModel *_clientModel)
 
 void WalletView::setWalletModel(WalletModel *_walletModel)
 {
+    LogPrintf("knst set-wallet-model-1\n");
     this->walletModel = _walletModel;
 
     // Put transaction list in tabs
+    LogPrintf("knst set-wallet-model-2\n");
     transactionView->setModel(_walletModel);
+    LogPrintf("knst set-wallet-model-3\n");
     overviewPage->setWalletModel(_walletModel);
+    LogPrintf("knst set-wallet-model-4\n");
     QSettings settings;
     if (settings.value("fShowMasternodesTab").toBool()) {
         masternodeListPage->setWalletModel(_walletModel);
     }
+    LogPrintf("knst set-wallet-model-5\n");
     receiveCoinsPage->setModel(_walletModel);
+    LogPrintf("knst set-wallet-model-6\n");
     sendCoinsPage->setModel(_walletModel);
+    LogPrintf("knst set-wallet-model-7\n");
     coinJoinCoinsPage->setModel(_walletModel);
+    LogPrintf("knst set-wallet-model-8\n");
     usedReceivingAddressesPage->setModel(_walletModel ? _walletModel->getAddressTableModel() : nullptr);
+    LogPrintf("knst set-wallet-model-9\n");
     usedSendingAddressesPage->setModel(_walletModel ? _walletModel->getAddressTableModel() : nullptr);
+    LogPrintf("knst set-wallet-model-10\n");
 
     if (_walletModel)
     {
@@ -187,6 +197,7 @@ void WalletView::setWalletModel(WalletModel *_walletModel)
         // Show progress dialog
         connect(_walletModel, &WalletModel::showProgress, this, &WalletView::showProgress);
     }
+    LogPrintf("knst set-wallet-model-11\n");
 }
 
 void WalletView::processNewTransaction(const QModelIndex& parent, int start, int /*end*/)

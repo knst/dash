@@ -80,13 +80,19 @@ void WalletFrame::setClientModel(ClientModel *_clientModel)
 
 bool WalletFrame::addWallet(WalletModel* walletModel, WalletView* walletView)
 {
+    LogPrintf("knst wallet-frame-add-wallet-1\n");
     if (!clientModel || !walletModel) return false;
 
+    LogPrintf("knst wallet-frame-add-wallet-2\n");
     if (mapWalletViews.count(walletModel) > 0) return false;
 
+    LogPrintf("knst wallet-frame-add-wallet-3\n");
     walletView->setClientModel(clientModel);
+    LogPrintf("knst wallet-frame-add-wallet-4\n");
     walletView->setWalletModel(walletModel);
+    LogPrintf("knst wallet-frame-add-wallet-5\n");
     walletView->showOutOfSyncWarning(bOutOfSync);
+    LogPrintf("knst wallet-frame-add-wallet-6\n");
 
     WalletView* current_wallet_view = currentWalletView();
     if (current_wallet_view) {
@@ -94,10 +100,13 @@ bool WalletFrame::addWallet(WalletModel* walletModel, WalletView* walletView)
     } else {
         walletView->gotoOverviewPage();
     }
+    LogPrintf("knst wallet-frame-add-wallet-7\n");
 
     walletStack->addWidget(walletView);
+    LogPrintf("knst wallet-frame-add-wallet-8\n");
     mapWalletViews[walletModel] = walletView;
 
+    LogPrintf("knst wallet-frame-add-wallet-end\n");
     return true;
 }
 

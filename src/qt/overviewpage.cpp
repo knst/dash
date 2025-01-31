@@ -225,8 +225,10 @@ OverviewPage::~OverviewPage()
 
 void OverviewPage::setBalance(const interfaces::WalletBalances& balances)
 {
+    LogPrintf("knst set-balance-1\n");
     int unit = walletModel->getOptionsModel()->getDisplayUnit();
     m_balances = balances;
+    LogPrintf("knst set-balance-2\n");
     if (walletModel->wallet().isLegacy()) {
         if (walletModel->wallet().privateKeysDisabled()) {
             ui->labelBalance->setText(BitcoinUnits::floorHtmlWithPrivacy(unit, balances.watch_only_balance, BitcoinUnits::SeparatorStyle::ALWAYS, m_privacy));
@@ -251,24 +253,29 @@ void OverviewPage::setBalance(const interfaces::WalletBalances& balances)
             ui->labelAnonymized->setText(BitcoinUnits::floorHtmlWithPrivacy(unit, balances.anonymized_balance, BitcoinUnits::SeparatorStyle::ALWAYS, m_privacy));
             ui->labelTotal->setText(BitcoinUnits::floorHtmlWithPrivacy(unit, balances.balance + balances.unconfirmed_balance + balances.immature_balance, BitcoinUnits::SeparatorStyle::ALWAYS, m_privacy));
     }
+    LogPrintf("knst set-balance-3\n");
     // only show immature (newly mined) balance if it's non-zero, so as not to complicate things
     // for the non-mining users
     bool fDebugUI = gArgs.GetBoolArg("-debug-ui", false);
     bool showImmature = fDebugUI || balances.immature_balance != 0;
     bool showWatchOnlyImmature = fDebugUI || balances.immature_watch_only_balance != 0;
 
+    LogPrintf("knst set-balance-4\n");
     // for symmetry reasons also show immature label when the watch-only one is shown
     ui->labelImmature->setVisible(showImmature || showWatchOnlyImmature);
     ui->labelImmatureText->setVisible(showImmature || showWatchOnlyImmature);
     ui->labelWatchImmature->setVisible(!walletModel->wallet().privateKeysDisabled() && showWatchOnlyImmature); // show watch-only immature balance
 
+    LogPrintf("knst set-balance-5\n");
     updateCoinJoinProgress();
+    LogPrintf("knst set-balance-6\n");
 
     int numISLocks = walletModel->getNumISLocks();
     if(cachedNumISLocks != numISLocks) {
         cachedNumISLocks = numISLocks;
         ui->listTransactions->update();
     }
+    LogPrintf("knst set-balance-7\n");
 }
 
 // show/hide watch-only labels
@@ -304,6 +311,7 @@ void OverviewPage::setClientModel(ClientModel *model)
 
 void OverviewPage::setWalletModel(WalletModel *model)
 {
+    LogPrintf("overview-set-wallet-model-1\n");
     this->walletModel = model;
     if(model && model->getOptionsModel())
     {
@@ -312,35 +320,48 @@ void OverviewPage::setWalletModel(WalletModel *model)
         // Keep up to date with wallet
         interfaces::Wallet& wallet = model->wallet();
         interfaces::WalletBalances balances = wallet.getBalances();
+        LogPrintf("overview-set-wallet-model-2\n");
         setBalance(balances);
+        LogPrintf("overview-set-wallet-model-3\n");
         connect(model, &WalletModel::balanceChanged, this, &OverviewPage::setBalance);
 
         connect(model->getOptionsModel(), &OptionsModel::displayUnitChanged, this, &OverviewPage::updateDisplayUnit);
 
+        LogPrintf("overview-set-wallet-model-4\n");
         updateWatchOnlyLabels((wallet.haveWatchOnly() && !model->wallet().privateKeysDisabled()) || gArgs.GetBoolArg("-debug-ui", false));
+        LogPrintf("overview-set-wallet-model-5\n");
         connect(model, &WalletModel::notifyWatchonlyChanged, [this](bool showWatchOnly) {
             updateWatchOnlyLabels(showWatchOnly && !walletModel->wallet().privateKeysDisabled());
         });
 
+        LogPrintf("overview-set-wallet-model-6\n");
         // explicitly update PS frame and transaction list to reflect actual settings
         updateAdvancedCJUI(model->getOptionsModel()->getShowAdvancedCJUI());
+        LogPrintf("overview-set-wallet-model-7\n");
 
         connect(model->getOptionsModel(), &OptionsModel::coinJoinRoundsChanged, this, &OverviewPage::updateCoinJoinProgress);
+        LogPrintf("overview-set-wallet-model-8\n");
         connect(model->getOptionsModel(), &OptionsModel::coinJoinAmountChanged, this, &OverviewPage::updateCoinJoinProgress);
+        LogPrintf("overview-set-wallet-model-9\n");
         connect(model->getOptionsModel(), &OptionsModel::AdvancedCJUIChanged, this, &OverviewPage::updateAdvancedCJUI);
+        LogPrintf("overview-set-wallet-model-10\n");
         connect(model->getOptionsModel(), &OptionsModel::coinJoinEnabledChanged, [=]() {
             coinJoinStatus(true);
         });
+        LogPrintf("overview-set-wallet-model-11\n");
 
         // Disable coinJoinClient builtin support for automatic backups while we are in GUI,
         // we'll handle automatic backups and user warnings in coinJoinStatus()
         walletModel->coinJoin()->disableAutobackups();
 
+        LogPrintf("overview-set-wallet-model-12\n");
         connect(ui->toggleCoinJoin, &QPushButton::clicked, this, &OverviewPage::toggleCoinJoin);
 
         // coinjoin buttons will not react to spacebar must be clicked on
+        LogPrintf("overview-set-wallet-model-13\n");
         ui->toggleCoinJoin->setFocusPolicy(Qt::NoFocus);
     }
+    LogPrintf("overview-set-wallet-model-end\n");
 }
 
 void OverviewPage::updateDisplayUnit()
@@ -374,11 +395,14 @@ void OverviewPage::showOutOfSyncWarning(bool fShow)
 
 void OverviewPage::updateCoinJoinProgress()
 {
+    LogPrintf("knst update-cj-progress-1\n");
     if (!walletModel || !clientModel || clientModel->node().shutdownRequested() || !clientModel->masternodeSync().isBlockchainSynced()) return;
 
+    LogPrintf("knst update-cj-progress-2\n");
     QString strAmountAndRounds;
     QString strCoinJoinAmount = BitcoinUnits::formatHtmlWithUnit(nDisplayUnit, clientModel->coinJoinOptions().getAmount() * COIN, false, BitcoinUnits::SeparatorStyle::ALWAYS);
 
+    LogPrintf("knst update-cj-progress-3\n");
     if(m_balances.balance == 0)
     {
         ui->coinJoinProgress->setValue(0);
@@ -393,6 +417,7 @@ void OverviewPage::updateCoinJoinProgress()
         return;
     }
 
+    LogPrintf("knst update-cj-progress-4\n");
     CAmount nAnonymizableBalance = walletModel->wallet().getAnonymizableBalance(false, false);
 
     CAmount nMaxToAnonymize = nAnonymizableBalance + m_balances.anonymized_balance;
@@ -400,6 +425,7 @@ void OverviewPage::updateCoinJoinProgress()
     // If it's more than the anon threshold, limit to that.
     if (nMaxToAnonymize > clientModel->coinJoinOptions().getAmount() * COIN) nMaxToAnonymize = clientModel->coinJoinOptions().getAmount() * COIN;
 
+    LogPrintf("knst update-cj-progress-5\n");
     if(nMaxToAnonymize == 0) return;
 
     if (nMaxToAnonymize >= clientModel->coinJoinOptions().getAmount() * COIN) {
@@ -419,18 +445,23 @@ void OverviewPage::updateCoinJoinProgress()
                 QString(BitcoinUnits::factor(nDisplayUnit) == 1 ? "" : "~") + strMaxToAnonymize +
                 " / " + tr("%n Rounds", "", clientModel->coinJoinOptions().getRounds()) + "</span>";
     }
+    LogPrintf("knst update-cj-progress-6\n");
     ui->labelAmountRounds->setText(strAmountAndRounds);
 
     if (!fShowAdvancedCJUI) return;
 
+    LogPrintf("knst update-cj-progress-7\n");
     const interfaces::WalletBalances balances = walletModel->wallet().getBalances();
     CAmount nDenominatedConfirmedBalance = balances.denominated_trusted;
     CAmount nDenominatedUnconfirmedBalance = balances.denominated_untrusted_peding;
     CAmount nNormalizedAnonymizedBalance;
     float nAverageAnonymizedRounds;
 
+    LogPrintf("knst update-cj-progress-8\n");
     nNormalizedAnonymizedBalance = walletModel->wallet().getNormalizedAnonymizedBalance();
+    LogPrintf("knst update-cj-progress-9\n");
     nAverageAnonymizedRounds = walletModel->wallet().getAverageAnonymizedRounds();
+    LogPrintf("knst update-cj-progress-10\n");
 
     // calculate parts of the progress, each of them shouldn't be higher than 1
     // progress of denominating
@@ -465,8 +496,10 @@ void OverviewPage::updateCoinJoinProgress()
     float progress = denomPartCalc + anonNormPartCalc + anonFullPartCalc;
     if(progress >= 100) progress = 100;
 
+    LogPrintf("knst update-cj-progress-11\n");
     ui->coinJoinProgress->setValue(progress);
 
+    LogPrintf("knst update-cj-progress-12\n");
     QString strToolPip = QString("<b>" + tr("Overall progress") + ": %1%</b><br/>" +
                           tr("Denominated") + ": %2%<br/>" +
                           tr("Partially mixed") + ": %3%<br/>" +
@@ -475,6 +508,7 @@ void OverviewPage::updateCoinJoinProgress()
             .arg(progress).arg(denomPart).arg(anonNormPart).arg(anonFullPart)
             .arg(nAverageAnonymizedRounds);
     ui->coinJoinProgress->setToolTip(strToolPip);
+    LogPrintf("knst update-cj-progress-13\n");
 }
 
 void OverviewPage::updateAdvancedCJUI(bool fShowAdvancedCJUI)
@@ -487,10 +521,12 @@ void OverviewPage::updateAdvancedCJUI(bool fShowAdvancedCJUI)
 
 void OverviewPage::coinJoinStatus(bool fForce)
 {
+    LogPrintf("knst cj-status-1\n");
     if (!walletModel || !clientModel) return;
 
     if (!fForce && (clientModel->node().shutdownRequested() || !clientModel->masternodeSync().isBlockchainSynced())) return;
 
+    LogPrintf("knst cj-status-2\n");
     // Disable any PS UI for masternode or when autobackup is disabled or failed for whatever reason
     if (clientModel->node().isMasternode() || nWalletBackups <= 0) {
         DisableCoinJoinCompletely();
@@ -499,9 +535,11 @@ void OverviewPage::coinJoinStatus(bool fForce)
         }
         return;
     }
+    LogPrintf("knst cj-status-3\n");
 
     bool fIsEnabled = clientModel->coinJoinOptions().isEnabled();
     ui->frameCoinJoin->setVisible(fIsEnabled);
+    LogPrintf("knst cj-status-4\n");
     if (!fIsEnabled) {
         SetupTransactionList(NUM_ITEMS_DISABLED);
         if (timer != nullptr) {
@@ -510,10 +548,12 @@ void OverviewPage::coinJoinStatus(bool fForce)
         return;
     }
 
+    LogPrintf("knst cj-status-5\n");
     if (timer != nullptr && !timer->isActive()) {
         timer->start(1000);
     }
 
+    LogPrintf("knst cj-status-6\n");
     // Wrap all coinjoin related widgets we want to show/hide state based.
     // Value of the map contains a flag if this widget belongs to the advanced
     // CoinJoin UI option or not. True if it does, false if not.
@@ -526,6 +566,7 @@ void OverviewPage::coinJoinStatus(bool fForce)
         {ui->labelAmountRounds, false}
     };
 
+    LogPrintf("knst cj-status-7\n");
     auto setWidgetsVisible = [&](bool fVisible) {
         static bool fInitial{true};
         static bool fLastVisible{false};
@@ -546,9 +587,11 @@ void OverviewPage::coinJoinStatus(bool fForce)
         fLastShowAdvanced = fShowAdvancedCJUI;
     };
 
+    LogPrintf("knst cj-status-8\n");
     static int64_t nLastDSProgressBlockTime = 0;
     int nBestHeight = clientModel->node().getNumBlocks();
 
+    LogPrintf("knst cj-status-9\n");
     // We are processing more than 1 block per second, we'll just leave
     if (nBestHeight > walletModel->coinJoin()->getCachedBlocks() && GetTime() - nLastDSProgressBlockTime <= 1) return;
     nLastDSProgressBlockTime = GetTime();
@@ -557,35 +600,46 @@ void OverviewPage::coinJoinStatus(bool fForce)
     if(walletModel->getKeysLeftSinceAutoBackup() < COINJOIN_KEYS_THRESHOLD_WARNING) {
         strKeysLeftText = "<span style='" + GUIUtil::getThemedStyleQString(GUIUtil::ThemedStyle::TS_ERROR) + "'>" + strKeysLeftText + "</span>";
     }
+    LogPrintf("knst cj-status-10\n");
     if (!walletModel->wallet().isLegacy()) {
         // we don't need in auto-back for case of Descriptor wallets
         strKeysLeftText = "";
     }
     ui->labelCoinJoinEnabled->setToolTip(strKeysLeftText);
 
+    LogPrintf("knst cj-status-11\n");
     QString strCoinJoinName = QString::fromStdString(gCoinJoinName);
     if (!walletModel->coinJoin()->isMixing()) {
+        LogPrintf("knst cj-status-11.1\n");
         if (nBestHeight != walletModel->coinJoin()->getCachedBlocks()) {
             walletModel->coinJoin()->setCachedBlocks(nBestHeight);
-            updateCoinJoinProgress();
+            LogPrintf("knst cj-status-11.2\n");
+            updateCoinJoinProgress(); // <----
+            LogPrintf("knst cj-status-11.3\n");
         }
 
+        LogPrintf("knst cj-status-11.4\n");
         setWidgetsVisible(false);
+        LogPrintf("knst cj-status-11.5\n");
         ui->toggleCoinJoin->setText(tr("Start %1").arg(strCoinJoinName));
+        LogPrintf("knst cj-status-11.6\n");
 
         QString strEnabled = tr("Disabled");
         // Show how many keys left in advanced PS UI mode only
         if (fShowAdvancedCJUI && !strKeysLeftText.isEmpty()) strEnabled += ", " + strKeysLeftText;
         ui->labelCoinJoinEnabled->setText(strEnabled);
+        LogPrintf("knst cj-status-11.7\n");
 
         // If mixing isn't active always show the lower number of txes because there are
         // anyway the most PS widgets hidden.
         SetupTransactionList(NUM_ITEMS_ENABLED_NORMAL);
+        LogPrintf("knst cj-status-11.8\n");
 
         return;
     } else {
         SetupTransactionList(fShowAdvancedCJUI ? NUM_ITEMS_ENABLED_ADVANCED : NUM_ITEMS_ENABLED_NORMAL);
     }
+    LogPrintf("knst cj-status-12\n");
 
     // Warn user that wallet is running out of keys
     // NOTE: we do NOT warn user and do NOT create autobackups if mixing is not running
@@ -627,11 +681,13 @@ void OverviewPage::coinJoinStatus(bool fForce)
         }
     }
 
+    LogPrintf("knst cj-status-13\n");
     QString strEnabled = walletModel->coinJoin()->isMixing() ? tr("Enabled") : tr("Disabled");
     // Show how many keys left in advanced PS UI mode only
     if(fShowAdvancedCJUI && !strKeysLeftText.isEmpty()) strEnabled += ", " + strKeysLeftText;
     ui->labelCoinJoinEnabled->setText(strEnabled);
 
+    LogPrintf("knst cj-status-14\n");
     if (walletModel->wallet().isLegacy()) {
         if(nWalletBackups == -1) {
             // Automatic backup failed, nothing else we can do until user fixes the issue manually
@@ -650,6 +706,7 @@ void OverviewPage::coinJoinStatus(bool fForce)
         }
     }
 
+    LogPrintf("knst cj-status-15\n");
     // check coinjoin status and unlock if needed
     if(nBestHeight != walletModel->coinJoin()->getCachedBlocks()) {
         // Balance and number of transactions might have changed
@@ -657,9 +714,12 @@ void OverviewPage::coinJoinStatus(bool fForce)
         updateCoinJoinProgress();
     }
 
+    LogPrintf("knst cj-status-16\n");
     setWidgetsVisible(true);
 
+    LogPrintf("knst cj-status-17\n");
     ui->labelSubmittedDenom->setText(QString(walletModel->coinJoin()->getSessionDenoms().c_str()));
+    LogPrintf("knst cj-status-18\n");
 }
 
 void OverviewPage::toggleCoinJoin(){
@@ -717,9 +777,11 @@ void OverviewPage::toggleCoinJoin(){
 
 void OverviewPage::SetupTransactionList(int nNumItems)
 {
+    LogPrintf("knst setup-tx-list-1\n");
     if (walletModel == nullptr || walletModel->getTransactionTableModel() == nullptr) {
         return;
     }
+    LogPrintf("knst setup-tx-list-2\n");
 
     // Set up transaction list
     if (filter == nullptr) {
@@ -729,15 +791,20 @@ void OverviewPage::SetupTransactionList(int nNumItems)
         filter->setSortRole(Qt::EditRole);
         filter->setShowInactive(false);
         filter->sort(TransactionTableModel::Date, Qt::DescendingOrder);
+        LogPrintf("knst setup-tx-list-3\n");
         ui->listTransactions->setModel(filter.get());
+        LogPrintf("knst setup-tx-list-4\n");
     }
 
     if (filter->rowCount() == nNumItems) {
         return;
     }
+    LogPrintf("knst setup-tx-list-5\n");
 
     filter->setLimit(nNumItems);
+    LogPrintf("knst setup-tx-list-6\n");
     ui->listTransactions->setMinimumHeight(nNumItems * ITEM_HEIGHT);
+    LogPrintf("knst setup-tx-list-7\n");
 }
 
 void OverviewPage::DisableCoinJoinCompletely()

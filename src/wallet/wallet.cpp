@@ -240,6 +240,7 @@ std::shared_ptr<CWallet> LoadWalletInternal(interfaces::Chain& chain, interfaces
             return nullptr;
         }
 
+        const auto start{SteadyClock::now()};
         chain.initMessage(_("Loading wallet…").translated);
         std::shared_ptr<CWallet> wallet = CWallet::Create(&chain, &coinjoin_loader, name, std::move(database), options.create_flags, error, warnings);
         if (!wallet) {
@@ -247,11 +248,15 @@ std::shared_ptr<CWallet> LoadWalletInternal(interfaces::Chain& chain, interfaces
             status = DatabaseStatus::FAILED_LOAD;
             return nullptr;
         }
+        wallet->WalletLogPrintf("Wallet Create in %15dms\n", Ticks<std::chrono::milliseconds>(SteadyClock::now() - start));
         AddWallet(wallet);
+        wallet->WalletLogPrintf("Wallet +AddWallet in %15dms\n", Ticks<std::chrono::milliseconds>(SteadyClock::now() - start));
         wallet->postInitProcess();
+        wallet->WalletLogPrintf("Wallet +PostInit in %15dms\n", Ticks<std::chrono::milliseconds>(SteadyClock::now() - start));
 
         // Write the wallet setting
         UpdateWalletSetting(chain, name, load_on_start, warnings);
+        wallet->WalletLogPrintf("Wallet +UpdateSettings in %15dms\n", Ticks<std::chrono::milliseconds>(SteadyClock::now() - start));
 
         return wallet;
     } catch (const std::runtime_error& e) {
@@ -264,6 +269,7 @@ std::shared_ptr<CWallet> LoadWalletInternal(interfaces::Chain& chain, interfaces
 
 std::shared_ptr<CWallet> LoadWallet(interfaces::Chain& chain, interfaces::CoinJoin::Loader& coinjoin_loader, const std::string& name, std::optional<bool> load_on_start, const DatabaseOptions& options, DatabaseStatus& status, bilingual_str& error, std::vector<bilingual_str>& warnings)
 {
+    LogPrintf("knst load wallet-1\n");
     auto result = WITH_LOCK(g_loading_wallet_mutex, return g_loading_wallet_set.insert(name));
     if (!result.second) {
         error = Untranslated("Wallet already loading.");
@@ -272,6 +278,7 @@ std::shared_ptr<CWallet> LoadWallet(interfaces::Chain& chain, interfaces::CoinJo
     }
     auto wallet = LoadWalletInternal(chain, coinjoin_loader, name, load_on_start, options, status, error, warnings);
     WITH_LOCK(g_loading_wallet_mutex, g_loading_wallet_set.erase(result.first));
+    LogPrintf("knst load wallet-2\n");
     return wallet;
 }
 
@@ -4056,11 +4063,14 @@ DBErrors CWallet::LoadWallet()
 // This avoids accidental spending of collaterals. They can still be unlocked manually if a spend is really intended.
 void CWallet::AutoLockMasternodeCollaterals()
 {
+    LogPrintf("auto-lock-1\n");
     if (!m_chain) return;
 
     std::vector<std::pair<const CTransactionRef&, unsigned int>> outputs;
+    LogPrintf("auto-lock-2\n");
 
     LOCK(cs_wallet);
+    LogPrintf("auto-lock-3\n");
     for (const auto& pair : mapWallet) {
         for (unsigned int i = 0; i < pair.second.tx->vout.size(); ++i) {
             if (IsMine(pair.second.tx->vout[i]) && !IsSpent(pair.first, i)) {
@@ -4068,9 +4078,11 @@ void CWallet::AutoLockMasternodeCollaterals()
             }
         }
     }
+    LogPrintf("auto-lock-5\n");
     for (const auto& outPoint : m_chain->listMNCollaterials(outputs)) {
         LockCoin(outPoint);
     }
+    LogPrintf("auto-lock-6\n");
 }
 
 DBErrors CWallet::ZapSelectTx(std::vector<uint256>& vHashIn, std::vector<uint256>& vHashOut)
@@ -4998,20 +5010,26 @@ std::shared_ptr<CWallet> CWallet::Create(interfaces::Chain* chain, interfaces::C
     // Try to top up keypool. No-op if the wallet is locked.
     walletInstance->TopUpKeyPool();
 
+    walletInstance->WalletLogPrintf("Wallet +top-up in %15dms\n", Ticks<std::chrono::milliseconds>(SteadyClock::now() - start));
     if (chain && !AttachChain(walletInstance, *chain, error, warnings)) {
         return nullptr;
     }
+    walletInstance->WalletLogPrintf("Wallet +attach in %15dms\n", Ticks<std::chrono::milliseconds>(SteadyClock::now() - start));
 
     if (coinjoin_loader) {
         coinjoin_loader->AddWallet(walletInstance);
     }
 
+    walletInstance->WalletLogPrintf("Wallet +CJ loader in %15dms\n", Ticks<std::chrono::milliseconds>(SteadyClock::now() - start));
     {
         LOCK(cs_wallets);
+        walletInstance->WalletLogPrintf("Wallet +lock cs_wallets in %15dms\n", Ticks<std::chrono::milliseconds>(SteadyClock::now() - start));
         for (auto& load_wallet : g_load_wallet_fns) {
             load_wallet(interfaces::MakeWallet(walletInstance));
+            walletInstance->WalletLogPrintf("Wallet +next loader %15dms\n", Ticks<std::chrono::milliseconds>(SteadyClock::now() - start));
         }
     }
+    walletInstance->WalletLogPrintf("Wallet +g_load_wallet in %15dms\n", Ticks<std::chrono::milliseconds>(SteadyClock::now() - start));
 
 
     {

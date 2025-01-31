@@ -117,22 +117,28 @@ void WalletController::closeAllWallets(QWidget* parent)
 
 WalletModel* WalletController::getOrCreateWallet(std::unique_ptr<interfaces::Wallet> wallet)
 {
+    LogPrintf("get-or-create-1\n");
     QMutexLocker locker(&m_mutex);
 
+    LogPrintf("get-or-create-1-1\n");
     // Return model instance if exists.
     if (!m_wallets.empty()) {
         std::string name = wallet->getWalletName();
+        LogPrintf("get-or-create-1-2\n");
         for (WalletModel* wallet_model : m_wallets) {
+            LogPrintf("get-or-create-1-3\n");
             if (wallet_model->wallet().getWalletName() == name) {
                 return wallet_model;
             }
         }
     }
 
+    LogPrintf("get-or-create-1-4\n");
     // Instantiate model and register it.
     WalletModel* wallet_model = new WalletModel(std::move(wallet), m_client_model,
                                                 nullptr /* required for the following moveToThread() call */);
 
+    LogPrintf("get-or-create-2\n");
     // Move WalletModel object to the thread that created the WalletController
     // object (GUI main thread), instead of the current thread, which could be
     // an outside wallet thread or RPC thread sending a LoadWallet notification.
@@ -146,6 +152,7 @@ WalletModel* WalletController::getOrCreateWallet(std::unique_ptr<interfaces::Wal
 
     m_wallets.push_back(wallet_model);
 
+    LogPrintf("get-or-create-3\n");
     // WalletModel::startPollBalance needs to be called in a thread managed by
     // Qt because of startTimer. Considering the current thread can be a RPC
     // thread, better delegate the calling to Qt with Qt::AutoConnection.
@@ -166,11 +173,14 @@ WalletModel* WalletController::getOrCreateWallet(std::unique_ptr<interfaces::Wal
         }
     }, Qt::QueuedConnection);
 
+    LogPrintf("get-or-create-4\n");
     // Re-emit coinsSent signal from wallet model.
     connect(wallet_model, &WalletModel::coinsSent, this, &WalletController::coinsSent);
 
+    LogPrintf("get-or-create-5\n");
     Q_EMIT walletAdded(wallet_model);
 
+    LogPrintf("get-or-create-6\n");
     return wallet_model;
 }
 

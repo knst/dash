@@ -2900,23 +2900,29 @@ static RPCHelpMan loadwallet()
         },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
+    LogPrintf("knst load-wallet-1\n");
     WalletContext& context = EnsureWalletContext(request.context);
     const std::string name(request.params[0].get_str());
 
+    LogPrintf("knst load-wallet-2\n");
     DatabaseOptions options;
     DatabaseStatus status;
     options.require_existing = true;
     bilingual_str error;
     std::vector<bilingual_str> warnings;
     std::optional<bool> load_on_start = request.params[1].isNull() ? std::nullopt : std::optional<bool>(request.params[1].get_bool());
+    LogPrintf("knst load-wallet-3\n");
     std::shared_ptr<CWallet> const wallet = LoadWallet(*context.chain, *context.m_coinjoin_loader, name, load_on_start, options, status, error, warnings);
+    LogPrintf("knst load-wallet-4\n");
 
     HandleWalletError(wallet, status, error);
 
     UniValue obj(UniValue::VOBJ);
+    LogPrintf("knst load-wallet-5\n");
     obj.pushKV("name", wallet->GetName());
     obj.pushKV("warning", Join(warnings, Untranslated("\n")).original);
 
+    LogPrintf("knst load-wallet-6\n");
     return obj;
 },
     };

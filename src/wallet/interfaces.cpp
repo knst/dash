@@ -379,7 +379,7 @@ public:
         return m_wallet->FillPSBT(psbtx, complete, sighash_type, sign, bip32derivs, n_signed);
     }
 
-#define MICRO 0.000001
+#define MILLI 0.001
 
     WalletBalances getBalances() override
     {
@@ -399,7 +399,7 @@ public:
         result.denominated_untrusted_peding = bal.m_denominated_untrusted_pending;
         result.denominated_trusted = bal.m_denominated_trusted;
 
-        LogPrintf("knst getBalances() %.2fms\n", (GetTimeMicros() - time) * MICRO);
+        LogPrintf("knst getBalances() %.2fms\n", (GetTimeMicros() - time) * MILLI);
         return result;
     }
     bool tryGetBalances(WalletBalances& balances, uint256& block_hash) override
@@ -407,47 +407,48 @@ public:
         int64_t time = GetTimeMicros();
         TRY_LOCK(m_wallet->cs_wallet, locked_wallet);
         if (!locked_wallet) {
-            LogPrintf("knst tryGetBalances-1() %.2fms\n", (GetTimeMicros() - time) * MICRO);
+            LogPrintf("knst tryGetBalances-1() %.2fms\n", (GetTimeMicros() - time) * MILLI);
             return false;
         }
         block_hash = m_wallet->GetLastBlockHash();
         balances = getBalances();
-        LogPrintf("knst tryGetBalances-2() %.2fms\n", (GetTimeMicros() - time) * MICRO);
+        LogPrintf("knst tryGetBalances-2() %.2fms\n", (GetTimeMicros() - time) * MILLI);
         return true;
     }
     CAmount getBalance() override
     {
         int64_t time = GetTimeMicros();
         auto ret = m_wallet->GetBalance().m_mine_trusted;
-        LogPrintf("knst getBalance() %.2fms\n", (GetTimeMicros() - time) * MICRO);
+        LogPrintf("knst getBalance() %.2fms\n", (GetTimeMicros() - time) * MILLI);
         return ret;
     }
     CAmount getAnonymizableBalance(bool fSkipDenominated, bool fSkipUnconfirmed) override
     {
         int64_t time = GetTimeMicros();
         auto ret = m_wallet->GetAnonymizableBalance(fSkipDenominated, fSkipUnconfirmed);
-        LogPrintf("knst getAnonymizableBalance() %.2fms\n", (GetTimeMicros() - time) * MICRO);
+        LogPrintf("knst getAnonymizableBalance() %.2fms\n", (GetTimeMicros() - time) * MILLI);
         return ret;
     }
     CAmount getAnonymizedBalance() override
     {
+        // removed
         int64_t time = GetTimeMicros();
         auto ret = m_wallet->GetBalance().m_anonymized;
-        LogPrintf("knst getAnonymizedBalance() %.2fms\n", (GetTimeMicros() - time) * MICRO);
+        LogPrintf("knst getAnonymizedBalance() %.2fms\n", (GetTimeMicros() - time) * MILLI);
         return ret;
     }
     CAmount getNormalizedAnonymizedBalance() override
     {
         int64_t time = GetTimeMicros();
         auto ret = m_wallet->GetNormalizedAnonymizedBalance();
-        LogPrintf("knst getNormalizedAnonymizedBalance() %.2fms\n", (GetTimeMicros() - time) * MICRO);
+        LogPrintf("knst getNormalizedAnonymizedBalance() %.2fms\n", (GetTimeMicros() - time) * MILLI);
         return ret;
     }
     CAmount getAverageAnonymizedRounds() override
     {
         int64_t time = GetTimeMicros();
         auto ret = m_wallet->GetAverageAnonymizedRounds();
-        LogPrintf("knst getAverageAnonymizedRounds() %.2fms\n", (GetTimeMicros() - time) * MICRO);
+        LogPrintf("knst getAverageAnonymizedRounds() %.2fms\n", (GetTimeMicros() - time) * MILLI);
         return ret;
     }
     CAmount getAvailableBalance(const CCoinControl& coin_control) override
@@ -455,11 +456,11 @@ public:
         int64_t time = GetTimeMicros();
         if (coin_control.IsUsingCoinJoin()) {
             auto ret = m_wallet->GetBalance(0, coin_control.m_avoid_address_reuse, false, &coin_control).m_anonymized;
-            LogPrintf("knst getAvailableBalance-1() %.2fms\n", (GetTimeMicros() - time) * MICRO);
+            LogPrintf("knst getAvailableBalance-1() %.2fms\n", (GetTimeMicros() - time) * MILLI);
             return ret;
         } else {
             auto ret = m_wallet->GetAvailableBalance(&coin_control);
-            LogPrintf("knst getAvailableBalance-2() %.2fms\n", (GetTimeMicros() - time) * MICRO);
+            LogPrintf("knst getAvailableBalance-2() %.2fms\n", (GetTimeMicros() - time) * MILLI);
             return ret;
         }
     }
@@ -478,7 +479,7 @@ public:
         int64_t time = GetTimeMicros();
         LOCK(m_wallet->cs_wallet);
         auto ret = m_wallet->GetDebit(txin, filter);
-        LogPrintf("knst getDebit() %.2fms\n", (GetTimeMicros() - time) * MICRO);
+        LogPrintf("knst getDebit() %.2fms\n", (GetTimeMicros() - time) * MILLI);
         return ret;
     }
     CAmount getCredit(const CTxOut& txout, isminefilter filter) override
@@ -486,7 +487,7 @@ public:
         int64_t time = GetTimeMicros();
         LOCK(m_wallet->cs_wallet);
         auto ret = m_wallet->GetCredit(txout, filter);
-        LogPrintf("knst getCredit() %.2fms\n", (GetTimeMicros() - time) * MICRO);
+        LogPrintf("knst getCredit() %.2fms\n", (GetTimeMicros() - time) * MILLI);
         return ret;
     }
     CoinsList listCoins() override

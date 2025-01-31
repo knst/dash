@@ -53,12 +53,18 @@ WalletModel::WalletModel(std::unique_ptr<interfaces::Wallet> wallet, ClientModel
     cachedNumISLocks(0),
     cachedCoinJoinRounds(0)
 {
+    LogPrintf("Wallet-Model-1\n");
     fHaveWatchOnly = m_wallet->haveWatchOnly();
+    LogPrintf("Wallet-Model-2\n");
     addressTableModel = new AddressTableModel(this);
+    LogPrintf("Wallet-Model-3\n");
     transactionTableModel = new TransactionTableModel(this);
+    LogPrintf("Wallet-Model-4\n");
     recentRequestsTableModel = new RecentRequestsTableModel(this);
+    LogPrintf("Wallet-Model-5\n");
 
     subscribeToCoreSignals();
+    LogPrintf("Wallet-Model-6\n");
 }
 
 WalletModel::~WalletModel()
