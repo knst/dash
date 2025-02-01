@@ -139,13 +139,11 @@ bool CMnemonic::Check(const SecureString& mnemonic)
 }
 
 // passphrase must be at most 256 characters otherwise it would be truncated
-SecureVector CMnemonic::ToSeed(const SecureString& mnemonic, const SecureString& passphrase)
+void CMnemonic::ToSeed(const SecureString& mnemonic, const SecureString& passphrase, SecureVector& seedRet)
 {
+
     SecureString ssSalt = SecureString("mnemonic") + passphrase;
     SecureVector vchSalt(ssSalt.begin(), ssSalt.begin() + strnlen(ssSalt.data(), 256));
-
-    SecureVector seedRet;
     seedRet.resize(64);
     PKCS5_PBKDF2_HMAC_SHA512(mnemonic.c_str(), mnemonic.size(), vchSalt.data(), vchSalt.size(), 2048, 64, seedRet.data());
-    return seedRet;
 }
