@@ -5907,8 +5907,7 @@ void CWallet::SetupDescriptorScriptPubKeyMans(const SecureString& mnemonic_arg, 
     if (!CMnemonic::Check(mnemonic)) {
         throw std::runtime_error(std::string(__func__) + ": invalid mnemonic: `" + std::string(mnemonic.c_str()) + "`");
     }
-    SecureVector seed_key;
-    CMnemonic::ToSeed(mnemonic, mnemonic_passphrase, seed_key);
+    SecureVector seed_key = CMnemonic::ToSeed(mnemonic, mnemonic_passphrase, seed_key);
 
     // Get the extended key
     CExtKey master_key;

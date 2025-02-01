@@ -33,7 +33,7 @@ public:
     static SecureString FromData(const SecureVector& data, int len);
     static bool Check(const SecureString& mnemonic);
     // passphrase must be at most 256 characters otherwise it would be truncated
-    static void ToSeed(const SecureString& mnemonic, const SecureString& passphrase, SecureVector& seedRet);
+    static SecureVector ToSeed(const SecureString& mnemonic, const SecureString& passphrase);
 };
 
 #endif // BITCOIN_WALLET_BIP39_H
