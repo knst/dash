@@ -558,7 +558,6 @@ public:
     CWallet* wallet() override { return m_wallet.get(); }
 
     std::shared_ptr<CWallet> m_wallet;
-    std::unique_ptr<interfaces::CoinJoin::Client> m_coinjoin_client;
 };
 
 class WalletLoaderImpl : public WalletLoader
