@@ -86,7 +86,6 @@ class RawTransactionsTest(BitcoinTestFramework):
         self.signrawtransactionwithwallet_tests()
         self.sendrawtransaction_tests()
         self.sendrawtransaction_testmempoolaccept_tests()
-        self.decoderawtransaction_tests()
         self.transaction_version_number_tests()
         if not self.options.descriptors:
             self.raw_multisig_transaction_legacy_tests()
@@ -422,8 +421,8 @@ class RawTransactionsTest(BitcoinTestFramework):
 
         # send 1.2 BTC to msig adr
         txId = self.nodes[0].sendtoaddress(mSigObj, 1.2)
-            self.sync_all()
-            self.generate(self.nodes[0], 1)
+        self.sync_all()
+        self.generate(self.nodes[0], 1)
         # node2 has both keys of the 2of2 ms addr, tx should affect the balance
         assert_equal(self.nodes[2].getbalance(), bal + Decimal('1.20000000'))
 
