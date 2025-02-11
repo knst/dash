@@ -261,7 +261,7 @@ void TxToUniv(const CTransaction& tx, const uint256& hashBlock, bool include_add
 
                 case TxVerbosity::SHOW_DETAILS_AND_PREVOUT:
                     UniValue o_script_pub_key(UniValue::VOBJ);
-                    ScriptPubKeyToUniv(prev_txout.scriptPubKey, o_script_pub_key, /* includeHex */ true);
+                    ScriptPubKeyToUniv(prev_txout.scriptPubKey, o_script_pub_key, /* includeHex */ true, /*include_address=*/true);
 
                     UniValue p(UniValue::VOBJ);
                     p.pushKV("generated", bool(prev_coin.fCoinBase));
