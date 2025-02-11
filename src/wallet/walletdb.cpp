@@ -1190,7 +1190,7 @@ std::unique_ptr<WalletDatabase> CreateMockWalletDatabase()
     return std::make_unique<BerkeleyDatabase>(std::make_shared<BerkeleyEnvironment>(), "");
 #elif defined(USE_BDB)
     return std::make_unique<SQLiteDatabase>("", "", true);
-#elif 
+#elif
     return std::make_unique<BerkeleyDatabase>(std::make_shared<BerkeleyEnvironment>(), "");
 #endif
 }
