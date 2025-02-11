@@ -1919,9 +1919,9 @@ void ScriptPubKeyToUniv(const CScript& scriptPubKey, UniValue& out, bool fInclud
     ScriptPubKeyToUniv(scriptPubKey, out, fIncludeHex, IsDeprecatedRPCEnabled("addresses"));
 }
 
-void TxToUniv(const CTransaction& tx, const uint256& hashBlock, UniValue& entry, bool include_hex, const CTxUndo* txundo, const CSpentIndexTxInfo* ptxSpentInfo)
+void TxToUniv(const CTransaction& tx, const uint256& hashBlock, UniValue& entry, bool include_hex, const CTxUndo* txundo, TxVerbosity verbosity, const CSpentIndexTxInfo* ptxSpentInfo)
 {
-    TxToUniv(tx, hashBlock, IsDeprecatedRPCEnabled("addresses"), entry, include_hex, txundo, ptxSpentInfo);
+    TxToUniv(tx, hashBlock, IsDeprecatedRPCEnabled("addresses"), entry, include_hex, txundo, verbosity, ptxSpentInfo);
 }
 
 template<typename T>
