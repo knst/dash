@@ -14,7 +14,6 @@ import sys
 
 # Disabled warnings:
 DISABLED = [
-    'SC2086', # Double quote to prevent globbing and word splitting.
     'SC2162', # read without -r will mangle backslashes.
 ]
 
