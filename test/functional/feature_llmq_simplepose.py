@@ -110,7 +110,6 @@ class LLMQSimplePoSeTest(DashTestFramework):
         if skip_count != 0:
             self.bump_mocktime(skip_count, nodes=nodes)
             self.generate(self.nodes[0], skip_count, sync_fun=self.no_op)
-        self.sync_blocks(nodes)
 
         q = self.nodes[0].getbestblockhash()
         self.log.info("Expected quorum_hash: "+str(q))
