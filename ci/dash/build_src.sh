@@ -14,7 +14,7 @@ source ./ci/dash/matrix.sh
 unset CC; unset CXX
 unset DISPLAY
 
-if [ "$PULL_REQUEST" != "false" ]; then test/lint/commit-script-check.sh $COMMIT_RANGE; fi
+if [ "$PULL_REQUEST" != "false" ]; then test/lint/commit-script-check.sh "$COMMIT_RANGE"; fi
 
 if [ "$CHECK_DOC" = 1 ]; then
     # TODO: Verify subtrees
@@ -28,7 +28,7 @@ if [ "$CHECK_DOC" = 1 ]; then
     test/lint/all-lint.py
 fi
 
-ccache --zero-stats --max-size=$CCACHE_SIZE
+ccache --zero-stats --max-size="$CCACHE_SIZE"
 
 if [ -n "$CONFIG_SHELL" ]; then
   export CONFIG_SHELL="$CONFIG_SHELL"
@@ -46,18 +46,18 @@ mkdir build-ci
 cd build-ci
 
 bash -c "../configure $BITCOIN_CONFIG_ALL $BITCOIN_CONFIG" || ( cat config.log && false)
-make distdir VERSION=$BUILD_TARGET
+make distdir VERSION="$BUILD_TARGET"
 
-cd dashcore-$BUILD_TARGET
+cd "dashcore-$BUILD_TARGET"
 bash -c "./configure $BITCOIN_CONFIG_ALL $BITCOIN_CONFIG" || ( cat config.log && false)
 
-make $MAKEJOBS $GOAL || ( echo "Build failure. Verbose build follows." && make $GOAL V=1 ; false )
+make "$MAKEJOBS" "$GOAL" || ( echo "Build failure. Verbose build follows." && make "$GOAL" V=1 ; false )
 
 ccache --version | head -n 1 && ccache --show-stats
 
 if [ -n "$USE_VALGRIND" ]; then
     echo "valgrind in USE!"
-    ${BASE_ROOT_DIR}/ci/test/wrap-valgrind.sh
+    "${BASE_ROOT_DIR}/ci/test/wrap-valgrind.sh"
 fi
 
 if [ "$RUN_SECURITY_TESTS" = "true" ]; then
