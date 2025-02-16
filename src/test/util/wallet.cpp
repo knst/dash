@@ -36,6 +36,6 @@ void importaddress(CWallet& wallet, const std::string& address)
     wallet.MarkDirty();
     assert(!spk_man->HaveWatchOnly(script));
     if (!spk_man->AddWatchOnly(script, 0 /* nCreateTime */)) assert(false);
-    wallet.SetAddressBook(dest, /* label */ "", "receive");
+    wallet.SetAddressBook(dest, /*label=*/"", "receive");
 }
 #endif // ENABLE_WALLET
