@@ -3,7 +3,7 @@
         "a914eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee87",
         {
             "asm": "OP_HASH160 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee OP_EQUAL",
-            "address": "2NF2b3KS8xXb9XHvbRMXdZh8s5g92rUZHtp",
+            "address": "92Cpm6g9Hba4maFG66aDjVxcgPY4wnQM4E",
             "type": "scripthash"
         }
     ],
@@ -12,7 +12,7 @@
         {
             "asm": "OP_RETURN 0",
             "type": "nulldata",
-            "p2sh": "2NG8CqGyR16jkZU5H7J9WM5xpCT6Fpw6bww"
+            "p2sh": "93JSZ4DRLAifokPwn3C6WtnZoAVHwDa6UP"
         }
-    ],
+    ]
 ]
