@@ -34,11 +34,20 @@ class WalletMnemonicbitsTest(BitcoinTestFramework):
         assert_equal(mnemonic, mnemonic_pre)
 
         if self.options.descriptors:
-            assert not "mnemonic" in self.nodes[0].listdescriptors()
+            assert not "mnemonic" in self.nodes[0].listdescriptors()['descriptors'][0]
+            assert "mnemonic" in self.nodes[0].listdescriptors(True)['descriptors'][0]
             descriptors = self.nodes[0].listdescriptors(True)['descriptors']
             assert_equal(len(descriptors[0]['mnemonic'].split()), 12)
             assert_equal(len(descriptors[1]['mnemonic'].split()), 12)
             assert_equal(descriptors[0]['mnemonic'], descriptors[1]['mnemonic'])
+
+            mnemonic_count = 0
+            for desc in descriptors:
+                if desc['mnemonic']:
+                    mnemonic_count += 1
+            # Coinbase imported private key doesn't have mnemonic
+            assert_equal(mnemonic_count, 2)
+            assert_equal(len(descriptors), 3)
         else:
             assert_equal(len(self.nodes[0].dumphdinfo()["mnemonic"].split()), 12)  # 12 words by default
 
