@@ -345,8 +345,8 @@ public:
     std::map<uint256, DescriptorCache> m_descriptor_caches;
     std::map<std::pair<uint256, CKeyID>, CKey> m_descriptor_keys;
     std::map<std::pair<uint256, CKeyID>, std::pair<CPubKey, std::vector<unsigned char>>> m_descriptor_crypt_keys;
-    SecureString mnemonic;
-    SecureString mnemonic_passphrase;
+    std::map<std::pair<uint256, CKeyID>, std::pair<SecureString, SecureString>> mnemonics;
+    std::map<std::pair<uint256, CKeyID>, std::pair<std::vector<unsigned char>, std::vector<unsigned char>>> crypted_mnemonics;
     bool tx_corrupt{false};
 
     CWalletScanState() {
@@ -739,13 +739,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
             LogPrintf("ssvalue -> mnemonic : %s\n", mnemonic.c_str());
 
             if (!mnemonic.empty()) {
-                if (wss.mnemonic != mnemonic && !wss.mnemonic.empty()) {
-                    LogPrintf("m-1 '%s' m-2 '%s'\n", mnemonic, wss.mnemonic);
-                    strErr = "Error reading wallet database: more than one mnemonic";
-                    return false;
-                }
-                wss.mnemonic = mnemonic;
-                wss.mnemonic_passphrase = mnemonic_passphrase;
+                wss.mnemonics.insert(std::make_pair(std::make_pair(desc_id, pubkey.GetID()), std::make_pair(mnemonic, mnemonic_passphrase)));
             }
         } else if (strType == DBKeys::WALLETDESCRIPTORCKEY) {
             uint256 desc_id;
@@ -765,8 +759,8 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
             wss.fIsEncrypted = true;
 
             // TODO : remove copy-paste with plain-text key
-            SecureString mnemonic;
-            SecureString mnemonic_passphrase;
+            std::vector<unsigned char> mnemonic;
+            std::vector<unsigned char> mnemonic_passphrase;
             // it's okay if wallet doesn't have mnemonic.
             // The wallet may be created in an older version of Dash Core or by importing descriptor
             try
@@ -776,16 +770,10 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
             }
             catch (const std::ios_base::failure&) {}
             LogPrintf("ssvalue [crypted] -> mnemonic : %s\n", HexStr(mnemonic));
-
             if (!mnemonic.empty()) {
-                if (wss.mnemonic != mnemonic && !wss.mnemonic.empty()) {
-                    LogPrintf("m-1 '%s' m-2 '%s'\n", HexStr(mnemonic), HexStr(wss.mnemonic));
-                    strErr = "Error reading wallet database: more than one mnemonic";
-                    return false;
-                }
-                wss.mnemonic = mnemonic;
-                wss.mnemonic_passphrase = mnemonic_passphrase;
+                wss.crypted_mnemonics.insert(std::make_pair(std::make_pair(desc_id, pubkey.GetID()), std::make_pair(mnemonic, mnemonic_passphrase)));
             }
+
         } else if (strType == DBKeys::LOCKED_UTXO) {
             uint256 hash;
             uint32_t n;
@@ -930,12 +918,22 @@ DBErrors WalletBatch::LoadWallet(CWallet* pwallet)
     // Set the descriptor keys
     for (auto desc_key_pair : wss.m_descriptor_keys) {
         auto spk_man = pwallet->GetScriptPubKeyMan(desc_key_pair.first.first);
-        ((DescriptorScriptPubKeyMan*)spk_man)->AddKey(desc_key_pair.first.second, desc_key_pair.second, wss.mnemonic, wss.mnemonic_passphrase);
+        auto it = wss.mnemonics.find(desc_key_pair.first);
+        if (it == wss.mnemonics.end()) {
+            ((DescriptorScriptPubKeyMan*)spk_man)->AddKey(desc_key_pair.first.second, desc_key_pair.second, "", "");
+        } else {
+            ((DescriptorScriptPubKeyMan*)spk_man)->AddKey(desc_key_pair.first.second, desc_key_pair.second, it->second.first, it->second.second);
+        }
     }
 
     for (auto desc_key_pair : wss.m_descriptor_crypt_keys) {
         auto spk_man = pwallet->GetScriptPubKeyMan(desc_key_pair.first.first);
-        ((DescriptorScriptPubKeyMan*)spk_man)->AddCryptedKey(desc_key_pair.first.second, desc_key_pair.second.first, desc_key_pair.second.second, wss.mnemonic, wss.mnemonic_passphrase);
+        auto it = wss.crypted_mnemonics.find(desc_key_pair.first);
+        if (it == wss.crypted_mnemonics.end()) {
+            ((DescriptorScriptPubKeyMan*)spk_man)->AddCryptedKey(desc_key_pair.first.second, desc_key_pair.second.first, desc_key_pair.second.second, {}, {});
+        } else {
+            ((DescriptorScriptPubKeyMan*)spk_man)->AddCryptedKey(desc_key_pair.first.second, desc_key_pair.second.first, desc_key_pair.second.second, it->second.first, it->second.second);
+        }
     }
 
     if (fNoncriticalErrors && result == DBErrors::LOAD_OK)
