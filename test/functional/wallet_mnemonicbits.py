@@ -24,6 +24,15 @@ class WalletMnemonicbitsTest(BitcoinTestFramework):
         self.stop_node(0)
         self.nodes[0].assert_start_raises_init_error(['-mnemonicbits=123'], "Error: Invalid '-mnemonicbits'. Allowed values: 128, 160, 192, 224, 256.")
         self.start_node(0)
+
+        mnemonic_pre = self.nodes[0].listdescriptors(True)['descriptors'][1]["mnemonic"] if self.options.descriptors else self.nodes[0].dumphdinfo()["mnemonic"]
+
+        self.log.info(f"descriptors: {self.nodes[0].listdescriptors(True)}")
+        self.nodes[0].encryptwallet('pass')
+        self.nodes[0].walletpassphrase('pass', 100)
+        mnemonic = self.nodes[0].listdescriptors(True)['descriptors'][1]["mnemonic"] if self.options.descriptors else self.nodes[0].dumphdinfo()["mnemonic"]
+        assert_equal(mnemonic, mnemonic_pre)
+
         if self.options.descriptors:
             assert not "mnemonic" in self.nodes[0].listdescriptors()
             descriptors = self.nodes[0].listdescriptors(True)['descriptors']
@@ -41,6 +50,7 @@ class WalletMnemonicbitsTest(BitcoinTestFramework):
         self.restart_node(0, extra_args=["-mnemonicbits=224"])
         self.nodes[0].createwallet("wallet_224")
         self.restart_node(0, extra_args=["-mnemonicbits=256"])
+        self.nodes[0].get_wallet_rpc(self.default_wallet_name).walletpassphrase('pass', 100)
         self.nodes[0].loadwallet("wallet_160")
         self.nodes[0].loadwallet("wallet_192")
         self.nodes[0].loadwallet("wallet_224")
@@ -62,6 +72,8 @@ class WalletMnemonicbitsTest(BitcoinTestFramework):
             assert_equal(len(self.nodes[0].get_wallet_rpc("wallet_224").dumphdinfo()["mnemonic"].split()), 21)              # 21 words
             assert_equal(len(self.nodes[0].get_wallet_rpc("wallet_256").dumphdinfo()["mnemonic"].split()), 24)              # 24 words
 
+        mnemonic = self.nodes[0].get_wallet_rpc(self.default_wallet_name).listdescriptors(True)["descriptors"][1]["mnemonic"] if self.options.descriptors else self.nodes[0].get_wallet_rpc(self.default_wallet_name).dumphdinfo()["mnemonic"]
+        assert_equal(mnemonic, mnemonic_pre)
 
 if __name__ == '__main__':
     WalletMnemonicbitsTest().main ()
