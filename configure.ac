@@ -311,8 +311,8 @@ AC_ARG_ENABLE([miner],
                     [enable in-wallet miner (default is yes)])],
     [enable_miner=$enableval],
     [enable_miner=yes])
-AM_CONDITIONAL([ENABLE_MINER], [test x$enable_miner = xyes])
-if test "x$enable_miner" = xyes; then
+AM_CONDITIONAL([ENABLE_MINER], [test "$enable_miner" = "yes"])
+if test "$enable_miner" = "yes"; then
     AC_DEFINE(ENABLE_MINER, 1, [Define this symbol if in-wallet miner should be enabled])
 fi
 
@@ -393,33 +393,33 @@ else
     # We always enable at at least -g1 debug info to support proper stacktraces in crash infos
     # Stacktraces will be suboptimal due to optimization, but better than nothing. Also, -fno-omit-frame-pointer
     # mitigates this a little bit
-    if test "x$GCC" = xyes; then
+    if test "$GCC" = "yes"; then
         DEBUG_CFLAGS="$DEBUG_CFLAGS -g1 -fno-omit-frame-pointer"
     fi
 
-    if test "x$GXX" = xyes; then
+    if test "$GXX" = "yes"; then
         DEBUG_CXXFLAGS="$DEBUG_CXXFLAGS -g1 -fno-omit-frame-pointer"
     fi
 fi
 
-if test "x$enable_stacktraces" != xno; then
+if test "$enable_stacktraces" != no; then
   AC_CHECK_HEADERS([execinfo.h], [], [enable_stacktraces=no])
 fi
 
-AM_CONDITIONAL([ENABLE_STACKTRACES], [test x$enable_stacktraces = xyes])
-if test "x$enable_stacktraces" = xyes; then
+AM_CONDITIONAL([ENABLE_STACKTRACES], [test "$enable_stacktraces" = "yes"])
+if test "$enable_stacktraces" = "yes"; then
     AC_DEFINE(ENABLE_STACKTRACES, 1, [Define this symbol if stacktraces should be enabled])
 else
     enable_crashhooks=no
 fi
 
-AM_CONDITIONAL([ENABLE_CRASH_HOOKS], [test x$enable_crashhooks = xyes])
-if test "x$enable_crashhooks" = xyes; then
+AM_CONDITIONAL([ENABLE_CRASH_HOOKS], [test "$enable_crashhooks" = "yes"])
+if test "$enable_crashhooks" = "yes"; then
     AC_DEFINE(ENABLE_CRASH_HOOKS, 1, [Define this symbol if crash hooks should be enabled])
 fi
 
 AX_CHECK_LINK_FLAG([-Wl,-wrap=__cxa_allocate_exception], [LINK_WRAP_SUPPORTED=yes],,,)
-AM_CONDITIONAL([CRASH_HOOKS_WRAPPED_CXX_ABI],[test x$LINK_WRAP_SUPPORTED = xyes])
+AM_CONDITIONAL([CRASH_HOOKS_WRAPPED_CXX_ABI],[test $LINK_WRAP_SUPPORTED = "yes"])
 
 if test "$LINK_WRAP_SUPPORTED" = "yes"; then
   AC_DEFINE(CRASH_HOOKS_WRAPPED_CXX_ABI, 1, [Define this symbol to use wrapped CXX ABIs for exception stacktraces])
@@ -780,7 +780,7 @@ case $host in
          fi
 
          gmp_prefix=$($BREW --prefix gmp 2>/dev/null)
-         if test x$gmp_prefix != x; then
+         if test "$gmp_prefix" != ""; then
            CORE_CPPFLAGS="$CORE_CPPFLAGS -I$gmp_prefix/include"
            CORE_LDFLAGS="$CORE_LDFLAGS -L$gmp_prefix/lib"
          fi
@@ -884,7 +884,7 @@ if test "$use_lcov" = "yes"; then
       COV_TOOL="$LLVM_COV gcov"
     ],[
       AC_MSG_RESULT([no])
-      if test "$GCOV" = "x"; then
+      if test "$GCOV" = ""; then
         AC_MSG_ERROR([lcov testing requested but gcov not found])
       fi
       COV_TOOL="$GCOV"
@@ -1222,8 +1222,8 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <stdint.h>
 )
 
 dnl ensure backtrace() is found, check -lexecinfo if necessary
-if test x$TARGET_OS != xwindows; then
-  if test "x$enable_stacktraces" != xno; then
+if test "$TARGET_OS" != "windows"; then
+  if test "$enable_stacktraces" != "no"; then
     AC_SEARCH_LIBS([backtrace], [execinfo], [], [
       AC_MSG_ERROR([Unable to find backtrace()])
     ])
@@ -1349,14 +1349,14 @@ else
 
     dnl Keep a copy of the original $QT_INCLUDES and use it when invoking qt's moc
     QT_INCLUDES_UNSUPPRESSED=$QT_INCLUDES
-    if test x$suppress_external_warnings != xno ; then
+    if test "$suppress_external_warnings" != "no" ; then
       QT_INCLUDES=SUPPRESS_WARNINGS($QT_INCLUDES)
       QT_DBUS_INCLUDES=SUPPRESS_WARNINGS($QT_DBUS_INCLUDES)
       QT_TEST_INCLUDES=SUPPRESS_WARNINGS($QT_TEST_INCLUDES)
     fi
 fi
 
-if test x$enable_fuzz_binary = xyes; then
+if test "$enable_fuzz_binary" = "yes"; then
   AC_MSG_CHECKING([whether main function is needed for fuzz binary])
   AX_CHECK_LINK_FLAG(
     [],
@@ -1411,7 +1411,7 @@ if test "$enable_wallet" != "no"; then
     fi
 fi
 
-if test x$use_usdt != xno; then
+if test "$use_usdt" != "no"; then
   AC_MSG_CHECKING([whether Userspace, Statically Defined Tracing tracepoints are supported])
   AC_COMPILE_IFELSE([
     AC_LANG_PROGRAM(
@@ -1487,7 +1487,7 @@ AX_CHECK_PREPROC_FLAG([-DBOOST_NO_CXX98_FUNCTION_BASE], [BOOST_CPPFLAGS="$BOOST_
                       [AC_LANG_PROGRAM([[#include <boost/config.hpp>]])])
 
 dnl Opt-in to Boost Process
-if test "x$boost_process" != xno; then
+if test "$boost_process" != "no"; then
 AC_MSG_CHECKING(for Boost Process)
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <boost/process.hpp>]],
  [[ boost::process::child* child = new boost::process::child; delete child; ]])],
@@ -1502,7 +1502,7 @@ fi
 fi
 
 dnl Check for reduced exports
-if test x$use_reduce_exports = xyes; then
+if test "$use_reduce_exports" = "yes"; then
     AX_CHECK_COMPILE_FLAG([-fvisibility=hidden], [CORE_CXXFLAGS="$CORE_CXXFLAGS -fvisibility=hidden"],
     [AC_MSG_ERROR([Cannot set hidden symbol visibility. Use --disable-reduce-exports.])], [$CXXFLAG_WERROR])
     AX_CHECK_LINK_FLAG([-Wl,--exclude-libs,ALL], [RELDFLAGS="-Wl,--exclude-libs,ALL"], [], [$LDFLAG_WERROR])
@@ -1529,7 +1529,7 @@ if test "$build_bitcoin_cli$build_bitcoind$bitcoin_enable_qt$use_tests$use_bench
   fi
 fi
 
-if test x$use_libevent = xyes; then
+if test "$use_libevent" = "yes"; then
   TEMP_CXXFLAGS="$CXXFLAGS"
   CXXFLAGS="$CXXFLAGS $EVENT_CFLAGS"
   AC_MSG_CHECKING([if evhttp_connection_get_peer expects const char**])
@@ -1782,7 +1782,7 @@ fi
 # When compiled natively on MacOS, we need to specify -flat to avoid producing a dSYM bundle
 # When cross-compiled on linux, we're using a different version of the tool that only supports flat symbol files
 AC_MSG_CHECKING([whether dsymutil needs -flat])
-if test x$DSYMUTIL != x && ($DSYMUTIL --help | grep -q \\-flat); then
+if test "$DSYMUTIL" != "" && ($DSYMUTIL --help | grep -q \\-flat); then
 AC_MSG_RESULT([yes])
 	DSYMUTIL_FLAT="$DSYMUTIL -flat"
 else
@@ -1795,36 +1795,36 @@ if test "$build_bitcoin_wallet$build_bitcoin_cli$build_bitcoin_tx$build_bitcoind
   AC_MSG_ERROR([No targets! Please specify at least one of: --with-utils --with-libs --with-daemon --with-gui --enable-bench or --enable-tests])
 fi
 
-AM_CONDITIONAL([TARGET_DARWIN], [test x$TARGET_OS = xdarwin])
-AM_CONDITIONAL([BUILD_DARWIN], [test x$BUILD_OS = xdarwin])
-AM_CONDITIONAL([TARGET_LINUX], [test x$TARGET_OS = xlinux])
-AM_CONDITIONAL([TARGET_WINDOWS], [test x$TARGET_OS = xwindows])
-AM_CONDITIONAL([ENABLE_WALLET], [test x$enable_wallet = xyes])
-AM_CONDITIONAL([USE_SQLITE], [test "x$use_sqlite" = "xyes"])
-AM_CONDITIONAL([USE_BDB], [test "x$use_bdb" = "xyes"])
-AM_CONDITIONAL([ENABLE_TESTS], [test x$BUILD_TEST = xyes])
-AM_CONDITIONAL([ENABLE_FUZZ], [test x$enable_fuzz = xyes])
-AM_CONDITIONAL([ENABLE_FUZZ_BINARY], [test x$enable_fuzz_binary = xyes])
-AM_CONDITIONAL([ENABLE_QT], [test x$bitcoin_enable_qt = xyes])
-AM_CONDITIONAL([ENABLE_QT_TESTS], [test x$BUILD_TEST_QT = xyes])
-AM_CONDITIONAL([ENABLE_BENCH], [test x$use_bench = xyes])
-AM_CONDITIONAL([USE_QRCODE], [test x$use_qr = xyes])
-AM_CONDITIONAL([USE_LCOV], [test x$use_lcov = xyes])
-AM_CONDITIONAL([USE_LIBEVENT], [test x$use_libevent = xyes])
-AM_CONDITIONAL([HARDEN], [test x$use_hardening = xyes])
-AM_CONDITIONAL([ENABLE_SSE42], [test x$enable_sse42 = xyes])
-AM_CONDITIONAL([ENABLE_SSE41], [test x$enable_sse41 = xyes])
-AM_CONDITIONAL([ENABLE_AVX2], [test x$enable_avx2 = xyes])
-AM_CONDITIONAL([ENABLE_X86_SHANI], [test x$enable_x86_shani = xyes])
-AM_CONDITIONAL([ENABLE_ARM_CRC], [test x$enable_arm_crc = xyes])
+AM_CONDITIONAL([TARGET_DARWIN], [test "$TARGET_OS" = "darwin"])
+AM_CONDITIONAL([BUILD_DARWIN], [test "$BUILD_OS" = "darwin"])
+AM_CONDITIONAL([TARGET_LINUX], [test "$TARGET_OS" = "linux"])
+AM_CONDITIONAL([TARGET_WINDOWS], [test "$TARGET_OS" = "windows"])
+AM_CONDITIONAL([ENABLE_WALLET], [test "$enable_wallet" = "yes"])
+AM_CONDITIONAL([USE_SQLITE], [test "$use_sqlite" = "yes"])
+AM_CONDITIONAL([USE_BDB], [test "$use_bdb" = "yes"])
+AM_CONDITIONAL([ENABLE_TESTS], [test "$BUILD_TEST" = "yes"])
+AM_CONDITIONAL([ENABLE_FUZZ], [test "$enable_fuzz" = "yes"])
+AM_CONDITIONAL([ENABLE_FUZZ_BINARY], [test "$enable_fuzz_binary" = "yes"])
+AM_CONDITIONAL([ENABLE_QT], [test "$bitcoin_enable_qt" = "yes"])
+AM_CONDITIONAL([ENABLE_QT_TESTS], [test "$BUILD_TEST_QT" = "yes"])
+AM_CONDITIONAL([ENABLE_BENCH], [test "$use_bench" = "yes"])
+AM_CONDITIONAL([USE_QRCODE], [test "$use_qr" = "yes"])
+AM_CONDITIONAL([USE_LCOV], [test "$use_lcov" = "yes"])
+AM_CONDITIONAL([USE_LIBEVENT], [test "$use_libevent" = "yes"])
+AM_CONDITIONAL([HARDEN], [test "$use_hardening" = "yes"])
+AM_CONDITIONAL([ENABLE_SSE42], [test "$enable_sse42" = "yes"])
+AM_CONDITIONAL([ENABLE_SSE41], [test "$enable_sse41" = "yes"])
+AM_CONDITIONAL([ENABLE_AVX2], [test "$enable_avx2" = "yes"])
+AM_CONDITIONAL([ENABLE_X86_SHANI], [test "$enable_x86_shani" = "yes"])
+AM_CONDITIONAL([ENABLE_ARM_CRC], [test "$enable_arm_crc" = "yes"])
 AM_CONDITIONAL([ENABLE_ARM_SHANI], [test "$enable_arm_shani" = "yes"])
-AM_CONDITIONAL([USE_ASM], [test x$use_asm = xyes])
-AM_CONDITIONAL([WORDS_BIGENDIAN], [test x$ac_cv_c_bigendian = xyes])
-AM_CONDITIONAL([USE_NATPMP], [test x$use_natpmp = xyes])
-AM_CONDITIONAL([USE_UPNP], [test x$use_upnp = xyes])
+AM_CONDITIONAL([USE_ASM], [test "$use_asm" = "yes"])
+AM_CONDITIONAL([WORDS_BIGENDIAN], [test "$ac_cv_c_bigendian" = "yes"])
+AM_CONDITIONAL([USE_NATPMP], [test "$use_natpmp" = "yes"])
+AM_CONDITIONAL([USE_UPNP], [test "$use_upnp" = "yes"])
 
 dnl for minisketch
-AM_CONDITIONAL([ENABLE_CLMUL], [test x$enable_clmul = xyes])
+AM_CONDITIONAL([ENABLE_CLMUL], [test "$enable_clmul" = "yes"])
 
 AC_DEFINE([CLIENT_VERSION_MAJOR], [_CLIENT_VERSION_MAJOR], [Major version])
 AC_DEFINE([CLIENT_VERSION_MINOR], [_CLIENT_VERSION_MINOR], [Minor version])
