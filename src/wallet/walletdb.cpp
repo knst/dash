@@ -740,6 +740,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
 
             if (!mnemonic.empty()) {
                 if (wss.mnemonic != mnemonic && !wss.mnemonic.empty()) {
+                    LogPrintf("m-1 '%s' m-2 '%s'\n", mnemonic, wss.mnemonic);
                     strErr = "Error reading wallet database: more than one mnemonic";
                     return false;
                 }
@@ -774,10 +775,11 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
                 ssValue >> mnemonic_passphrase;
             }
             catch (const std::ios_base::failure&) {}
-            LogPrintf("ssvalue -> mnemonic : %s\n", mnemonic.c_str());
+            LogPrintf("ssvalue [crypted] -> mnemonic : %s\n", HexStr(mnemonic));
 
             if (!mnemonic.empty()) {
                 if (wss.mnemonic != mnemonic && !wss.mnemonic.empty()) {
+                    LogPrintf("m-1 '%s' m-2 '%s'\n", HexStr(mnemonic), HexStr(wss.mnemonic));
                     strErr = "Error reading wallet database: more than one mnemonic";
                     return false;
                 }
@@ -933,7 +935,7 @@ DBErrors WalletBatch::LoadWallet(CWallet* pwallet)
 
     for (auto desc_key_pair : wss.m_descriptor_crypt_keys) {
         auto spk_man = pwallet->GetScriptPubKeyMan(desc_key_pair.first.first);
-        ((DescriptorScriptPubKeyMan*)spk_man)->AddCryptedKey(desc_key_pair.first.second, desc_key_pair.second.first, desc_key_pair.second.second);
+        ((DescriptorScriptPubKeyMan*)spk_man)->AddCryptedKey(desc_key_pair.first.second, desc_key_pair.second.first, desc_key_pair.second.second, wss.mnemonic, wss.mnemonic_passphrase);
     }
 
     if (fNoncriticalErrors && result == DBErrors::LOAD_OK)

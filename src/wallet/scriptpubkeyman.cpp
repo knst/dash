@@ -1845,6 +1845,7 @@ bool DescriptorScriptPubKeyMan::CheckDecryptionKey(const CKeyingMaterial& master
             keyFail = true;
             break;
         }
+        // TODO: test for mnemonics
         keyPass = true;
         if (m_decryption_thoroughly_checked)
             break;
@@ -1881,12 +1882,14 @@ bool DescriptorScriptPubKeyMan::Encrypt(const CKeyingMaterial& master_key, Walle
             return false;
         }
         if (!m_mnemonic.empty()) {
+            LogPrintf("knst encrypt mnemonic...\n");
             if (!EncryptSecret(master_key, mnemonic_secret, pubkey.GetHash(), crypted_mnemonic)) {
                 return false;
             }
             if (!EncryptSecret(master_key, mnemonic_passphrase_secret, pubkey.GetHash(), crypted_mnemonic_passphrase)) {
                 return false;
             }
+            LogPrintf("knst encrypt pubkey %s mnemonic %s -> %s\n", pubkey.GetHash().ToString(), m_mnemonic, HexStr(crypted_mnemonic));
         }
 
         m_map_crypted_keys[pubkey.GetID()] = make_pair(pubkey, crypted_secret);
@@ -2419,11 +2422,12 @@ bool DescriptorScriptPubKeyMan::AddKey(const CKeyID& key_id, const CKey& key, co
     m_map_keys[key_id] = key;
     m_mnemonic = mnemonic;
     m_mnemonic_passphrase = mnemonic_passphrase;
+    LogPrintf("knst add-key: %s\n", m_mnemonic, m_mnemonic_passphrase);
 
     return true;
 }
 
-bool DescriptorScriptPubKeyMan::AddCryptedKey(const CKeyID& key_id, const CPubKey& pubkey, const std::vector<unsigned char>& crypted_key)
+bool DescriptorScriptPubKeyMan::AddCryptedKey(const CKeyID& key_id, const CPubKey& pubkey, const std::vector<unsigned char>& crypted_key, const SecureString& mnemonic, const SecureString& mnemonic_passphrase)
 {
     LOCK(cs_desc_man);
     if (!m_map_keys.empty()) {
@@ -2431,6 +2435,8 @@ bool DescriptorScriptPubKeyMan::AddCryptedKey(const CKeyID& key_id, const CPubKe
     }
 
     m_map_crypted_keys[key_id] = make_pair(pubkey, crypted_key);
+    m_mnemonic = mnemonic;
+    m_mnemonic_passphrase = mnemonic_passphrase;
     return true;
 }
 
@@ -2489,6 +2495,20 @@ bool DescriptorScriptPubKeyMan::GetMnemonicString(SecureString& mnemonic, Secure
     if (m_storage.IsLocked(false)) return false;
     LogPrintf("knst get mnemonic: %s\n", mnemonic);
     // TODO - decrypt mnemonic here
+
+    /*
+            const CPubKey& pubkey = key_pair.second.first;
+            const std::vector<unsigned char>& crypted_secret = key_pair.second.second;
+            CKey key;
+            m_storage.WithEncryptionKey([&](const CKeyingMaterial& encryption_key) {
+                return DecryptKey(encryption_key, crypted_secret, pubkey, key);
+            });
+            keys[pubkey.GetID()] = key;
+        }
+        return keys;
+    }
+    return m_map_keys;
+*/
     mnemonic = m_mnemonic;
     mnemonic_passphrase = m_mnemonic_passphrase;
     return true;
