@@ -2015,8 +2015,7 @@ RPCHelpMan listdescriptors()
         if (priv) {
             SecureString mnemonic;
             SecureString mnemonic_passphrase;
-            // TODO keyid = ....
-            if (desc_spk_man->GetMnemonicString(CKeyID{}, mnemonic, mnemonic_passphrase)) {
+            if (desc_spk_man->GetMnemonicString(mnemonic, mnemonic_passphrase)) {
                 spk.pushKV("mnemonic", mnemonic.c_str());
                 spk.pushKV("mnemonicpassphrase", mnemonic_passphrase.c_str());
             }

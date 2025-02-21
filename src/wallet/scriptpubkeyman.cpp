@@ -2485,43 +2485,51 @@ bool DescriptorScriptPubKeyMan::GetDescriptorString(std::string& out, const bool
     return m_wallet_descriptor.descriptor->ToNormalizedString(provider, out, &m_wallet_descriptor.cache);
 }
 
-bool DescriptorScriptPubKeyMan::GetMnemonicString(const CKeyID& keyid, SecureString& mnemonic_out, SecureString& mnemonic_passphrase_out) const
+bool DescriptorScriptPubKeyMan::GetMnemonicString(SecureString& mnemonic_out, SecureString& mnemonic_passphrase_out) const
 {
     LOCK(cs_desc_man);
 
     mnemonic_out.clear();
     mnemonic_passphrase_out.clear();
 
+    if (m_mnemonics.empty() && m_crypted_mnemonics.empty()) {
+        WalletLogPrintf("%s: Descriptor wallet has no mnemonic defined\n", __func__);
+        return false;
+    }
     if (m_storage.IsLocked(false)) return false;
 
+    if (m_mnemonics.size() + m_crypted_mnemonics.size() > 1) {
+        WalletLogPrintf("%s: ERROR: One descriptor has multiple mnemonics. Can't match it\n", __func__);
+        return false;
+    }
     if (m_storage.HasEncryptionKeys() && !m_storage.IsLocked(true)) {
-        const auto crypted_mnemonic_it = m_crypted_mnemonics.find(keyid);
-        if (crypted_mnemonic_it == m_crypted_mnemonics.end()) return false;
-
-        const auto key_pair = m_map_crypted_keys.find(keyid);
-        if (key_pair == m_map_crypted_keys.end()) return false;
-
-        const CPubKey& pubkey = key_pair->second.first;
-        const auto mnemonic = crypted_mnemonic_it->second;
+        if (!m_crypted_mnemonics.empty() && m_map_crypted_keys.size() != 1) {
+            WalletLogPrintf("%s: ERROR: can't choose encryption key for mnemonic out of %lld\n", __func__, m_map_crypted_keys.size());
+            return false;
+        }
+        const CPubKey& pubkey = m_map_crypted_keys.begin()->second.first;
+        const auto mnemonic = m_crypted_mnemonics.begin()->second;
         const std::vector<unsigned char>& crypted_mnemonic = mnemonic.first;
         const std::vector<unsigned char>& crypted_mnemonic_passphrase = mnemonic.second;
-        CKey key;
-        // TODO - check result here
+
         SecureVector mnemonic_v;
         SecureVector mnemonic_passphrase_v;
-        m_storage.WithEncryptionKey([&](const CKeyingMaterial& encryption_key) {
+        if (!m_storage.WithEncryptionKey([&](const CKeyingMaterial& encryption_key) {
             return DecryptSecret(encryption_key, crypted_mnemonic, pubkey.GetHash(), mnemonic_v);
-        });
-        m_storage.WithEncryptionKey([&](const CKeyingMaterial& encryption_key) {
+        })) return false;
+        if (!m_storage.WithEncryptionKey([&](const CKeyingMaterial& encryption_key) {
             return DecryptSecret(encryption_key, crypted_mnemonic_passphrase, pubkey.GetHash(), mnemonic_passphrase_v);
-        });
+        })) return false;
+
         std::copy(mnemonic_v.begin(), mnemonic_v.end(), std::back_inserter(mnemonic_out));
         std::copy(mnemonic_passphrase_v.begin(), mnemonic_passphrase_v.end(), std::back_inserter(mnemonic_passphrase_out));
+
         LogPrintf("knst get encrypted mnemonic: %s\n", mnemonic_out);
         return true;
     }
-    const auto mnemonic_it = m_mnemonics.find(keyid);
-    if (mnemonic_it == m_mnemonics.end()) return false;
+    if (m_mnemonics.empty()) return false;
+
+    const auto mnemonic_it = m_mnemonics.begin();
 
     mnemonic_out = mnemonic_it->second.first;
     mnemonic_passphrase_out = mnemonic_it->second.second;

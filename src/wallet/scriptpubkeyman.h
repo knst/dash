@@ -609,7 +609,7 @@ public:
     const std::vector<CScript> GetScriptPubKeys() const;
 
     bool GetDescriptorString(std::string& out, const bool priv) const;
-    bool GetMnemonicString(const CKeyID& keyid, SecureString& mnemonic_out, SecureString& mnemonic_passphrase_out) const;
+    bool GetMnemonicString(SecureString& mnemonic_out, SecureString& mnemonic_passphrase_out) const;
 
     void UpgradeDescriptorCache();
 };
