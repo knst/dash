@@ -1888,15 +1888,19 @@ bool DescriptorScriptPubKeyMan::Encrypt(const CKeyingMaterial& master_key, Walle
             CKeyingMaterial mnemonic_passphrase_secret(mnemonic.second.begin(), mnemonic.second.end());
             LogPrintf("knst encrypt mnemonic...\n");
             if (!EncryptSecret(master_key, mnemonic_secret, pubkey.GetHash(), crypted_mnemonic)) {
+                LogPrintf("knst encrypt mnemonic - failed\n");
                 return false;
             }
             if (!EncryptSecret(master_key, mnemonic_passphrase_secret, pubkey.GetHash(), crypted_mnemonic_passphrase)) {
+                LogPrintf("knst encrypt mnemonic_passphrase - failed\n");
                 return false;
             }
             LogPrintf("knst encrypt pubkey %s mnemonic %s -> %s\n", pubkey.GetHash().ToString(), mnemonic.first, HexStr(crypted_mnemonic));
+            LogPrintf("knst encrypt pubkey %s mnemonic_passphrase %s -> %s\n", pubkey.GetHash().ToString(), mnemonic.second, HexStr(crypted_mnemonic_passphrase));
         }
 
         m_map_crypted_keys[pubkey.GetID()] = make_pair(pubkey, crypted_secret);
+        m_crypted_mnemonics[pubkey.GetID()] = make_pair(crypted_mnemonic, crypted_mnemonic_passphrase);
         batch->WriteCryptedDescriptorKey(GetID(), pubkey, crypted_secret, crypted_mnemonic, crypted_mnemonic_passphrase);
     }
     m_map_keys.clear();
@@ -2068,13 +2072,14 @@ bool DescriptorScriptPubKeyMan::AddDescriptorKeyWithDB(WalletBatch& batch, const
             return false;
         }
 
-        // TODO: add mnemonic for crypted
         m_map_crypted_keys[pubkey.GetID()] = make_pair(pubkey, crypted_secret);
         m_crypted_mnemonics[pubkey.GetID()] = make_pair(crypted_mnemonic, crypted_mnemonic_passphrase);
+        LogPrintf("knst write crypted descriptor: %s, %s as %s\n", GetID().ToString(), mnemonic, HexStr(crypted_mnemonic));
         return batch.WriteCryptedDescriptorKey(GetID(), pubkey, crypted_secret, crypted_mnemonic, crypted_mnemonic_passphrase);
     } else {
         m_map_keys[pubkey.GetID()] = key;
         m_mnemonics[pubkey.GetID()] = make_pair(mnemonic, mnemonic_passphrase);
+        LogPrintf("knst write plain descriptor: %s, %s\n", GetID().ToString(), mnemonic);
         return batch.WriteDescriptorKey(GetID(), pubkey, key.GetPrivKey(), mnemonic, mnemonic_passphrase);
     }
 }
@@ -2420,7 +2425,7 @@ bool DescriptorScriptPubKeyMan::AddKey(const CKeyID& key_id, const CKey& key, co
 
     m_map_keys[key_id] = key;
     m_mnemonics[key_id] = make_pair(mnemonic, mnemonic_passphrase);
-    LogPrintf("knst add-key: %s\n", mnemonic, mnemonic_passphrase);
+    LogPrintf("knst add-key: %s\n", mnemonic);
 
     return true;
 }
@@ -2516,10 +2521,18 @@ bool DescriptorScriptPubKeyMan::GetMnemonicString(SecureString& mnemonic_out, Se
         SecureVector mnemonic_passphrase_v;
         if (!m_storage.WithEncryptionKey([&](const CKeyingMaterial& encryption_key) {
             return DecryptSecret(encryption_key, crypted_mnemonic, pubkey.GetHash(), mnemonic_v);
-        })) return false;
-        if (!m_storage.WithEncryptionKey([&](const CKeyingMaterial& encryption_key) {
-            return DecryptSecret(encryption_key, crypted_mnemonic_passphrase, pubkey.GetHash(), mnemonic_passphrase_v);
-        })) return false;
+        })) {
+            LogPrintf("can't decrypt mnemonic pubkey %s crypted: %s\n", pubkey.GetHash().ToString(), HexStr(crypted_mnemonic));
+            return false;
+        }
+        if (!crypted_mnemonic_passphrase.empty()) {
+            if (!m_storage.WithEncryptionKey([&](const CKeyingMaterial& encryption_key) {
+                return DecryptSecret(encryption_key, crypted_mnemonic_passphrase, pubkey.GetHash(), mnemonic_passphrase_v);
+            })) {
+                LogPrintf("can't decrypt mnemonic-passphrase\n");
+                return false;
+            }
+        }
 
         std::copy(mnemonic_v.begin(), mnemonic_v.end(), std::back_inserter(mnemonic_out));
         std::copy(mnemonic_passphrase_v.begin(), mnemonic_passphrase_v.end(), std::back_inserter(mnemonic_passphrase_out));
