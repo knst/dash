@@ -345,8 +345,8 @@ public:
     std::map<uint256, DescriptorCache> m_descriptor_caches;
     std::map<std::pair<uint256, CKeyID>, CKey> m_descriptor_keys;
     std::map<std::pair<uint256, CKeyID>, std::pair<CPubKey, std::vector<unsigned char>>> m_descriptor_crypt_keys;
-    std::map<std::pair<uint256, CKeyID>, std::pair<SecureString, SecureString>> mnemonics;
-    std::map<std::pair<uint256, CKeyID>, std::pair<std::vector<unsigned char>, std::vector<unsigned char>>> crypted_mnemonics;
+    std::map<uint256, std::pair<SecureString, SecureString>> mnemonics;
+    std::map<uint256, std::pair<std::vector<unsigned char>, std::vector<unsigned char>>> crypted_mnemonics;
     bool tx_corrupt{false};
 
     CWalletScanState() {
@@ -739,7 +739,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
             LogPrintf("ssvalue -> mnemonic : %s\n", mnemonic.c_str());
 
             if (!mnemonic.empty()) {
-                wss.mnemonics.insert(std::make_pair(std::make_pair(desc_id, pubkey.GetID()), std::make_pair(mnemonic, mnemonic_passphrase)));
+                wss.mnemonics.insert(std::make_pair(desc_id, std::make_pair(mnemonic, mnemonic_passphrase)));
             }
         } else if (strType == DBKeys::WALLETDESCRIPTORCKEY) {
             uint256 desc_id;
@@ -771,7 +771,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
             catch (const std::ios_base::failure&) {}
             LogPrintf("ssvalue [crypted] -> mnemonic : %s\n", HexStr(mnemonic));
             if (!mnemonic.empty()) {
-                wss.crypted_mnemonics.insert(std::make_pair(std::make_pair(desc_id, pubkey.GetID()), std::make_pair(mnemonic, mnemonic_passphrase)));
+                wss.crypted_mnemonics.insert(std::make_pair(desc_id, std::make_pair(mnemonic, mnemonic_passphrase)));
             }
 
         } else if (strType == DBKeys::LOCKED_UTXO) {
@@ -918,7 +918,7 @@ DBErrors WalletBatch::LoadWallet(CWallet* pwallet)
     // Set the descriptor keys
     for (auto desc_key_pair : wss.m_descriptor_keys) {
         auto spk_man = pwallet->GetScriptPubKeyMan(desc_key_pair.first.first);
-        auto it = wss.mnemonics.find(desc_key_pair.first);
+        auto it = wss.mnemonics.find(desc_key_pair.first.first);
         if (it == wss.mnemonics.end()) {
             ((DescriptorScriptPubKeyMan*)spk_man)->AddKey(desc_key_pair.first.second, desc_key_pair.second, "", "");
         } else {
@@ -928,7 +928,7 @@ DBErrors WalletBatch::LoadWallet(CWallet* pwallet)
 
     for (auto desc_key_pair : wss.m_descriptor_crypt_keys) {
         auto spk_man = pwallet->GetScriptPubKeyMan(desc_key_pair.first.first);
-        auto it = wss.crypted_mnemonics.find(desc_key_pair.first);
+        auto it = wss.crypted_mnemonics.find(desc_key_pair.first.first);
         if (it == wss.crypted_mnemonics.end()) {
             ((DescriptorScriptPubKeyMan*)spk_man)->AddCryptedKey(desc_key_pair.first.second, desc_key_pair.second.first, desc_key_pair.second.second, {}, {});
         } else {

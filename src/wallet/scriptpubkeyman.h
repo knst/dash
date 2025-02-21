@@ -512,9 +512,7 @@ private:
     using KeyMap = std::map<CKeyID, CKey>;
 
     using Mnemonic = std::pair<SecureString, SecureString>;
-    using MnemonicMap = std::map<CKeyID, Mnemonic>;
     using CryptedMnemonic = std::pair<std::vector<unsigned char>, std::vector<unsigned char>>;
-    using CryptedMnemonicMap = std::map<CKeyID, CryptedMnemonic>;
 
     ScriptPubKeyMap m_map_script_pub_keys GUARDED_BY(cs_desc_man);
     PubKeyMap m_map_pubkeys GUARDED_BY(cs_desc_man);
@@ -523,8 +521,8 @@ private:
     KeyMap m_map_keys GUARDED_BY(cs_desc_man);
     CryptedKeyMap m_map_crypted_keys GUARDED_BY(cs_desc_man);
 
-    MnemonicMap m_mnemonics GUARDED_BY(cs_desc_man);
-    CryptedMnemonicMap m_crypted_mnemonics GUARDED_BY(cs_desc_man);
+    Mnemonic m_mnemonic GUARDED_BY(cs_desc_man);
+    CryptedMnemonic m_crypted_mnemonic GUARDED_BY(cs_desc_man);
 
     //! keeps track of whether Unlock has run a thorough check before
     bool m_decryption_thoroughly_checked = false;
