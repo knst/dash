@@ -25,11 +25,12 @@ class WalletMnemonicbitsTest(BitcoinTestFramework):
         self.nodes[0].assert_start_raises_init_error(['-mnemonicbits=123'], "Error: Invalid '-mnemonicbits'. Allowed values: 128, 160, 192, 224, 256.")
         self.start_node(0)
 
+        self.log.info(f"descriptors-1: {self.nodes[0].listdescriptors(True)}")
         mnemonic_pre = self.nodes[0].listdescriptors(True)['descriptors'][1]["mnemonic"] if self.options.descriptors else self.nodes[0].dumphdinfo()["mnemonic"]
 
-        self.log.info(f"descriptors: {self.nodes[0].listdescriptors(True)}")
-        self.nodes[0].encryptwallet('pass')
+        self.log.info(f"enc: {self.nodes[0].encryptwallet('pass')}")
         self.nodes[0].walletpassphrase('pass', 100)
+        self.log.info(f"descriptors-3: {self.nodes[0].listdescriptors(True)}")
         mnemonic = self.nodes[0].listdescriptors(True)['descriptors'][1]["mnemonic"] if self.options.descriptors else self.nodes[0].dumphdinfo()["mnemonic"]
         assert_equal(mnemonic, mnemonic_pre)
 
@@ -43,11 +44,11 @@ class WalletMnemonicbitsTest(BitcoinTestFramework):
 
             mnemonic_count = 0
             for desc in descriptors:
-                if desc['mnemonic']:
+                if 'mnemonic' in desc:
                     mnemonic_count += 1
-            # Coinbase imported private key doesn't have mnemonic
-            assert_equal(mnemonic_count, 2)
-            assert_equal(len(descriptors), 3)
+            # Coinbase imported private key doesn't have mnemonic; there should be 2 active and 2 inactive mnemonic
+            assert_equal(mnemonic_count, 4)
+            assert_equal(len(descriptors), 5)
         else:
             assert_equal(len(self.nodes[0].dumphdinfo()["mnemonic"].split()), 12)  # 12 words by default
 
