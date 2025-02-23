@@ -579,10 +579,10 @@ static CAmount GetReceived(const CWallet& wallet, const UniValue& params, bool b
     CAmount amount = 0;
     for (const std::pair<const uint256, CWalletTx>& wtx_pair : wallet.mapWallet) {
         const CWalletTx& wtx = wtx_pair.second;
-        int depth{wallet.GetTxDepthInMainChain(wtx)};
+        int depth{wtx.GetDepthInMainChain()};
         if (// Coinbase with less than 1 confirmation is no longer in the main chain
-            || (wtx.IsCoinBase() && (depth < 1 || !include_coinbase))
-            || (wallet.IsTxImmatureCoinBase(wtx) && !include_immature_coinbase)
+            (wtx.IsCoinBase() && (depth < 1 || !include_coinbase))
+            || (wtx.IsImmatureCoinBase() && !include_immature_coinbase)
             || !wallet.chain().checkFinalTx(*wtx.tx)) {
             continue;
         }
@@ -1000,7 +1000,7 @@ static UniValue ListReceived(const CWallet& wallet, const UniValue& params, cons
 
         // Coinbase with less than 1 confirmation is no longer in the main chain
         if ((wtx.IsCoinBase() && (nDepth < 1 || !include_coinbase))
-            || (wallet.IsTxImmatureCoinBase(wtx) && !include_immature_coinbase)
+            || (wtx.IsImmatureCoinBase() && !include_immature_coinbase)
             || !wallet.chain().checkFinalTx(*wtx.tx)) {
             continue;
         }
