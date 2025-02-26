@@ -38,6 +38,10 @@ class AbandonConflictTest(BitcoinTestFramework):
         txB = self.nodes[0].sendtoaddress(self.nodes[0].getnewaddress(), Decimal("10"))
         txC = self.nodes[0].sendtoaddress(self.nodes[0].getnewaddress(), Decimal("10"))
         self.sync_mempools()
+
+        # Can not abandon transaction in mempool
+        assert_raises_rpc_error(-5, 'Transaction not eligible for abandonment', lambda: alice.abandontransaction(txid=txA))
+
         self.generate(self.nodes[1], 1)
 
         # Can not abandon non-wallet transaction
