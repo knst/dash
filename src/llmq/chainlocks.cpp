@@ -458,6 +458,7 @@ void CChainLocksHandler::EnforceBestChainLock()
     {
         LOCK(cs);
 
+        LogPrintf("CChainLocksHandler::EnforceBestChainLock: is-enabled=%d\n", isEnabled);
         if (!isEnabled) {
             return;
         }
@@ -467,8 +468,10 @@ void CChainLocksHandler::EnforceBestChainLock()
 
         if (currentBestChainLockBlockIndex == nullptr) {
             // we don't have the header/block, so we can't do anything right now
+            LogPrintf("CChainLocksHandler::EnforceBestChainLock: curent best-chainlock=nullptr\n");
             return;
         }
+        LogPrintf("CChainLocksHandler::EnforceBestChainLock: curent best-chainlock=%s\n", currentBestChainLockBlockIndex->ToString());
     }
 
     BlockValidationState dummy_state;

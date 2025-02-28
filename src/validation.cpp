@@ -2066,7 +2066,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
             }
 
             if (!SequenceLocks(tx, nLockTimeFlags, prevheights, *pindex)) {
-                LogPrintf("ERROR: %s: contains a non-BIP68-final transaction\n", __func__);
+                LogPrintf("ERROR: %s: contains a non-BIP68-final transaction %s\n", __func__, tx.GetHash().ToString());
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-nonfinal");
             }
 

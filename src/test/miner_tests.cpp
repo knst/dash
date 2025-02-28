@@ -510,30 +510,38 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     tx.vin[0].nSequence = CTxIn::SEQUENCE_LOCKTIME_TYPE_FLAG;
     BOOST_CHECK(TestSequenceLocks(CTransaction{tx})); // Sequence locks pass
     tx.vin[0].nSequence = CTxIn::SEQUENCE_LOCKTIME_TYPE_FLAG | 1;
+    LogPrintf("aba-1\n");
     BOOST_CHECK(!TestSequenceLocks(CTransaction{tx})); // Sequence locks fail
+    LogPrintf("aba-2\n");
 
     BOOST_CHECK(pblocktemplate = AssemblerForTest(chainparams).CreateNewBlock(scriptPubKey));
+    LogPrintf("aba-3\n");
 
     // None of the of the absolute height/time locked tx should have made
     // it into the template because we still check IsFinalTx in CreateNewBlock,
     // but relative locked txs will if inconsistently added to mempool.
     // For now these will still generate a valid template until BIP68 soft fork
     BOOST_CHECK_EQUAL(pblocktemplate->block.vtx.size(), 3U);
+    LogPrintf("aba-4\n");
     // However if we advance height by 1 and time by 512, all of them should be mined
     for (int i = 0; i < CBlockIndex::nMedianTimeSpan; i++)
         m_node.chainman->ActiveChain().Tip()->GetAncestor(m_node.chainman->ActiveChain().Tip()->nHeight - i)->nTime += 512; //Trick the MedianTimePast
 
     } // unlock cs_main while calling createAndProcessEmptyBlock
+    LogPrintf("aba-5\n");
 
     // Mine an empty block
     createAndProcessEmptyBlock();
+    LogPrintf("aba-6\n");
 
     {
     LOCK(cs_main);
 
     SetMockTime(m_node.chainman->ActiveChain().Tip()->GetMedianTimePast() + 1);
+    LogPrintf("aba-7\n");
 
     BOOST_CHECK(pblocktemplate = AssemblerForTest(chainparams).CreateNewBlock(scriptPubKey));
+    LogPrintf("aba-8\n");
     BOOST_CHECK_EQUAL(pblocktemplate->block.vtx.size(), 5U);
     } // unlock cs_main while calling InvalidateBlock
 
