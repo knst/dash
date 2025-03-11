@@ -90,6 +90,7 @@ MAKE_MSG(SENDHEADERS2, "sendheaders2");
 MAKE_MSG(HEADERS2, "headers2");
 MAKE_MSG(GETQUORUMROTATIONINFO, "getqrinfo");
 MAKE_MSG(QUORUMROTATIONINFO, "qrinfo");
+MAKE_MSG(PLATFORMBAN, "platformban");
 }; // namespace NetMsgType
 
 /** All known message types. Keep this in the same order as the list of
@@ -171,6 +172,7 @@ const static std::string allNetMessageTypes[] = {
     NetMsgType::HEADERS2,
     NetMsgType::GETQUORUMROTATIONINFO,
     NetMsgType::QUORUMROTATIONINFO
+    NetMsgType::PLATFORMBAN,
 };
 const static std::vector<std::string> allNetMessageTypesVec(std::begin(allNetMessageTypes), std::end(allNetMessageTypes));
 
@@ -205,6 +207,7 @@ const static std::string netMessageTypesViolateBlocksOnly[] = {
     NetMsgType::QSIGSHARESINV,
     NetMsgType::QUORUMROTATIONINFO,
     NetMsgType::QWATCH,
+    NetMsgType::PLATFORMBAN,
     NetMsgType::TX,
 };
 const static std::set<std::string> netMessageTypesViolateBlocksOnlySet(std::begin(netMessageTypesViolateBlocksOnly), std::end(netMessageTypesViolateBlocksOnly));
@@ -296,6 +299,7 @@ const char* CInv::GetCommandInternal() const
         case MSG_CLSIG:                         return NetMsgType::CLSIG;
         case MSG_ISDLOCK:                       return NetMsgType::ISDLOCK;
         case MSG_DSQ:                           return NetMsgType::DSQUEUE;
+        case MSG_PLATFORM_BAN:                  return NetMsgType::PLATFORMBAN;
         default:
             return nullptr;
     }

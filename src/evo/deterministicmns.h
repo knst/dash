@@ -609,6 +609,51 @@ private:
     CDeterministicMNList GetListForBlockInternal(gsl::not_null<const CBlockIndex*> pindex) EXCLUSIVE_LOCKS_REQUIRED(cs);
 };
 
+/**
+ * Platform PoSe Ban are result in the node voting against the targeted evonode in all future DKG sessions until that targeted evonode has been successfully banned. Platform will initiate this ban process by passing relevant information to Core using RPC. See DIP-0031
+ *
+ * We use 2 main classes to manage Platform PoSe Ban
+ *
+ * PlatformBanMessage
+ * PlatformBanManager - a higher-level construct which store information about ban status
+**/
+
+/**
+ * PlatformBanMessage - low-level constructs which contain the m_protx_hash, m_signed_height, m_quorum_hash and m_signature
+ */
+class PlatformBanMessage
+{
+private:
+
+public:
+    uint256 m_protx_hash;
+    int32_t m_signed_height{0};
+    uint256 m_quorum_hash;
+    std::array<uint8_t, 96> m_signature{};
+
+    PlatformBanMessage() = default;
+
+    SERIALIZE_METHODS(PlatformBanMessage, obj)
+    {
+        READWRITE(obj.m_protx_hash, obj.m_signed_height, obj.m_quorum_hash, obj.m_signature);
+    }
+
+    uint256 GetHash() const
+    {
+        // TODO: move to cpp
+        return ::SerializeHash(*this);
+    }
+
+    bool Check() const {
+        // TODO: implement it
+        return false;
+    }
+    /**
+     * Relay is used to send this platform-ban message to other peers.
+     */
+    void Relay(PeerManager& peerman) const;
+};
+
 bool CheckProRegTx(CDeterministicMNManager& dmnman, const CTransaction& tx, gsl::not_null<const CBlockIndex*> pindexPrev, TxValidationState& state, const CCoinsViewCache& view, bool check_sigs);
 bool CheckProUpServTx(CDeterministicMNManager& dmnman, const CTransaction& tx, gsl::not_null<const CBlockIndex*> pindexPrev, TxValidationState& state, bool check_sigs);
 bool CheckProUpRegTx(CDeterministicMNManager& dmnman, const CTransaction& tx, gsl::not_null<const CBlockIndex*> pindexPrev, TxValidationState& state, const CCoinsViewCache& view, bool check_sigs);

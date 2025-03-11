@@ -504,7 +504,7 @@ enum GetDataMsg : uint32_t {
     /* MSG_LEGACY_TXLOCK_REQUEST = 4, */              // Legacy InstantSend and not used anymore
     /* MSG_TXLOCK_VOTE = 5, */                        // Legacy InstantSend and not used anymore
     MSG_SPORK = 6,
-    /* 7 - 15 were used in old Dash versions and were mainly budget and MN broadcast/ping related*/
+    * 7 - 15 were used in old Dash versions and were mainly budget and MN broadcast/ping related*/
     MSG_DSTX = 16,
     MSG_GOVERNANCE_OBJECT = 17,
     MSG_GOVERNANCE_OBJECT_VOTE = 18,
@@ -524,6 +524,7 @@ enum GetDataMsg : uint32_t {
     /* MSG_ISLOCK = 30, */                            // Non-deterministic InstantSend and not used anymore
     MSG_ISDLOCK = 31,
     MSG_DSQ = 32,
+    MSG_PLATFORM_BAN = 33,                            // Platform service ban (DIP-0031)
 };
 
 /** inv message data */
