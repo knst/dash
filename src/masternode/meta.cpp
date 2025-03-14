@@ -10,7 +10,8 @@
 
 #include <sstream>
 
-const std::string MasternodeMetaStore::SERIALIZATION_VERSION_STRING = "CMasternodeMetaMan-Version-3";
+const std::string MasternodeMetaStore::SERIALIZATION_VERSION_STRING_LEGACY = "CMasternodeMetaMan-Version-3";
+const std::string MasternodeMetaStore::SERIALIZATION_VERSION_STRING = "CMasternodeMetaMan-Version-4";
 
 CMasternodeMetaMan::CMasternodeMetaMan() :
     m_db{std::make_unique<db_type>("mncache.dat", "magicMasternodeCache")}
@@ -125,6 +126,12 @@ std::vector<uint256> CMasternodeMetaMan::GetAndClearDirtyGovernanceObjectHashes(
     std::vector<uint256> vecTmp;
     WITH_LOCK(cs, vecTmp.swap(vecDirtyGovernanceObjectHashes));
     return vecTmp;
+}
+
+bool CMasternodeMetaMan::AlreadyHavePlatformBan(const uint256& invHash)
+{
+    LOCK(cs);
+    return m_seen_platform_bans.contains(invHash);
 }
 
 std::string MasternodeMetaStore::ToString() const

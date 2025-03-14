@@ -46,6 +46,8 @@ private:
     std::atomic<int64_t> lastOutboundAttempt{0};
     std::atomic<int64_t> lastOutboundSuccess{0};
 
+    bool m_platform_ban{false} GUARDED_BY(cs);
+    int m_platform_ban_height{0} GUARDED_BY(cs);
 public:
     CMasternodeMetaInfo() = default;
     explicit CMasternodeMetaInfo(const uint256& _proTxHash) : proTxHash(_proTxHash) {}
@@ -55,7 +57,9 @@ public:
         nMixingTxCount(ref.nMixingTxCount.load()),
         mapGovernanceObjectsVotedOn(ref.mapGovernanceObjectsVotedOn),
         lastOutboundAttempt(ref.lastOutboundAttempt.load()),
-        lastOutboundSuccess(ref.lastOutboundSuccess.load())
+        lastOutboundSuccess(ref.lastOutboundSuccess.load()),
+        m_platform_ban(ref.m_platform_ban),
+        m_platform_ban_height(ref.m_platform_ban_height)
     {
     }
 
@@ -69,7 +73,9 @@ public:
                 obj.mapGovernanceObjectsVotedOn,
                 obj.outboundAttemptCount,
                 obj.lastOutboundAttempt,
-                obj.lastOutboundSuccess
+                obj.lastOutboundSuccess,
+                obj.m_platform_ban,
+                obj.m_platform_ban_height
                 );
     }
 
@@ -96,6 +102,24 @@ public:
     int64_t GetLastOutboundAttempt() const { return lastOutboundAttempt; }
     void SetLastOutboundSuccess(int64_t t) { lastOutboundSuccess = t; outboundAttemptCount = 0; }
     int64_t GetLastOutboundSuccess() const { return lastOutboundSuccess; }
+    bool SetPlatformBan(bool is_banned, int height)
+    { 
+        LOCK(cs);
+        if (height < m_platform_ban_height) {
+            return false;
+        }
+        if (height == m_platform_ban_height && !is_banned) {
+            return false;
+        }
+        m_platform_ban = is_banned;
+        m_platform_ban_height = height;
+        return true;
+    }
+    bool IsPlatformBanned() const
+    {
+        LOCK(cs);
+        return m_platform_ban;
+    }
 };
 using CMasternodeMetaInfoPtr = std::shared_ptr<CMasternodeMetaInfo>;
 
@@ -129,7 +153,7 @@ public:
         LOCK(cs);
         std::string strVersion;
         s >> strVersion;
-        if (strVersion != SERIALIZATION_VERSION_STRING) {
+        if (strVersion != SERIALIZATION_VERSION_STRING && strVersion != SERIALIZATION_VERSION_STRING_LEGACY) {
             return;
         }
         std::vector<CMasternodeMetaInfo> tmpMetaInfo;
@@ -160,6 +184,7 @@ private:
     bool is_valid{false};
 
     std::vector<uint256> vecDirtyGovernanceObjectHashes GUARDED_BY(cs);
+    std::set<uint256> m_seen_platform_bans{} GUARDED_BY(cs);
 
 public:
     explicit CMasternodeMetaMan();
@@ -181,6 +206,8 @@ public:
     void RemoveGovernanceObject(const uint256& nGovernanceObjectHash);
 
     std::vector<uint256> GetAndClearDirtyGovernanceObjectHashes();
+
+    bool AlreadyHavePlatformBan(const uint256& invHash);
 };
 
 #endif // BITCOIN_MASTERNODE_META_H

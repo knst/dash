@@ -565,6 +565,7 @@ private:
 
     CChainState& m_chainstate;
     CEvoDB& m_evoDb;
+    CMasternodeMetaMan& m_mn_metaman;
 
     std::unordered_map<uint256, CDeterministicMNList, StaticSaltedHasher> mnListsCache GUARDED_BY(cs);
     std::unordered_map<uint256, CDeterministicMNListDiff, StaticSaltedHasher> mnListDiffsCache GUARDED_BY(cs);
@@ -572,9 +573,10 @@ private:
     const CBlockIndex* m_initial_snapshot_index GUARDED_BY(cs) {nullptr};
 
 public:
-    explicit CDeterministicMNManager(CChainState& chainstate, CEvoDB& evoDb) :
+    explicit CDeterministicMNManager(CChainState& chainstate, CEvoDB& evoDb, CMasternodeMetaMan& mn_metaman) :
         m_chainstate(chainstate),
-        m_evoDb(evoDb)
+        m_evoDb(evoDb),
+        m_mn_metaman(mn_metaman)
     {
     }
     ~CDeterministicMNManager() = default;
