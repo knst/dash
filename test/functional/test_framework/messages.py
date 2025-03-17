@@ -2358,7 +2358,6 @@ class msg_platformban:
     def deserialize(self, f):
         self.protx_hash = deser_uint256(f)
         self.signed_height= struct.unpack("<I", f.read(4))[0]
-        self.cycleHash = deser_uint256(f)
         self.quorum_hash = deser_uint256(f)
         self.sig = f.read(96)
 
