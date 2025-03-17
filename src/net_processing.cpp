@@ -712,6 +712,9 @@ private:
                                const std::vector<CBlockHeader>& headers,
                                bool via_compact_block)
         EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex, g_msgproc_mutex);
+    PeerMsgRet ProcessPlatformBanMessage(CNode& peer, std::string_view msg_type, CDataStream& vRecv)
+        EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex, g_msgproc_mutex);
+
     /** Various helpers for headers processing, invoked by ProcessHeadersMessage() */
     /** Deal with state tracking and headers sync for peers that send the
      * occasional non-connecting header (this can happen due to BIP 130 headers
@@ -3518,7 +3521,7 @@ void PeerManagerImpl::PostProcessMessage(MessageProcessingResult&& result, NodeI
 }
 
 // TODO: move it to the proper place?
-PeerMsgRet ProcessMessagePlatformBan(CNode& peer, std::string_view msg_type, CDataStream& vRecv)
+PeerMsgRet PeerManagerImpl::ProcessPlatformBanMessage(CNode& peer, std::string_view msg_type, CDataStream& vRecv)
 {
     if (msg_type != NetMsgType::PLATFORMBAN) return {};
 
@@ -3535,11 +3538,11 @@ PeerMsgRet ProcessMessagePlatformBan(CNode& peer, std::string_view msg_type, CDa
 
     // Do nothing if node is out of sync
     if (!m_mn_sync.IsBlockchainSynced()) {
-        return;
+        return {};
     }
 
-    const auto list = m_dmnman.GetListAtChainTip();
-    auto dmn = list.GetMN(ptx.proTxHash);
+    const auto list = Assert(m_dmnman)->GetListAtChainTip();
+    auto dmn = list.GetMN(ban_msg.m_protx_hash);
     if (!dmn) {
         // small P2P penalty (1), as the evonode may have very recently been removed
         return tl::unexpected{1};
@@ -3549,7 +3552,7 @@ PeerMsgRet ProcessMessagePlatformBan(CNode& peer, std::string_view msg_type, CDa
         return tl::unexpected{100};
     }
     const int day_of_blocks = 576;
-    int tipHeight = WITH_LOCK(cs_main, return m_chainstate.m_chain.Height());
+    int tipHeight = WITH_LOCK(cs_main, return m_chainman.ActiveChainstate().m_chain.Height());
     if (tipHeight + 5 < ban_msg.m_signed_height || tipHeight - day_of_blocks - 5 > ban_msg.m_signed_height) {
         // m_signed_height is outside the range [TipHeight - 576 - 5, TipHeight + 5]
         return tl::unexpected{10};
@@ -3560,11 +3563,11 @@ PeerMsgRet ProcessMessagePlatformBan(CNode& peer, std::string_view msg_type, CDa
     }
 
     Consensus::LLMQType llmq_type = Params().GetConsensus().llmqTypePlatform;
-    auto quorum = GetQuorum(llmq_type, ban_msg.m_quorum_hash);
+    auto quorum = m_llmq_ctx->qman->GetQuorum(llmq_type, ban_msg.m_quorum_hash);
     if (!quorum) {
         return tl::unexpected{100};
     }
-    if (quorum->m_quorum_base_block_index != ban_msg.m_signed_height) {
+    if (quorum->m_quorum_base_block_index->nHeight != ban_msg.m_signed_height) {
         return tl::unexpected{100};
     }
     const std::string PLATFORM_BAN_REQUESTID_PREFIX = "PlatformPoSeBan";
@@ -3572,8 +3575,8 @@ PeerMsgRet ProcessMessagePlatformBan(CNode& peer, std::string_view msg_type, CDa
     const uint256 request_id = ::SerializeHash(std::make_pair(PLATFORM_BAN_REQUESTID_PREFIX, data));
     const uint256 msg_hash = ::SerializeHash(data);
 
-    auto ret = llmq::VerifyRecoveredSig(llmq_type, m_chainstate.m_chain, qman, ban_msg.m_signed_heigth, request_id, msg_hash, ban_msg.m_signature);
-    if (ret != VerifyRecSigStatus::Valid) {
+    auto ret = llmq::VerifyRecoveredSig(llmq_type, m_chainman.ActiveChainstate().m_chain, *m_llmq_ctx->qman, ban_msg.m_signed_height, request_id, msg_hash, ban_msg.m_signature);
+    if (ret != llmq::VerifyRecSigStatus::Valid) {
         return tl::unexpected{100};
     }
     return {};
@@ -5344,7 +5347,7 @@ void PeerManagerImpl::ProcessMessage(
         ProcessPeerMsgRet(m_llmq_ctx->qman->ProcessMessage(pfrom, m_connman, msg_type, vRecv), pfrom);
         m_llmq_ctx->shareman->ProcessMessage(pfrom, *this, m_sporkman, msg_type, vRecv);
         ProcessPeerMsgRet(m_llmq_ctx->sigman->ProcessMessage(pfrom, *this, msg_type, vRecv), pfrom);
-        ProcessPeerMsgRet(ProcessMessagePlatformBan(pfrom, msg_type, vRecv), pfrom);
+        ProcessPeerMsgRet(ProcessPlatformBanMessage(pfrom, msg_type, vRecv), pfrom);
 
         if (msg_type == NetMsgType::CLSIG) {
             if (llmq::AreChainLocksEnabled(m_sporkman)) {
