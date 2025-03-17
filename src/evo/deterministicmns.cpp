@@ -8,6 +8,7 @@
 #include <evo/evodb.h>
 #include <evo/providertx.h>
 #include <evo/specialtx.h>
+#include <masternode/meta.h>
 #include <llmq/commitment.h>
 #include <llmq/utils.h>
 
@@ -839,9 +840,9 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
                 newState->platformP2PPort = opt_proTx->platformP2PPort;
                 newState->platformHTTPPort = opt_proTx->platformHTTPPort;
             }
-            if (auto meta_info = m_mn_metaman->GetMetaInfo(opt_proTx->proTxHash); !meta_info.has_value() || !meta_info->SetPlatformBan(false, nHeight)) {
+            if (auto meta_info = m_mn_metaman.GetMetaInfo(opt_proTx->proTxHash, false); !meta_info || !meta_info->SetPlatformBan(false, nHeight)) {
                 LogPrintf("CDeterministicMNManager::%s -- MN %s is not Platform revived at height %d\n",
-                          __func__, pt_proTx->proTxHash.ToString(), nHeight);
+                          __func__, opt_proTx->proTxHash.ToString(), nHeight);
             }
 
             if (newState->IsBanned()) {
@@ -1178,6 +1179,17 @@ void CDeterministicMNManager::CleanupCache(int nHeight)
         mnListDiffsCache.erase(h);
     }
 
+}
+
+uint256 PlatformBanMessage::GetHash() const
+{
+    return ::SerializeHash(*this);
+}
+
+bool PlatformBanMessage::Check() const
+{
+    // TODO: implement it
+    return false;
 }
 
 [[nodiscard]] static bool EraseOldDBData(CDBWrapper& db, const std::vector<std::string>& db_key_prefixes)

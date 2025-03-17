@@ -2257,7 +2257,7 @@ bool PeerManagerImpl::AlreadyHave(const CInv& inv)
         return m_cj_ctx->server->HasQueue(inv.hash);
 #endif
     case MSG_PLATFORM_BAN:
-        return m_mn_metaman->AlreadyHavePlatformBan(inv.hash);
+        return m_mn_metaman.AlreadyHavePlatformBan(inv.hash);
     }
 
 

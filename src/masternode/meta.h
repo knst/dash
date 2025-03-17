@@ -127,6 +127,7 @@ class MasternodeMetaStore
 {
 protected:
     static const std::string SERIALIZATION_VERSION_STRING;
+    static const std::string SERIALIZATION_VERSION_STRING_LEGACY;
 
     mutable RecursiveMutex cs;
     std::map<uint256, CMasternodeMetaInfoPtr> metaInfos GUARDED_BY(cs);

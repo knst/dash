@@ -31,6 +31,7 @@ class CBlockIndex;
 class CChainState;
 class CCoinsViewCache;
 class CEvoDB;
+class CMasternodeMetaMan;
 class TxValidationState;
 
 extern RecursiveMutex cs_main;
@@ -640,20 +641,15 @@ public:
         READWRITE(obj.m_protx_hash, obj.m_signed_height, obj.m_quorum_hash, obj.m_signature);
     }
 
-    uint256 GetHash() const
-    {
-        // TODO: move to cpp
-        return ::SerializeHash(*this);
-    }
+    uint256 GetHash() const;
 
-    bool Check() const {
-        // TODO: implement it
-        return false;
-    }
+    bool Check() const;
+
+
     /**
      * Relay is used to send this platform-ban message to other peers.
      */
-    void Relay(PeerManager& peerman) const;
+//    void Relay(PeerManager& peerman) const;
 };
 
 bool CheckProRegTx(CDeterministicMNManager& dmnman, const CTransaction& tx, gsl::not_null<const CBlockIndex*> pindexPrev, TxValidationState& state, const CCoinsViewCache& view, bool check_sigs);

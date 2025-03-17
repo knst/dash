@@ -500,7 +500,7 @@ void CDKGSession::VerifyConnectionAndMinProtoVersions(CConnman& connman) const
         }
         if (meta_info->IsPlatformBanned()) {
             m->badConnection = true;
-            logger.Batch("%s is Platform PoSe banned", m->dmn->protTxHash.ToString());
+            logger.Batch("%s is Platform PoSe banned", m->dmn->proTxHash.ToString());
         }
     }
 }
