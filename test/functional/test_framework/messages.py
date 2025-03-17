@@ -2369,9 +2369,12 @@ class msg_platformban:
         r += self.sig
         return r
 
+    def calc_sha256(self):
+        return uint256_from_str(hash256(self.serialize()))
+
     def __repr__(self):
-        return "msg_platformban(protx_hash=%064x signed_height=%d, quorum_hash=%064x, txid=%064x, cycleHash=%064x)" % \
-               (self.protx_hash, self.signed_height, self.quorum_has)
+        return "msg_platformban(protx_hash=%064x signed_height=%d, quorum_hash=%064x)" % \
+               (self.protx_hash, self.signed_height, self.quorum_hash)
 
 
 class msg_qsigshare:
