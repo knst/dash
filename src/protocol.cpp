@@ -171,7 +171,7 @@ const static std::string allNetMessageTypes[] = {
     NetMsgType::SENDHEADERS2,
     NetMsgType::HEADERS2,
     NetMsgType::GETQUORUMROTATIONINFO,
-    NetMsgType::QUORUMROTATIONINFO
+    NetMsgType::QUORUMROTATIONINFO,
     NetMsgType::PLATFORMBAN,
 };
 const static std::vector<std::string> allNetMessageTypesVec(std::begin(allNetMessageTypes), std::end(allNetMessageTypes));
