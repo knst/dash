@@ -2345,6 +2345,36 @@ class msg_isdlock:
                (self.nVersion, repr(self.inputs), self.txid, self.cycleHash)
 
 
+class msg_platformban:
+    __slots__ = ("protx_hash", "signed_height", "quorum_hash", "sig")
+    msgtype = b"platformban"
+
+    def __init__(self, protx_hash=0, signed_height=0, quorum_hash=0, sig=b'\x00' * 96):
+        self.protx_hash = protx_hash
+        self.signed_height = signed_height
+        self.quorum_hash = quorum_hash
+        self.sig = sig
+
+    def deserialize(self, f):
+        self.protx_hash = deser_uint256(f)
+        self.signed_height= struct.unpack("<I", f.read(4))[0]
+        self.cycleHash = deser_uint256(f)
+        self.quorum_hash = deser_uint256(f)
+        self.sig = f.read(96)
+
+    def serialize(self):
+        r = b""
+        r += ser_uint256(self.protx_hash)
+        r += struct.pack("<I", self.signed_height)
+        r += ser_uint256(self.quorum_hash)
+        r += self.sig
+        return r
+
+    def __repr__(self):
+        return "msg_platformban(protx_hash=%064x signed_height=%d, quorum_hash=%064x, txid=%064x, cycleHash=%064x)" % \
+               (self.protx_hash, self.signed_height, self.quorum_has)
+
+
 class msg_qsigshare:
     __slots__ = ("sig_shares",)
     msgtype = b"qsigshare"

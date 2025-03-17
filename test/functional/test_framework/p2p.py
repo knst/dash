@@ -65,6 +65,7 @@ from test_framework.messages import (
     msg_merkleblock,
     msg_notfound,
     msg_ping,
+    msg_platformban,
     msg_pong,
     msg_qdata,
     msg_qgetdata,
@@ -161,6 +162,7 @@ MESSAGEMAP = {
     b"qwatch" : None,
     b"senddsq": None,
     b"spork": None,
+    b"platformban": msg_platformban,
 }
 
 
