@@ -2256,8 +2256,9 @@ bool PeerManagerImpl::AlreadyHave(const CInv& inv)
 #else
         return m_cj_ctx->server->HasQueue(inv.hash);
 #endif
-    case MSG_PLATFORM_BAN:
+/*    case MSG_PLATFORM_BAN:
         return m_mn_metaman.AlreadyHavePlatformBan(inv.hash);
+        */
     }
 
 
@@ -2880,13 +2881,14 @@ void PeerManagerImpl::ProcessGetData(CNode& pfrom, Peer& peer, const std::atomic
                 push = true;
             }
         }
-        if (!push && inv.type == MSG_PLATFORM_BAN) {
+        /*
+        if (!push && inv.type == MSG_PLATFORM_BAN) { // TODO  - we can't build platform ban message from scratch; let's just forward it when it's known
             auto opt_platform_ban; // = 
             if (oppt_platform_ban.has_value()) {
                 m_connnman.PushMessage(&pfrom, msgMager.Make(NetMsgType::PLATFORMBAN, *opt_platform_ban));
                 push = true;
             }
-        }
+        }*/
 
         if (!push) {
             vNotFound.push_back(inv);
@@ -3515,6 +3517,7 @@ void PeerManagerImpl::PostProcessMessage(MessageProcessingResult&& result, NodeI
     }
 }
 
+// TODO: move it to the proper place?
 PeerMsgRet ProcessMessagePlatformBan(CNode& peer, std::string_view msg_type, CDataStream& vRecv)
 {
     if (msg_type != NetMsgType::PLATFORMBAN) return {};
@@ -3524,7 +3527,7 @@ PeerMsgRet ProcessMessagePlatformBan(CNode& peer, std::string_view msg_type, CDa
 
     const uint256 hash = ban_msg.GetHash();
 
-    WITH_LOCK(::cs_main, peerman.EraseObjectRequest(peer.GetId(), CInv(MSG_PLATFORM_BAN, hash)));
+//    WITH_LOCK(::cs_main, peerman.EraseObjectRequest(peer.GetId(), CInv(MSG_PLATFORM_BAN, hash)));
 
     std::string strLogMsg{strprintf("PLATFORMBAN -- hash: %s protx: %d height: %d peer=%d", hash.ToString(), ban_msg.m_protx_hash.ToString(),
                                     ban_msg.m_signed_height, peer.GetId())};

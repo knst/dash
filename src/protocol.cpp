@@ -299,7 +299,7 @@ const char* CInv::GetCommandInternal() const
         case MSG_CLSIG:                         return NetMsgType::CLSIG;
         case MSG_ISDLOCK:                       return NetMsgType::ISDLOCK;
         case MSG_DSQ:                           return NetMsgType::DSQUEUE;
-        case MSG_PLATFORM_BAN:                  return NetMsgType::PLATFORMBAN;
+//        case MSG_PLATFORM_BAN:                  return NetMsgType::PLATFORMBAN;
         default:
             return nullptr;
     }

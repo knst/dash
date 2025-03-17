@@ -130,6 +130,7 @@ std::vector<uint256> CMasternodeMetaMan::GetAndClearDirtyGovernanceObjectHashes(
 
 bool CMasternodeMetaMan::AlreadyHavePlatformBan(const uint256& invHash)
 {
+    // TODO - remove it
     LOCK(cs);
     return m_seen_platform_bans.contains(invHash);
 }
