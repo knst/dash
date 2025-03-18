@@ -622,7 +622,7 @@ private:
 **/
 
 /**
- * PlatformBanMessage - low-level constructs which contain the m_protx_hash, m_signed_height, m_quorum_hash and m_signature
+ * PlatformBanMessage - low-level constructs which contain the m_protx_hash, m_requested_height, m_quorum_hash and m_signature
  */
 class PlatformBanMessage
 {
@@ -630,7 +630,7 @@ private:
 
 public:
     uint256 m_protx_hash;
-    int32_t m_signed_height{0};
+    int32_t m_requested_height{0};
     uint256 m_quorum_hash;
 //    std::array<uint8_t, 96> m_signature{};
     CBLSSignature m_signature;
@@ -639,7 +639,7 @@ public:
 
     SERIALIZE_METHODS(PlatformBanMessage, obj)
     {
-        READWRITE(obj.m_protx_hash, obj.m_signed_height, obj.m_quorum_hash);
+        READWRITE(obj.m_protx_hash, obj.m_requested_height, obj.m_quorum_hash);
         if (!(s.GetType() & SER_GETHASH)) {
             READWRITE(CBLSSignatureVersionWrapper(const_cast<CBLSSignature&>(obj.m_signature), false));
         }
