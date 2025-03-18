@@ -38,6 +38,7 @@
 #include <util/check.h>
 #include <util/system.h>
 #include <util/strencodings.h>
+#include <util/underlying.h>
 #include <util/trace.h>
 
 #include <algorithm>
@@ -1778,6 +1779,7 @@ void PeerManagerImpl::AddToCompactExtraTransactions(const CTransactionRef& tx) E
 
 void PeerManagerImpl::Misbehaving(const NodeId pnode, const int howmuch, const std::string& message)
 {
+    assert(false); // to see stack trace
     assert(howmuch > 0);
 
     PeerRef peer = GetPeerRef(pnode);
@@ -3532,8 +3534,8 @@ PeerMsgRet PeerManagerImpl::ProcessPlatformBanMessage(CNode& peer, std::string_v
 
 //    WITH_LOCK(::cs_main, peerman.EraseObjectRequest(peer.GetId(), CInv(MSG_PLATFORM_BAN, hash)));
 
-    std::string strLogMsg{strprintf("PLATFORMBAN -- hash: %s protx: %d height: %d peer=%d", hash.ToString(), ban_msg.m_protx_hash.ToString(),
-                                    ban_msg.m_signed_height, peer.GetId())};
+    LogPrintf("PLATFORMBAN -- hash: %s protx_hash: %s protx: %d height: %d peer=%d\n", hash.ToString(), ban_msg.m_protx_hash.ToString(),
+                                    ban_msg.m_signed_height, peer.GetId());
 
 
     // Do nothing if node is out of sync
@@ -3549,25 +3551,29 @@ PeerMsgRet PeerManagerImpl::ProcessPlatformBanMessage(CNode& peer, std::string_v
     }
     if (dmn->nType != MnType::Evo) {
         // Ban node, P2P penalty (100) if protx_hash is associated with a regular node not an evonode 
+        LogPrintf("PLATFORMBAN -- hash: %s protx_hash: %s unexpected type of node\n", hash.ToString(), ban_msg.m_protx_hash.ToString());
         return tl::unexpected{100};
     }
     const int day_of_blocks = 576;
     int tipHeight = WITH_LOCK(cs_main, return m_chainman.ActiveChainstate().m_chain.Height());
-    if (tipHeight + 5 < ban_msg.m_signed_height || tipHeight - day_of_blocks - 5 > ban_msg.m_signed_height) {
-        // m_signed_height is outside the range [TipHeight - 576 - 5, TipHeight + 5]
-        return tl::unexpected{10};
-    }
     if (tipHeight < ban_msg.m_signed_height || tipHeight - day_of_blocks > ban_msg.m_signed_height) {
         // m_signed_height is inside the range [TipHeight - 576 - 5, TipHeight + 5]
+        LogPrintf("PLATFORMBAN -- hash: %s protx_hash: %s unexpected height: %d tip: %d\n", hash.ToString(), ban_msg.m_protx_hash.ToString(), ban_msg.m_signed_height, tipHeight);
+        if (tipHeight + 5 < ban_msg.m_signed_height || tipHeight - day_of_blocks - 5 > ban_msg.m_signed_height) {
+            // m_signed_height is outside the range [TipHeight - 576 - 5, TipHeight + 5]
+            return tl::unexpected{10};
+        }
         return tl::unexpected{1};
     }
 
     Consensus::LLMQType llmq_type = Params().GetConsensus().llmqTypePlatform;
     auto quorum = m_llmq_ctx->qman->GetQuorum(llmq_type, ban_msg.m_quorum_hash);
     if (!quorum) {
+        LogPrintf("PLATFORMBAN -- hash: %s protx_hash: %s missing quorum_hash: %s llmq_type: %d\n", hash.ToString(), ban_msg.m_protx_hash.ToString(), ban_msg.m_quorum_hash.ToString(), ToUnderlying(llmq_type));
         return tl::unexpected{100};
     }
     if (quorum->m_quorum_base_block_index->nHeight != ban_msg.m_signed_height) {
+        LogPrintf("PLATFORMBAN -- protx_hash: %s unexpected height: %d quorum_height: %d\n", ban_msg.m_protx_hash.ToString(), ban_msg.m_signed_height, quorum->m_quorum_base_block_index->nHeight);
         return tl::unexpected{100};
     }
     const std::string PLATFORM_BAN_REQUESTID_PREFIX = "PlatformPoSeBan";
@@ -3577,6 +3583,7 @@ PeerMsgRet PeerManagerImpl::ProcessPlatformBanMessage(CNode& peer, std::string_v
 
     auto ret = llmq::VerifyRecoveredSig(llmq_type, m_chainman.ActiveChainstate().m_chain, *m_llmq_ctx->qman, ban_msg.m_signed_height, request_id, msg_hash, ban_msg.m_signature);
     if (ret != llmq::VerifyRecSigStatus::Valid) {
+        LogPrintf("PLATFORMBAN -- hash: %s protx_hash: %s sig validation failed: %d\n", hash.ToString(), ban_msg.m_protx_hash.ToString(), ToUnderlying(ret));
         return tl::unexpected{100};
     }
     return {};
@@ -5293,7 +5300,11 @@ void PeerManagerImpl::ProcessMessage(
         Misbehaving(pfrom.GetId(), 100, strprintf("received not-requested quorumrotationinfo. peer=%d", pfrom.GetId()));
         return;
     }
-
+/*
+    if (msg_type == NetMsgType::PLATFORMBAN) {
+    // implemented below
+    }
+    */
     if (msg_type == NetMsgType::NOTFOUND) {
         // Remove the NOTFOUND transactions from the peer
         LOCK(cs_main);
