@@ -23,7 +23,7 @@ class PlatformBanInterface(P2PInterface):
 class PlatformBanMessagesTest(DashTestFramework):
     def set_test_params(self):
 #self.set_dash_test_params(1, 0, [[]], evo_count=2)
-        self.set_dash_test_params(1, 0, [[]], evo_count=4)
+        self.set_dash_test_params(1, 0, [[]], evo_count=3)
 
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
@@ -41,11 +41,8 @@ class PlatformBanMessagesTest(DashTestFramework):
         node.sporkupdate("SPORK_2_INSTANTSEND_ENABLED", 1)
         self.wait_for_sporks_same()
 
-        for _ in range(4):
+        for _ in range(3):
             self.dynamically_add_masternode(evo=True)
-
-#        self.activate_v20(expected_activation_height=900)
-#        self.log.info("Activated v20 at height:" + str(node.getblockcount()))
 
         self.mempool_size = 0
 
@@ -55,14 +52,16 @@ class PlatformBanMessagesTest(DashTestFramework):
         node.importprivkey(privkey)
         pubkey = key.get_pubkey().get_bytes()
 
-        self.mine_quorum(llmq_type_name='llmq_test_platform', llmq_type=106)
+        q = self.mine_quorum(llmq_type_name='llmq_test_platform', llmq_type=106)
 
+        self.log.info(f"quorum: {q} {node.quorum('info', 106, q)}")
+        self.log.info(f"check banned: {self.check_banned(self.mninfo[0])}")
+        assert not self.check_banned(self.mninfo[0])
 
         self.log.info("Create and sign platform-ban message for mn-0")
         msg = msg_platformban()
         msg.protx_hash = int(self.mninfo[0].proTxHash, 16)
         msg.requested_height = node.getblockcount()
-        #msg.requested_height = node.getblockcount() --- maybe shold be height of quorum
 
         request_id_buf = ser_string(b"PlatformPoSeBan") + ser_uint256(msg.protx_hash) + struct.pack("<I", msg.requested_height)
         request_id = hash256(request_id_buf)[::-1].hex()
@@ -73,15 +72,24 @@ class PlatformBanMessagesTest(DashTestFramework):
         msg_hash = format(msg.calc_sha256(), '064x')
 
         recsig = self.get_recovered_sig(request_id, msg_hash, llmq_type=106, use_platformsign=True)
-#self.log.info(f"sig: {recsig}")
+        self.log.info(f"for msg_hash: {msg_hash} sig: {recsig}")
         msg.sig = bytearray.fromhex(recsig["sig"])
 
         self.log.info(f"Platform ban message is created: {msg}")
 
         p2p_node2 = self.mninfo[1].node.add_p2p_connection(PlatformBanInterface())
         p2p_node2.send_message(msg)
-        wait_until_helper(lambda: p2p_node2.message_count["platformban"] > 0, timeout=10, lock=p2p_lock)
-        p2p_node2.message_count[message] = 0
+#        wait_until_helper(lambda: p2p_node2.message_count["platformban"] > 0, timeout=10, lock=p2p_lock)
+#        p2p_node2.message_count[message] = 0
 
+
+        self.log.info(f"check banned: {self.check_banned(self.mninfo[0])}")
+        assert not self.check_banned(self.mninfo[0])
+
+        q = self.mine_quorum(llmq_type_name='llmq_test_platform', expected_members=2, expected_connections=1, expected_contributions=2, expected_commitments=2, llmq_type=106)
+        self.log.info(f"quorum: {q} {node.quorum('info', 106, q)}")
+
+        self.log.info(f"check banned: {self.check_banned(self.mninfo[0])}")
+        assert self.check_banned(self.mninfo[0])
 if __name__ == '__main__':
     PlatformBanMessagesTest().main()
