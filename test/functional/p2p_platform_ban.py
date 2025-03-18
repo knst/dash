@@ -3,19 +3,22 @@
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#class PlatformBanInterface(P2PInterface):
-
-
-from test_framework.messages import msg_platformban, hash256, ser_string, ser_uint256
-from test_framework.test_framework import DashTestFramework
 from test_framework.key import ECKey
-from test_framework.wallet_util import bytes_to_wif
-
+from test_framework.messages import msg_platformban, hash256, ser_string, ser_uint256
 from test_framework.p2p import (
     p2p_lock,
     P2PInterface,
 )
+from test_framework.test_framework import DashTestFramework
+from test_framework.util import wait_until_helper
+from test_framework.wallet_util import bytes_to_wif
+
 import struct
+
+class PlatformBanInterface(P2PInterface):
+    def __init__(self):
+        super().__init__()
+
 
 class PlatformBanMessagesTest(DashTestFramework):
     def set_test_params(self):
@@ -70,13 +73,12 @@ class PlatformBanMessagesTest(DashTestFramework):
         msg_hash = format(msg.calc_sha256(), '064x')
 
         recsig = self.get_recovered_sig(request_id, msg_hash, llmq_type=106, use_platformsign=True)
-        self.log.info(f"sig: {recsig}")
-
+#self.log.info(f"sig: {recsig}")
         msg.sig = bytearray.fromhex(recsig["sig"])
 
-        self.log.info("Platform ban message is created: {msg}")
+        self.log.info(f"Platform ban message is created: {msg}")
 
-        p2p_node2 = self.mninfo[1].node.add_p2p_connection(P2PInterface())
+        p2p_node2 = self.mninfo[1].node.add_p2p_connection(PlatformBanInterface())
         p2p_node2.send_message(msg)
         wait_until_helper(lambda: p2p_node2.message_count["platformban"] > 0, timeout=10, lock=p2p_lock)
         p2p_node2.message_count[message] = 0
