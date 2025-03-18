@@ -595,6 +595,7 @@ class P2PInterface(P2PConnection):
     def on_isdlock(self, message): pass
     def on_islock(self, message): pass
     def on_mnlistdiff(self, message): pass
+    def on_platformban(self, message): pass
     def on_qdata(self, message): pass
     def on_qgetdata(self, message): pass
     def on_qwatch(self, message): pass
