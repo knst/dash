@@ -155,14 +155,14 @@ MESSAGEMAP = {
     b"isdlock": msg_isdlock,
     b"mnlistdiff": msg_mnlistdiff,
     b"notfound": msg_notfound,
-    b"qfcommit": None,
-    b"qsendrecsigs": None,
-    b"qgetdata": msg_qgetdata,
+    b"platformban": msg_platformban,
     b"qdata": msg_qdata,
+    b"qfcommit": None,
+    b"qgetdata": msg_qgetdata,
+    b"qsendrecsigs": None,
     b"qwatch" : None,
     b"senddsq": None,
     b"spork": None,
-    b"platformban": msg_platformban,
 }
 
 
@@ -532,6 +532,7 @@ class P2PInterface(P2PConnection):
         with p2p_lock:
             try:
                 msgtype = message.msgtype.decode('ascii')
+                print(f"new message!!! {msgtype}")
                 self.message_count[msgtype] += 1
                 self.last_message[msgtype] = message
                 getattr(self, 'on_' + msgtype)(message)
@@ -590,13 +591,12 @@ class P2PInterface(P2PConnection):
     def on_ping(self, message):
         self.send_message(msg_pong(message.nonce))
 
-    def on_mnlistdiff(self, message): pass
     def on_clsig(self, message): pass
-    def on_islock(self, message): pass
     def on_isdlock(self, message): pass
-
-    def on_qgetdata(self, message): pass
+    def on_islock(self, message): pass
+    def on_mnlistdiff(self, message): pass
     def on_qdata(self, message): pass
+    def on_qgetdata(self, message): pass
     def on_qwatch(self, message): pass
 
     def on_verack(self, message): pass
