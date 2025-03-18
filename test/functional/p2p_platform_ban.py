@@ -61,10 +61,10 @@ class PlatformBanMessagesTest(DashTestFramework):
         self.log.info("Create and sign platform-ban message for mn-0")
         msg = msg_platformban()
         msg.protx_hash = int(self.mninfo[0].proTxHash, 16)
-        msg.signed_height = node.getblockcount()
-        #msg.signed_height = node.getblockcount() --- maybe shold be height of quorum
+        msg.requested_height = node.getblockcount()
+        #msg.requested_height = node.getblockcount() --- maybe shold be height of quorum
 
-        request_id_buf = ser_string(b"PlatformPoSeBan") + ser_uint256(msg.protx_hash) + struct.pack("<I", msg.signed_height)
+        request_id_buf = ser_string(b"PlatformPoSeBan") + ser_uint256(msg.protx_hash) + struct.pack("<I", msg.requested_height)
         request_id = hash256(request_id_buf)[::-1].hex()
 
         quorum_hash = self.mninfo[1].node.quorum("selectquorum", 106, request_id)["quorumHash"]
