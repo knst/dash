@@ -3586,11 +3586,16 @@ PeerMsgRet PeerManagerImpl::ProcessPlatformBanMessage(CNode& pfrom, std::string_
         return tl::unexpected{100};
     }
     // At this point, the outgoing message serialization version can't change.
-    const CNetMsgMaker msgMaker(pfrom.GetCommonVersion());
     const auto meta_info = m_mn_metaman.GetMetaInfo(ban_msg.m_protx_hash);
     if (meta_info->SetPlatformBan(true, ban_msg.m_requested_height)) {
         LogPrintf("PLATFORMBAN -- forward message to other nodes\n");
-        m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::PLATFORMBAN, ban_msg));
+        LOCK(m_peer_mutex);
+        for (const auto& [_, peer] : m_peer_map) {
+            if (!peer->IsBlockOnlyConn() && peer->nVersion >= MIN_MASTERNODE_PROTO_VERSION) {
+                const CNetMsgMaker msgMaker(peer.GetCommonVersion());
+                m_connman.PushMessage(&peer, msgMaker.Make(NetMsgType::PLATFORMBAN, ban_msg));
+            }
+        }
     }
     return {};
 }
