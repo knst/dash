@@ -2370,7 +2370,10 @@ class msg_platformban:
         return r
 
     def calc_sha256(self):
-        return uint256_from_str(hash256(self.serialize()))
+        r = b""
+        r += ser_uint256(self.protx_hash)
+        r += struct.pack("<I", self.requested_height)
+        return uint256_from_str(hash256(r))
 
     def __repr__(self):
         return "msg_platformban(protx_hash=%064x requested_height=%d, quorum_hash=%064x)" % \
