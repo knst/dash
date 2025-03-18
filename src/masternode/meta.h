@@ -113,6 +113,7 @@ public:
         }
         m_platform_ban = is_banned;
         m_platform_ban_height = height;
+        LogPrintf("PLATFORMBAN set for height=%d status=%d\n", height, is_banned);
         return true;
     }
     bool IsPlatformBanned() const

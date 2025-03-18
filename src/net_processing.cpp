@@ -3522,7 +3522,7 @@ void PeerManagerImpl::PostProcessMessage(MessageProcessingResult&& result, NodeI
 }
 
 // TODO: move it to the proper place?
-PeerMsgRet PeerManagerImpl::ProcessPlatformBanMessage(CNode& peer, std::string_view msg_type, CDataStream& vRecv)
+PeerMsgRet PeerManagerImpl::ProcessPlatformBanMessage(CNode& pfrom, std::string_view msg_type, CDataStream& vRecv)
 {
     if (msg_type != NetMsgType::PLATFORMBAN) return {};
 
@@ -3531,9 +3531,9 @@ PeerMsgRet PeerManagerImpl::ProcessPlatformBanMessage(CNode& peer, std::string_v
 
     const uint256 hash = ban_msg.GetHash();
 
-//    WITH_LOCK(::cs_main, peerman.EraseObjectRequest(peer.GetId(), CInv(MSG_PLATFORM_BAN, hash)));
+//    WITH_LOCK(::cs_main, peerman.EraseObjectRequest(pfrom.GetId(), CInv(MSG_PLATFORM_BAN, hash)));
 
-    LogPrintf("PLATFORMBAN -- hash: %s protx_hash: %s height: %d peer=%d\n", hash.ToString(), ban_msg.m_protx_hash.ToString(), ban_msg.m_requested_height, peer.GetId());
+    LogPrintf("PLATFORMBAN -- hash: %s protx_hash: %s height: %d peer=%d\n", hash.ToString(), ban_msg.m_protx_hash.ToString(), ban_msg.m_requested_height, pfrom.GetId());
 
 
     // Do nothing if node is out of sync
@@ -3584,6 +3584,13 @@ PeerMsgRet PeerManagerImpl::ProcessPlatformBanMessage(CNode& peer, std::string_v
     if (ret != llmq::VerifyRecSigStatus::Valid) {
         LogPrintf("PLATFORMBAN -- hash: %s protx_hash: %s request_id: %s msg_hash: %s sig validation failed: %d\n", hash.ToString(), ban_msg.m_protx_hash.ToString(), request_id.ToString(), msg_hash.ToString(), ToUnderlying(ret));
         return tl::unexpected{100};
+    }
+    // At this point, the outgoing message serialization version can't change.
+    const CNetMsgMaker msgMaker(pfrom.GetCommonVersion());
+    const auto meta_info = m_mn_metaman.GetMetaInfo(ban_msg.m_protx_hash);
+    if (meta_info->SetPlatformBan(true, ban_msg.m_requested_height)) {
+        LogPrintf("PLATFORMBAN -- forward message to other nodes\n");
+        m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::PLATFORMBAN, ban_msg));
     }
     return {};
 }
