@@ -2346,25 +2346,25 @@ class msg_isdlock:
 
 
 class msg_platformban:
-    __slots__ = ("protx_hash", "signed_height", "quorum_hash", "sig")
+    __slots__ = ("protx_hash", "requested_height", "quorum_hash", "sig")
     msgtype = b"platformban"
 
-    def __init__(self, protx_hash=0, signed_height=0, quorum_hash=0, sig=b'\x00' * 96):
+    def __init__(self, protx_hash=0, requested_height=0, quorum_hash=0, sig=b'\x00' * 96):
         self.protx_hash = protx_hash
-        self.signed_height = signed_height
+        self.requested_height = requested_height
         self.quorum_hash = quorum_hash
         self.sig = sig
 
     def deserialize(self, f):
         self.protx_hash = deser_uint256(f)
-        self.signed_height= struct.unpack("<I", f.read(4))[0]
+        self.requested_height= struct.unpack("<I", f.read(4))[0]
         self.quorum_hash = deser_uint256(f)
         self.sig = f.read(96)
 
     def serialize(self):
         r = b""
         r += ser_uint256(self.protx_hash)
-        r += struct.pack("<I", self.signed_height)
+        r += struct.pack("<I", self.requested_height)
         r += ser_uint256(self.quorum_hash)
         r += self.sig
         return r
@@ -2373,8 +2373,8 @@ class msg_platformban:
         return uint256_from_str(hash256(self.serialize()))
 
     def __repr__(self):
-        return "msg_platformban(protx_hash=%064x signed_height=%d, quorum_hash=%064x)" % \
-               (self.protx_hash, self.signed_height, self.quorum_hash)
+        return "msg_platformban(protx_hash=%064x requested_height=%d, quorum_hash=%064x)" % \
+               (self.protx_hash, self.requested_height, self.quorum_hash)
 
 
 class msg_qsigshare:
