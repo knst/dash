@@ -2260,9 +2260,8 @@ bool PeerManagerImpl::AlreadyHave(const CInv& inv)
 #else
         return m_cj_ctx->server->HasQueue(inv.hash);
 #endif
-/*    case MSG_PLATFORM_BAN:
+    case MSG_PLATFORM_BAN:
         return m_mn_metaman.AlreadyHavePlatformBan(inv.hash);
-        */
     }
 
 
@@ -2885,14 +2884,13 @@ void PeerManagerImpl::ProcessGetData(CNode& pfrom, Peer& peer, const std::atomic
                 push = true;
             }
         }
-        /*
-        if (!push && inv.type == MSG_PLATFORM_BAN) { // TODO  - we can't build platform ban message from scratch; let's just forward it when it's known
-            auto opt_platform_ban; // = 
-            if (oppt_platform_ban.has_value()) {
-                m_connnman.PushMessage(&pfrom, msgMager.Make(NetMsgType::PLATFORMBAN, *opt_platform_ban));
+        if (!push && inv.type == MSG_PLATFORM_BAN) {
+            auto opt_platform_ban = m_mn_metaman.GetPlatformBan(inv.hash);
+            if (opt_platform_ban.has_value()) {
+                m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::PLATFORMBAN, *opt_platform_ban));
                 push = true;
             }
-        }*/
+        }
 
         if (!push) {
             vNotFound.push_back(inv);
@@ -3589,6 +3587,11 @@ PeerMsgRet PeerManagerImpl::ProcessPlatformBanMessage(CNode& pfrom, std::string_
     const auto meta_info = m_mn_metaman.GetMetaInfo(ban_msg.m_protx_hash);
     if (meta_info->SetPlatformBan(true, ban_msg.m_requested_height)) {
         LogPrintf("PLATFORMBAN -- forward message to other nodes\n");
+        m_mn_metaman.RememberPlatformBan(hash, ban_msg);
+        CInv platform_ban_inv{MSG_PLATFORM_BAN, hash};
+        RelayInv(platform_ban_inv);
+        /*
+        LOCK(m_nodes_mutex);
         LOCK(m_peer_mutex);
         for (const auto& [_, peer] : m_peer_map) {
             m_connman.ForNode(peer->m_id, [this, ban_msg](CNode* node) {
@@ -3599,6 +3602,7 @@ PeerMsgRet PeerManagerImpl::ProcessPlatformBanMessage(CNode& pfrom, std::string_
                 return true; // result of ForNode is not used
             });
         }
+        */
     }
     return {};
 }

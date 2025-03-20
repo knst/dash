@@ -525,7 +525,7 @@ enum GetDataMsg : uint32_t {
     /* MSG_ISLOCK = 30, */                            // Non-deterministic InstantSend and not used anymore
     MSG_ISDLOCK = 31,
     MSG_DSQ = 32,
-//    MSG_PLATFORM_BAN = 33,                            // Platform service ban (DIP-0031)
+    MSG_PLATFORM_BAN = 33,                            // Platform service ban (DIP-0031)
 };
 
 /** inv message data */

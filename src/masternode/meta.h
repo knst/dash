@@ -13,8 +13,11 @@
 #include <atomic>
 #include <map>
 #include <memory>
+#include <optional>
 #include <vector>
 
+// TODO: drop it
+#include <evo/deterministicmns.h>
 class CConnman;
 class UniValue;
 
@@ -186,7 +189,7 @@ private:
     bool is_valid{false};
 
     std::vector<uint256> vecDirtyGovernanceObjectHashes GUARDED_BY(cs);
-    std::set<uint256> m_seen_platform_bans{} GUARDED_BY(cs);
+    std::map<uint256, PlatformBanMessage> m_seen_platform_bans{} GUARDED_BY(cs);
 
 public:
     explicit CMasternodeMetaMan();
@@ -209,7 +212,9 @@ public:
 
     std::vector<uint256> GetAndClearDirtyGovernanceObjectHashes();
 
-    bool AlreadyHavePlatformBan(const uint256& invHash);
+    bool AlreadyHavePlatformBan(const uint256& inv_hash) const;
+    std::optional<PlatformBanMessage> GetPlatformBan(const uint256& inv_hash) const;
+    void RememberPlatformBan(const uint256& inv_hash, PlatformBanMessage& msg);
 };
 
 #endif // BITCOIN_MASTERNODE_META_H
