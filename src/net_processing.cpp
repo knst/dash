@@ -3591,10 +3591,13 @@ PeerMsgRet PeerManagerImpl::ProcessPlatformBanMessage(CNode& pfrom, std::string_
         LogPrintf("PLATFORMBAN -- forward message to other nodes\n");
         LOCK(m_peer_mutex);
         for (const auto& [_, peer] : m_peer_map) {
-            if (!peer->IsBlockOnlyConn() && peer->nVersion >= MIN_MASTERNODE_PROTO_VERSION) {
-                const CNetMsgMaker msgMaker(peer.GetCommonVersion());
-                m_connman.PushMessage(&peer, msgMaker.Make(NetMsgType::PLATFORMBAN, ban_msg));
-            }
+            m_connman.ForNode(peer->m_id, [this, ban_msg](CNode* node) {
+                if (!node->IsBlockOnlyConn() && node->nVersion >= MIN_MASTERNODE_PROTO_VERSION) {
+                    const CNetMsgMaker msgMaker(node->GetCommonVersion());
+                    this->m_connman.PushMessage(node, msgMaker.Make(NetMsgType::PLATFORMBAN, ban_msg));
+                }
+                return true; // result of ForNode is not used
+            });
         }
     }
     return {};
