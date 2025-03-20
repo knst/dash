@@ -532,7 +532,6 @@ class P2PInterface(P2PConnection):
         with p2p_lock:
             try:
                 msgtype = message.msgtype.decode('ascii')
-                print(f"new message!!! {msgtype}")
                 self.message_count[msgtype] += 1
                 self.last_message[msgtype] = message
                 getattr(self, 'on_' + msgtype)(message)
