@@ -29,6 +29,10 @@ class PlatformBanMessagesTest(DashTestFramework):
         self.skip_if_no_wallet()
 
     def check_banned(self, mn):
+        self.log.info(f"info-0: {self.nodes[0].protx('info', mn.proTxHash)}")
+        self.log.info(f"info-1: {self.nodes[1].protx('info', mn.proTxHash)}")
+        self.log.info(f"info-2: {self.nodes[2].protx('info', mn.proTxHash)}")
+        self.log.info(f"info-3: {self.nodes[3].protx('info', mn.proTxHash)}")
         info = self.nodes[0].protx('info', mn.proTxHash)
         if info['state']['PoSeBanHeight'] != -1:
             return True
@@ -38,7 +42,8 @@ class PlatformBanMessagesTest(DashTestFramework):
         node = self.nodes[0]
 
         node.sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
-        node.sporkupdate("SPORK_2_INSTANTSEND_ENABLED", 1)
+#        node.sporkupdate("SPORK_2_INSTANTSEND_ENABLED", 1)
+        node.sporkupdate("SPORK_23_QUORUM_POSE", 0)
         self.wait_for_sporks_same()
 
         for _ in range(3):
@@ -77,10 +82,10 @@ class PlatformBanMessagesTest(DashTestFramework):
 
         self.log.info(f"Platform ban message is created: {msg}")
 
-        p2p_node2 = self.mninfo[1].node.add_p2p_connection(PlatformBanInterface())
+        p2p_node2 = self.mninfo[2].node.add_p2p_connection(PlatformBanInterface())
         p2p_node2.send_message(msg)
-#        wait_until_helper(lambda: p2p_node2.message_count["platformban"] > 0, timeout=10, lock=p2p_lock)
-#        p2p_node2.message_count[message] = 0
+        wait_until_helper(lambda: p2p_node2.message_count["platformban"] > 0, timeout=10, lock=p2p_lock)
+        p2p_node2.message_count["platformban"] = 0
 
 
         self.log.info(f"check banned: {self.check_banned(self.mninfo[0])}")
@@ -89,6 +94,12 @@ class PlatformBanMessagesTest(DashTestFramework):
         q = self.mine_quorum(llmq_type_name='llmq_test_platform', expected_members=2, expected_connections=1, expected_contributions=2, expected_commitments=2, llmq_type=106)
         self.log.info(f"quorum: {q} {node.quorum('info', 106, q)}")
 
+        self.log.info(f"check banned: {self.check_banned(self.mninfo[0])}")
+#assert self.check_banned(self.mninfo[0])
+        p2p_node = node.add_p2p_connection(PlatformBanInterface())
+        p2p_node.send_message(msg)
+        self.log.info(f"check banned: {self.check_banned(self.mninfo[0])}")
+        q = self.mine_quorum(llmq_type_name='llmq_test_platform', expected_members=2, expected_connections=1, expected_contributions=2, expected_commitments=2, llmq_type=106)
         self.log.info(f"check banned: {self.check_banned(self.mninfo[0])}")
         assert self.check_banned(self.mninfo[0])
 if __name__ == '__main__':
