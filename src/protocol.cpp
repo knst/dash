@@ -192,6 +192,7 @@ const static std::string netMessageTypesViolateBlocksOnly[] = {
     NetMsgType::DSTX,
     NetMsgType::DSVIN,
     NetMsgType::GETQUORUMROTATIONINFO,
+    NetMsgType::PLATFORMBAN,
     NetMsgType::QBSIGSHARES,
     NetMsgType::QCOMPLAINT,
     NetMsgType::QCONTRIB,
@@ -207,7 +208,6 @@ const static std::string netMessageTypesViolateBlocksOnly[] = {
     NetMsgType::QSIGSHARESINV,
     NetMsgType::QUORUMROTATIONINFO,
     NetMsgType::QWATCH,
-    NetMsgType::PLATFORMBAN,
     NetMsgType::TX,
 };
 const static std::set<std::string> netMessageTypesViolateBlocksOnlySet(std::begin(netMessageTypesViolateBlocksOnly), std::end(netMessageTypesViolateBlocksOnly));

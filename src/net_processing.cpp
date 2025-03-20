@@ -3546,7 +3546,7 @@ PeerMsgRet PeerManagerImpl::ProcessPlatformBanMessage(CNode& pfrom, std::string_
         return tl::unexpected{1};
     }
     if (dmn->nType != MnType::Evo) {
-        // Ban node, P2P penalty (100) if protx_hash is associated with a regular node not an evonode 
+        // Ban node, P2P penalty (100) if protx_hash is associated with a regular node not an evonode
         LogPrintf("PLATFORMBAN -- hash: %s protx_hash: %s unexpected type of node\n", hash.ToString(), ban_msg.m_protx_hash.ToString());
         return tl::unexpected{100};
     }
@@ -3590,19 +3590,6 @@ PeerMsgRet PeerManagerImpl::ProcessPlatformBanMessage(CNode& pfrom, std::string_
         m_mn_metaman.RememberPlatformBan(hash, ban_msg);
         CInv platform_ban_inv{MSG_PLATFORM_BAN, hash};
         RelayInv(platform_ban_inv);
-        /*
-        LOCK(m_nodes_mutex);
-        LOCK(m_peer_mutex);
-        for (const auto& [_, peer] : m_peer_map) {
-            m_connman.ForNode(peer->m_id, [this, ban_msg](CNode* node) {
-                if (!node->IsBlockOnlyConn() && node->nVersion >= MIN_MASTERNODE_PROTO_VERSION) {
-                    const CNetMsgMaker msgMaker(node->GetCommonVersion());
-                    this->m_connman.PushMessage(node, msgMaker.Make(NetMsgType::PLATFORMBAN, ban_msg));
-                }
-                return true; // result of ForNode is not used
-            });
-        }
-        */
     }
     return {};
 }

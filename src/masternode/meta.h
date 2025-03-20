@@ -106,7 +106,7 @@ public:
     void SetLastOutboundSuccess(int64_t t) { lastOutboundSuccess = t; outboundAttemptCount = 0; }
     int64_t GetLastOutboundSuccess() const { return lastOutboundSuccess; }
     bool SetPlatformBan(bool is_banned, int height)
-    { 
+    {
         LOCK(cs);
         if (height < m_platform_ban_height) {
             return false;
@@ -116,7 +116,6 @@ public:
         }
         m_platform_ban = is_banned;
         m_platform_ban_height = height;
-        LogPrintf("PLATFORMBAN set for height=%d status=%d\n", height, is_banned);
         return true;
     }
     bool IsPlatformBanned() const
