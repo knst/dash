@@ -175,6 +175,7 @@ static bool CompareByLastPaid(const CDeterministicMN* _a, const CDeterministicMN
     return CompareByLastPaid(*_a, *_b);
 }
 
+// TODO: refactor it to return just protx instead CDeterministicMNCPtr. Use ForEachMN instead of ForEachMNShared
 CDeterministicMNCPtr CDeterministicMNList::GetMNPayee(gsl::not_null<const CBlockIndex*> pindexPrev) const
 {
     if (mnMap.size() == 0) {

@@ -33,13 +33,13 @@ CSimplifiedMNListEntry::CSimplifiedMNListEntry(const CDeterministicMN& dmn) :
     service(dmn.pdmnState->addr),
     pubKeyOperator(dmn.pdmnState->pubKeyOperator),
     keyIDVoting(dmn.pdmnState->keyIDVoting),
-    isValid(!dmn.pdmnState->IsBanned()),
-    platformHTTPPort(dmn.pdmnState->platformHTTPPort),
-    platformNodeID(dmn.pdmnState->platformNodeID),
     scriptPayout(dmn.pdmnState->scriptPayout),
     scriptOperatorPayout(dmn.pdmnState->scriptOperatorPayout),
+    platformNodeID(dmn.pdmnState->platformNodeID),
+    platformHTTPPort(dmn.pdmnState->platformHTTPPort),
     nVersion(dmn.pdmnState->nVersion == CProRegTx::LEGACY_BLS_VERSION ? LEGACY_BLS_VERSION : BASIC_BLS_VERSION),
-    nType(dmn.nType)
+    nType(dmn.nType),
+    isValid(!dmn.pdmnState->IsBanned())
 {
 }
 
@@ -336,6 +336,8 @@ bool BuildSimplifiedMNListDiff(CDeterministicMNManager& dmnman, const Chainstate
                                const llmq::CQuorumManager& qman, const uint256& baseBlockHash, const uint256& blockHash,
                                CSimplifiedMNListDiff& mnListDiffRet, std::string& errorRet, bool extended)
 {
+    // TODO: make benchmark logging for it during re-index ; 
+    // TODO ensure that GetListForBlock is not abused too much (or always cached)
     AssertLockHeld(cs_main);
     mnListDiffRet = CSimplifiedMNListDiff();
 

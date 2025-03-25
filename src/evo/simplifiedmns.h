@@ -39,13 +39,13 @@ public:
     CService service;
     CBLSLazyPublicKey pubKeyOperator;
     CKeyID keyIDVoting;
-    bool isValid{false};
-    uint16_t platformHTTPPort{0};
-    uint160 platformNodeID{};
     CScript scriptPayout; // mem-only
     CScript scriptOperatorPayout; // mem-only
+    uint160 platformNodeID{};
+    uint16_t platformHTTPPort{0};
     uint16_t nVersion{LEGACY_BLS_VERSION};
     MnType nType{MnType::Regular};
+    bool isValid{false};
 
     CSimplifiedMNListEntry() = default;
     explicit CSimplifiedMNListEntry(const CDeterministicMN& dmn);
@@ -103,6 +103,7 @@ public:
 class CSimplifiedMNList
 {
 public:
+    // TODO: remove this unique-ptr
     std::vector<std::unique_ptr<CSimplifiedMNListEntry>> mnList;
 
     CSimplifiedMNList() = default;

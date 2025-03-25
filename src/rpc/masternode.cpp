@@ -257,6 +257,7 @@ static RPCHelpMan masternode_winners()
     int nChainTipHeight = pindexTip->nHeight;
     int nStartHeight = std::max(nChainTipHeight - nCount, 1);
 
+    // TODO - why here tip_mn_list and node.dmnman->GetListForBlock(pindex) ?
     const auto tip_mn_list = CHECK_NONFATAL(node.dmnman)->GetListAtChainTip();
     for (int h = nStartHeight; h <= nChainTipHeight; h++) {
         const CBlockIndex* pIndex = pindexTip->GetAncestor(h - 1);
