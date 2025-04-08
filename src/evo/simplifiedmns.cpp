@@ -336,6 +336,7 @@ bool BuildSimplifiedMNListDiff(CDeterministicMNManager& dmnman, const Chainstate
                                const llmq::CQuorumManager& qman, const uint256& baseBlockHash, const uint256& blockHash,
                                CSimplifiedMNListDiff& mnListDiffRet, std::string& errorRet, bool extended)
 {
+    int64_t tt = GetTimeMicros();
     // TODO: make benchmark logging for it during re-index ; 
     // TODO ensure that GetListForBlock is not abused too much (or always cached)
     AssertLockHeld(cs_main);
@@ -402,6 +403,7 @@ bool BuildSimplifiedMNListDiff(CDeterministicMNManager& dmnman, const Chainstate
     }
     vMatch[0] = true; // only coinbase matches
     mnListDiffRet.cbTxMerkleTree = CPartialMerkleTree(vHashes, vMatch);
+    LogPrintf("knst BuildSimplifiedMNListDiff for %d took %.2f\n", blockIndex->nHeight, (GetTimeMicros() - tt) * 0.000001);
 
     return true;
 }
