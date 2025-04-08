@@ -1072,6 +1072,7 @@ void RPCConsole::updateMasternodeCount()
     if (!clientModel) {
         return;
     }
+    // TODO: return 4 items instead copying full list
     auto mnList = clientModel->getMasternodeList().first;
     size_t total_mn_count = mnList.GetAllMNsCount();
     size_t total_enabled_mn_count = mnList.GetValidMNsCount();
@@ -1321,6 +1322,7 @@ void RPCConsole::updateDetailWidget()
         ui->peerPermissions->setText(permissions.join(" & "));
     }
     ui->peerMappedAS->setText(stats->nodeStats.m_mapped_as != 0 ? QString::number(stats->nodeStats.m_mapped_as) : ts.na);
+    // TODO: request directly MN by service without copying mn list
     auto dmn = clientModel->getMasternodeList().first.GetMNByService(stats->nodeStats.addr);
     if (dmn == nullptr) {
         ui->peerNodeType->setText(tr("Regular"));
