@@ -178,6 +178,7 @@ static bool CompareByLastPaid(const CDeterministicMN* _a, const CDeterministicMN
 // TODO: refactor it to return just protx instead CDeterministicMNCPtr. Use ForEachMN instead of ForEachMNShared
 CDeterministicMNCPtr CDeterministicMNList::GetMNPayee(gsl::not_null<const CBlockIndex*> pindexPrev) const
 {
+    int64_t tt = GetTimeMicros();
     if (mnMap.size() == 0) {
         return nullptr;
     }
@@ -211,6 +212,7 @@ CDeterministicMNCPtr CDeterministicMNList::GetMNPayee(gsl::not_null<const CBlock
         }
     });
 
+    LogPrintf("knst GetMNPayee took %.5f\n", (GetTimeMicros() - tt) * 0.000001);
     return best;
 }
 
@@ -961,10 +963,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
 
     // The payee for the current block was determined by the previous block's list, but it might have disappeared in the
     // current block. We still pay that MN one last time, however.
-    if (payee && newList.HasMN(payee->proTxHash)) {
-        auto dmn = newList.GetMN(payee->proTxHash);
-        // HasMN has reported that GetMN should succeed, enforce that.
-        assert(dmn);
+    if (auto dmn = payee ? newList.GetMN(payee->proTxHash : payee)) {
         auto newState = std::make_shared<CDeterministicMNState>(*dmn->pdmnState);
         newState->nLastPaidHeight = nHeight;
         // Starting from v19 and until MNRewardReallocation, EvoNodes will be paid 4 blocks in a row
@@ -985,6 +984,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
             assert(dmn);
             LogPrint(BCLog::MNPAYMENTS, "CDeterministicMNManager::%s -- MN %s, nConsecutivePayments=%d\n",
                       __func__, dmn->proTxHash.ToString(), dmn->pdmnState->nConsecutivePayments);
+        }
         }
     }
 
