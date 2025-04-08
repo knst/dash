@@ -108,6 +108,7 @@ void ClientModel::setMasternodeList(const CDeterministicMNList& mnList, const CB
 std::pair<CDeterministicMNList, const CBlockIndex*> ClientModel::getMasternodeList() const
 {
     LOCK(cs_mnlinst);
+    // TODO: return here const copy ?
     return {*mnListCached, mnListTip};
 }
 

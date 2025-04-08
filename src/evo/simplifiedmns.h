@@ -101,6 +101,7 @@ public:
 class CSimplifiedMNList
 {
 public:
+    // TODO: consider removing unique_ptr here (which is used once during initialization for sorting)
     std::vector<std::unique_ptr<CSimplifiedMNListEntry>> mnList;
 
     CSimplifiedMNList() = default;
