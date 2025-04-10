@@ -175,7 +175,6 @@ static bool CompareByLastPaid(const CDeterministicMN* _a, const CDeterministicMN
     return CompareByLastPaid(*_a, *_b);
 }
 
-// TODO: refactor it to return just protx instead CDeterministicMNCPtr. Use ForEachMN instead of ForEachMNShared
 CDeterministicMNCPtr CDeterministicMNList::GetMNPayee(gsl::not_null<const CBlockIndex*> pindexPrev) const
 {
     int64_t tt = GetTimeMicros();
@@ -212,7 +211,7 @@ CDeterministicMNCPtr CDeterministicMNList::GetMNPayee(gsl::not_null<const CBlock
         }
     });
 
-    LogPrintf("knst GetMNPayee took %.5f\n", (GetTimeMicros() - tt) * 0.000001);
+    LogPrintf("knst GetMNPayee took %.5fms\n", (GetTimeMicros() - tt) * 0.001);
     return best;
 }
 
@@ -603,7 +602,8 @@ void CDeterministicMNList::RemoveMN(const uint256& proTxHash)
 
 bool CDeterministicMNManager::ProcessBlock(const CBlock& block, gsl::not_null<const CBlockIndex*> pindex,
                                            BlockValidationState& state, const CCoinsViewCache& view,
-                                           llmq::CQuorumSnapshotManager& qsnapman, bool fJustCheck,
+                                           llmq::CQuorumSnapshotManager& qsnapman,
+                                           const CDeterministicMNList& newList,
                                            std::optional<MNListUpdates>& updatesRet)
 {
     AssertLockHeld(cs_main);
@@ -613,23 +613,12 @@ bool CDeterministicMNManager::ProcessBlock(const CBlock& block, gsl::not_null<co
         return true;
     }
 
-    CDeterministicMNList oldList, newList;
+    CDeterministicMNList oldList;
     CDeterministicMNListDiff diff;
 
     int nHeight = pindex->nHeight;
 
     try {
-        if (!BuildNewListFromBlock(block, pindex->pprev, state, view, newList, qsnapman, true)) {
-            // pass the state returned by the function above
-            return false;
-        }
-
-        if (fJustCheck) {
-            return true;
-        }
-
-        newList.SetBlockHash(pindex->GetBlockHash());
-
         LOCK(cs);
 
         oldList = GetListForBlockInternal(pindex->pprev);
@@ -725,6 +714,8 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
                                                     CDeterministicMNList& mnListRet,
                                                     llmq::CQuorumSnapshotManager& qsnapman, bool debugLogs)
 {
+    int64_t tt = GetTimeMicros();
+
     int nHeight = pindexPrev->nHeight + 1;
 
     CDeterministicMNList oldList = GetListForBlock(pindexPrev);
@@ -963,7 +954,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
 
     // The payee for the current block was determined by the previous block's list, but it might have disappeared in the
     // current block. We still pay that MN one last time, however.
-    if (auto dmn = payee ? newList.GetMN(payee->proTxHash : payee)) {
+    if (auto dmn = payee ? newList.GetMN(payee->proTxHash) : payee) {
         auto newState = std::make_shared<CDeterministicMNState>(*dmn->pdmnState);
         newState->nLastPaidHeight = nHeight;
         // Starting from v19 and until MNRewardReallocation, EvoNodes will be paid 4 blocks in a row
@@ -985,7 +976,6 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
             LogPrint(BCLog::MNPAYMENTS, "CDeterministicMNManager::%s -- MN %s, nConsecutivePayments=%d\n",
                       __func__, dmn->proTxHash.ToString(), dmn->pdmnState->nConsecutivePayments);
         }
-        }
     }
 
     // reset nConsecutivePayments on non-paid EvoNodes
@@ -1005,6 +995,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
 
     mnListRet = std::move(newList);
 
+    LogPrintf("knst BuildNewListFromBlock  took %.5fms\n", (GetTimeMicros() - tt) * 0.001);
     return true;
 }
 

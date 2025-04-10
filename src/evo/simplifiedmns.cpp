@@ -403,7 +403,7 @@ bool BuildSimplifiedMNListDiff(CDeterministicMNManager& dmnman, const Chainstate
     }
     vMatch[0] = true; // only coinbase matches
     mnListDiffRet.cbTxMerkleTree = CPartialMerkleTree(vHashes, vMatch);
-    LogPrintf("knst BuildSimplifiedMNListDiff for %d took %.2f\n", blockIndex->nHeight, (GetTimeMicros() - tt) * 0.000001);
+    LogPrintf("knst BuildSimplifiedMNListDiff for %d took %.2fms\n", blockIndex->nHeight, (GetTimeMicros() - tt) * 0.001);
 
     return true;
 }

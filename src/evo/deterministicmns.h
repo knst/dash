@@ -325,6 +325,7 @@ public:
     [[nodiscard]] CDeterministicMNCPtr GetMNByService(const CService& service) const;
     [[nodiscard]] CDeterministicMNCPtr GetMNByInternalId(uint64_t internalId) const;
     [[nodiscard]] CDeterministicMNCPtr GetMNPayee(gsl::not_null<const CBlockIndex*> pindexPrev) const;
+//    [[nodiscard]] uint256 GetMNPayeeProtx(gsl::not_null<const CBlockIndex*> pindexPrev) const;
 
     /**
      * Calculates the projected MN payees for the next *count* blocks. The result is not guaranteed to be correct
@@ -580,13 +581,14 @@ public:
     ~CDeterministicMNManager() = default;
 
     bool ProcessBlock(const CBlock& block, gsl::not_null<const CBlockIndex*> pindex, BlockValidationState& state,
-                      const CCoinsViewCache& view, llmq::CQuorumSnapshotManager& qsnapman, bool fJustCheck,
+                      const CCoinsViewCache& view, llmq::CQuorumSnapshotManager& qsnapman, const CDeterministicMNList& newList,
                       std::optional<MNListUpdates>& updatesRet) EXCLUSIVE_LOCKS_REQUIRED(!cs, cs_main);
     bool UndoBlock(gsl::not_null<const CBlockIndex*> pindex, std::optional<MNListUpdates>& updatesRet) EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
     void UpdatedBlockTip(gsl::not_null<const CBlockIndex*> pindex) EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
     // the returned list will not contain the correct block hash (we can't know it yet as the coinbase TX is not updated yet)
+    // TODO - -remove debugLogs
     bool BuildNewListFromBlock(const CBlock& block, gsl::not_null<const CBlockIndex*> pindexPrev,
                                BlockValidationState& state, const CCoinsViewCache& view, CDeterministicMNList& mnListRet,
                                llmq::CQuorumSnapshotManager& qsnapman, bool debugLogs) EXCLUSIVE_LOCKS_REQUIRED(!cs);

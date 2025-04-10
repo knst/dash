@@ -10,6 +10,7 @@
 #include <evo/cbtx.h>
 #include <evo/creditpool.h>
 #include <evo/deterministicmns.h>
+#include <evo/simplifiedmns.h>
 #include <evo/mnhftx.h>
 #include <evo/providertx.h>
 #include <evo/assetlocktx.h>
@@ -173,16 +174,26 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(const CBlock& block, const CB
         nTimeQuorum += nTime3 - nTime2;
         LogPrint(BCLog::BENCHMARK, "        - m_qblockman: %.2fms [%.2fs]\n", 0.001 * (nTime3 - nTime2), nTimeQuorum * 0.000001);
 
-        if (!m_dmnman.ProcessBlock(block, pindex, state, view, m_qsnapman, fJustCheck, updatesRet)) {
-            // pass the state returned by the function above
-            return false;
+
+        CDeterministicMNList newList;
+        if (DeploymentActiveAt(*pindex, m_consensus_params, Consensus::DEPLOYMENT_DIP0003)) {
+            if (!m_dmnman.BuildNewListFromBlock(block, pindex->pprev, state, view, newList, m_qsnapman, true)) {
+                // pass the state returned by the function above
+                return false;
+            }
+            newList.SetBlockHash(pindex->GetBlockHash());
+
+            if (!fJustCheck && !m_dmnman.ProcessBlock(block, pindex, state, view, m_qsnapman, newList, updatesRet)) {
+                // pass the state returned by the function above
+                return false;
+            }
         }
 
         int64_t nTime4 = GetTimeMicros();
         nTimeDMN += nTime4 - nTime3;
         LogPrint(BCLog::BENCHMARK, "        - m_dmnman: %.2fms [%.2fs]\n", 0.001 * (nTime4 - nTime3), nTimeDMN * 0.000001);
 
-        if (fCheckCbTxMerkleRoots && !CheckCbTxMerkleRoots(block, pindex, m_dmnman, m_qsnapman, m_qblockman, state, view)) {
+        if (fCheckCbTxMerkleRoots && !CheckCbTxMerkleRoots(block, pindex, m_qblockman, CSimplifiedMNList(newList), state)) {
             // pass the state returned by the function above
             return false;
         }
