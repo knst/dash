@@ -177,7 +177,6 @@ static bool CompareByLastPaid(const CDeterministicMN* _a, const CDeterministicMN
 
 CDeterministicMNCPtr CDeterministicMNList::GetMNPayee(gsl::not_null<const CBlockIndex*> pindexPrev) const
 {
-    int64_t tt = GetTimeMicros();
     if (mnMap.size() == 0) {
         return nullptr;
     }
@@ -211,7 +210,6 @@ CDeterministicMNCPtr CDeterministicMNList::GetMNPayee(gsl::not_null<const CBlock
         }
     });
 
-    LogPrintf("knst GetMNPayee took %.5fms\n", (GetTimeMicros() - tt) * 0.001);
     return best;
 }
 
@@ -714,7 +712,6 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
                                                     CDeterministicMNList& mnListRet,
                                                     llmq::CQuorumSnapshotManager& qsnapman, bool debugLogs)
 {
-    int64_t tt = GetTimeMicros();
 
     int nHeight = pindexPrev->nHeight + 1;
 
@@ -995,7 +992,6 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
 
     mnListRet = std::move(newList);
 
-    LogPrintf("knst BuildNewListFromBlock  took %.5fms\n", (GetTimeMicros() - tt) * 0.001);
     return true;
 }
 
