@@ -76,20 +76,26 @@ class WalletMnemonicbitsTest(BitcoinTestFramework):
         if self.options.descriptors:
             self.nodes[0].createwallet("wallet_256", False, True, "", False, True)  # blank Descriptors
             self.nodes[0].get_wallet_rpc("wallet_256").upgradetohd()
+            self.nodes[0].createwallet("wallet_256_pre", False, True, "", False, True)  # blank Descriptors
+            self.nodes[0].get_wallet_rpc("wallet_256_pre").upgradetohd(mnemonic_pre)
             # first descriptor is private key with no mnemonic for CbTx (see node.importprivkey), we use number#1 here instead
             assert_equal(len(self.nodes[0].get_wallet_rpc(self.default_wallet_name).listdescriptors(True)["descriptors"][1]["mnemonic"].split()), 12)  # 12 words by default
             assert_equal(len(self.nodes[0].get_wallet_rpc("wallet_160").listdescriptors(True)["descriptors"][0]["mnemonic"].split()), 15)              # 15 words
             assert_equal(len(self.nodes[0].get_wallet_rpc("wallet_192").listdescriptors(True)["descriptors"][0]["mnemonic"].split()), 18)              # 18 words
             assert_equal(len(self.nodes[0].get_wallet_rpc("wallet_224").listdescriptors(True)["descriptors"][0]["mnemonic"].split()), 21)              # 21 words
             assert_equal(len(self.nodes[0].get_wallet_rpc("wallet_256").listdescriptors(True)["descriptors"][0]["mnemonic"].split()), 24)              # 24 words
+            assert_equal(self.nodes[0].get_wallet_rpc("wallet_256").listdescriptors(True)["descriptors"][0]["mnemonic"], mnemonic_pre)                # same as upgradetohd
         else:
             self.nodes[0].createwallet("wallet_256", False, True)  # blank HD legacy
             self.nodes[0].get_wallet_rpc("wallet_256").upgradetohd()
+            self.nodes[0].createwallet("wallet_256_pre", False, True)  # blank HD legacy
+            self.nodes[0].get_wallet_rpc("wallet_256_pre").upgradetohd(mnemonic_pre)
             assert_equal(len(self.nodes[0].get_wallet_rpc(self.default_wallet_name).dumphdinfo()["mnemonic"].split()), 12)  # 12 words by default
             assert_equal(len(self.nodes[0].get_wallet_rpc("wallet_160").dumphdinfo()["mnemonic"].split()), 15)              # 15 words
             assert_equal(len(self.nodes[0].get_wallet_rpc("wallet_192").dumphdinfo()["mnemonic"].split()), 18)              # 18 words
             assert_equal(len(self.nodes[0].get_wallet_rpc("wallet_224").dumphdinfo()["mnemonic"].split()), 21)              # 21 words
             assert_equal(len(self.nodes[0].get_wallet_rpc("wallet_256").dumphdinfo()["mnemonic"].split()), 24)              # 24 words
+            assert_equal(self.nodes[0].get_wallet_rpc("wallet_256_pre").dumphdinfo()["mnemonic"], mnemonic_pre)             # same as upgradetohd
 
 
 if __name__ == '__main__':
