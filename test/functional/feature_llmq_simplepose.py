@@ -138,11 +138,13 @@ class LLMQSimplePoSeTest(DashTestFramework):
 
         self.log.info("Waiting final commitment")
         self.wait_for_quorum_commitment(q, nodes)
+        time.sleep(1)
 
         self.log.info("Mining final commitment")
         self.bump_mocktime(1, nodes=nodes)
         self.nodes[0].getblocktemplate() # this calls CreateNewBlock
         self.generate(self.nodes[0], 1, sync_fun=lambda: self.sync_blocks(nodes))
+        time.sleep(1)
 
         self.log.info("Waiting for quorum to appear in the list")
         self.wait_for_quorum_list(q, nodes)

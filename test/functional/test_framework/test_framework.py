@@ -1775,6 +1775,7 @@ class DashTestFramework(BitcoinTestFramework):
                     break
             return member_count >= expected_member_count
 
+        time.sleep(0.5)
         self.wait_until(check_dkg_session, timeout=timeout)
 
     def wait_for_quorum_commitment(self, quorum_hash, nodes, llmq_type=100, timeout=15):
@@ -1796,6 +1797,7 @@ class DashTestFramework(BitcoinTestFramework):
                     return False
             return True
 
+        time.sleep(0.5)
         self.wait_until(check_dkg_comitments, timeout=timeout)
 
     def wait_for_quorum_list(self, quorum_hash, nodes, timeout=15, llmq_type_name="llmq_test"):
