@@ -2725,14 +2725,6 @@ static RPCHelpMan upgradetohd()
         secureMnemonicPassphrase = request.params[1].get_str().c_str();
     }
 
-    // TODO: breaking changes kept for v21!
-    // instead upgradetohd let's use more straightforward 'sethdseed'
-    constexpr bool is_v21 = false;
-    const int previous_version{pwallet->GetVersion()};
-    if (is_v21 && previous_version >= FEATURE_HD) {
-        return JSONRPCError(RPC_WALLET_ERROR, "Already at latest version. Wallet version unchanged.");
-    }
-
     bilingual_str error;
     const bool wallet_upgraded{pwallet->UpgradeToHD(secureMnemonic, secureMnemonicPassphrase, secureWalletPassphrase, error)};
 
