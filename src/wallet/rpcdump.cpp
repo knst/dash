@@ -1404,6 +1404,8 @@ static UniValue ProcessImport(CWallet& wallet, const UniValue& data, const int64
             warnings = ProcessImportLegacy(import_data, pubkey_map, privkey_map, script_pub_keys, have_solving_data, data, ordered_pubkeys);
         } else if (data.exists("desc")) {
             warnings = ProcessImportDescriptor(import_data, pubkey_map, privkey_map, script_pub_keys, have_solving_data, data, ordered_pubkeys);
+/*        } else if (data.exists("mnemonic")) {
+            warnings = ProcessImportDescriptor(import_data, pubkey_map, privkey_map, script_pub_keys, have_solving_data, data*/
         } else {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Either a descriptor or scriptPubKey must be provided.");
         }
