@@ -33,15 +33,17 @@ private:
     friend class CDeterministicMNStateDiff;
 
 public:
-    int nVersion{CProRegTx::LEGACY_BLS_VERSION};
+    int16_t nVersion{CProRegTx::LEGACY_BLS_VERSION};
+    uint16_t nRevocationReason{CProUpRevTx::REASON_NOT_SPECIFIED};
 
     int nRegisteredHeight{-1};
     int nLastPaidHeight{0};
     int nConsecutivePayments{0};
     int nPoSePenalty{0};
     int nPoSeRevivedHeight{-1};
-    uint16_t nRevocationReason{CProUpRevTx::REASON_NOT_SPECIFIED};
 
+    uint16_t platformP2PPort{0};
+    uint16_t platformHTTPPort{0};
     // the block hash X blocks after registration, used in quorum calculations
     uint256 confirmedHash;
     // sha256(proTxHash, confirmedHash) to speed up quorum calculations
@@ -56,8 +58,6 @@ public:
     CScript scriptOperatorPayout;
 
     uint160 platformNodeID{};
-    uint16_t platformP2PPort{0};
-    uint16_t platformHTTPPort{0};
 
 public:
     CDeterministicMNState() = default;
@@ -83,7 +83,7 @@ public:
     SERIALIZE_METHODS(CDeterministicMNState, obj)
     {
         READWRITE(
-            obj.nVersion,
+            static_cast<int>(obj.nVersion),
             obj.nRegisteredHeight,
             obj.nLastPaidHeight,
             obj.nConsecutivePayments,
