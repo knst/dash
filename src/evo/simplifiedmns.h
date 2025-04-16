@@ -50,9 +50,24 @@ public:
     CSimplifiedMNListEntry() = default;
     explicit CSimplifiedMNListEntry(const CDeterministicMN& dmn);
 
+public:
     bool operator==(const CSimplifiedMNListEntry& rhs) const
     {
+/*        auto to_tuple = [](const CSimplifiedMNListEntry&) -> auto
+            return std::tie(proRegTxHash, confirmedHash, service, pubKeyOperator, keyIDVoting, platformNodeID, platformHTTPPort, nVersion, nType, isValid);
+        }
         return to_tuple() == rhs.to_tuple();
+        */
+        return proRegTxHash == rhs.proRegTxHash &&
+               confirmedHash == rhs.confirmedHash &&
+               service == rhs.service &&
+               pubKeyOperator == rhs.pubKeyOperator &&
+               keyIDVoting == rhs.keyIDVoting &&
+               isValid == rhs.isValid &&
+               nVersion == rhs.nVersion &&
+               nType == rhs.nType &&
+               platformHTTPPort == rhs.platformHTTPPort &&
+               platformNodeID == rhs.platformNodeID;
     }
 
     bool operator!=(const CSimplifiedMNListEntry& rhs) const
@@ -89,16 +104,12 @@ public:
 
     std::string ToString() const;
     [[nodiscard]] UniValue ToJson(bool extended = false) const;
-private:
-    auto to_tuple() const {
-        return std::tie(proRegTxHash, confirmedHash, service, pubKeyOperator, keyIDVoting, platformNodeID, platformHTTPPort, nVersion, nType, isValid);
-    }
 };
 
 class CSimplifiedMNList
 {
 public:
-    std::vector<CSimplifiedMNListEntry> mnList;
+    std::vector<std::unique_ptr<CSimplifiedMNListEntry>> mnList;
 
     CSimplifiedMNList() = default;
     explicit CSimplifiedMNList(const CDeterministicMNList& dmnList);
