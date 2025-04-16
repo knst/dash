@@ -39,29 +39,20 @@ public:
     CService service;
     CBLSLazyPublicKey pubKeyOperator;
     CKeyID keyIDVoting;
-    bool isValid{false};
-    uint16_t platformHTTPPort{0};
     uint160 platformNodeID{};
-    CScript scriptPayout; // mem-only
-    CScript scriptOperatorPayout; // mem-only
+    uint16_t platformHTTPPort{0};
     uint16_t nVersion{LEGACY_BLS_VERSION};
     MnType nType{MnType::Regular};
+    bool isValid{false};
+    CScript scriptPayout; // mem-only
+    CScript scriptOperatorPayout; // mem-only
 
     CSimplifiedMNListEntry() = default;
     explicit CSimplifiedMNListEntry(const CDeterministicMN& dmn);
 
     bool operator==(const CSimplifiedMNListEntry& rhs) const
     {
-        return proRegTxHash == rhs.proRegTxHash &&
-               confirmedHash == rhs.confirmedHash &&
-               service == rhs.service &&
-               pubKeyOperator == rhs.pubKeyOperator &&
-               keyIDVoting == rhs.keyIDVoting &&
-               isValid == rhs.isValid &&
-               nVersion == rhs.nVersion &&
-               nType == rhs.nType &&
-               platformHTTPPort == rhs.platformHTTPPort &&
-               platformNodeID == rhs.platformNodeID;
+        return to_tuple() == rhs.to_tuple();
     }
 
     bool operator!=(const CSimplifiedMNListEntry& rhs) const
@@ -98,12 +89,16 @@ public:
 
     std::string ToString() const;
     [[nodiscard]] UniValue ToJson(bool extended = false) const;
+private:
+    auto to_tuple() const {
+        return std::tie(proRegTxHash, confirmedHash, service, pubKeyOperator, keyIDVoting, platformNodeID, platformHTTPPort, nVersion, nType, isValid);
+    }
 };
 
 class CSimplifiedMNList
 {
 public:
-    std::vector<std::unique_ptr<CSimplifiedMNListEntry>> mnList;
+    std::vector<CSimplifiedMNListEntry> mnList;
 
     CSimplifiedMNList() = default;
     explicit CSimplifiedMNList(const CDeterministicMNList& dmnList);
