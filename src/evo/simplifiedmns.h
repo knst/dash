@@ -39,11 +39,11 @@ public:
     CService service;
     CBLSLazyPublicKey pubKeyOperator;
     CKeyID keyIDVoting;
-    bool isValid{false};
-    uint16_t platformHTTPPort{0};
-    uint160 platformNodeID{};
     CScript scriptPayout; // mem-only
     CScript scriptOperatorPayout; // mem-only
+    uint160 platformNodeID{};
+    uint16_t platformHTTPPort{0};
+    bool isValid{false};
     uint16_t nVersion{LEGACY_BLS_VERSION};
     MnType nType{MnType::Regular};
 
