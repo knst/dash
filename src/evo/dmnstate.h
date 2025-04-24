@@ -12,6 +12,7 @@
 #include <pubkey.h>
 #include <script/script.h>
 
+#include <atomic>
 #include <memory>
 #include <utility>
 
@@ -62,8 +63,34 @@ public:
     uint16_t platformP2PPort{0};
     uint16_t platformHTTPPort{0};
 
+    static std::atomic<int64_t> counter;
+    static std::atomic<int64_t> destructed;
 public:
-    CDeterministicMNState() = default;
+    CDeterministicMNState() { ++counter; }
+    CDeterministicMNState(const CDeterministicMNState& state) :
+        nPoSeBanHeight{state.nPoSeBanHeight},
+        nVersion(state.nVersion),
+        nRegisteredHeight{state.nRegisteredHeight},
+        nLastPaidHeight{state.nLastPaidHeight},
+        nConsecutivePayments{state.nConsecutivePayments},
+        nPoSePenalty{state.nPoSePenalty},
+        nPoSeRevivedHeight{state.nPoSeRevivedHeight},
+        nRevocationReason{state.nRevocationReason},
+        confirmedHash{state.confirmedHash},
+        confirmedHashWithProRegTxHash{state.confirmedHashWithProRegTxHash},
+        keyIDOwner(state.keyIDOwner),
+        pubKeyOperator(state.pubKeyOperator),
+        keyIDVoting(state.keyIDVoting),
+        addr(state.addr),
+        scriptPayout(state.scriptPayout),
+        scriptOperatorPayout(state.scriptOperatorPayout),
+        platformNodeID(state.platformNodeID),
+        platformP2PPort(state.platformP2PPort),
+        platformHTTPPort(state.platformHTTPPort)
+    {
+        ++counter;
+    }
+
     explicit CDeterministicMNState(const CProRegTx& proTx) :
         nVersion(proTx.nVersion),
         keyIDOwner(proTx.keyIDOwner),
@@ -75,13 +102,17 @@ public:
         platformP2PPort(proTx.platformP2PPort),
         platformHTTPPort(proTx.platformHTTPPort)
     {
+        ++counter;
     }
 
     template <typename Stream>
     CDeterministicMNState(deserialize_type, Stream& s)
     {
+        ++counter;
+
         s >> *this;
     }
+    virtual ~CDeterministicMNState() { ++destructed; }
 
     SERIALIZE_METHODS(CDeterministicMNState, obj)
     {
