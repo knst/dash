@@ -27,6 +27,9 @@
 #include <util/underlying.h>
 #include <util/enumerate.h>
 
+std::atomic<int64_t> CSimplifiedMNListEntry::counter{0};
+std::atomic<int64_t> CSimplifiedMNListEntry::destructed{0};
+
 CSimplifiedMNListEntry::CSimplifiedMNListEntry(const CDeterministicMN& dmn) :
     proRegTxHash(dmn.proTxHash),
     confirmedHash(dmn.pdmnState->confirmedHash),
@@ -41,6 +44,7 @@ CSimplifiedMNListEntry::CSimplifiedMNListEntry(const CDeterministicMN& dmn) :
     nVersion(dmn.pdmnState->nVersion == CProRegTx::LEGACY_BLS_VERSION ? LEGACY_BLS_VERSION : BASIC_BLS_VERSION),
     nType(dmn.nType)
 {
+    ++counter;
 }
 
 uint256 CSimplifiedMNListEntry::CalcHash() const
@@ -336,6 +340,21 @@ bool BuildSimplifiedMNListDiff(CDeterministicMNManager& dmnman, const Chainstate
                                const llmq::CQuorumManager& qman, const uint256& baseBlockHash, const uint256& blockHash,
                                CSimplifiedMNListDiff& mnListDiffRet, std::string& errorRet, bool extended)
 {
+    LogPrintf("sizeof(CSimplifiedMNListEntry)=%d\n", sizeof(CSimplifiedMNListEntry));
+    LogPrintf("sizeof(CBLSLazyPublicKey)=%d\n", sizeof(CBLSLazyPublicKey));
+    LogPrintf("sizeof(CBLSLazySignature)=%d\n", sizeof(CBLSLazySignature));
+    LogPrintf("sizeof(CDeterministicMNState)=%d\n", sizeof(CDeterministicMNState));
+
+    LogPrintf("CSimplifiedMNListEntry counter: %d\n", CSimplifiedMNListEntry::counter);
+    LogPrintf("CBLSLazyPubllicKey counter: %d\n", CBLSLazyPublicKey::counter);
+    LogPrintf("CBLSLazySignature counter: %d\n", CBLSLazySignature::counter);
+    LogPrintf("CDeterministicMNState counter: %d\n", CDeterministicMNState::counter);
+
+    LogPrintf("CSimplifiedMNListEntry total: %d\n", CSimplifiedMNListEntry::counter - CSimplifiedMNListEntry::destructed);
+    LogPrintf("CBLSLazyPubllicKey total: %d\n", CBLSLazyPublicKey::counter - CBLSLazyPublicKey::destructed);
+    LogPrintf("CDeterministicMNState total: %d\n", CDeterministicMNState::counter - CDeterministicMNState::destructed);
+
+
     AssertLockHeld(cs_main);
     mnListDiffRet = CSimplifiedMNListDiff();
 

@@ -401,16 +401,24 @@ private:
     mutable uint256 hash;
 
 public:
+    static std::atomic<int64_t> counter;
+    static std::atomic<int64_t> destructed;
+public:
     CBLSLazyWrapper() :
         vecBytes{},
         bufLegacyScheme(bls::bls_legacy_scheme.load())
-    {}
+    {
+        ++counter;
+    }
 
     explicit CBLSLazyWrapper(const CBLSLazyWrapper& r)
     {
         *this = r;
+        ++counter;
     }
-    virtual ~CBLSLazyWrapper() = default;
+    virtual ~CBLSLazyWrapper() {
+        ++destructed;
+    }
 
     CBLSLazyWrapper& operator=(const CBLSLazyWrapper& r)
     {
@@ -564,6 +572,12 @@ public:
         return Get().ToString(bufLegacyScheme);
     }
 };
+
+template<typename BLSObject>
+std::atomic<int64_t> CBLSLazyWrapper<BLSObject>::counter{0};
+template<typename BLSObject>
+std::atomic<int64_t> CBLSLazyWrapper<BLSObject>::destructed{0};
+
 using CBLSLazySignature = CBLSLazyWrapper<CBLSSignature>;
 using CBLSLazyPublicKey = CBLSLazyWrapper<CBLSPublicKey>;
 

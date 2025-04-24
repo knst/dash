@@ -12,6 +12,7 @@
 #include <pubkey.h>
 #include <sync.h>
 #include <threadsafety.h>
+#include <atomic>
 
 class UniValue;
 class CBlockIndex;
@@ -47,7 +48,9 @@ public:
     uint16_t nVersion{LEGACY_BLS_VERSION};
     MnType nType{MnType::Regular};
 
-    CSimplifiedMNListEntry() = default;
+    static std::atomic<int64_t> counter;
+    static std::atomic<int64_t> destructed;
+    CSimplifiedMNListEntry() { ++counter;  }
     explicit CSimplifiedMNListEntry(const CDeterministicMN& dmn);
 
     bool operator==(const CSimplifiedMNListEntry& rhs) const
@@ -63,6 +66,7 @@ public:
                platformHTTPPort == rhs.platformHTTPPort &&
                platformNodeID == rhs.platformNodeID;
     }
+    ~CSimplifiedMNListEntry() { ++destructed; }
 
     bool operator!=(const CSimplifiedMNListEntry& rhs) const
     {
