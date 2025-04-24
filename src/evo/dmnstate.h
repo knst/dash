@@ -33,14 +33,16 @@ private:
     friend class CDeterministicMNStateDiff;
 
 public:
-    int nVersion{CProRegTx::LEGACY_BLS_VERSION};
+    uint8_t nVersion{CProRegTx::LEGACY_BLS_VERSION};
+    uint8_t nRevocationReason{CProUpRevTx::REASON_NOT_SPECIFIED};
+
+    uint16_t platformP2PPort{0};
 
     int nRegisteredHeight{-1};
     int nLastPaidHeight{0};
     int nConsecutivePayments{0};
     int nPoSePenalty{0};
     int nPoSeRevivedHeight{-1};
-    uint16_t nRevocationReason{CProUpRevTx::REASON_NOT_SPECIFIED};
 
     // the block hash X blocks after registration, used in quorum calculations
     uint256 confirmedHash;
@@ -56,7 +58,6 @@ public:
     CScript scriptOperatorPayout;
 
     uint160 platformNodeID{};
-    uint16_t platformP2PPort{0};
     uint16_t platformHTTPPort{0};
 
 public:
@@ -82,15 +83,26 @@ public:
 
     SERIALIZE_METHODS(CDeterministicMNState, obj)
     {
+        int version; 
+        SER_WRITE(obj, version = obj.nVersion);
+        READWRITE(version);
+        SER_READ(obj, obj.nVersion = static_cast<uint8_t>(version));
+
         READWRITE(
-            obj.nVersion,
+//            obj.nVersion,
             obj.nRegisteredHeight,
             obj.nLastPaidHeight,
             obj.nConsecutivePayments,
             obj.nPoSePenalty,
             obj.nPoSeRevivedHeight,
-            obj.nPoSeBanHeight,
-            obj.nRevocationReason,
+            obj.nPoSeBanHeight
+        );
+        uint16_t revocation_reason;
+        SER_WRITE(obj, revocation_reason = obj.nRevocationReason);
+        READWRITE(revocation_reason);
+        SER_READ(obj, obj.nRevocationReason = static_cast<uint8_t>(revocation_reason));
+
+        READWRITE(
             obj.confirmedHash,
             obj.confirmedHashWithProRegTxHash,
             obj.keyIDOwner);
