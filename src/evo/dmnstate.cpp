@@ -13,6 +13,7 @@
 #include <univalue.h>
 #include <messagesigner.h>
 
+std::atomic<int64_t> CDeterministicMNState::counter{0};
 std::string CDeterministicMNState::ToString() const
 {
     CTxDestination dest;

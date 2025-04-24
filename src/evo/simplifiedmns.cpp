@@ -27,6 +27,8 @@
 #include <util/underlying.h>
 #include <util/enumerate.h>
 
+std::atomic<int> CSimplifiedMNListEntry::counter{0};
+
 CSimplifiedMNListEntry::CSimplifiedMNListEntry(const CDeterministicMN& dmn) :
     proRegTxHash(dmn.proTxHash),
     confirmedHash(dmn.pdmnState->confirmedHash),
@@ -41,6 +43,7 @@ CSimplifiedMNListEntry::CSimplifiedMNListEntry(const CDeterministicMN& dmn) :
     nVersion(dmn.pdmnState->nVersion == CProRegTx::LEGACY_BLS_VERSION ? LEGACY_BLS_VERSION : BASIC_BLS_VERSION),
     nType(dmn.nType)
 {
+    ++counter;
 }
 
 uint256 CSimplifiedMNListEntry::CalcHash() const
@@ -340,6 +343,13 @@ bool BuildSimplifiedMNListDiff(CDeterministicMNManager& dmnman, const Chainstate
     LogPrintf("sizeof(CBLSLazyPublicKey)=%d\n", sizeof(CBLSLazyPublicKey));
     LogPrintf("sizeof(CBLSLazySignature)=%d\n", sizeof(CBLSLazySignature));
     LogPrintf("sizeof(CDeterministicMNState)=%d\n", sizeof(CDeterministicMNState));
+    LogPrintf("sizeof(CService)=%d\n", sizeof(CService));
+
+    LogPrintf("CSimplifiedMNListEntry counter: %d\n", CSimplifiedMNListEntry::counter);
+    LogPrintf("CBLSLazyPubllicKey counter: %d\n", CBLSLazyPublicKey::counter);
+    LogPrintf("CBLSLazySignature counter: %d\n", CBLSLazySignature::counter);
+    LogPrintf("CDeterministicMNState counter: %d\n", CDeterministicMNState::counter);
+
 
     AssertLockHeld(cs_main);
     mnListDiffRet = CSimplifiedMNListDiff();

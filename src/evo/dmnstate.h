@@ -12,6 +12,7 @@
 #include <pubkey.h>
 #include <script/script.h>
 
+#include <atomic>
 #include <memory>
 #include <utility>
 
@@ -58,8 +59,10 @@ public:
     uint8_t nVersion{CProRegTx::LEGACY_BLS_VERSION};
     uint8_t nRevocationReason{CProUpRevTx::REASON_NOT_SPECIFIED};
     uint8_t nConsecutivePayments{0};
+
+    static std::atomic<int64_t> counter;
 public:
-    CDeterministicMNState() = default;
+    CDeterministicMNState() { ++counter; }
     explicit CDeterministicMNState(const CProRegTx& proTx) :
         nVersion(proTx.nVersion),
         keyIDOwner(proTx.keyIDOwner),
@@ -71,13 +74,17 @@ public:
         platformP2PPort(proTx.platformP2PPort),
         platformHTTPPort(proTx.platformHTTPPort)
     {
+        ++counter;
     }
 
     template <typename Stream>
     CDeterministicMNState(deserialize_type, Stream& s)
     {
         s >> *this;
+
+        ++counter;
     }
+    virtual ~CDeterministicMNState() { --counter; }
 
     SERIALIZE_METHODS(CDeterministicMNState, obj)
     {
