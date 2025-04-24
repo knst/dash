@@ -336,6 +336,11 @@ bool BuildSimplifiedMNListDiff(CDeterministicMNManager& dmnman, const Chainstate
                                const llmq::CQuorumManager& qman, const uint256& baseBlockHash, const uint256& blockHash,
                                CSimplifiedMNListDiff& mnListDiffRet, std::string& errorRet, bool extended)
 {
+    LogPrintf("sizeof(CSimplifiedMNListEntry)=%d\n", sizeof(CSimplifiedMNListEntry));
+    LogPrintf("sizeof(CBLSLazyPublicKey)=%d\n", sizeof(CBLSLazyPublicKey));
+    LogPrintf("sizeof(CBLSLazySignature)=%d\n", sizeof(CBLSLazySignature));
+    LogPrintf("sizeof(CDeterministicMNState)=%d\n", sizeof(CDeterministicMNState));
+
     AssertLockHeld(cs_main);
     mnListDiffRet = CSimplifiedMNListDiff();
 
