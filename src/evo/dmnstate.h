@@ -29,9 +29,21 @@ namespace llmq
 class CDeterministicMNState
 {
 private:
+    int nPoSeBanHeight{-1};
+
     friend class CDeterministicMNStateDiff;
 
 public:
+    uint8_t nVersion{CProRegTx::LEGACY_BLS_VERSION};
+    uint8_t nRevocationReason{CProUpRevTx::REASON_NOT_SPECIFIED};
+
+    uint16_t platformP2PPort{0};
+
+    int nRegisteredHeight{-1};
+    int nLastPaidHeight{0};
+    int nConsecutivePayments{0};
+    int nPoSePenalty{0};
+    int nPoSeRevivedHeight{-1};
 
     // the block hash X blocks after registration, used in quorum calculations
     uint256 confirmedHash;
@@ -47,18 +59,7 @@ public:
     CScript scriptOperatorPayout;
 
     uint160 platformNodeID{};
-    int nPoSeBanHeight{-1};
-
-    int nRegisteredHeight{-1};
-    int nLastPaidHeight{0};
-    int nPoSePenalty{0};
-    int nPoSeRevivedHeight{-1};
-
     uint16_t platformHTTPPort{0};
-    uint16_t platformP2PPort{0};
-    uint8_t nVersion{CProRegTx::LEGACY_BLS_VERSION};
-    uint8_t nRevocationReason{CProUpRevTx::REASON_NOT_SPECIFIED};
-    uint8_t nConsecutivePayments{0};
 
     static std::atomic<int64_t> counter;
 public:
@@ -96,13 +97,8 @@ public:
         READWRITE(
 //            obj.nVersion,
             obj.nRegisteredHeight,
-            obj.nLastPaidHeight);
-        int consecutive_payments;
-        SER_WRITE(obj, consecutive_payments = obj.nConsecutivePayments);
-        READWRITE(consecutive_payments);
-        SER_READ(obj, obj.nConsecutivePayments = consecutive_payments);
-
-        READWRITE(
+            obj.nLastPaidHeight,
+            obj.nConsecutivePayments,
             obj.nPoSePenalty,
             obj.nPoSeRevivedHeight,
             obj.nPoSeBanHeight
