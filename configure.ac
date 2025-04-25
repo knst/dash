@@ -452,13 +452,7 @@ if test "$enable_werror" = "yes"; then
   fi
   ERROR_CXXFLAGS=$CXXFLAG_WERROR
 
-  dnl -Warray-bounds and -Wdangling-reference cause problems with GCC. Do not treat these warnings as errors.
-  AX_CHECK_COMPILE_FLAG([-Warray-bounds], [NOWARN_CXXFLAGS="$NOWARN_CXXFLAGS -Wno-error=array-bounds"], [], [$CXXFLAG_WERROR], [AC_LANG_SOURCE([
-    #if defined(__clang__) || defined(__INTEL_COMPILER) || !defined(__GNUC__)
-      #error Non-GCC compiler detected, not setting flag
-    #endif
-    int main(void) { return 0; }
-  ])])
+  dnl -Wdangling-reference cause problems with GCC. Do not treat these warnings as errors.
   AX_CHECK_COMPILE_FLAG([-Wdangling-reference], [NOWARN_CXXFLAGS="$NOWARN_CXXFLAGS -Wno-error=dangling-reference"], [], [$CXXFLAG_WERROR], [AC_LANG_SOURCE([
     #if defined(__clang__) || defined(__INTEL_COMPILER) || !defined(__GNUC__)
       #error Non-GCC compiler detected, not setting flag
@@ -476,6 +470,8 @@ if test "$enable_werror" = "yes"; then
     int main(void) { return 0; }
   ])])
 
+  dnl -Warray-bounds is not compatible with immer implementation, the compiler output is to noisy. Silent it
+  AX_CHECK_COMPILE_FLAG([-Warray-bounds], [WARN_CXXFLAGS="$WARN_CXXFLAGS -Wno-array-bounds"], [], [$CXXFLAG_WERROR])
   dnl -Wstringop-overread and -Wstringop-overflow are broken in gcc
   AX_CHECK_COMPILE_FLAG([-Wstringop-overread], [WARN_CXXFLAGS="$WARN_CXXFLAGS -Wno-stringop-overread"], [], [$CXXFLAG_WERROR])
   AX_CHECK_COMPILE_FLAG([-Wstringop-overflow], [WARN_CXXFLAGS="$WARN_CXXFLAGS -Wno-stringop-overflow"], [], [$CXXFLAG_WERROR])
