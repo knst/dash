@@ -973,23 +973,20 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
         }
     }
 
-    const bool isv19Active{DeploymentActiveAfter(pindexPrev, Params().GetConsensus(), Consensus::DEPLOYMENT_V19)};
-    if (isv19Active && !isMNRewardReallocation) {
-        // reset nConsecutivePayments on non-paid EvoNodes
-        auto newList2 = newList;
-        newList2.ForEachMN(false, [&](auto& dmn) {
-            if (dmn.nType != MnType::Evo) return;
-            if (dmn.pdmnState->nConsecutivePayments == 0) return;
-            if (payee != nullptr && dmn.proTxHash == payee->proTxHash) return;
-            if (debugLogs) {
-                LogPrint(BCLog::MNPAYMENTS, "CDeterministicMNManager::%s -- MN %s, reset nConsecutivePayments %d->0\n",
-                          __func__, dmn.proTxHash.ToString(), dmn.pdmnState->nConsecutivePayments);
-            }
-            auto newState = std::make_shared<CDeterministicMNState>(*dmn.pdmnState);
-            newState->nConsecutivePayments = 0;
-            newList.UpdateMN(dmn.proTxHash, newState);
-        });
-    }
+    // reset nConsecutivePayments on non-paid EvoNodes
+    auto newList2 = newList;
+    newList2.ForEachMN(false, [&](auto& dmn) {
+        if (dmn.nType != MnType::Evo) return;
+        if (payee != nullptr && dmn.proTxHash == payee->proTxHash && !isMNRewardReallocation) return;
+        if (dmn.pdmnState->nConsecutivePayments == 0) return;
+        if (debugLogs) {
+            LogPrint(BCLog::MNPAYMENTS, "CDeterministicMNManager::%s -- MN %s, reset nConsecutivePayments %d->0\n",
+                      __func__, dmn.proTxHash.ToString(), dmn.pdmnState->nConsecutivePayments);
+        }
+        auto newState = std::make_shared<CDeterministicMNState>(*dmn.pdmnState);
+        newState->nConsecutivePayments = 0;
+        newList.UpdateMN(dmn.proTxHash, newState);
+    });
 
     mnListRet = std::move(newList);
 
