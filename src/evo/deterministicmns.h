@@ -156,8 +156,10 @@ private:
     };
 
 public:
+    // check if we can make this map by internal id
     using MnMap = immer::map<uint256, CDeterministicMNCPtr, ImmerHasher>;
     using MnInternalIdMap = immer::map<uint64_t, uint256>;
+    // check if we can drop protx from here
     using MnUniquePropertyMap = immer::map<uint256, std::pair<uint256, uint32_t>, ImmerHasher>;
 
 private:
