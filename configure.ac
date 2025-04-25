@@ -452,6 +452,7 @@ if test "$enable_werror" = "yes"; then
   fi
   ERROR_CXXFLAGS=$CXXFLAG_WERROR
 
+  # TODO remove it after backporting bitcoin/bitcoin#27605
   dnl -Wdangling-reference cause problems with GCC. Do not treat these warnings as errors.
   AX_CHECK_COMPILE_FLAG([-Wdangling-reference], [NOWARN_CXXFLAGS="$NOWARN_CXXFLAGS -Wno-error=dangling-reference"], [], [$CXXFLAG_WERROR], [AC_LANG_SOURCE([
     #if defined(__clang__) || defined(__INTEL_COMPILER) || !defined(__GNUC__)
