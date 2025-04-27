@@ -4,6 +4,7 @@
 
 #include <qt/walletview.h>
 
+#include <qt/walletframe.h>
 #include <node/psbt.h>
 #include <node/transaction.h>
 #include <policy/policy.h>
@@ -102,7 +103,8 @@ WalletView::WalletView(WalletModel* wallet_model, QWidget* parent)
 
     QSettings settings;
     if (settings.value("fShowMasternodesTab").toBool()) {
-        masternodeListPage = new MasternodeList();
+    //    masternodeListPage = new MasternodeList(); // <---- 2nd masternode list
+        masternodeListPage = ((WalletFrame *)parent)->masternodeListPage;
         masternodeListPage->setWalletModel(walletModel);
         addWidget(masternodeListPage);
     }
@@ -173,9 +175,11 @@ void WalletView::setClientModel(ClientModel *_clientModel)
         coinJoinCoinsPage->setClientModel(_clientModel);
     }
     QSettings settings;
+    /*
     if (settings.value("fShowMasternodesTab").toBool() && masternodeListPage != nullptr) {
         masternodeListPage->setClientModel(_clientModel);
     }
+    */
     if (settings.value("fShowGovernanceTab").toBool() && governanceListPage != nullptr) {
         governanceListPage->setClientModel(_clientModel);
     }
@@ -235,6 +239,7 @@ void WalletView::gotoMasternodePage()
     QSettings settings;
     if (settings.value("fShowMasternodesTab").toBool()) {
         setCurrentWidget(masternodeListPage);
+//        masternodeListPage->setWalletModel(walletModel);
     }
 }
 

@@ -918,6 +918,7 @@ void BitcoinGUI::addWallet(WalletModel* walletModel)
     if (!walletFrame || !m_wallet_controller) return;
 
     WalletView* wallet_view = new WalletView(walletModel, walletFrame);
+//    wallet_view->masternodeListPage = walletFrame->masternodeListPage;
     if (!walletFrame->addView(wallet_view)) return;
 
     rpcConsole->addWallet(walletModel);

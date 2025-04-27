@@ -59,7 +59,9 @@ private:
     ClientModel *clientModel;
     QMap<WalletModel*, WalletView*> mapWalletViews;
     QGroupBox* no_wallet_group;
+public:
     MasternodeList* masternodeListPage;
+private:
     GovernanceList* governanceListPage;
 
     bool bOutOfSync;

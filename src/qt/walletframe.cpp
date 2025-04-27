@@ -55,7 +55,7 @@ WalletFrame::WalletFrame(QWidget* parent)
 
     walletStack->addWidget(no_wallet_group);
 
-    masternodeListPage = new MasternodeList();
+    masternodeListPage = new MasternodeList(); // <---- 1st masternode list
     walletStack->addWidget(masternodeListPage);
 
     governanceListPage = new GovernanceList();

@@ -66,7 +66,9 @@ private:
     SendCoinsDialog* coinJoinCoinsPage;
     AddressBookPage *usedSendingAddressesPage;
     AddressBookPage *usedReceivingAddressesPage;
+public:
     MasternodeList* masternodeListPage{nullptr};
+private:
     GovernanceList* governanceListPage{nullptr};
 
     TransactionView *transactionView;

@@ -89,6 +89,7 @@ MasternodeList::MasternodeList(QWidget* parent) :
     connect(ui->tableWidgetMasternodesDIP3, &QTableWidget::doubleClicked, this, &MasternodeList::extraInfoDIP3_clicked);
 
     timer = new QTimer(this);
+    LogPrintf("new updateDIP3ListScheduled\n");
     connect(timer, &QTimer::timeout, this, &MasternodeList::updateDIP3ListScheduled);
     timer->start(1000);
 
@@ -138,27 +139,34 @@ void MasternodeList::updateDIP3ListScheduled()
 
     // To prevent high cpu usage update only once in MASTERNODELIST_FILTER_COOLDOWN_SECONDS seconds
     // after filter was last changed unless we want to force the update.
+    bool do_update = false;
     if (fFilterUpdatedDIP3) {
         int64_t nSecondsToWait = nTimeFilterUpdatedDIP3 - GetTime() + MASTERNODELIST_FILTER_COOLDOWN_SECONDS;
         ui->countLabelDIP3->setText(tr("Please wait…") + " " + QString::number(nSecondsToWait));
 
         if (nSecondsToWait <= 0) {
-            updateDIP3List();
             fFilterUpdatedDIP3 = false;
+            do_update = true;
         }
     } else if (mnListChanged) {
         int64_t nMnListUpdateSecods = clientModel->masternodeSync().isBlockchainSynced() ? MASTERNODELIST_UPDATE_SECONDS : MASTERNODELIST_UPDATE_SECONDS * 10;
         int64_t nSecondsToWait = nTimeUpdatedDIP3 - GetTime() + nMnListUpdateSecods;
 
         if (nSecondsToWait <= 0) {
-            updateDIP3List();
+            nTimeUpdatedDIP3 = GetTime();
             mnListChanged = false;
+            do_update = true;
         }
+    }
+    if (do_update) {
+        updateDIP3List();
     }
 }
 
+// TODO: it's called N-times (that many as wallets are loaded)
 void MasternodeList::updateDIP3List()
 {
+    int64_t tt = GetTimeMicros();
     if (!clientModel || clientModel->node().shutdownRequested()) {
         return;
     }
@@ -194,8 +202,6 @@ void MasternodeList::updateDIP3List()
     ui->tableWidgetMasternodesDIP3->setSortingEnabled(false);
     ui->tableWidgetMasternodesDIP3->clearContents();
     ui->tableWidgetMasternodesDIP3->setRowCount(0);
-
-    nTimeUpdatedDIP3 = GetTime();
 
     std::map<uint256, int> nextPayments;
     for (size_t i = 0; i < projectedPayees.size(); i++) {
@@ -313,6 +319,8 @@ void MasternodeList::updateDIP3List()
 
     ui->countLabelDIP3->setText(QString::number(ui->tableWidgetMasternodesDIP3->rowCount()));
     ui->tableWidgetMasternodesDIP3->setSortingEnabled(true);
+#define MILLI 0.001
+    LogPrintf("updateDIP3List done %d ms\n", MILLI * (tt - GetTimeMicros()));
 }
 
 void MasternodeList::on_filterLineEditDIP3_textChanged(const QString& strFilterIn)
