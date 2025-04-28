@@ -127,7 +127,7 @@ bool CFinalCommitment::Verify(CDeterministicMNManager& dmnman, CQuorumSnapshotMa
                 if (!signers[i]) {
                     continue;
                 }
-                memberPubKeys.emplace_back(members[i]->pdmnState->pubKeyOperator.Get());
+                memberPubKeys.emplace_back(members[i]->pdmnState.pubKeyOperator.Get());
             }
 
             if (!membersSig.VerifySecureAggregated(memberPubKeys, commitmentHash)) {

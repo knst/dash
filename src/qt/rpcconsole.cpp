@@ -1337,7 +1337,7 @@ void RPCConsole::updateDetailWidget()
         } else {
             ui->peerNodeType->setText(tr("Verified Masternode"));
         }
-        ui->peerPoSeScore->setText(QString::number(dmn->pdmnState->nPoSePenalty));
+        ui->peerPoSeScore->setText(QString::number(dmn->pdmnState.nPoSePenalty));
     }
 
     // This check fails for example if the lock was busy and

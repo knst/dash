@@ -52,7 +52,7 @@ public:
     COutPoint collateralOutpoint;
     uint16_t nOperatorReward{0};
     MnType nType{MnType::Regular};
-    std::shared_ptr<const CDeterministicMNState> pdmnState;
+    CDeterministicMNState pdmnState;
 
     CDeterministicMN() = delete; // no default constructor, must specify internalId
     explicit CDeterministicMN(uint64_t _internalId, MnType mnType = MnType::Regular) :
@@ -370,8 +370,8 @@ public:
     [[nodiscard]] CDeterministicMNList ApplyDiff(gsl::not_null<const CBlockIndex*> pindex, const CDeterministicMNListDiff& diff) const;
 
     void AddMN(const CDeterministicMNCPtr& dmn, bool fBumpTotalCount = true);
-    void UpdateMN(const CDeterministicMN& oldDmn, const std::shared_ptr<const CDeterministicMNState>& pdmnState);
-    void UpdateMN(const uint256& proTxHash, const std::shared_ptr<const CDeterministicMNState>& pdmnState);
+    void UpdateMN(const CDeterministicMN& oldDmn, const CDeterministicMNState& pdmnState);
+    void UpdateMN(const uint256& proTxHash, const CDeterministicMNState& pdmnState);
     void UpdateMN(const CDeterministicMN& oldDmn, const CDeterministicMNStateDiff& stateDiff);
     void RemoveMN(const uint256& proTxHash);
 

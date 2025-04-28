@@ -213,7 +213,7 @@ static CDeterministicMNCPtr FindPayoutDmn(CDeterministicMNManager& dmnman, const
     for (const auto& txout : block.vtx[0]->vout) {
         CDeterministicMNCPtr found;
         dmnList.ForEachMNShared(true, [&](const CDeterministicMNCPtr& dmn) {
-            if (found == nullptr && txout.scriptPubKey == dmn->pdmnState->scriptPayout) {
+            if (found == nullptr && txout.scriptPubKey == dmn->pdmnState.scriptPayout) {
                 found = dmn;
             }
         });
@@ -516,7 +516,7 @@ void FuncDIP3Protx(TestChainSetup& setup)
     nHeight++;
 
     auto dmn = dmnman.GetListAtChainTip().GetMN(dmnHashes[0]);
-    BOOST_REQUIRE(dmn != nullptr && dmn->pdmnState->addr.GetPort() == 1000);
+    BOOST_REQUIRE(dmn != nullptr && dmn->pdmnState.addr.GetPort() == 1000);
 
     // test ProUpRevTx
     tx = CreateProUpRevTx(chainman.ActiveChain(), *(setup.m_node.mempool), utxos, dmnHashes[0], operatorKeys[dmnHashes[0]], setup.coinbaseKey);
@@ -526,7 +526,7 @@ void FuncDIP3Protx(TestChainSetup& setup)
     nHeight++;
 
     dmn = dmnman.GetListAtChainTip().GetMN(dmnHashes[0]);
-    BOOST_REQUIRE(dmn != nullptr && dmn->pdmnState->GetBannedHeight() == nHeight);
+    BOOST_REQUIRE(dmn != nullptr && dmn->pdmnState.GetBannedHeight() == nHeight);
 
     // test that the revoked MN does not get paid anymore
     for (size_t i = 0; i < 20; i++) {
@@ -548,7 +548,7 @@ void FuncDIP3Protx(TestChainSetup& setup)
     CBLSSecretKey newOperatorKey;
     newOperatorKey.MakeNewKey();
     dmn = dmnman.GetListAtChainTip().GetMN(dmnHashes[0]);
-    tx = CreateProUpRegTx(chainman.ActiveChain(), *(setup.m_node.mempool), utxos, dmnHashes[0], ownerKeys[dmnHashes[0]], newOperatorKey.GetPublicKey(), ownerKeys[dmnHashes[0]].GetPubKey().GetID(), dmn->pdmnState->scriptPayout, setup.coinbaseKey);
+    tx = CreateProUpRegTx(chainman.ActiveChain(), *(setup.m_node.mempool), utxos, dmnHashes[0], ownerKeys[dmnHashes[0]], newOperatorKey.GetPublicKey(), ownerKeys[dmnHashes[0]].GetPubKey().GetID(), dmn->pdmnState.scriptPayout, setup.coinbaseKey);
     // check malleability protection again, but this time by also relying on the signature inside the ProUpRegTx
     auto tx2 = MalleateProTxPayout<CProUpRegTx>(tx);
     TxValidationState dummy_state;
@@ -574,8 +574,8 @@ void FuncDIP3Protx(TestChainSetup& setup)
     nHeight++;
 
     dmn = dmnman.GetListAtChainTip().GetMN(dmnHashes[0]);
-    BOOST_REQUIRE(dmn != nullptr && dmn->pdmnState->addr.GetPort() == 100);
-    BOOST_REQUIRE(dmn != nullptr && !dmn->pdmnState->IsBanned());
+    BOOST_REQUIRE(dmn != nullptr && dmn->pdmnState.addr.GetPort() == 100);
+    BOOST_REQUIRE(dmn != nullptr && !dmn->pdmnState.IsBanned());
 
     // test that the revived MN gets payments again
     bool foundRevived = false;

@@ -102,7 +102,7 @@ PeerMsgRet CCoinJoinClientQueueManager::ProcessDSQueue(const CNode& peer, CConnm
             dsq.m_protxHash = dmn->proTxHash;
         }
 
-        if (!dsq.CheckSignature(dmn->pdmnState->pubKeyOperator.Get())) {
+        if (!dsq.CheckSignature(dmn->pdmnState.pubKeyOperator.Get())) {
             return tl::unexpected{10};
         }
 
@@ -186,7 +186,7 @@ void CCoinJoinClientSession::ProcessMessage(CNode& peer, CChainState& active_cha
     if (!m_mn_sync.IsBlockchainSynced()) return;
 
     if (!mixingMasternode) return;
-    if (mixingMasternode->pdmnState->addr != peer.addr) return;
+    if (mixingMasternode->pdmnState.addr != peer.addr) return;
 
     if (msg_type == NetMsgType::DSSTATUSUPDATE) {
         CCoinJoinStatusUpdate psssup;
@@ -1085,7 +1085,7 @@ bool CCoinJoinClientSession::JoinExistingQueue(CAmount nBalanceNeedsAnonymized, 
         }
 
         // skip next mn payments winners
-        if (dmn->pdmnState->nLastPaidHeight + nWeightedMnCount < mnList.GetHeight() + WinnersToSkip()) {
+        if (dmn->pdmnState.nLastPaidHeight + nWeightedMnCount < mnList.GetHeight() + WinnersToSkip()) {
             WalletCJLogPrint(m_wallet, "CCoinJoinClientSession::JoinExistingQueue -- skipping winner, masternode=%s\n", dmn->proTxHash.ToString());
             continue;
         }
@@ -1106,7 +1106,7 @@ bool CCoinJoinClientSession::JoinExistingQueue(CAmount nBalanceNeedsAnonymized, 
 
         m_clientman.AddUsedMasternode(dsq.masternodeOutpoint);
 
-        if (connman.IsMasternodeOrDisconnectRequested(dmn->pdmnState->addr)) {
+        if (connman.IsMasternodeOrDisconnectRequested(dmn->pdmnState.addr)) {
             WalletCJLogPrint(m_wallet, /* Continued */
                              "CCoinJoinClientSession::JoinExistingQueue -- skipping connection, masternode=%s\n", dmn->proTxHash.ToString());
             continue;
@@ -1161,7 +1161,7 @@ bool CCoinJoinClientSession::StartNewQueue(CAmount nBalanceNeedsAnonymized, CCon
         m_clientman.AddUsedMasternode(dmn->collateralOutpoint);
 
         // skip next mn payments winners
-        if (dmn->pdmnState->nLastPaidHeight + nWeightedMnCount < mnList.GetHeight() + WinnersToSkip()) {
+        if (dmn->pdmnState.nLastPaidHeight + nWeightedMnCount < mnList.GetHeight() + WinnersToSkip()) {
             WalletCJLogPrint(m_wallet, "CCoinJoinClientSession::StartNewQueue -- skipping winner, masternode=%s\n", dmn->proTxHash.ToString());
             nTries++;
             continue;
@@ -1178,7 +1178,7 @@ bool CCoinJoinClientSession::StartNewQueue(CAmount nBalanceNeedsAnonymized, CCon
             continue;
         }
 
-        if (connman.IsMasternodeOrDisconnectRequested(dmn->pdmnState->addr)) {
+        if (connman.IsMasternodeOrDisconnectRequested(dmn->pdmnState.addr)) {
             WalletCJLogPrint(m_wallet, "CCoinJoinClientSession::StartNewQueue -- skipping connection, masternode=%s\n",
                              dmn->proTxHash.ToString());
             nTries++;
@@ -1218,7 +1218,7 @@ bool CCoinJoinClientSession::ProcessPendingDsaRequest(CConnman& connman)
 
     CService mn_addr;
     if (auto dmn = m_dmnman.GetListAtChainTip().GetMN(pendingDsaRequest.GetProTxHash())) {
-        mn_addr = Assert(dmn->pdmnState)->addr;
+        mn_addr = dmn->pdmnState.addr;
     } else {
         WalletCJLogPrint(m_wallet, "CCoinJoinClientSession::%s -- cannot find address to connect, masternode=%s\n", __func__,
             pendingDsaRequest.GetProTxHash().ToString());
@@ -1820,7 +1820,7 @@ void CCoinJoinClientSession::RelayIn(const CCoinJoinEntry& entry, CConnman& conn
 {
     if (!mixingMasternode) return;
 
-    connman.ForNode(mixingMasternode->pdmnState->addr, [&entry, &connman, this](CNode* pnode) {
+    connman.ForNode(mixingMasternode->pdmnState.addr, [&entry, &connman, this](CNode* pnode) {
         WalletCJLogPrint(m_wallet, "CCoinJoinClientSession::RelayIn -- found master, relaying message to %s\n",
                          pnode->addr.ToStringAddrPort());
         CNetMsgMaker msgMaker(pnode->GetCommonVersion());
@@ -1873,10 +1873,9 @@ void CCoinJoinClientSession::GetJsonInfo(UniValue& obj) const
 {
     assert(obj.isObject());
     if (mixingMasternode != nullptr) {
-        assert(mixingMasternode->pdmnState);
         obj.pushKV("protxhash", mixingMasternode->proTxHash.ToString());
         obj.pushKV("outpoint", mixingMasternode->collateralOutpoint.ToStringShort());
-        obj.pushKV("service", mixingMasternode->pdmnState->addr.ToStringAddrPort());
+        obj.pushKV("service", mixingMasternode->pdmnState.addr.ToStringAddrPort());
     }
     obj.pushKV("denomination", ValueFromAmount(CoinJoin::DenominationToAmount(nSessionDenom)));
     obj.pushKV("state", GetStateString());
