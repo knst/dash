@@ -548,9 +548,9 @@ static RPCHelpMan gobject_vote_many()
 
     auto mnList = CHECK_NONFATAL(node.dmnman)->GetListAtChainTip();
     mnList.ForEachMN(true, [&](auto& dmn) {
-        const bool is_mine = CheckWalletOwnsKey(*wallet, dmn.pdmnState->keyIDVoting);
+        const bool is_mine = CheckWalletOwnsKey(*wallet, dmn.pdmnState.keyIDVoting);
         if (is_mine) {
-            votingKeys.emplace(dmn.proTxHash, dmn.pdmnState->keyIDVoting);
+            votingKeys.emplace(dmn.proTxHash, dmn.pdmnState.keyIDVoting);
         }
     });
 
@@ -604,13 +604,13 @@ static RPCHelpMan gobject_vote_alias()
     }
 
 
-    const bool is_mine = CheckWalletOwnsKey(*wallet, dmn->pdmnState->keyIDVoting);
+    const bool is_mine = CheckWalletOwnsKey(*wallet, dmn->pdmnState.keyIDVoting);
     if (!is_mine) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Private key for voting address %s not known by wallet", EncodeDestination(PKHash(dmn->pdmnState->keyIDVoting))));
+        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Private key for voting address %s not known by wallet", EncodeDestination(PKHash(dmn->pdmnState.keyIDVoting))));
     }
 
     std::map<uint256, CKeyID> votingKeys;
-    votingKeys.emplace(proTxHash, dmn->pdmnState->keyIDVoting);
+    votingKeys.emplace(proTxHash, dmn->pdmnState.keyIDVoting);
 
     return VoteWithMasternodes(request, *wallet, votingKeys, hash, eVoteSignal, eVoteOutcome);
 },

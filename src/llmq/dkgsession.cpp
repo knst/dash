@@ -212,7 +212,7 @@ void CDKGSession::SendContributions(CDKGPendingMessages& pendingMessages, PeerMa
             skContrib.MakeNewKey();
         }
 
-        if (!qc.contributions->Encrypt(i, m->dmn->pdmnState->pubKeyOperator.Get(), skContrib, PROTOCOL_VERSION)) {
+        if (!qc.contributions->Encrypt(i, m->dmn->pdmnState.pubKeyOperator.Get(), skContrib, PROTOCOL_VERSION)) {
             logger.Batch("failed to encrypt contribution for %s", m->dmn->proTxHash.ToString());
             return;
         }
@@ -1259,7 +1259,7 @@ std::vector<CFinalCommitment> CDKGSession::FinalizeCommitments()
 
             fqc.signers[signerIndex] = true;
             aggSigs.emplace_back(qc.sig);
-            aggPks.emplace_back(m->dmn->pdmnState->pubKeyOperator.Get());
+            aggPks.emplace_back(m->dmn->pdmnState.pubKeyOperator.Get());
 
             signerIds.emplace_back(m->id);
             thresholdSigs.emplace_back(qc.quorumSig);

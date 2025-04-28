@@ -29,16 +29,16 @@
 
 CSimplifiedMNListEntry::CSimplifiedMNListEntry(const CDeterministicMN& dmn) :
     proRegTxHash(dmn.proTxHash),
-    confirmedHash(dmn.pdmnState->confirmedHash),
-    netInfo(dmn.pdmnState->netInfo),
-    pubKeyOperator(dmn.pdmnState->pubKeyOperator),
-    keyIDVoting(dmn.pdmnState->keyIDVoting),
-    isValid(!dmn.pdmnState->IsBanned()),
-    platformHTTPPort(dmn.pdmnState->platformHTTPPort),
-    platformNodeID(dmn.pdmnState->platformNodeID),
-    scriptPayout(dmn.pdmnState->scriptPayout),
-    scriptOperatorPayout(dmn.pdmnState->scriptOperatorPayout),
-    nVersion(dmn.pdmnState->nVersion),
+    confirmedHash(dmn.pdmnState.confirmedHash),
+    netInfo(dmn.pdmnState.netInfo),
+    pubKeyOperator(dmn.pdmnState.pubKeyOperator),
+    keyIDVoting(dmn.pdmnState.keyIDVoting),
+    isValid(!dmn.pdmnState.IsBanned()),
+    platformHTTPPort(dmn.pdmnState.platformHTTPPort),
+    platformNodeID(dmn.pdmnState.platformNodeID),
+    scriptPayout(dmn.pdmnState.scriptPayout),
+    scriptOperatorPayout(dmn.pdmnState.scriptOperatorPayout),
+    nVersion(dmn.pdmnState.nVersion),
     nType(dmn.nType)
 {
 }

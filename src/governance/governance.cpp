@@ -1604,9 +1604,9 @@ void CGovernanceManager::RemoveInvalidVotes()
         // BuildDiff will construct itself with MNs that we already have knowledge
         // of, meaning that fetch operations should never fail.
         assert(oldDmn);
-        if ((p.second.fields & CDeterministicMNStateDiff::Field_keyIDVoting) && p.second.state.keyIDVoting != oldDmn->pdmnState->keyIDVoting) {
+        if ((p.second.fields & CDeterministicMNStateDiff::Field_keyIDVoting) && p.second.state.keyIDVoting != oldDmn->pdmnState.keyIDVoting) {
             changedKeyMNs.emplace_back(oldDmn->collateralOutpoint);
-        } else if ((p.second.fields & CDeterministicMNStateDiff::Field_pubKeyOperator) && p.second.state.pubKeyOperator != oldDmn->pdmnState->pubKeyOperator) {
+        } else if ((p.second.fields & CDeterministicMNStateDiff::Field_pubKeyOperator) && p.second.state.pubKeyOperator != oldDmn->pdmnState.pubKeyOperator) {
             changedKeyMNs.emplace_back(oldDmn->collateralOutpoint);
         }
     }

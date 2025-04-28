@@ -974,7 +974,7 @@ static UniValue protx_update_service_common_wrapper(const JSONRPCRequest& reques
         throw std::runtime_error(strprintf("masternode with proTxHash %s is not a %s", ptx.proTxHash.ToString(), GetMnType(mnType).description));
     }
 
-    ptx.nVersion = dmn->pdmnState->nVersion;
+    ptx.nVersion = dmn->pdmnState.nVersion;
 
     if (auto entryRet = ptx.netInfo.AddEntry(request.params[1].get_str()); entryRet != NetInfoStatus::Success) {
         throw std::runtime_error(strprintf("%s (%s)", NISToString(entryRet), request.params[1].get_str()));
@@ -1004,7 +1004,7 @@ static UniValue protx_update_service_common_wrapper(const JSONRPCRequest& reques
         paramIdx += 3;
     }
 
-    if (keyOperator.GetPublicKey() != dmn->pdmnState->pubKeyOperator.Get()) {
+    if (keyOperator.GetPublicKey() != dmn->pdmnState.pubKeyOperator.Get()) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("the operator key does not belong to the registered public key"));
     }
 
@@ -1015,7 +1015,7 @@ static UniValue protx_update_service_common_wrapper(const JSONRPCRequest& reques
     // param operatorPayoutAddress
     if (!request.params[paramIdx].isNull()) {
         if (request.params[paramIdx].get_str().empty()) {
-            ptx.scriptOperatorPayout = dmn->pdmnState->scriptOperatorPayout;
+            ptx.scriptOperatorPayout = dmn->pdmnState.scriptOperatorPayout;
         } else {
             CTxDestination payoutDest = DecodeDestination(request.params[paramIdx].get_str());
             if (!IsValidDestination(payoutDest)) {
@@ -1024,7 +1024,7 @@ static UniValue protx_update_service_common_wrapper(const JSONRPCRequest& reques
             ptx.scriptOperatorPayout = GetScriptForDestination(payoutDest);
         }
     } else {
-        ptx.scriptOperatorPayout = dmn->pdmnState->scriptOperatorPayout;
+        ptx.scriptOperatorPayout = dmn->pdmnState.scriptOperatorPayout;
     }
 
     CTxDestination feeSource;
@@ -1040,7 +1040,7 @@ static UniValue protx_update_service_common_wrapper(const JSONRPCRequest& reques
             ExtractDestination(ptx.scriptOperatorPayout, feeSource);
         } else {
             // use payout address as default source for fees
-            ExtractDestination(dmn->pdmnState->scriptPayout, feeSource);
+            ExtractDestination(dmn->pdmnState.scriptPayout, feeSource);
         }
     }
 
@@ -1101,15 +1101,15 @@ static RPCHelpMan protx_update_registrar_wrapper(const bool specific_legacy_bls_
         throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("masternode %s not found", ptx.proTxHash.ToString()));
     }
 
-    ptx.keyIDVoting = dmn->pdmnState->keyIDVoting;
-    ptx.scriptPayout = dmn->pdmnState->scriptPayout;
+    ptx.keyIDVoting = dmn->pdmnState.keyIDVoting;
+    ptx.scriptPayout = dmn->pdmnState.scriptPayout;
 
     if (!request.params[1].get_str().empty()) {
         // new pubkey
         ptx.pubKeyOperator.Set(ParseBLSPubKey(request.params[1].get_str(), "operator BLS address", use_legacy), use_legacy);
     } else {
         // same pubkey, reuse as is
-        ptx.pubKeyOperator = dmn->pdmnState->pubKeyOperator;
+        ptx.pubKeyOperator = dmn->pdmnState.pubKeyOperator;
     }
 
     CHECK_NONFATAL(ptx.pubKeyOperator.IsLegacy() == (ptx.nVersion == ProTxVersion::LegacyBLS));
@@ -1129,7 +1129,7 @@ static RPCHelpMan protx_update_registrar_wrapper(const bool specific_legacy_bls_
     }
 
     {
-        const auto pkhash{PKHash(dmn->pdmnState->keyIDOwner)};
+        const auto pkhash{PKHash(dmn->pdmnState.keyIDOwner)};
         LOCK(wallet->cs_wallet);
         if (wallet->IsMine(GetScriptForDestination(pkhash)) != isminetype::ISMINE_SPENDABLE) {
             throw std::runtime_error(strprintf("Private key for owner address %s not found in your wallet", EncodeDestination(pkhash)));
@@ -1151,7 +1151,7 @@ static RPCHelpMan protx_update_registrar_wrapper(const bool specific_legacy_bls_
     }
 
     FundSpecialTx(*wallet, tx, ptx, feeSourceDest);
-    SignSpecialTxPayloadByHash(tx, ptx, dmn->pdmnState->keyIDOwner, *wallet);
+    SignSpecialTxPayloadByHash(tx, ptx, dmn->pdmnState.keyIDOwner, *wallet);
     SetTxPayload(tx, ptx);
 
     return SignAndSendSpecialTx(request, chain_helper, chainman, tx);
@@ -1222,7 +1222,7 @@ static RPCHelpMan protx_revoke()
         ptx.nReason = (uint16_t)nReason;
     }
 
-    if (keyOperator.GetPublicKey() != dmn->pdmnState->pubKeyOperator.Get()) {
+    if (keyOperator.GetPublicKey() != dmn->pdmnState.pubKeyOperator.Get()) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("the operator key does not belong to the registered public key"));
     }
 
@@ -1235,15 +1235,15 @@ static RPCHelpMan protx_revoke()
         if (!IsValidDestination(feeSourceDest))
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Dash address: ") + request.params[3].get_str());
         FundSpecialTx(*pwallet, tx, ptx, feeSourceDest);
-    } else if (dmn->pdmnState->scriptOperatorPayout != CScript()) {
+    } else if (dmn->pdmnState.scriptOperatorPayout != CScript()) {
         // Using funds from previousely specified operator payout address
         CTxDestination txDest;
-        ExtractDestination(dmn->pdmnState->scriptOperatorPayout, txDest);
+        ExtractDestination(dmn->pdmnState.scriptOperatorPayout, txDest);
         FundSpecialTx(*pwallet, tx, ptx, txDest);
-    } else if (dmn->pdmnState->scriptPayout != CScript()) {
+    } else if (dmn->pdmnState.scriptPayout != CScript()) {
         // Using funds from previousely specified masternode payout address
         CTxDestination txDest;
-        ExtractDestination(dmn->pdmnState->scriptPayout, txDest);
+        ExtractDestination(dmn->pdmnState.scriptPayout, txDest);
         FundSpecialTx(*pwallet, tx, ptx, txDest);
     } else {
         throw JSONRPCError(RPC_INTERNAL_ERROR, "No payout or fee source addresses found, can't revoke");
@@ -1298,8 +1298,8 @@ static UniValue BuildDMNListEntry(const CWallet* const pwallet, const CDetermini
     o.pushKV("confirmations", confirmations);
 
 #ifdef ENABLE_WALLET
-    bool hasOwnerKey = CheckWalletOwnsKey(pwallet, dmn.pdmnState->keyIDOwner);
-    bool hasVotingKey = CheckWalletOwnsKey(pwallet, dmn.pdmnState->keyIDVoting);
+    bool hasOwnerKey = CheckWalletOwnsKey(pwallet, dmn.pdmnState.keyIDOwner);
+    bool hasVotingKey = CheckWalletOwnsKey(pwallet, dmn.pdmnState.keyIDVoting);
 
     bool ownsCollateral = false;
     if (Coin coin; GetUTXOCoin(chainman.ActiveChainstate(), dmn.collateralOutpoint, coin)) {
@@ -1314,8 +1314,8 @@ static UniValue BuildDMNListEntry(const CWallet* const pwallet, const CDetermini
         walletObj.pushKV("hasOperatorKey", false);
         walletObj.pushKV("hasVotingKey", hasVotingKey);
         walletObj.pushKV("ownsCollateral", ownsCollateral);
-        walletObj.pushKV("ownsPayeeScript", CheckWalletOwnsScript(pwallet, dmn.pdmnState->scriptPayout));
-        walletObj.pushKV("ownsOperatorRewardScript", CheckWalletOwnsScript(pwallet, dmn.pdmnState->scriptOperatorPayout));
+        walletObj.pushKV("ownsPayeeScript", CheckWalletOwnsScript(pwallet, dmn.pdmnState.scriptPayout));
+        walletObj.pushKV("ownsOperatorRewardScript", CheckWalletOwnsScript(pwallet, dmn.pdmnState.scriptOperatorPayout));
         o.pushKV("wallet", walletObj);
     }
 #endif
@@ -1400,10 +1400,10 @@ static RPCHelpMan protx_list()
         CDeterministicMNList mnList = dmnman.GetListForBlock(chainman.ActiveChain()[height]);
         mnList.ForEachMN(false, [&](const auto& dmn) {
             if (setOutpts.count(dmn.collateralOutpoint) ||
-                CheckWalletOwnsKey(wallet.get(), dmn.pdmnState->keyIDOwner) ||
-                CheckWalletOwnsKey(wallet.get(), dmn.pdmnState->keyIDVoting) ||
-                CheckWalletOwnsScript(wallet.get(), dmn.pdmnState->scriptPayout) ||
-                CheckWalletOwnsScript(wallet.get(), dmn.pdmnState->scriptOperatorPayout)) {
+                CheckWalletOwnsKey(wallet.get(), dmn.pdmnState.keyIDOwner) ||
+                CheckWalletOwnsKey(wallet.get(), dmn.pdmnState.keyIDVoting) ||
+                CheckWalletOwnsScript(wallet.get(), dmn.pdmnState.scriptPayout) ||
+                CheckWalletOwnsScript(wallet.get(), dmn.pdmnState.scriptOperatorPayout)) {
                 ret.push_back(BuildDMNListEntry(wallet.get(), dmn, mn_metaman, detailed, chainman));
             }
         });

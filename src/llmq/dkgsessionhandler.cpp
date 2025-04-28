@@ -396,7 +396,7 @@ std::set<NodeId> BatchVerifyMessageSigs(CDKGSession& session, const std::vector<
             break;
         }
 
-        pubKeys.emplace_back(member->dmn->pdmnState->pubKeyOperator.Get());
+        pubKeys.emplace_back(member->dmn->pdmnState.pubKeyOperator.Get());
         messageHashes.emplace_back(msgHash);
     }
     if (!revertToSingleVerification) {
@@ -424,7 +424,7 @@ std::set<NodeId> BatchVerifyMessageSigs(CDKGSession& session, const std::vector<
         }
 
         auto member = session.GetMember(msg->proTxHash);
-        bool valid = msg->sig.VerifyInsecure(member->dmn->pdmnState->pubKeyOperator.Get(), msg->GetSignHash());
+        bool valid = msg->sig.VerifyInsecure(member->dmn->pdmnState.pubKeyOperator.Get(), msg->GetSignHash());
         if (!valid) {
             ret.emplace(nodeId);
         }

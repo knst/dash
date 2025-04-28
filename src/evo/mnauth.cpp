@@ -105,7 +105,7 @@ PeerMsgRet CMNAuth::ProcessMessage(CNode& peer, ServiceFlags node_services, CCon
     if (Params().NetworkIDString() != CBaseChainParams::MAIN && gArgs.IsArgSet("-pushversion")) {
         nOurNodeVersion = gArgs.GetIntArg("-pushversion", PROTOCOL_VERSION);
     }
-    const CBLSPublicKey pubKey(dmn->pdmnState->pubKeyOperator.Get());
+    const CBLSPublicKey pubKey(dmn->pdmnState.pubKeyOperator.Get());
     // See comment in PushMNAUTH (fInbound is negated here as we're on the other side of the connection)
     if (peer.nVersion < MNAUTH_NODE_VER_VERSION || nOurNodeVersion < MNAUTH_NODE_VER_VERSION) {
         signHash = ::SerializeHash(std::make_tuple(pubKey, peer.GetSentMNAuthChallenge(), !peer.IsInboundConn()));

@@ -175,7 +175,7 @@ static RPCHelpMan masternode_status()
         mnObj.pushKV("type", std::string(GetMnType(dmn->nType).description));
         mnObj.pushKV("collateralHash", dmn->collateralOutpoint.hash.ToString());
         mnObj.pushKV("collateralIndex", (int)dmn->collateralOutpoint.n);
-        mnObj.pushKV("dmnState", dmn->pdmnState->ToJson(dmn->nType));
+        mnObj.pushKV("dmnState", dmn->pdmnState.ToJson(dmn->nType));
     }
     mnObj.pushKV("state", node.mn_activeman->GetStateString());
     mnObj.pushKV("status", node.mn_activeman->GetStatus());
@@ -190,12 +190,12 @@ static std::string GetRequiredPaymentsString(CGovernanceManager& govman, const C
     std::string strPayments = "Unknown";
     if (payee) {
         CTxDestination dest;
-        if (!ExtractDestination(payee->pdmnState->scriptPayout, dest)) {
+        if (!ExtractDestination(payee->pdmnState.scriptPayout, dest)) {
             NONFATAL_UNREACHABLE();
         }
         strPayments = EncodeDestination(dest);
-        if (payee->nOperatorReward != 0 && payee->pdmnState->scriptOperatorPayout != CScript()) {
-            if (!ExtractDestination(payee->pdmnState->scriptOperatorPayout, dest)) {
+        if (payee->nOperatorReward != 0 && payee->pdmnState.scriptOperatorPayout != CScript()) {
+            if (!ExtractDestination(payee->pdmnState.scriptOperatorPayout, dest)) {
                 NONFATAL_UNREACHABLE();
             }
             strPayments += ", " + EncodeDestination(dest);
@@ -526,12 +526,12 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
         return "UNKNOWN";
     };
     const auto dmnToLastPaidTime = [&](const auto& dmn) {
-        if (dmn.pdmnState->nLastPaidHeight == 0) {
+        if (dmn.pdmnState.nLastPaidHeight == 0) {
             return (int)0;
         }
 
         LOCK(cs_main);
-        const CBlockIndex* pindex = chainman.ActiveChain()[dmn.pdmnState->nLastPaidHeight];
+        const CBlockIndex* pindex = chainman.ActiveChain()[dmn.pdmnState.nLastPaidHeight];
         return (int)pindex->nTime;
     };
 
@@ -540,7 +540,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
     const int tipHeight = WITH_LOCK(cs_main, return chainman.ActiveChain().Tip()->nHeight);
     mnList.ForEachMN(false, [&](auto& dmn) {
         if (showRecentMnsOnly && mnList.IsMNPoSeBanned(dmn)) {
-            if (tipHeight - dmn.pdmnState->GetBannedHeight() > Params().GetConsensus().nSuperblockCycle) {
+            if (tipHeight - dmn.pdmnState.GetBannedHeight() > Params().GetConsensus().nSuperblockCycle) {
                 return;
             }
         }
@@ -558,7 +558,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
             }
         }
 
-        CScript payeeScript = dmn.pdmnState->scriptPayout;
+        CScript payeeScript = dmn.pdmnState.scriptPayout;
         CTxDestination payeeDest;
         std::string payeeStr = "UNKNOWN";
         if (ExtractDestination(payeeScript, payeeDest)) {
@@ -568,7 +568,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
         std::string strAddress{};
         if (strMode == "addr" || strMode == "full" || strMode == "info" || strMode == "json" || strMode == "recent" ||
             strMode == "evo") {
-            for (const CService& entry : dmn.pdmnState->netInfo.GetEntries()) {
+            for (const CService& entry : dmn.pdmnState.netInfo.GetEntries()) {
                 strAddress += entry.ToStringAddrPort() + " ";
             }
             if (!strAddress.empty()) strAddress.pop_back(); // Remove trailing space
@@ -581,10 +581,10 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
         } else if (strMode == "full") {
             std::string strFull = strprintf("%s %d %s %s %s %s",
                                     PadString(dmnToStatus(dmn), 18),
-                                    dmn.pdmnState->nPoSePenalty,
+                                    dmn.pdmnState.nPoSePenalty,
                                     payeeStr,
                                     PadString(ToString(dmnToLastPaidTime(dmn)), 10),
-                                    PadString(ToString(dmn.pdmnState->nLastPaidHeight), 6),
+                                    PadString(ToString(dmn.pdmnState.nLastPaidHeight), 6),
                                     strAddress);
             if (!strFilter.empty() && strFull.find(strFilter) == std::string::npos &&
                 strOutpoint.find(strFilter) == std::string::npos) return;
@@ -592,7 +592,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
         } else if (strMode == "info") {
             std::string strInfo = strprintf("%s %d %s %s",
                                     PadString(dmnToStatus(dmn), 18),
-                                    dmn.pdmnState->nPoSePenalty,
+                                    dmn.pdmnState.nPoSePenalty,
                                     payeeStr,
                                     strAddress);
             if (!strFilter.empty() && strInfo.find(strFilter) == std::string::npos &&
@@ -604,38 +604,38 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
                                     strAddress,
                                     payeeStr,
                                     dmnToStatus(dmn),
-                                    dmn.pdmnState->nPoSePenalty,
+                                    dmn.pdmnState.nPoSePenalty,
                                     dmnToLastPaidTime(dmn),
-                                    dmn.pdmnState->nLastPaidHeight,
-                                    EncodeDestination(PKHash(dmn.pdmnState->keyIDOwner)),
-                                    EncodeDestination(PKHash(dmn.pdmnState->keyIDVoting)),
+                                    dmn.pdmnState.nLastPaidHeight,
+                                    EncodeDestination(PKHash(dmn.pdmnState.keyIDOwner)),
+                                    EncodeDestination(PKHash(dmn.pdmnState.keyIDVoting)),
                                     collateralAddressStr,
-                                    dmn.pdmnState->pubKeyOperator.ToString());
+                                    dmn.pdmnState.pubKeyOperator.ToString());
             if (!strFilter.empty() && strInfo.find(strFilter) == std::string::npos &&
                 strOutpoint.find(strFilter) == std::string::npos) return;
             UniValue objMN(UniValue::VOBJ);
             objMN.pushKV("proTxHash", dmn.proTxHash.ToString());
-            objMN.pushKV("address", dmn.pdmnState->netInfo.GetPrimary().ToStringAddrPort());
+            objMN.pushKV("address", dmn.pdmnState.netInfo.GetPrimary().ToStringAddrPort());
             objMN.pushKV("payee", payeeStr);
             objMN.pushKV("status", dmnToStatus(dmn));
             objMN.pushKV("type", std::string(GetMnType(dmn.nType).description));
             if (dmn.nType == MnType::Evo) {
-                objMN.pushKV("platformNodeID", dmn.pdmnState->platformNodeID.ToString());
-                objMN.pushKV("platformP2PPort", dmn.pdmnState->platformP2PPort);
-                objMN.pushKV("platformHTTPPort", dmn.pdmnState->platformHTTPPort);
+                objMN.pushKV("platformNodeID", dmn.pdmnState.platformNodeID.ToString());
+                objMN.pushKV("platformP2PPort", dmn.pdmnState.platformP2PPort);
+                objMN.pushKV("platformHTTPPort", dmn.pdmnState.platformHTTPPort);
             }
-            objMN.pushKV("pospenaltyscore", dmn.pdmnState->nPoSePenalty);
-            objMN.pushKV("consecutivePayments", dmn.pdmnState->nConsecutivePayments);
+            objMN.pushKV("pospenaltyscore", dmn.pdmnState.nPoSePenalty);
+            objMN.pushKV("consecutivePayments", dmn.pdmnState.nConsecutivePayments);
             objMN.pushKV("lastpaidtime", dmnToLastPaidTime(dmn));
-            objMN.pushKV("lastpaidblock", dmn.pdmnState->nLastPaidHeight);
-            objMN.pushKV("owneraddress", EncodeDestination(PKHash(dmn.pdmnState->keyIDOwner)));
-            objMN.pushKV("votingaddress", EncodeDestination(PKHash(dmn.pdmnState->keyIDVoting)));
+            objMN.pushKV("lastpaidblock", dmn.pdmnState.nLastPaidHeight);
+            objMN.pushKV("owneraddress", EncodeDestination(PKHash(dmn.pdmnState.keyIDOwner)));
+            objMN.pushKV("votingaddress", EncodeDestination(PKHash(dmn.pdmnState.keyIDVoting)));
             objMN.pushKV("collateraladdress", collateralAddressStr);
-            objMN.pushKV("pubkeyoperator", dmn.pdmnState->pubKeyOperator.ToString());
+            objMN.pushKV("pubkeyoperator", dmn.pdmnState.pubKeyOperator.ToString());
             obj.pushKV(strOutpoint, objMN);
         } else if (strMode == "lastpaidblock") {
             if (!strFilter.empty() && strOutpoint.find(strFilter) == std::string::npos) return;
-            obj.pushKV(strOutpoint, dmn.pdmnState->nLastPaidHeight);
+            obj.pushKV(strOutpoint, dmn.pdmnState.nLastPaidHeight);
         } else if (strMode == "lastpaidtime") {
             if (!strFilter.empty() && strOutpoint.find(strFilter) == std::string::npos) return;
             obj.pushKV(strOutpoint, dmnToLastPaidTime(dmn));
@@ -645,10 +645,10 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
             obj.pushKV(strOutpoint, payeeStr);
         } else if (strMode == "owneraddress") {
             if (!strFilter.empty() && strOutpoint.find(strFilter) == std::string::npos) return;
-            obj.pushKV(strOutpoint, EncodeDestination(PKHash(dmn.pdmnState->keyIDOwner)));
+            obj.pushKV(strOutpoint, EncodeDestination(PKHash(dmn.pdmnState.keyIDOwner)));
         } else if (strMode == "pubkeyoperator") {
             if (!strFilter.empty() && strOutpoint.find(strFilter) == std::string::npos) return;
-            obj.pushKV(strOutpoint, dmn.pdmnState->pubKeyOperator.ToString());
+            obj.pushKV(strOutpoint, dmn.pdmnState.pubKeyOperator.ToString());
         } else if (strMode == "status") {
             std::string strStatus = dmnToStatus(dmn);
             if (!strFilter.empty() && strStatus.find(strFilter) == std::string::npos &&
@@ -656,7 +656,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
             obj.pushKV(strOutpoint, strStatus);
         } else if (strMode == "votingaddress") {
             if (!strFilter.empty() && strOutpoint.find(strFilter) == std::string::npos) return;
-            obj.pushKV(strOutpoint, EncodeDestination(PKHash(dmn.pdmnState->keyIDVoting)));
+            obj.pushKV(strOutpoint, EncodeDestination(PKHash(dmn.pdmnState.keyIDVoting)));
         }
     });
 

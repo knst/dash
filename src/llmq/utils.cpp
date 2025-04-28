@@ -403,7 +403,7 @@ std::vector<std::vector<CDeterministicMNCPtr>> BuildNewQuorumQuarterMembers(
 
     allMns.ForEachMNShared(false, [&MnsUsedAtH, &MnsNotUsedAtH](const CDeterministicMNCPtr& dmn) {
         if (!MnsUsedAtH.HasMN(dmn->proTxHash)) {
-            if (!dmn->pdmnState->IsBanned()) {
+            if (!dmn->pdmnState.IsBanned()) {
                 try {
                     MnsNotUsedAtH.AddMN(dmn);
                 } catch (const std::runtime_error& e) {
@@ -642,7 +642,7 @@ std::pair<CDeterministicMNList, CDeterministicMNList> GetMNUsageBySnapshot(const
             } catch (const std::runtime_error& e) {
             }
         } else {
-            if (!dmn->pdmnState->IsBanned()) {
+            if (!dmn->pdmnState.IsBanned()) {
                 try {
                     nonUsedMNs.AddMN(dmn);
                 } catch (const std::runtime_error& e) {
@@ -830,7 +830,7 @@ bool EnsureQuorumConnections(const Consensus::LLMQParams& llmqParams, CConnman& 
                     debugMsg += strprintf("  %s (not in valid MN set anymore)\n", c.ToString());
                 } else {
                     debugMsg += strprintf("  %s (%s)\n", c.ToString(),
-                                          dmn->pdmnState->netInfo.GetPrimary().ToStringAddrPort());
+                                          dmn->pdmnState.netInfo.GetPrimary().ToStringAddrPort());
                 }
             }
             LogPrint(BCLog::NET_NETCONN, debugMsg.c_str()); /* Continued */
@@ -879,7 +879,7 @@ void AddQuorumProbeConnections(const Consensus::LLMQParams& llmqParams, CConnman
                     debugMsg += strprintf("  %s (not in valid MN set anymore)\n", c.ToString());
                 } else {
                     debugMsg += strprintf("  %s (%s)\n", c.ToString(),
-                                          dmn->pdmnState->netInfo.GetPrimary().ToStringAddrPort());
+                                          dmn->pdmnState.netInfo.GetPrimary().ToStringAddrPort());
                 }
             }
             LogPrint(BCLog::NET_NETCONN, debugMsg.c_str()); /* Continued */
