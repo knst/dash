@@ -407,7 +407,7 @@ public:
         bufLegacyScheme(bls::bls_legacy_scheme.load())
     {}
 
-    explicit CBLSLazyWrapper(const CBLSLazyWrapper& r)
+    explicit CBLSLazyWrapper(const CBLSLazyWrapper& r) :
     {
         *this = r;
     }
@@ -420,14 +420,16 @@ public:
         bufLegacyScheme = r.bufLegacyScheme;
         if (r.bufValid) {
             vecBytes = r.vecBytes;
-        } else {
+    /*    } else {
             std::fill(vecBytes.begin(), vecBytes.end(), 0);
+            */
         }
         objInitialized = r.objInitialized;
         if (r.objInitialized) {
             obj = r.obj;
-        } else {
+        /*} else {
             obj.Reset();
+            */
         }
         hash = r.hash;
         return *this;
