@@ -342,7 +342,7 @@ void CDeterministicMNList::PoSePunish(const uint256& proTxHash, int penalty, boo
 
     int maxPenalty = CalcMaxPoSePenalty();
 
-    auto newState = CDeterministicMNState(dmn->pdmnState);
+    CDeterministicMNState newState{dmn->pdmnState};
     newState.nPoSePenalty += penalty;
     newState.nPoSePenalty = std::min(maxPenalty, newState.nPoSePenalty);
 
@@ -383,7 +383,7 @@ void CDeterministicMNList::PoSeDecrease(const CDeterministicMN& dmn)
 {
     assert(dmn.pdmnState.nPoSePenalty > 0 && !dmn.pdmnState.IsBanned());
 
-    auto newState = CDeterministicMNState(dmn.pdmnState);
+    CDeterministicMNState newState{dmn.pdmnState};
     newState.nPoSePenalty--;
     UpdateMN(dmn, newState);
 }
@@ -397,7 +397,7 @@ CDeterministicMNListDiff CDeterministicMNList::BuildDiff(const CDeterministicMNL
         auto fromPtr = GetMN(toPtr->proTxHash);
         if (fromPtr == nullptr) {
             diffRet.addedMNs.emplace_back(toPtr);
-        } else if (fromPtr != toPtr) { // TODO - check if that's a possible pessimisation instead of optimization
+        } else if (fromPtr != toPtr) {
             CDeterministicMNStateDiff stateDiff(fromPtr->pdmnState, toPtr->pdmnState);
             if (stateDiff.fields) {
                 diffRet.updatedMNs.emplace(toPtr->GetInternalId(), std::move(stateDiff));
@@ -549,8 +549,8 @@ void CDeterministicMNList::UpdateMN(const uint256& proTxHash, const CDeterminist
 
 void CDeterministicMNList::UpdateMN(const CDeterministicMN& oldDmn, const CDeterministicMNStateDiff& stateDiff)
 {
-    auto oldState = oldDmn.pdmnState;
-    auto newState = CDeterministicMNState(oldState); // TODO - simplify all similar
+    CDeterministicMNState newState{oldDmn.pdmnState};
+    // TODO - check if diff empty - do nothing
     stateDiff.ApplyToState(newState);
     UpdateMN(oldDmn, newState);
 }
@@ -733,7 +733,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
         // has been reached, but the block hash will then point to the block at nMasternodeMinimumConfirmations
         int nConfirmations = pindexPrev->nHeight - dmn.pdmnState.nRegisteredHeight;
         if (nConfirmations >= Params().GetConsensus().nMasternodeMinimumConfirmations) {
-            auto newState = CDeterministicMNState(dmn.pdmnState);
+            CDeterministicMNState newState{dmn.pdmnState};
             newState.UpdateConfirmedHash(dmn.proTxHash, pindexPrev->GetBlockHash());
             newList.UpdateMN(dmn.proTxHash, newState);
         }
@@ -798,7 +798,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
 
             dmn->nOperatorReward = proTx.nOperatorReward;
 
-            auto dmnState = CDeterministicMNState(proTx);
+            CDeterministicMNState dmnState{proTx};
             dmnState.nRegisteredHeight = nHeight;
             if (proTx.addr == CService()) {
                 // start in banned pdmnState as we need to wait for a ProUpServTx
@@ -833,7 +833,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-protx-type");
             }
 
-            auto newState = CDeterministicMNState(dmn->pdmnState);
+            CDeterministicMNState newState{dmn->pdmnState};
             newState.addr = opt_proTx->addr;
             newState.scriptOperatorPayout = opt_proTx->scriptOperatorPayout;
             if (opt_proTx->nType == MnType::Evo) {
@@ -868,7 +868,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
             if (!dmn) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-protx-hash");
             }
-            auto newState = CDeterministicMNState(dmn->pdmnState);
+            CDeterministicMNState newState{dmn->pdmnState};
             if (newState.pubKeyOperator != opt_proTx->pubKeyOperator) {
                 // reset all operator related fields and put MN into PoSe-banned state in case the operator key changes
                 newState.ResetOperatorFields();
@@ -896,7 +896,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
             if (!dmn) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-protx-hash");
             }
-            auto newState = CDeterministicMNState(dmn->pdmnState);
+            CDeterministicMNState newState{dmn->pdmnState};
             newState.ResetOperatorFields();
             newState.BanIfNotBanned(nHeight);
             newState.nRevocationReason = opt_proTx->nReason;
@@ -951,7 +951,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
     // The payee for the current block was determined by the previous block's list, but it might have disappeared in the
     // current block. We still pay that MN one last time, however.
     if (auto dmn = payee ? newList.GetMN(payee->proTxHash) : nullptr) {
-        auto newState = CDeterministicMNState(dmn->pdmnState);
+        CDeterministicMNState newState{dmn->pdmnState};
         newState.nLastPaidHeight = nHeight;
         // Starting from v19 and until MNRewardReallocation, EvoNodes will be paid 4 blocks in a row
         // No need to check if v19 is active, since EvoNode ProRegTxes are allowed only after v19 activation
@@ -984,7 +984,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
             LogPrint(BCLog::MNPAYMENTS, "CDeterministicMNManager::%s -- MN %s, reset nConsecutivePayments %d->0\n",
                       __func__, dmn.proTxHash.ToString(), dmn.pdmnState.nConsecutivePayments);
         }
-        auto newState = CDeterministicMNState(dmn.pdmnState);
+        CDeterministicMNState newState{dmn.pdmnState};
         newState.nConsecutivePayments = 0;
         newList.UpdateMN(dmn.proTxHash, newState);
     });
