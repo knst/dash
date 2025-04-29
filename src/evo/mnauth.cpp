@@ -114,7 +114,7 @@ PeerMsgRet CMNAuth::ProcessMessage(CNode& peer, ServiceFlags node_services, CCon
     }
     LogPrint(BCLog::NET_NETCONN, "CMNAuth::%s -- constructed signHash for nVersion %d, peer=%d\n", __func__, peer.nVersion, peer.GetId());
 
-    if (!mnauth.sig.VerifyInsecure(dmn->pdmnState.pubKeyOperator.Get(), signHash, false)) {
+    if (!mnauth.sig.VerifyInsecure(pubKey, signHash, false)) {
         // Same as above, MN seems to not know its fate yet, so give it a chance to update. If this is a
         // malicious node (DoSing us), it'll get banned soon.
         return tl::unexpected{MisbehavingError{10, "mnauth signature verification failed"}};
@@ -175,7 +175,7 @@ PeerMsgRet CMNAuth::ProcessMessage(CNode& peer, ServiceFlags node_services, CCon
     }
 
     peer.SetVerifiedProRegTxHash(mnauth.proRegTxHash);
-    peer.SetVerifiedPubKeyHash(dmn->pdmnState.pubKeyOperator.GetHash());
+    peer.SetVerifiedPubKeyHash(pubKey.GetHash());
 
     if (!peer.m_masternode_iqr_connection && connman.IsMasternodeQuorumRelayMember(peer.GetVerifiedProRegTxHash())) {
         // Tell our peer that we're interested in plain LLMQ recovered signatures.
