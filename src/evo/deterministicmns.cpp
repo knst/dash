@@ -709,7 +709,6 @@ void CDeterministicMNManager::UpdatedBlockTip(gsl::not_null<const CBlockIndex*> 
 bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::not_null<const CBlockIndex*> pindexPrev,
                                                     BlockValidationState& state, const CCoinsViewCache& view,
                                                     CDeterministicMNList& mnListRet,
-                              //                      CDeterministicMNCPtr& payee_ret,
                                                     llmq::CQuorumSnapshotManager& qsnapman, bool debugLogs)
 {
     int nHeight = pindexPrev->nHeight + 1;
@@ -719,8 +718,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
     newList.SetBlockHash(uint256()); // we can't know the final block hash, so better not return a (invalid) block hash
     newList.SetHeight(nHeight);
 
-    // TODO: return payee_ret and re-use it
-    const payee_ret = oldList.GetMNPayee(pindexPrev);
+    auto payee = oldList.GetMNPayee(pindexPrev);
 
     // we iterate the oldList here and update the newList
     // this is only valid as long these have not diverged at this point, which is the case as long as we don't add
@@ -931,7 +929,6 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
         }
     }
 
-    // TODO: merge this loop with loop above for better cache locality
     // we skip the coinbase
     for (int i = 1; i < (int)block.vtx.size(); i++) {
         const CTransaction& tx = *block.vtx[i];
@@ -952,7 +949,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
 
     // The payee for the current block was determined by the previous block's list, but it might have disappeared in the
     // current block. We still pay that MN one last time, however.
-    if (auto dmn = payee_ret ? newList.GetMN(payee_ret->proTxHash) : nullptr) {
+    if (auto dmn = payee ? newList.GetMN(payee->proTxHash) : nullptr) {
         auto newState = std::make_shared<CDeterministicMNState>(*dmn->pdmnState);
         newState->nLastPaidHeight = nHeight;
         // Starting from v19 and until MNRewardReallocation, EvoNodes will be paid 4 blocks in a row
@@ -965,9 +962,9 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
                           __func__, dmn->proTxHash.ToString(), newState->nConsecutivePayments);
             }
         }
-        newList.UpdateMN(payee_ret->proTxHash, newState);
+        newList.UpdateMN(payee->proTxHash, newState);
         if (debugLogs) {
-            dmn = newList.GetMN(payee_ret->proTxHash);
+            dmn = newList.GetMN(payee->proTxHash);
             // Since the previous GetMN query returned a value, after an update, querying the same
             // hash *must* give us a result. If it doesn't, that would be a potential logic bug.
             assert(dmn);
@@ -977,15 +974,14 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
     }
 
     // reset nConsecutivePayments on non-paid EvoNodes
-    if (isMNRewardRealloction) {
-        auto newList2 = newList;
-        newList2.ForEachMN(false, [&](auto& dmn) {
-            if (dmn.nType != MnType::Evo) return;
-            if (dmn.pdmnState->nConsecutivePayments == 0) return;
-            if (payee_ret != nullptr && dmn.proTxHash == payee_ret->proTxHash) return;
-            if (debugLogs) {
-                LogPrint(BCLog::MNPAYMENTS, "CDeterministicMNManager::%s -- MN %s, reset nConsecutivePayments %d->0\n",
-                          __func__, dmn.proTxHash.ToString(), dmn.pdmnState->nConsecutivePayments);
+    auto newList2 = newList;
+    newList2.ForEachMN(false, [&](auto& dmn) {
+        if (dmn.nType != MnType::Evo) return;
+        if (payee != nullptr && dmn.proTxHash == payee->proTxHash && !isMNRewardReallocation) return;
+        if (dmn.pdmnState->nConsecutivePayments == 0) return;
+        if (debugLogs) {
+            LogPrint(BCLog::MNPAYMENTS, "CDeterministicMNManager::%s -- MN %s, reset nConsecutivePayments %d->0\n",
+                      __func__, dmn.proTxHash.ToString(), dmn.pdmnState->nConsecutivePayments);
         }
         auto newState = std::make_shared<CDeterministicMNState>(*dmn.pdmnState);
         newState->nConsecutivePayments = 0;
