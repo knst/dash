@@ -407,7 +407,7 @@ public:
         bufLegacyScheme(bls::bls_legacy_scheme.load())
     {}
 
-    explicit CBLSLazyWrapper(const CBLSLazyWrapper& r) :
+    explicit CBLSLazyWrapper(const CBLSLazyWrapper& r)
     {
         *this = r;
     }

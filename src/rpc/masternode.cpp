@@ -602,7 +602,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
                                     EncodeDestination(PKHash(dmn.pdmnState.keyIDOwner)),
                                     EncodeDestination(PKHash(dmn.pdmnState.keyIDVoting)),
                                     collateralAddressStr,
-                                    dmn.pdmnState.pubKeyOperator.ToString());
+                                    dmn.pdmnState.pubKeyOperator->ToString());
             if (!strFilter.empty() && strInfo.find(strFilter) == std::string::npos &&
                 strOutpoint.find(strFilter) == std::string::npos) return;
             UniValue objMN(UniValue::VOBJ);
@@ -623,7 +623,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
             objMN.pushKV("owneraddress", EncodeDestination(PKHash(dmn.pdmnState.keyIDOwner)));
             objMN.pushKV("votingaddress", EncodeDestination(PKHash(dmn.pdmnState.keyIDVoting)));
             objMN.pushKV("collateraladdress", collateralAddressStr);
-            objMN.pushKV("pubkeyoperator", dmn.pdmnState.pubKeyOperator.ToString());
+            objMN.pushKV("pubkeyoperator", dmn.pdmnState.pubKeyOperator->ToString());
             obj.pushKV(strOutpoint, objMN);
         } else if (strMode == "lastpaidblock") {
             if (!strFilter.empty() && strOutpoint.find(strFilter) == std::string::npos) return;
@@ -640,7 +640,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
             obj.pushKV(strOutpoint, EncodeDestination(PKHash(dmn.pdmnState.keyIDOwner)));
         } else if (strMode == "pubkeyoperator") {
             if (!strFilter.empty() && strOutpoint.find(strFilter) == std::string::npos) return;
-            obj.pushKV(strOutpoint, dmn.pdmnState.pubKeyOperator.ToString());
+            obj.pushKV(strOutpoint, dmn.pdmnState.pubKeyOperator->ToString());
         } else if (strMode == "status") {
             std::string strStatus = dmnToStatus(dmn);
             if (!strFilter.empty() && strStatus.find(strFilter) == std::string::npos &&

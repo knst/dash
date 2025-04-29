@@ -164,7 +164,7 @@ PeerMsgRet CCoinJoinServer::ProcessDSQUEUE(const CNode& peer, CDataStream& vRecv
         dsq.m_protxHash = dmn->proTxHash;
     }
 
-    if (!dsq.CheckSignature(dmn->pdmnState.pubKeyOperator.Get())) {
+    if (!dsq.CheckSignature(dmn->pdmnState.pubKeyOperator->Get())) {
         return tl::unexpected{10};
     }
 

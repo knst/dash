@@ -52,7 +52,8 @@ public:
     uint256 confirmedHashWithProRegTxHash;
 
     CKeyID keyIDOwner;
-    CBLSLazyPublicKey pubKeyOperator;
+    // TODO - make it shared everywhere (including ProTxs)
+    std::shared_ptr<CBLSLazyPublicKey> pubKeyOperator{std::make_shared<CBLSLazyPublicKey>()};
     CKeyID keyIDVoting;
     CService addr;
     CScript scriptPayout;
@@ -67,7 +68,7 @@ public:
     explicit CDeterministicMNState(const CProRegTx& proTx) :
         nVersion(proTx.nVersion),
         keyIDOwner(proTx.keyIDOwner),
-        pubKeyOperator(proTx.pubKeyOperator),
+        pubKeyOperator(std::make_shared<CBLSLazyPublicKey>(proTx.pubKeyOperator)),
         keyIDVoting(proTx.keyIDVoting),
         addr(proTx.addr),
         scriptPayout(proTx.scriptPayout),
@@ -85,6 +86,7 @@ public:
 
     SERIALIZE_METHODS(CDeterministicMNState, obj)
     {
+        SER_READ(obj, obj.pubKeyOperator = std::make_shared<CBLSLazyPublicKey>());
         READWRITE(
             obj.nVersion,
             obj.nRegisteredHeight,
@@ -97,7 +99,7 @@ public:
             obj.confirmedHash,
             obj.confirmedHashWithProRegTxHash,
             obj.keyIDOwner);
-        READWRITE(CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), obj.nVersion == ProTxVersion::LegacyBLS));
+        READWRITE(CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(*obj.pubKeyOperator), obj.nVersion == ProTxVersion::LegacyBLS));
         READWRITE(
             obj.keyIDVoting,
             obj.addr,
@@ -111,7 +113,7 @@ public:
     void ResetOperatorFields()
     {
         nVersion = ProTxVersion::LegacyBLS;
-        pubKeyOperator = CBLSLazyPublicKey();
+        pubKeyOperator = std::make_shared<CBLSLazyPublicKey>();
         addr = CService();
         scriptOperatorPayout = CScript();
         nRevocationReason = CProUpRevTx::REASON_NOT_SPECIFIED;
@@ -244,7 +246,7 @@ public:
             if constexpr (BaseType::mask == Field_pubKeyOperator) {
                 if (obj.fields & member.mask) {
                     SER_READ(obj, read_pubkey = true);
-                    READWRITE(CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.state.pubKeyOperator), obj.state.nVersion == ProTxVersion::LegacyBLS));
+                    READWRITE(CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(*obj.state.pubKeyOperator), obj.state.nVersion == ProTxVersion::LegacyBLS));
                 }
             } else {
                 if (obj.fields & member.mask) {
@@ -255,7 +257,7 @@ public:
 
         if (read_pubkey) {
             SER_READ(obj, obj.fields |= Field_nVersion);
-            SER_READ(obj, obj.state.pubKeyOperator.SetLegacy(obj.state.nVersion == ProTxVersion::LegacyBLS));
+            SER_READ(obj, obj.state.pubKeyOperator->SetLegacy(obj.state.nVersion == ProTxVersion::LegacyBLS));
         }
     }
 

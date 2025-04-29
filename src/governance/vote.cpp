@@ -214,7 +214,7 @@ bool CGovernanceVote::IsValid(const CDeterministicMNList& tip_mn_list, bool useV
     if (useVotingKey) {
         return CheckSignature(dmn->pdmnState.keyIDVoting);
     } else {
-        return CheckSignature(dmn->pdmnState.pubKeyOperator.Get());
+        return CheckSignature(dmn->pdmnState.pubKeyOperator->Get());
     }
 }
 

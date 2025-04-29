@@ -35,7 +35,7 @@ public:
     uint256 proRegTxHash;
     uint256 confirmedHash;
     CService service;
-    CBLSLazyPublicKey pubKeyOperator;
+    std::shared_ptr<CBLSLazyPublicKey> pubKeyOperator{std::make_shared<CBLSLazyPublicKey>()};
     CKeyID keyIDVoting;
     bool isValid{false};
     uint16_t platformHTTPPort{0};
@@ -76,7 +76,7 @@ public:
                 obj.proRegTxHash,
                 obj.confirmedHash,
                 obj.service,
-                CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), (obj.nVersion == ProTxVersion::LegacyBLS)),
+                CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(*obj.pubKeyOperator), (obj.nVersion == ProTxVersion::LegacyBLS)),
                 obj.keyIDVoting,
                 obj.isValid
                 );

@@ -3461,7 +3461,7 @@ std::pair<bool /*ret*/, bool /*do_return*/> static ValidateDSTX(CDeterministicMN
         // we have no idea about (e.g we were offline)? How to handle them?
     }
 
-    if (!dstx.CheckSignature(dmn->pdmnState.pubKeyOperator.Get())) {
+    if (!dstx.CheckSignature(dmn->pdmnState.pubKeyOperator->Get())) {
         LogPrint(BCLog::COINJOIN, "DSTX -- CheckSignature() failed for %s\n", hashTx.ToString());
         return {false, true};
     }

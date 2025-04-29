@@ -66,7 +66,7 @@ std::string CSimplifiedMNListEntry::ToString() const
                      "pubKeyOperator=%s, votingAddress=%s, isValid=%d, payoutAddress=%s, operatorPayoutAddress=%s, "
                      "platformHTTPPort=%d, platformNodeID=%s)",
                      nVersion, ToUnderlying(nType), proRegTxHash.ToString(), confirmedHash.ToString(),
-                     service.ToStringAddrPort(), pubKeyOperator.ToString(), EncodeDestination(PKHash(keyIDVoting)),
+                     service.ToStringAddrPort(), pubKeyOperator->ToString(), EncodeDestination(PKHash(keyIDVoting)),
                      isValid, payoutAddress, operatorPayoutAddress, platformHTTPPort, platformNodeID.ToString());
 }
 
@@ -78,7 +78,7 @@ UniValue CSimplifiedMNListEntry::ToJson(bool extended) const
     obj.pushKV("proRegTxHash", proRegTxHash.ToString());
     obj.pushKV("confirmedHash", confirmedHash.ToString());
     obj.pushKV("service", service.ToStringAddrPort());
-    obj.pushKV("pubKeyOperator", pubKeyOperator.ToString());
+    obj.pushKV("pubKeyOperator", pubKeyOperator->ToString());
     obj.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
     obj.pushKV("isValid", isValid);
     if (nType == MnType::Evo) {
