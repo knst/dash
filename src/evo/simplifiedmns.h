@@ -38,13 +38,13 @@ public:
     CService service;
     CBLSLazyPublicKey pubKeyOperator;
     CKeyID keyIDVoting;
-    uint160 platformNodeID{};
-    uint16_t platformHTTPPort{0};
-    uint16_t nVersion{ProTxVersion::LegacyBLS};
-    MnType nType{MnType::Regular};
     bool isValid{false};
+    uint16_t platformHTTPPort{0};
+    uint160 platformNodeID{};
     CScript scriptPayout; // mem-only
     CScript scriptOperatorPayout; // mem-only
+    uint16_t nVersion{ProTxVersion::LegacyBLS};
+    MnType nType{MnType::Regular};
 
     static std::atomic<int64_t> counter;
     static std::atomic<int64_t> destructed;
@@ -53,7 +53,16 @@ public:
 
     bool operator==(const CSimplifiedMNListEntry& rhs) const
     {
-        return to_tuple() == rhs.to_tuple();
+        return proRegTxHash == rhs.proRegTxHash &&
+               confirmedHash == rhs.confirmedHash &&
+               service == rhs.service &&
+               pubKeyOperator == rhs.pubKeyOperator &&
+               keyIDVoting == rhs.keyIDVoting &&
+               isValid == rhs.isValid &&
+               nVersion == rhs.nVersion &&
+               nType == rhs.nType &&
+               platformHTTPPort == rhs.platformHTTPPort &&
+               platformNodeID == rhs.platformNodeID;
     }
     ~CSimplifiedMNListEntry() { ++destructed; }
 
@@ -91,10 +100,6 @@ public:
 
     std::string ToString() const;
     [[nodiscard]] UniValue ToJson(bool extended = false) const;
-private:
-    auto to_tuple() const {
-        return std::tie(proRegTxHash, confirmedHash, service, pubKeyOperator, keyIDVoting, platformNodeID, platformHTTPPort, nVersion, nType, isValid);
-    }
 };
 
 class CSimplifiedMNList
