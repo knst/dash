@@ -521,10 +521,13 @@ void CDeterministicMNList::UpdateMN(const CDeterministicMN& oldDmn, const CDeter
         throw(std::runtime_error(strprintf("%s: Can't update a masternode %s with a duplicate keyIDOwner=%s", __func__,
                 oldDmn.proTxHash.ToString(), EncodeDestination(PKHash(pdmnState.keyIDOwner)))));
     }
-    if (!UpdateUniqueProperty(*dmn, *oldState.pubKeyOperator, *pdmnState.pubKeyOperator)) {
-        mnUniquePropertyMap = mnUniquePropertyMapSaved;
-        throw(std::runtime_error(strprintf("%s: Can't update a masternode %s with a duplicate pubKeyOperator=%s", __func__,
-                oldDmn.proTxHash.ToString(), pdmnState.pubKeyOperator->ToString())));
+    // Compare pointer first because it's much faster
+    if (oldState.pubKeyOperator != pdmnState.pubKeyOperator) {
+        if (!UpdateUniqueProperty(*dmn, *oldState.pubKeyOperator, *pdmnState.pubKeyOperator)) {
+            mnUniquePropertyMap = mnUniquePropertyMapSaved;
+            throw(std::runtime_error(strprintf("%s: Can't update a masternode %s with a duplicate pubKeyOperator=%s", __func__,
+                    oldDmn.proTxHash.ToString(), pdmnState.pubKeyOperator->ToString())));
+        }
     }
     if (dmn->nType == MnType::Evo) {
         if (!UpdateUniqueProperty(*dmn, oldState.platformNodeID, pdmnState.platformNodeID)) {
