@@ -46,7 +46,7 @@ CSimplifiedMNListEntry::CSimplifiedMNListEntry(CDeterministicMN&& dmn) :
     proRegTxHash(std::move(dmn.proTxHash)),
     confirmedHash(std::move(dmn.pdmnState.confirmedHash)),
     service(std::move(dmn.pdmnState.addr)),
-    pubKeyOperator(std::move(dmn.pdmnState.pubKeyOperator)),
+    pubKeyOperator(dmn.pdmnState.pubKeyOperator),
     keyIDVoting(std::move(dmn.pdmnState.keyIDVoting)),
     isValid(!dmn.pdmnState.IsBanned()),
     platformHTTPPort(dmn.pdmnState.platformHTTPPort),
