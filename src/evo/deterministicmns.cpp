@@ -425,7 +425,7 @@ CDeterministicMNListDiff CDeterministicMNList::BuildDiff(const CDeterministicMNL
 
 CDeterministicMNList CDeterministicMNList::ApplyDiff(gsl::not_null<const CBlockIndex*> pindex, const CDeterministicMNListDiff& diff) const
 {
-    CDeterministicMNList result = *this;
+    CDeterministicMNList result{*this};
     result.blockHash = pindex->GetBlockHash();
     result.nHeight = pindex->nHeight;
 
@@ -717,8 +717,8 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
 {
     int nHeight = pindexPrev->nHeight + 1;
 
-    CDeterministicMNList oldList = GetListForBlock(pindexPrev);
-    CDeterministicMNList newList = oldList;
+    CDeterministicMNList oldList{GetListForBlock(pindexPrev)};
+    CDeterministicMNList newList{oldList};
     newList.SetBlockHash(uint256()); // we can't know the final block hash, so better not return a (invalid) block hash
     newList.SetHeight(nHeight);
 
