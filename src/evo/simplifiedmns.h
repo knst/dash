@@ -54,7 +54,7 @@ public:
         return proRegTxHash == rhs.proRegTxHash &&
                confirmedHash == rhs.confirmedHash &&
                service == rhs.service &&
-               *pubKeyOperator == *rhs.pubKeyOperator &&
+               (pubKeyOperator == rhs.pubKeyOperator || *pubKeyOperator == *rhs.pubKeyOperator) &&
                keyIDVoting == rhs.keyIDVoting &&
                isValid == rhs.isValid &&
                nVersion == rhs.nVersion &&
