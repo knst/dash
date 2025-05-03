@@ -457,8 +457,8 @@ private:
 
     friend bool operator==(const CDeterministicMNList& a, const CDeterministicMNList& b)
     {
-        return  a.blockHash == b.blockHash &&
-                a.nHeight == b.nHeight &&
+        return  a.nHeight == b.nHeight &&
+                a.blockHash == b.blockHash &&
                 a.nTotalRegisteredCount == b.nTotalRegisteredCount &&
                 a.mnMap == b.mnMap &&
                 a.mnInternalIdMap == b.mnInternalIdMap &&
