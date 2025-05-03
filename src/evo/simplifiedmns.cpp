@@ -42,6 +42,21 @@ CSimplifiedMNListEntry::CSimplifiedMNListEntry(const CDeterministicMN& dmn) :
     nType(dmn.nType)
 {
 }
+CSimplifiedMNListEntry::CSimplifiedMNListEntry(CDeterministicMN&& dmn) :
+    proRegTxHash(std::move(dmn.proTxHash)),
+    confirmedHash(std::move(dmn.pdmnState.confirmedHash)),
+    service(std::move(dmn.pdmnState.addr)),
+    pubKeyOperator(std::move(dmn.pdmnState.pubKeyOperator)),
+    keyIDVoting(std::move(dmn.pdmnState.keyIDVoting)),
+    isValid(!dmn.pdmnState.IsBanned()),
+    platformHTTPPort(dmn.pdmnState.platformHTTPPort),
+    platformNodeID(std::move(dmn.pdmnState.platformNodeID)),
+    scriptPayout(std::move(dmn.pdmnState.scriptPayout)),
+    scriptOperatorPayout(std::move(dmn.pdmnState.scriptOperatorPayout)),
+    nVersion(dmn.pdmnState.nVersion),
+    nType(dmn.nType)
+{
+}
 
 uint256 CSimplifiedMNListEntry::CalcHash() const
 {
@@ -110,11 +125,11 @@ CSimplifiedMNList::CSimplifiedMNList(const std::vector<CSimplifiedMNListEntry>& 
     });
 }
 
-CSimplifiedMNList::CSimplifiedMNList(const CDeterministicMNList& dmnList)
+CSimplifiedMNList::CSimplifiedMNList(CDeterministicMNList&& dmnList)
 {
     mnList.reserve(dmnList.GetAllMNsCount());
     dmnList.ForEachMN(false, [this](auto& dmn) {
-        mnList.emplace_back(std::make_unique<CSimplifiedMNListEntry>(dmn));
+        mnList.emplace_back(std::make_unique<CSimplifiedMNListEntry>(std::move(dmn)));
     });
 
     std::sort(mnList.begin(), mnList.end(), [&](const std::unique_ptr<CSimplifiedMNListEntry>& a, const std::unique_ptr<CSimplifiedMNListEntry>& b) {

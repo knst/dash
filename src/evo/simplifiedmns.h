@@ -47,6 +47,7 @@ public:
 
     CSimplifiedMNListEntry() = default;
     explicit CSimplifiedMNListEntry(const CDeterministicMN& dmn);
+    explicit CSimplifiedMNListEntry(CDeterministicMN&& dmn);
 
     bool operator==(const CSimplifiedMNListEntry& rhs) const
     {
@@ -104,7 +105,7 @@ public:
     std::vector<std::unique_ptr<CSimplifiedMNListEntry>> mnList;
 
     CSimplifiedMNList() = default;
-    explicit CSimplifiedMNList(const CDeterministicMNList& dmnList);
+    explicit CSimplifiedMNList(CDeterministicMNList&& dmnList);
 
     // This constructor from std::vector is used in unit-tests
     explicit CSimplifiedMNList(const std::vector<CSimplifiedMNListEntry>& smlEntries);

@@ -193,7 +193,7 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(const CBlock& block, const CB
         nTimeDMN += nTime4 - nTime3;
         LogPrint(BCLog::BENCHMARK, "        - m_dmnman: %.2fms [%.2fs]\n", 0.001 * (nTime4 - nTime3), nTimeDMN * 0.000001);
 
-        if (fCheckCbTxMerkleRoots && !CheckCbTxMerkleRoots(block, pindex, m_qblockman, CSimplifiedMNList(mn_list), state)) {
+        if (fCheckCbTxMerkleRoots && !CheckCbTxMerkleRoots(block, pindex, m_qblockman, CSimplifiedMNList(std::move(mn_list)), state)) {
             // pass the state returned by the function above
             return false;
         }
