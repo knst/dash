@@ -104,12 +104,19 @@ private:
     bool Unlock(const CTransaction& tx, TxValidationState& state);
 };
 
+struct CreditPoolDataPerBlock  {
+    CAmount credit_pool{0};
+    CAmount unlocked{0};
+    std::unordered_set<uint64_t> indexes;
+};
+
 class CCreditPoolManager
 {
 private:
-    static constexpr size_t CreditPoolCacheSize = 1000;
+    static constexpr size_t CreditPoolCacheSize = 1000; // it should be at least 576 long
     Mutex cache_mutex;
     unordered_lru_cache<uint256, CCreditPool, StaticSaltedHasher> creditPoolCache GUARDED_BY(cache_mutex) {CreditPoolCacheSize};
+    unordered_lru_cache<uint256, CreditPoolDataPerBlock, StaticSaltedHasher> block_data_cache GUARDED_BY(cache_mutex) {CreditPoolCacheSize};
 
     CEvoDB& evoDb;
 
@@ -137,6 +144,13 @@ private:
 
     CCreditPool ConstructCreditPool(const gsl::not_null<const CBlockIndex*> block_index, CCreditPool prev,
                                     const Consensus::Params& consensusParams);
+
+    // One GetCreditDataForBlock is reading block from disk, other does not
+    // Both GetCreditDataForBlock use the same cache block_data_cache
+    std::optional<CreditPoolDataPerBlock> GetCreditDataForBlock(const gsl::not_null<const CBlockIndex*> block_index,
+                                                   const Consensus::Params& consensusParams);
+public:
+    std::optional<CreditPoolDataPerBlock> GetCreditDataForBlock(const CBlock& block);
 };
 
 std::optional<CCreditPoolDiff> GetCreditPoolDiffForBlock(CCreditPoolManager& cpoolman, const BlockManager& blockman, const llmq::CQuorumManager& qman,
