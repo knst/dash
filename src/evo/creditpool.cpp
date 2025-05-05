@@ -98,6 +98,10 @@ static std::optional<CreditPoolDataPerBlock> GetCreditDataFromBlock(const gsl::n
             throw std::runtime_error(strprintf("%s: GetDataFromUnlockTx failed: %s", __func__, tx_state.ToString()));
         }
         blockData.unlocked += unlocked;
+        if (blockData.indexes.find(index) != blockData.indexes.end()) {
+            throw std::runtime_error(strprintf("%s: duplicated index %d", __func__, tx_state.ToString(), index));
+        }
+
         blockData.indexes.insert(index);
     }
 
