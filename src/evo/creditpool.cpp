@@ -45,49 +45,21 @@ static bool GetDataFromUnlockTx(const CTransaction& tx, CAmount& toUnlock, uint6
     return true;
 }
 
-namespace {
-    struct CreditPoolDataPerBlock  {
-        CAmount credit_pool{0};
-        CAmount unlocked{0};
-        std::unordered_set<uint64_t> indexes;
-    };
-} // anonymous namespace
-
 // it throws exception if anything went wrong
-static std::optional<CreditPoolDataPerBlock> GetCreditDataFromBlock(const gsl::not_null<const CBlockIndex*> block_index,
-                                                   const Consensus::Params& consensusParams)
+static CreditPoolDataPerBlock GetCreditDataFromBlock(const CBlock& block)
 {
-    // There's no CbTx before DIP0003 activation
-    if (!DeploymentActiveAt(*block_index, Params().GetConsensus(), Consensus::DEPLOYMENT_DIP0003)) {
-        return std::nullopt;
-    }
-
     CreditPoolDataPerBlock blockData;
 
-    static Mutex cache_mutex;
-    static unordered_lru_cache<uint256, CreditPoolDataPerBlock, StaticSaltedHasher> block_data_cache GUARDED_BY(cache_mutex) {576 * 2};
-    {
-        LOCK(cache_mutex);
-        if (block_data_cache.get(block_index->GetBlockHash(), blockData)) {
-            return blockData;
-        }
-    }
-
-    CBlock block;
-    if (!ReadBlockFromDisk(block, block_index, consensusParams)) {
-        throw std::runtime_error("failed-getcbforblock-read");
-    }
-
     if (block.vtx.empty() || block.vtx[0]->vExtraPayload.empty() || !block.vtx[0]->IsSpecialTxVersion()) {
-        LogPrintf("%s: ERROR: empty CbTx for CreditPool at height=%d\n", __func__, block_index->nHeight);
-        return std::nullopt;
+        LogPrintf("%s: ERROR: empty CbTx for CreditPool for block=%s\n", __func__, block.GetHash().ToString());
+        return blockData;
     }
 
 
     if (const auto opt_cbTx = GetTxPayload<CCbTx>(block.vtx[0]->vExtraPayload); opt_cbTx) {
         blockData.credit_pool = opt_cbTx->creditPoolBalance;
     }
-    for (CTransactionRef tx : block.vtx) {
+    for (const CTransactionRef& tx : block.vtx) {
         if (!tx->IsSpecialTxVersion() || tx->nType != TRANSACTION_ASSET_UNLOCK) continue;
 
         CAmount unlocked{0};
@@ -103,6 +75,48 @@ static std::optional<CreditPoolDataPerBlock> GetCreditDataFromBlock(const gsl::n
 
         blockData.indexes.insert(index);
     }
+
+    return blockData;
+}
+
+std::optional<CreditPoolDataPerBlock> CCreditPoolManager::GetCreditDataForBlock(const CBlock& block)
+{
+    CreditPoolDataPerBlock blockData;
+
+    const uint256& block_hash = block.GetHash();
+
+    {
+        LOCK(cache_mutex);
+        if (block_data_cache.get(block_hash, blockData)) {
+            return blockData;
+        }
+    }
+
+    blockData = GetCreditDataFromBlock(block);
+
+    LOCK(cache_mutex);
+    block_data_cache.insert(block_hash, blockData);
+    return blockData;
+}
+
+std::optional<CreditPoolDataPerBlock> CCreditPoolManager::GetCreditDataForBlock(const gsl::not_null<const CBlockIndex*> block_index,
+                                                   const Consensus::Params& consensusParams)
+{
+    CreditPoolDataPerBlock blockData;
+
+    {
+        LOCK(cache_mutex);
+        if (block_data_cache.get(block_index->GetBlockHash(), blockData)) {
+            return blockData;
+        }
+    }
+
+    CBlock block;
+    if (!ReadBlockFromDisk(block, block_index, consensusParams)) {
+        throw std::runtime_error("failed-getcbforblock-read");
+    }
+
+    blockData = GetCreditDataFromBlock(block);
 
     LOCK(cache_mutex);
     block_data_cache.insert(block_index->GetBlockHash(), blockData);
@@ -151,7 +165,12 @@ void CCreditPoolManager::AddToCache(const uint256& block_hash, int height, const
 CCreditPool CCreditPoolManager::ConstructCreditPool(const gsl::not_null<const CBlockIndex*> block_index,
                                                     CCreditPool prev, const Consensus::Params& consensusParams)
 {
-    std::optional<CreditPoolDataPerBlock> opt_block_data = GetCreditDataFromBlock(block_index, consensusParams);
+    // There's no CbTx before DIP0003 activation
+    if (!DeploymentActiveAt(*block_index, Params().GetConsensus(), Consensus::DEPLOYMENT_DIP0003)) {
+        return CCreditPool{};
+    }
+
+    std::optional<CreditPoolDataPerBlock> opt_block_data = GetCreditDataForBlock(block_index, consensusParams);
     if (!opt_block_data) {
         // If reading of previous block is not successfully, but
         // prev contains credit pool related data, something strange happened
@@ -179,8 +198,8 @@ CCreditPool CCreditPoolManager::ConstructCreditPool(const gsl::not_null<const CB
 
     const CBlockIndex* distant_block_index{block_index->GetAncestor(block_index->nHeight - Params().CreditPoolPeriodBlocks())};
     CAmount distantUnlocked{0};
-    if (distant_block_index) {
-        if (std::optional<CreditPoolDataPerBlock> distant_block{GetCreditDataFromBlock(distant_block_index, consensusParams)}; distant_block) {
+    if (distant_block_index && DeploymentActiveAt(*distant_block_index, consensusParams, Consensus::DEPLOYMENT_DIP0003)) {
+        if (std::optional<CreditPoolDataPerBlock> distant_block{GetCreditDataForBlock(distant_block_index, consensusParams)}; distant_block) {
             distantUnlocked = distant_block->unlocked;
         }
     }
@@ -333,6 +352,9 @@ std::optional<CCreditPoolDiff> GetCreditPoolDiffForBlock(CCreditPoolManager& cpo
                 return std::nullopt;
             }
         }
+        // Let's cache data here to avoid reading from disk in the future
+        (void)(cpoolman.GetCreditDataForBlock(block));
+
         return creditPoolDiff;
     } catch (const std::exception& e) {
         LogPrintf("%s -- failed: %s\n", __func__, e.what());
