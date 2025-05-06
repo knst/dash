@@ -588,13 +588,6 @@ AC_COMPILE_IFELSE([AC_LANG_SOURCE([[char foo;]])],
     ])
 
 saved_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS -fomit-frame-pointer"
-AC_MSG_CHECKING([if ${CC} supports -fomit-frame-pointer])
-AC_COMPILE_IFELSE([AC_LANG_SOURCE([[char foo;]])],
-    [ AC_MSG_RESULT([yes]) ],
-    [ AC_MSG_RESULT([no])
-      CFLAGS="$saved_CFLAGS"
-    ])
 
 if test x"$CFLAGS_overridden" = x"no" -a x"$CXXFLAGS_overridden" = x"no"; then
   dnl Enable warnings
