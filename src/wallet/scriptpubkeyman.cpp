@@ -974,6 +974,7 @@ bool LegacyScriptPubKeyMan::LoadCryptedKey(const CPubKey &vchPubKey, const std::
     return AddCryptedKeyInner(vchPubKey, vchCryptedSecret);
 }
 
+// TODO: inline this function to safe time on double cs_KeyStore lock
 bool LegacyScriptPubKeyMan::HaveKeyInner(const CKeyID &address) const
 {
     LOCK(cs_KeyStore);
@@ -1111,6 +1112,7 @@ bool LegacyScriptPubKeyMan::HaveHDKey(const CKeyID &address, CHDChain& hdChainCu
 {
     LOCK(cs_KeyStore);
 
+    // TODO: benchmark `count` vs `find`
     if (!mapHdPubKeys.count(address)) return false;
     return GetHDChain(hdChainCurrent);
 }
@@ -1118,6 +1120,7 @@ bool LegacyScriptPubKeyMan::HaveHDKey(const CKeyID &address, CHDChain& hdChainCu
 bool LegacyScriptPubKeyMan::HaveKey(const CKeyID &address) const
 {
     LOCK(cs_KeyStore);
+    // TODO: benchmark `count` vs `find`
     if (mapHdPubKeys.count(address) > 0)
         return true;
     return HaveKeyInner(address);

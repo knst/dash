@@ -239,6 +239,7 @@ private:
     //! keeps track of whether Unlock has run a thorough check before
     bool fDecryptionThoroughlyChecked = true;
 
+    // TODO: use here *faster* map; at least unordered_map
     using WatchOnlySet = std::set<CScript>;
     using WatchKeyMap = std::map<CKeyID, CPubKey>;
     using HDPubKeyMap = std::map<CKeyID, CHDPubKey>;
