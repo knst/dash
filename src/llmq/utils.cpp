@@ -635,17 +635,20 @@ std::pair<CDeterministicMNList, CDeterministicMNList> GetMNUsageBySnapshot(const
     int64_t t1 = GetTimeMicros();
 
     size_t i{0};
+    // TODO - copy list for 'usedMNs'; after that remove some as unneded
     for (const auto& dmn : sortedAllMns) {
         if (snapshot.activeQuorumMembers[i]) {
             try {
                 usedMNs.AddMN(dmn);
             } catch (const std::runtime_error& e) {
+                assert(false); // it should not happen! it will break list and make do not much with consensus
             }
         } else {
             if (!dmn->pdmnState->IsBanned()) {
                 try {
                     nonUsedMNs.AddMN(dmn);
                 } catch (const std::runtime_error& e) {
+                    assert(false); // it should not happen! it will break list and make do not much with consensus
                 }
             }
         }
