@@ -631,6 +631,9 @@ std::pair<CDeterministicMNList, CDeterministicMNList> GetMNUsageBySnapshot(const
     auto allMns = dmnman.GetListForBlock(pWorkBlockIndex);
     auto sortedAllMns = allMns.CalculateQuorum(allMns.GetAllMNsCount(), modifier);
 
+    static int64_t time_snapshot{0};
+    int64_t t1 = GetTimeMicros();
+
     size_t i{0};
     for (const auto& dmn : sortedAllMns) {
         if (snapshot.activeQuorumMembers[i]) {
@@ -648,6 +651,9 @@ std::pair<CDeterministicMNList, CDeterministicMNList> GetMNUsageBySnapshot(const
         }
         i++;
     }
+    int64_t t2 = GetTimeMicros();
+    time_snapshot += t2 - t1;
+    LogPrint(BCLog::BENCHMARK, " GetMNUsageBySnapshot - : %.2fms [%.2fs]\n", 0.001 * (t2 - t1), time_snapshot * 0.000001);
 
     return std::make_pair(usedMNs, nonUsedMNs);
 }
