@@ -75,7 +75,7 @@ static PreviousQuorumQuarters GetPreviousQuorumQuarterMembers(const Consensus::L
 static std::vector<std::vector<CDeterministicMNCPtr>> GetQuorumQuarterMembersBySnapshot(
     const Consensus::LLMQParams& llmqParams, CDeterministicMNManager& dmnman,
     const CBlockIndex* pCycleQuorumBaseBlockIndex, const llmq::CQuorumSnapshot& snapshot, int nHeight);
-static std::pair<CDeterministicMNList, CDeterministicMNList> GetMNUsageBySnapshot(
+static std::pair<std::vector<CDeterministicMNCPtr>, std::vector<CDeterministicMNCPtr>> GetMNUsageBySnapshot(
     const Consensus::LLMQParams& llmqParams, CDeterministicMNManager& dmnman,
     const CBlockIndex* pCycleQuorumBaseBlockIndex, const llmq::CQuorumSnapshot& snapshot, int nHeight);
 
@@ -613,10 +613,10 @@ std::vector<std::vector<CDeterministicMNCPtr>> GetQuorumQuarterMembersBySnapshot
         const auto modifier = GetHashModifier(llmqParams, pCycleQuorumBaseBlockIndex);
         const auto [MnsUsedAtH, MnsNotUsedAtH] = GetMNUsageBySnapshot(llmqParams, dmnman, pCycleQuorumBaseBlockIndex, snapshot, nHeight);
         // the list begins with all the unused MNs
-        auto sortedMnsNotUsedAtH = CalculateQuorum(MnsNotUsedAtH, MnsNotUsedAtH.GetAllMNsCount(), modifier, false);
+        auto sortedMnsNotUsedAtH = CalculateQuorum(MnsNotUsedAtH, MnsNotUsedAtH.size(), modifier, false);
         sortedCombinedMns = std::move(sortedMnsNotUsedAtH);
         // Now add the already used MNs to the end of the list
-        auto sortedMnsUsedAtH = CalculateQuorum(MnsUsedAtH, MnsUsedAtH.GetAllMNsCount(), modifier, false);
+        auto sortedMnsUsedAtH = CalculateQuorum(MnsUsedAtH, MnsUsedAtH.size(), modifier, false);
         std::move(sortedMnsUsedAtH.begin(), sortedMnsUsedAtH.end(), std::back_inserter(sortedCombinedMns));
     }
 
@@ -693,7 +693,7 @@ std::vector<std::vector<CDeterministicMNCPtr>> GetQuorumQuarterMembersBySnapshot
     }
 }
 
-std::pair<CDeterministicMNList, CDeterministicMNList> GetMNUsageBySnapshot(const Consensus::LLMQParams& llmqParams,
+static std::pair<std::vector<CDeterministicMNCPtr>, std::vector<CDeterministicMNCPtr>> GetMNUsageBySnapshot(const Consensus::LLMQParams& llmqParams,
                                                                            CDeterministicMNManager& dmnman,
                                                                            const CBlockIndex* pCycleQuorumBaseBlockIndex,
                                                                            const llmq::CQuorumSnapshot& snapshot,
@@ -704,8 +704,8 @@ std::pair<CDeterministicMNList, CDeterministicMNList> GetMNUsageBySnapshot(const
         return {};
     }
 
-    CDeterministicMNList usedMNs;
-    CDeterministicMNList nonUsedMNs;
+    std::vector<CDeterministicMNCPtr> usedMNs;
+    std::vector<CDeterministicMNCPtr> nonUsedMNs;
 
     const CBlockIndex* pWorkBlockIndex = pCycleQuorumBaseBlockIndex->GetAncestor(pCycleQuorumBaseBlockIndex->nHeight - 8);
     const auto modifier = GetHashModifier(llmqParams, pCycleQuorumBaseBlockIndex);
@@ -717,21 +717,12 @@ std::pair<CDeterministicMNList, CDeterministicMNList> GetMNUsageBySnapshot(const
     int64_t t1 = GetTimeMicros();
 
     size_t i{0};
-    // TODO - copy list for 'usedMNs'; after that remove some as unneded
     for (const auto& dmn : sortedAllMns) {
         if (snapshot.activeQuorumMembers[i]) {
-            try {
-                usedMNs.AddMN(dmn);
-            } catch (const std::runtime_error& e) {
-                assert(false); // it should not happen! it will break list and make do not much with consensus
-            }
+            usedMNs.push_back(dmn);
         } else {
             if (!dmn->pdmnState->IsBanned()) {
-                try {
-                    nonUsedMNs.AddMN(dmn);
-                } catch (const std::runtime_error& e) {
-                    assert(false); // it should not happen! it will break list and make do not much with consensus
-                }
+                nonUsedMNs.push_back(dmn);
             }
         }
         i++;
