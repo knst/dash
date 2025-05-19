@@ -301,6 +301,7 @@ public:
 
     [[nodiscard]] bool IsMNValid(const uint256& proTxHash) const;
     [[nodiscard]] bool IsMNPoSeBanned(const uint256& proTxHash) const;
+    // TODO: remove both confusing static methods; call dmn's IsBanned directly
     static bool IsMNValid(const CDeterministicMN& dmn);
     static bool IsMNPoSeBanned(const CDeterministicMN& dmn);
 

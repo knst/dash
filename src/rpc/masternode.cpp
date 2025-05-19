@@ -517,9 +517,11 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
 
     const auto mnList = CHECK_NONFATAL(node.dmnman)->GetListAtChainTip();
     const auto dmnToStatus = [&](const auto& dmn) {
+        // TODO refactor mnlist if possible ?
         if (mnList.IsMNValid(dmn)) {
             return "ENABLED";
         }
+        // TODO refactor mnlist if possible ?
         if (mnList.IsMNPoSeBanned(dmn)) {
             return "POSE_BANNED";
         }
@@ -539,7 +541,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
     const bool showEvoOnly = strMode == "evo";
     const int tipHeight = WITH_LOCK(cs_main, return chainman.ActiveChain().Tip()->nHeight);
     mnList.ForEachMN(false, [&](auto& dmn) {
-        if (showRecentMnsOnly && mnList.IsMNPoSeBanned(dmn)) {
+        if (showRecentMnsOnly && dmn.pdmnState->IsBanned()) {
             if (tipHeight - dmn.pdmnState->GetBannedHeight() > Params().GetConsensus().nSuperblockCycle) {
                 return;
             }
