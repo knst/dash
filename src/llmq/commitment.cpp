@@ -231,6 +231,9 @@ bool CheckLLMQCommitment(CDeterministicMNManager& dmnman, CQuorumSnapshotManager
         return true;
     }
 
+    // TODO: is it double verify for same commitment? 
+    // yes. other is CQuorumBlockProcessor::ProcessCommitment
+    // but here is not signature validated; only commitment. It's good.
     if (!qcTx.commitment.Verify(dmnman, qsnapman, pQuorumBaseBlockIndex, false)) {
         LogPrint(BCLog::LLMQ, "CFinalCommitment -- h[%d] invalid qcTx.commitment[%s] Verify failed\n", pindexPrev->nHeight, qcTx.commitment.quorumHash.ToString());
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-qc-invalid");
