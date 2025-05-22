@@ -579,38 +579,26 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
                 strOutpoint.find(strFilter) == std::string::npos) return;
             obj.pushKV(strOutpoint, strAddress);
         } else if (strMode == "full") {
-            std::string strFull = strprintf("%s %d %s %s %s %s",
-                                    PadString(dmnToStatus(dmn), 18),
-                                    dmn.pdmnState.nPoSePenalty,
-                                    payeeStr,
-                                    PadString(ToString(dmnToLastPaidTime(dmn)), 10),
-                                    PadString(ToString(dmn.pdmnState.nLastPaidHeight), 6),
-                                    strAddress);
+            std::string strFull = strprintf("%s %d %s %s %s %s", PadString(dmnToStatus(dmn), 18),
+                                            dmn.pdmnState.nPoSePenalty, payeeStr,
+                                            PadString(ToString(dmnToLastPaidTime(dmn)), 10),
+                                            PadString(ToString(dmn.pdmnState.nLastPaidHeight), 6), strAddress);
             if (!strFilter.empty() && strFull.find(strFilter) == std::string::npos &&
                 strOutpoint.find(strFilter) == std::string::npos) return;
             obj.pushKV(strOutpoint, strFull);
         } else if (strMode == "info") {
-            std::string strInfo = strprintf("%s %d %s %s",
-                                    PadString(dmnToStatus(dmn), 18),
-                                    dmn.pdmnState.nPoSePenalty,
-                                    payeeStr,
-                                    strAddress);
+            std::string strInfo = strprintf("%s %d %s %s", PadString(dmnToStatus(dmn), 18), dmn.pdmnState.nPoSePenalty,
+                                            payeeStr, strAddress);
             if (!strFilter.empty() && strInfo.find(strFilter) == std::string::npos &&
                 strOutpoint.find(strFilter) == std::string::npos) return;
             obj.pushKV(strOutpoint, strInfo);
         } else if (strMode == "json" || strMode == "recent" || strMode == "evo") {
-            std::string strInfo = strprintf("%s %s %s %s %d %d %d %s %s %s %s",
-                                    dmn.proTxHash.ToString(),
-                                    strAddress,
-                                    payeeStr,
-                                    dmnToStatus(dmn),
-                                    dmn.pdmnState.nPoSePenalty,
-                                    dmnToLastPaidTime(dmn),
-                                    dmn.pdmnState.nLastPaidHeight,
-                                    EncodeDestination(PKHash(dmn.pdmnState.keyIDOwner)),
-                                    EncodeDestination(PKHash(dmn.pdmnState.keyIDVoting)),
-                                    collateralAddressStr,
-                                    dmn.pdmnState.pubKeyOperator.ToString());
+            std::string strInfo = strprintf("%s %s %s %s %d %d %d %s %s %s %s", dmn.proTxHash.ToString(), strAddress,
+                                            payeeStr, dmnToStatus(dmn), dmn.pdmnState.nPoSePenalty,
+                                            dmnToLastPaidTime(dmn), dmn.pdmnState.nLastPaidHeight,
+                                            EncodeDestination(PKHash(dmn.pdmnState.keyIDOwner)),
+                                            EncodeDestination(PKHash(dmn.pdmnState.keyIDVoting)), collateralAddressStr,
+                                            dmn.pdmnState.pubKeyOperator.ToString());
             if (!strFilter.empty() && strInfo.find(strFilter) == std::string::npos &&
                 strOutpoint.find(strFilter) == std::string::npos) return;
             UniValue objMN(UniValue::VOBJ);

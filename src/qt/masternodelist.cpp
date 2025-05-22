@@ -213,10 +213,10 @@ void MasternodeList::updateDIP3List()
     mnList.ForEachMN(false, [&](auto& dmn) {
         if (walletModel && ui->checkBoxMyMasternodesOnly->isChecked()) {
             bool fMyMasternode = setOutpts.count(dmn.collateralOutpoint) ||
-                walletModel->wallet().isSpendable(PKHash(dmn.pdmnState.keyIDOwner)) ||
-                walletModel->wallet().isSpendable(PKHash(dmn.pdmnState.keyIDVoting)) ||
-                walletModel->wallet().isSpendable(dmn.pdmnState.scriptPayout) ||
-                walletModel->wallet().isSpendable(dmn.pdmnState.scriptOperatorPayout);
+                                 walletModel->wallet().isSpendable(PKHash(dmn.pdmnState.keyIDOwner)) ||
+                                 walletModel->wallet().isSpendable(PKHash(dmn.pdmnState.keyIDVoting)) ||
+                                 walletModel->wallet().isSpendable(dmn.pdmnState.scriptPayout) ||
+                                 walletModel->wallet().isSpendable(dmn.pdmnState.scriptOperatorPayout);
             if (!fMyMasternode) return;
         }
         // populate list
@@ -227,9 +227,12 @@ void MasternodeList::updateDIP3List()
             QString::fromStdString(dmn.pdmnState.netInfo.GetPrimary().ToStringAddrPort()), addr_ba);
         QTableWidgetItem* typeItem = new QTableWidgetItem(QString::fromStdString(std::string(GetMnType(dmn.nType).description)));
         QTableWidgetItem* statusItem = new QTableWidgetItem(dmn.pdmnState.IsBanned() ? tr("POSE_BANNED") : tr("ENABLED"));
-        QTableWidgetItem* PoSeScoreItem = new CMasternodeListWidgetItem<int>(QString::number(dmn.pdmnState.nPoSePenalty), dmn.pdmnState.nPoSePenalty);
-        QTableWidgetItem* registeredItem = new CMasternodeListWidgetItem<int>(QString::number(dmn.pdmnState.nRegisteredHeight), dmn.pdmnState.nRegisteredHeight);
-        QTableWidgetItem* lastPaidItem = new CMasternodeListWidgetItem<int>(QString::number(dmn.pdmnState.nLastPaidHeight), dmn.pdmnState.nLastPaidHeight);
+        QTableWidgetItem* PoSeScoreItem = new CMasternodeListWidgetItem<int>(QString::number(dmn.pdmnState.nPoSePenalty),
+                                                                             dmn.pdmnState.nPoSePenalty);
+        QTableWidgetItem* registeredItem = new CMasternodeListWidgetItem<int>(QString::number(dmn.pdmnState.nRegisteredHeight),
+                                                                              dmn.pdmnState.nRegisteredHeight);
+        QTableWidgetItem* lastPaidItem = new CMasternodeListWidgetItem<int>(QString::number(dmn.pdmnState.nLastPaidHeight),
+                                                                            dmn.pdmnState.nLastPaidHeight);
 
         QString strNextPayment = "UNKNOWN";
         int nNextPayment = 0;

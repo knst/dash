@@ -606,7 +606,8 @@ static RPCHelpMan gobject_vote_alias()
 
     const bool is_mine = CheckWalletOwnsKey(*wallet, dmn->pdmnState.keyIDVoting);
     if (!is_mine) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Private key for voting address %s not known by wallet", EncodeDestination(PKHash(dmn->pdmnState.keyIDVoting))));
+        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Private key for voting address %s not known by wallet",
+                                                            EncodeDestination(PKHash(dmn->pdmnState.keyIDVoting))));
     }
 
     std::map<uint256, CKeyID> votingKeys;

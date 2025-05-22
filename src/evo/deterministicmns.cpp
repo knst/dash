@@ -39,7 +39,9 @@ uint64_t CDeterministicMN::GetInternalId() const
 
 std::string CDeterministicMN::ToString() const
 {
-    return strprintf("CDeterministicMN(proTxHash=%s, collateralOutpoint=%s, nOperatorReward=%f, state=%s", proTxHash.ToString(), collateralOutpoint.ToStringShort(), (double)nOperatorReward / 100, pdmnState.ToString());
+    return strprintf("CDeterministicMN(proTxHash=%s, collateralOutpoint=%s, nOperatorReward=%f, state=%s",
+                     proTxHash.ToString(), collateralOutpoint.ToStringShort(), (double)nOperatorReward / 100,
+                     pdmnState.ToString());
 }
 
 UniValue CDeterministicMN::ToJson() const
@@ -86,10 +88,7 @@ bool CDeterministicMNList::IsMNValid(const CDeterministicMN& dmn)
     return !IsMNPoSeBanned(dmn);
 }
 
-bool CDeterministicMNList::IsMNPoSeBanned(const CDeterministicMN& dmn)
-{
-    return dmn.pdmnState.IsBanned();
-}
+bool CDeterministicMNList::IsMNPoSeBanned(const CDeterministicMN& dmn) { return dmn.pdmnState.IsBanned(); }
 
 CDeterministicMNCPtr CDeterministicMNList::GetMN(const uint256& proTxHash) const
 {
@@ -111,8 +110,9 @@ CDeterministicMNCPtr CDeterministicMNList::GetValidMN(const uint256& proTxHash) 
 
 CDeterministicMNCPtr CDeterministicMNList::GetMNByOperatorKey(const CBLSPublicKey& pubKey) const
 {
-    const auto it = ranges::find_if(mnMap,
-                              [&pubKey](const auto& p){return p.second->pdmnState.pubKeyOperator.Get() == pubKey;});
+    const auto it = ranges::find_if(mnMap, [&pubKey](const auto& p) {
+        return p.second->pdmnState.pubKeyOperator.Get() == pubKey;
+    });
     if (it == mnMap.end()) {
         return nullptr;
     }
@@ -307,7 +307,8 @@ std::vector<std::pair<arith_uint256, CDeterministicMNCPtr>> CDeterministicMNList
         // TODO When https://github.com/bitcoin/bitcoin/pull/13191 gets backported, implement something that is similar but for single-sha256
         uint256 h;
         CSHA256 sha256;
-        sha256.Write(dmn->pdmnState.confirmedHashWithProRegTxHash.begin(), dmn->pdmnState.confirmedHashWithProRegTxHash.size());
+        sha256.Write(dmn->pdmnState.confirmedHashWithProRegTxHash.begin(),
+                     dmn->pdmnState.confirmedHashWithProRegTxHash.size());
         sha256.Write(modifier.begin(), modifier.size());
         sha256.Finalize(h.begin());
 
@@ -347,8 +348,8 @@ void CDeterministicMNList::PoSePunish(const uint256& proTxHash, int penalty, boo
     newState.nPoSePenalty = std::min(maxPenalty, newState.nPoSePenalty);
 
     if (debugLogs && dmn->pdmnState.nPoSePenalty != maxPenalty) {
-        LogPrintf("CDeterministicMNList::%s -- punished MN %s, penalty %d->%d (max=%d)\n",
-                  __func__, proTxHash.ToString(), dmn->pdmnState.nPoSePenalty, newState.nPoSePenalty, maxPenalty);
+        LogPrintf("CDeterministicMNList::%s -- punished MN %s, penalty %d->%d (max=%d)\n", __func__,
+                  proTxHash.ToString(), dmn->pdmnState.nPoSePenalty, newState.nPoSePenalty, maxPenalty);
     }
 
     if (newState.nPoSePenalty >= maxPenalty && !newState.IsBanned()) {
@@ -480,12 +481,13 @@ void CDeterministicMNList::AddMN(const CDeterministicMNCPtr& dmn, bool fBumpTota
     if (!AddUniqueProperty(*dmn, dmn->pdmnState.keyIDOwner)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
         throw(std::runtime_error(strprintf("%s: Can't add a masternode %s with a duplicate keyIDOwner=%s", __func__,
-                dmn->proTxHash.ToString(), EncodeDestination(PKHash(dmn->pdmnState.keyIDOwner)))));
+                                           dmn->proTxHash.ToString(),
+                                           EncodeDestination(PKHash(dmn->pdmnState.keyIDOwner)))));
     }
     if (dmn->pdmnState.pubKeyOperator != CBLSLazyPublicKey() && !AddUniqueProperty(*dmn, dmn->pdmnState.pubKeyOperator)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
         throw(std::runtime_error(strprintf("%s: Can't add a masternode %s with a duplicate pubKeyOperator=%s", __func__,
-                dmn->proTxHash.ToString(), dmn->pdmnState.pubKeyOperator.ToString())));
+                                           dmn->proTxHash.ToString(), dmn->pdmnState.pubKeyOperator.ToString())));
     }
 
     if (dmn->nType == MnType::Evo) {
@@ -539,12 +541,12 @@ void CDeterministicMNList::UpdateMN(const CDeterministicMN& oldDmn, const CDeter
     if (!UpdateUniqueProperty(*dmn, oldState.keyIDOwner, pdmnState.keyIDOwner)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
         throw(std::runtime_error(strprintf("%s: Can't update a masternode %s with a duplicate keyIDOwner=%s", __func__,
-                oldDmn.proTxHash.ToString(), EncodeDestination(PKHash(pdmnState.keyIDOwner)))));
+                                           oldDmn.proTxHash.ToString(), EncodeDestination(PKHash(pdmnState.keyIDOwner)))));
     }
     if (!UpdateUniqueProperty(*dmn, oldState.pubKeyOperator, pdmnState.pubKeyOperator)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
-        throw(std::runtime_error(strprintf("%s: Can't update a masternode %s with a duplicate pubKeyOperator=%s", __func__,
-                oldDmn.proTxHash.ToString(), pdmnState.pubKeyOperator.ToString())));
+        throw(std::runtime_error(strprintf("%s: Can't update a masternode %s with a duplicate pubKeyOperator=%s",
+                                           __func__, oldDmn.proTxHash.ToString(), pdmnState.pubKeyOperator.ToString())));
     }
     if (dmn->nType == MnType::Evo) {
         if (!UpdateUniqueProperty(*dmn, oldState.platformNodeID, pdmnState.platformNodeID)) {
@@ -601,13 +603,12 @@ void CDeterministicMNList::RemoveMN(const uint256& proTxHash)
     if (!DeleteUniqueProperty(*dmn, dmn->pdmnState.keyIDOwner)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
         throw(std::runtime_error(strprintf("%s: Can't delete a masternode %s with a keyIDOwner=%s", __func__,
-                proTxHash.ToString(), EncodeDestination(PKHash(dmn->pdmnState.keyIDOwner)))));
+                                           proTxHash.ToString(), EncodeDestination(PKHash(dmn->pdmnState.keyIDOwner)))));
     }
-    if (dmn->pdmnState.pubKeyOperator != CBLSLazyPublicKey() &&
-        !DeleteUniqueProperty(*dmn, dmn->pdmnState.pubKeyOperator)) {
+    if (dmn->pdmnState.pubKeyOperator != CBLSLazyPublicKey() && !DeleteUniqueProperty(*dmn, dmn->pdmnState.pubKeyOperator)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
         throw(std::runtime_error(strprintf("%s: Can't delete a masternode %s with a pubKeyOperator=%s", __func__,
-                proTxHash.ToString(), dmn->pdmnState.pubKeyOperator.ToString())));
+                                           proTxHash.ToString(), dmn->pdmnState.pubKeyOperator.ToString())));
     }
 
     if (dmn->nType == MnType::Evo) {
@@ -987,8 +988,9 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
         if (dmn->nType == MnType::Evo && !isMNRewardReallocation) {
             ++newState.nConsecutivePayments;
             if (debugLogs) {
-                LogPrint(BCLog::MNPAYMENTS, "CDeterministicMNManager::%s -- MN %s is an EvoNode, bumping nConsecutivePayments to %d\n",
-                          __func__, dmn->proTxHash.ToString(), newState.nConsecutivePayments);
+                LogPrint(BCLog::MNPAYMENTS,
+                         "CDeterministicMNManager::%s -- MN %s is an EvoNode, bumping nConsecutivePayments to %d\n",
+                         __func__, dmn->proTxHash.ToString(), newState.nConsecutivePayments);
             }
         }
         newList.UpdateMN(payee->proTxHash, newState);
@@ -997,8 +999,8 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
             // Since the previous GetMN query returned a value, after an update, querying the same
             // hash *must* give us a result. If it doesn't, that would be a potential logic bug.
             assert(dmn);
-            LogPrint(BCLog::MNPAYMENTS, "CDeterministicMNManager::%s -- MN %s, nConsecutivePayments=%d\n",
-                      __func__, dmn->proTxHash.ToString(), dmn->pdmnState.nConsecutivePayments);
+            LogPrint(BCLog::MNPAYMENTS, "CDeterministicMNManager::%s -- MN %s, nConsecutivePayments=%d\n", __func__,
+                     dmn->proTxHash.ToString(), dmn->pdmnState.nConsecutivePayments);
         }
     }
 
@@ -1010,7 +1012,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
         if (dmn.pdmnState.nConsecutivePayments == 0) return;
         if (debugLogs) {
             LogPrint(BCLog::MNPAYMENTS, "CDeterministicMNManager::%s -- MN %s, reset nConsecutivePayments %d->0\n",
-                      __func__, dmn.proTxHash.ToString(), dmn.pdmnState.nConsecutivePayments);
+                     __func__, dmn.proTxHash.ToString(), dmn.pdmnState.nConsecutivePayments);
         }
         auto newState = CDeterministicMNState(dmn.pdmnState);
         newState.nConsecutivePayments = 0;
@@ -1504,7 +1506,8 @@ bool CheckProUpRegTx(CDeterministicMNManager& dmnman, const CTransaction& tx, gs
     }
 
     // don't allow reuse of payee key for other keys (don't allow people to put the payee key onto an online server)
-    if (payoutDest == CTxDestination(PKHash(dmn->pdmnState.keyIDOwner)) || payoutDest == CTxDestination(PKHash(opt_ptx->keyIDVoting))) {
+    if (payoutDest == CTxDestination(PKHash(dmn->pdmnState.keyIDOwner)) ||
+        payoutDest == CTxDestination(PKHash(opt_ptx->keyIDVoting))) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-payee-reuse");
     }
 
@@ -1519,7 +1522,8 @@ bool CheckProUpRegTx(CDeterministicMNManager& dmnman, const CTransaction& tx, gs
     if (!ExtractDestination(coin.out.scriptPubKey, collateralTxDest)) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-collateral-dest");
     }
-    if (collateralTxDest == CTxDestination(PKHash(dmn->pdmnState.keyIDOwner)) || collateralTxDest == CTxDestination(PKHash(opt_ptx->keyIDVoting))) {
+    if (collateralTxDest == CTxDestination(PKHash(dmn->pdmnState.keyIDOwner)) ||
+        collateralTxDest == CTxDestination(PKHash(opt_ptx->keyIDVoting))) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-collateral-reuse");
     }
 
