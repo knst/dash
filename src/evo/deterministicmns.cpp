@@ -624,7 +624,12 @@ bool CDeterministicMNManager::ProcessBlock(const CBlock& block, gsl::not_null<co
         LOCK(cs);
 
         oldList = GetListForBlockInternal(pindex->pprev);
-        diff = oldList.BuildDiff(newList);
+        if (!oldList.is_equal_lists(newList)) {
+            LogPrintf("knst is NOT equal lists!\n");
+            diff = oldList.BuildDiff(newList);
+        } else {
+            LogPrintf("knst is equal lists!\n");
+        }
 
         m_evoDb.Write(std::make_pair(DB_LIST_DIFF, newList.GetBlockHash()), diff);
         if ((nHeight % DISK_SNAPSHOT_PERIOD) == 0 || pindex->pprev == m_initial_snapshot_index) {

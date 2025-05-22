@@ -390,6 +390,19 @@ public:
         return GetMN(p->first);
     }
 
+    /**
+     * nHeight and blockHash is excluded from comparision,
+     * while operator==() compares nHeight and blockHash too
+     */
+    bool is_equal_lists(const CDeterministicMNList& b)
+    {
+        return nTotalRegisteredCount == b.nTotalRegisteredCount &&
+               mnMap == b.mnMap &&
+               mnInternalIdMap == b.mnInternalIdMap &&
+               mnUniquePropertyMap == b.mnUniquePropertyMap;
+    }
+
+
 private:
     template <typename T>
     [[nodiscard]] uint256 GetUniquePropertyHash(const T& v) const
@@ -457,12 +470,9 @@ private:
 
     friend bool operator==(const CDeterministicMNList& a, const CDeterministicMNList& b)
     {
-        return  a.nHeight == b.nHeight &&
-                a.blockHash == b.blockHash &&
-                a.nTotalRegisteredCount == b.nTotalRegisteredCount &&
-                a.mnMap == b.mnMap &&
-                a.mnInternalIdMap == b.mnInternalIdMap &&
-                a.mnUniquePropertyMap == b.mnUniquePropertyMap;
+        return a.nHeight == b.nHeight &&
+               a.blockHash == b.blockHash &&
+               a.is_equal_lists(b);
     }
 };
 
