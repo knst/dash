@@ -6,7 +6,6 @@
 
 #include <llmq/options.h>
 #include <llmq/snapshot.h>
-#include <llmq/quorums.h>
 
 #include <chainparams.h>
 #include <deploymentstatus.h>
@@ -950,11 +949,6 @@ bool BlsCheck::operator()()
         }
     } else if (m_pubkeys.size() == 1) {
         if (!m_sig.VerifyInsecure(m_pubkeys.back(), m_msg_hash)) {
-            LogPrint(BCLog::LLMQ, "%s\n", m_id_string);
-            return false;
-        }
-    } else if (!m_clsig.IsNull()) {
-        if (m_clhandler->VerifyChainLock(m_clsig) != llmq::VerifyRecSigStatus::Valid) {
             LogPrint(BCLog::LLMQ, "%s\n", m_id_string);
             return false;
         }

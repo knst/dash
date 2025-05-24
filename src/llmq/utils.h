@@ -8,8 +8,6 @@
 #include <bls/bls.h>
 #include <gsl/pointers.h>
 #include <llmq/params.h>
-#include <llmq/clsig.h>
-#include <llmq/chainlocks.h>
 #include <saltedhasher.h>
 #include <sync.h>
 #include <uint256.h>
@@ -60,22 +58,12 @@ void AddQuorumProbeConnections(const Consensus::LLMQParams& llmqParams, CConnman
                                gsl::not_null<const CBlockIndex*> pQuorumBaseBlockIndex, const uint256& myProTxHash);
 
 struct BlsCheck {
-    const llmq::CChainLocksHandler* m_clhandler;
-    llmq::CChainLockSig m_clsig;
-
     CBLSSignature m_sig;
     std::vector<CBLSPublicKey> m_pubkeys;
     uint256 m_msg_hash;
     std::string m_id_string;
 
     BlsCheck() = default;
-
-    BlsCheck(const llmq::CChainLocksHandler* clhandler, llmq::CChainLockSig cl_sig, std::string id_string) :
-        m_clhandler(clhandler),
-        m_clsig(cl_sig),
-        m_id_string(id_string)
-    {
-    }
 
     BlsCheck(CBLSSignature sig, std::vector<CBLSPublicKey> pubkeys, uint256 msg_hash, std::string id_string) :
         m_sig(sig),
@@ -87,8 +75,6 @@ struct BlsCheck {
 
     void swap(BlsCheck& obj)
     {
-        std::swap(m_clhandler, obj.m_clhandler);
-        std::swap(m_clsig, obj.m_clsig);
         std::swap(m_sig, obj.m_sig);
         std::swap(m_pubkeys, obj.m_pubkeys);
         std::swap(m_msg_hash, obj.m_msg_hash);
