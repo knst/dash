@@ -31,7 +31,7 @@ std::string CDeterministicMNState::ToString() const
                      "operatorPayoutAddress=%s)\n"
                      "  %s",
                      nVersion, nRegisteredHeight, nLastPaidHeight, nPoSePenalty, nPoSeRevivedHeight, nPoSeBanHeight,
-                     nRevocationReason, EncodeDestination(PKHash(keyIDOwner)), pubKeyOperator.ToString(),
+                     nRevocationReason, EncodeDestination(PKHash(keyIDOwner)), pubKeyOperator->ToString(),
                      EncodeDestination(PKHash(keyIDVoting)), payoutAddress, operatorPayoutAddress, netInfo.ToString());
 }
 
@@ -59,7 +59,7 @@ UniValue CDeterministicMNState::ToJson(MnType nType) const
     if (ExtractDestination(scriptPayout, dest)) {
         obj.pushKV("payoutAddress", EncodeDestination(dest));
     }
-    obj.pushKV("pubKeyOperator", pubKeyOperator.ToString());
+    obj.pushKV("pubKeyOperator", pubKeyOperator->ToString());
     if (ExtractDestination(scriptOperatorPayout, dest)) {
         obj.pushKV("operatorPayoutAddress", EncodeDestination(dest));
     }
@@ -115,7 +115,7 @@ UniValue CDeterministicMNStateDiff::ToJson(MnType nType) const
         }
     }
     if (fields & Field_pubKeyOperator) {
-        obj.pushKV("pubKeyOperator", state.pubKeyOperator.ToString());
+        obj.pushKV("pubKeyOperator", state.pubKeyOperator->ToString());
     }
     if (nType == MnType::Evo) {
         if (fields & Field_platformNodeID) {
