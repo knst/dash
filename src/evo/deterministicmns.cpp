@@ -102,7 +102,7 @@ CDeterministicMNCPtr CDeterministicMNList::GetValidMN(const uint256& proTxHash) 
 CDeterministicMNCPtr CDeterministicMNList::GetMNByOperatorKey(const CBLSPublicKey& pubKey) const
 {
     const auto it = ranges::find_if(mnMap,
-                              [&pubKey](const auto& p){return p.second->pdmnState->pubKeyOperator.Get() == pubKey;});
+                              [&pubKey](const auto& p){return p.second->pdmnState->pubKeyOperator->Get() == pubKey;});
     if (it == mnMap.end()) {
         return nullptr;
     }
@@ -424,10 +424,11 @@ void CDeterministicMNList::AddMN(const CDeterministicMNCPtr& dmn, bool fBumpTota
         throw(std::runtime_error(strprintf("%s: Can't add a masternode %s with a duplicate keyIDOwner=%s", __func__,
                 dmn->proTxHash.ToString(), EncodeDestination(PKHash(dmn->pdmnState->keyIDOwner)))));
     }
-    if (dmn->pdmnState->pubKeyOperator != CBLSLazyPublicKey() && !AddUniqueProperty(*dmn, dmn->pdmnState->pubKeyOperator)) {
+    // TODO: add IsNull instead compare to new object
+    if (*dmn->pdmnState->pubKeyOperator != CBLSLazyPublicKey() && !AddUniqueProperty(*dmn, *dmn->pdmnState->pubKeyOperator)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
         throw(std::runtime_error(strprintf("%s: Can't add a masternode %s with a duplicate pubKeyOperator=%s", __func__,
-                dmn->proTxHash.ToString(), dmn->pdmnState->pubKeyOperator.ToString())));
+                dmn->proTxHash.ToString(), dmn->pdmnState->pubKeyOperator->ToString())));
     }
 
     if (dmn->nType == MnType::Evo) {
@@ -495,10 +496,10 @@ void CDeterministicMNList::UpdateMN(const CDeterministicMN& oldDmn, const std::s
         throw(std::runtime_error(strprintf("%s: Can't update a masternode %s with a duplicate keyIDOwner=%s", __func__,
                 oldDmn.proTxHash.ToString(), EncodeDestination(PKHash(pdmnState->keyIDOwner)))));
     }
-    if (!UpdateUniqueProperty(*dmn, oldState->pubKeyOperator, pdmnState->pubKeyOperator)) {
+    if (!UpdateUniqueProperty(*dmn, *oldState->pubKeyOperator, *pdmnState->pubKeyOperator)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
         throw(std::runtime_error(strprintf("%s: Can't update a masternode %s with a duplicate pubKeyOperator=%s", __func__,
-                oldDmn.proTxHash.ToString(), pdmnState->pubKeyOperator.ToString())));
+                oldDmn.proTxHash.ToString(), pdmnState->pubKeyOperator->ToString())));
     }
     if (dmn->nType == MnType::Evo) {
         if (!UpdateUniqueProperty(*dmn, oldState->platformNodeID, pdmnState->platformNodeID)) {
@@ -564,11 +565,12 @@ void CDeterministicMNList::RemoveMN(const uint256& proTxHash)
         throw(std::runtime_error(strprintf("%s: Can't delete a masternode %s with a keyIDOwner=%s", __func__,
                 proTxHash.ToString(), EncodeDestination(PKHash(dmn->pdmnState->keyIDOwner)))));
     }
-    if (dmn->pdmnState->pubKeyOperator != CBLSLazyPublicKey() &&
-        !DeleteUniqueProperty(*dmn, dmn->pdmnState->pubKeyOperator)) {
+    // TODO: add IsNull instead compare to new object
+    if (*dmn->pdmnState->pubKeyOperator != CBLSLazyPublicKey() &&
+        !DeleteUniqueProperty(*dmn, *dmn->pdmnState->pubKeyOperator)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
         throw(std::runtime_error(strprintf("%s: Can't delete a masternode %s with a pubKeyOperator=%s", __func__,
-                proTxHash.ToString(), dmn->pdmnState->pubKeyOperator.ToString())));
+                proTxHash.ToString(), dmn->pdmnState->pubKeyOperator->ToString())));
     }
 
     if (dmn->nType == MnType::Evo) {
@@ -842,7 +844,8 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
             }
             if (newState->IsBanned()) {
                 // only revive when all keys are set
-                if (newState->pubKeyOperator != CBLSLazyPublicKey() && !newState->keyIDVoting.IsNull() &&
+                // TODO: add IsNull instead compare to new object
+                if (*newState->pubKeyOperator != CBLSLazyPublicKey() && !newState->keyIDVoting.IsNull() &&
                     !newState->keyIDOwner.IsNull()) {
                     newState->Revive(nHeight);
                     if (debugLogs) {
@@ -868,13 +871,13 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-protx-hash");
             }
             auto newState = std::make_shared<CDeterministicMNState>(*dmn->pdmnState);
-            if (newState->pubKeyOperator != opt_proTx->pubKeyOperator) {
+            if (*newState->pubKeyOperator != opt_proTx->pubKeyOperator) {
                 // reset all operator related fields and put MN into PoSe-banned state in case the operator key changes
                 newState->ResetOperatorFields();
                 newState->BanIfNotBanned(nHeight);
                 // we update pubKeyOperator here, make sure state version matches
                 newState->nVersion = opt_proTx->nVersion;
-                newState->pubKeyOperator = opt_proTx->pubKeyOperator;
+                newState->pubKeyOperator = std::make_shared<CBLSLazyPublicKey>(opt_proTx->pubKeyOperator);
             }
             newState->keyIDVoting = opt_proTx->keyIDVoting;
             newState->scriptPayout = opt_proTx->scriptPayout;
@@ -1461,7 +1464,7 @@ bool CheckProUpServTx(CDeterministicMNManager& dmnman, const CTransaction& tx, g
         // pass the state returned by the function above
         return false;
     }
-    if (check_sigs && !CheckHashSig(*opt_ptx, mn->pdmnState->pubKeyOperator.Get(), state)) {
+    if (check_sigs && !CheckHashSig(*opt_ptx, mn->pdmnState->pubKeyOperator->Get(), state)) {
         // pass the state returned by the function above
         return false;
     }
@@ -1551,7 +1554,7 @@ bool CheckProUpRevTx(CDeterministicMNManager& dmnman, const CTransaction& tx, gs
         // pass the state returned by the function above
         return false;
     }
-    if (check_sigs && !CheckHashSig(*opt_ptx, dmn->pdmnState->pubKeyOperator.Get(), state)) {
+    if (check_sigs && !CheckHashSig(*opt_ptx, dmn->pdmnState->pubKeyOperator->Get(), state)) {
         // pass the state returned by the function above
         return false;
     }

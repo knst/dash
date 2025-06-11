@@ -186,6 +186,7 @@ bool CGovernanceVote::CheckSignature(const CBLSPublicKey& pubKey) const
     return true;
 }
 
+// TODO: IsValid should not know anything about tip_mn_list or pdmnState or useVotingkey
 bool CGovernanceVote::IsValid(const CDeterministicMNList& tip_mn_list, bool useVotingKey) const
 {
     if (nTime > GetAdjustedTime() + (60 * 60)) {
@@ -214,7 +215,7 @@ bool CGovernanceVote::IsValid(const CDeterministicMNList& tip_mn_list, bool useV
     if (useVotingKey) {
         return CheckSignature(dmn->pdmnState->keyIDVoting);
     } else {
-        return CheckSignature(dmn->pdmnState->pubKeyOperator.Get());
+        return CheckSignature(dmn->pdmnState->pubKeyOperator->Get());
     }
 }
 

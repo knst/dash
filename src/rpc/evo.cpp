@@ -1003,7 +1003,7 @@ static UniValue protx_update_service_common_wrapper(const JSONRPCRequest& reques
         paramIdx += 3;
     }
 
-    if (keyOperator.GetPublicKey() != dmn->pdmnState->pubKeyOperator.Get()) {
+    if (keyOperator.GetPublicKey() != dmn->pdmnState->pubKeyOperator->Get()) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("the operator key does not belong to the registered public key"));
     }
 
@@ -1108,7 +1108,7 @@ static RPCHelpMan protx_update_registrar_wrapper(const bool specific_legacy_bls_
         ptx.pubKeyOperator.Set(ParseBLSPubKey(request.params[1].get_str(), "operator BLS address", use_legacy), use_legacy);
     } else {
         // same pubkey, reuse as is
-        ptx.pubKeyOperator = dmn->pdmnState->pubKeyOperator;
+        ptx.pubKeyOperator = *dmn->pdmnState->pubKeyOperator;
     }
 
     CHECK_NONFATAL(ptx.pubKeyOperator.IsLegacy() == (ptx.nVersion == ProTxVersion::LegacyBLS));
@@ -1221,7 +1221,7 @@ static RPCHelpMan protx_revoke()
         ptx.nReason = (uint16_t)nReason;
     }
 
-    if (keyOperator.GetPublicKey() != dmn->pdmnState->pubKeyOperator.Get()) {
+    if (keyOperator.GetPublicKey() != dmn->pdmnState->pubKeyOperator->Get()) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("the operator key does not belong to the registered public key"));
     }
 

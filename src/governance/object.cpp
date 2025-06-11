@@ -408,6 +408,8 @@ bool CGovernanceObject::IsValidLocally(const CDeterministicMNList& tip_mn_list, 
         }
 
         std::string strOutpoint = m_obj.masternodeOutpoint.ToStringShort();
+        // TODO: consider adding new helper: GetPubkeyByCollateral / GetPubkeyByProtx
+        // because governance is not supposed to know anything about pdmnState
         auto dmn = tip_mn_list.GetMNByCollateral(m_obj.masternodeOutpoint);
         if (!dmn) {
             strError = "Failed to find Masternode by UTXO, missing masternode=" + strOutpoint;
@@ -415,8 +417,8 @@ bool CGovernanceObject::IsValidLocally(const CDeterministicMNList& tip_mn_list, 
         }
 
         // Check that we have a valid MN signature
-        if (!CheckSignature(dmn->pdmnState->pubKeyOperator.Get())) {
-            strError = "Invalid masternode signature for: " + strOutpoint + ", pubkey = " + dmn->pdmnState->pubKeyOperator.ToString();
+        if (!CheckSignature(dmn->pdmnState->pubKeyOperator->Get())) {
+            strError = "Invalid masternode signature for: " + strOutpoint + ", pubkey = " + dmn->pdmnState->pubKeyOperator->ToString();
             return false;
         }
 

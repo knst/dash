@@ -682,16 +682,16 @@ void CTxMemPool::addUncheckedProTx(indexed_transaction_set::iterator& newit, con
         mapProTxRefs.emplace(proTx.proTxHash, tx_hash);
         mapProTxBlsPubKeyHashes.emplace(proTx.pubKeyOperator.GetHash(), tx_hash);
         auto dmn = Assert(m_dmnman->GetListAtChainTip().GetMN(proTx.proTxHash));
-        newit->validForProTxKey = ::SerializeHash(dmn->pdmnState->pubKeyOperator);
-        if (dmn->pdmnState->pubKeyOperator != proTx.pubKeyOperator) {
+        newit->validForProTxKey = ::SerializeHash(*dmn->pdmnState->pubKeyOperator);
+        if (*dmn->pdmnState->pubKeyOperator != proTx.pubKeyOperator) {
             newit->isKeyChangeProTx = true;
         }
     } else if (tx.nType == TRANSACTION_PROVIDER_UPDATE_REVOKE) {
         auto proTx = *Assert(GetTxPayload<CProUpRevTx>(tx));
         mapProTxRefs.emplace(proTx.proTxHash, tx_hash);
         auto dmn = Assert(m_dmnman->GetListAtChainTip().GetMN(proTx.proTxHash));
-        newit->validForProTxKey = ::SerializeHash(dmn->pdmnState->pubKeyOperator);
-        if (dmn->pdmnState->pubKeyOperator.Get() != CBLSPublicKey()) {
+        newit->validForProTxKey = ::SerializeHash(*dmn->pdmnState->pubKeyOperator);
+        if (dmn->pdmnState->pubKeyOperator->Get() != CBLSPublicKey()) {
             newit->isKeyChangeProTx = true;
         }
     } else if (tx.nType == TRANSACTION_ASSET_UNLOCK) {
@@ -1410,7 +1410,7 @@ bool CTxMemPool::existsProviderTxConflict(const CTransaction &tx) const {
             return true; // i.e. failed to find validated ProTx == conflict
         }
         // only allow one operator key change in the mempool
-        if (dmn->pdmnState->pubKeyOperator != proTx.pubKeyOperator) {
+        if (*dmn->pdmnState->pubKeyOperator != proTx.pubKeyOperator) {
             if (hasKeyChangeInMempool(proTx.proTxHash)) {
                 return true;
             }
@@ -1432,7 +1432,8 @@ bool CTxMemPool::existsProviderTxConflict(const CTransaction &tx) const {
             return true; // i.e. failed to find validated ProTx == conflict
         }
         // only allow one operator key change in the mempool
-        if (dmn->pdmnState->pubKeyOperator.Get() != CBLSPublicKey()) {
+        // TODO: add IsNull instead compare to new object
+        if (dmn->pdmnState->pubKeyOperator->Get() != CBLSPublicKey()) {
             if (hasKeyChangeInMempool(proTx.proTxHash)) {
                 return true;
             }
