@@ -476,7 +476,6 @@ libbitcoin_node_a_SOURCES = \
   governance/validators.cpp \
   governance/vote.cpp \
   governance/votedb.cpp \
-  gsl/assert.cpp \
   httprpc.cpp \
   httpserver.cpp \
   i2p.cpp \
@@ -784,6 +783,7 @@ libbitcoin_common_a_SOURCES = \
   deploymentinfo.cpp \
   evo/core_write.cpp \
   evo/netinfo.cpp \
+  gsl/assert.cpp \
   governance/common.cpp \
   init/common.cpp \
   key.cpp \
