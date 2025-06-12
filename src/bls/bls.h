@@ -390,7 +390,7 @@ class CBLSLazyWrapper
 private:
     mutable std::mutex mutex;
 
-    mutable std::array<uint8_t, BLSObject::SerSize> vecBytes;
+    mutable std::array<uint8_t, BLSObject::SerSize> vecBytes{};
 
     mutable BLSObject obj;
     mutable bool objInitialized{false};
@@ -403,7 +403,6 @@ private:
 
 public:
     CBLSLazyWrapper() :
-        vecBytes{},
         bufLegacyScheme(bls::bls_legacy_scheme.load())
     {}
 
@@ -418,16 +417,10 @@ public:
         std::unique_lock<std::mutex> l(r.mutex);
         bufValid = r.bufValid;
         bufLegacyScheme = r.bufLegacyScheme;
-        if (r.bufValid) {
-            vecBytes = r.vecBytes;
-        } else {
-            std::fill(vecBytes.begin(), vecBytes.end(), 0);
-        }
+        vecBytes = r.vecBytes;
         objInitialized = r.objInitialized;
         if (r.objInitialized) {
             obj = r.obj;
-        } else {
-            obj.Reset();
         }
         hash = r.hash;
         return *this;
@@ -442,13 +435,17 @@ public:
     inline void Serialize(Stream& s, const bool specificLegacyScheme) const
     {
         std::unique_lock<std::mutex> l(mutex);
-        if (!objInitialized && !bufValid) {
-            std::fill(vecBytes.begin(), vecBytes.end(), 0);
-        } else if (!bufValid || (bufLegacyScheme != specificLegacyScheme)) {
-            vecBytes = obj.ToBytes(specificLegacyScheme);
-            bufValid = true;
-            bufLegacyScheme = specificLegacyScheme;
-            hash.SetNull();
+        if (!objInitialized) {
+            if (bufValid && bufLegacyScheme != specificLegacyScheme) {
+                vecBytes = Get().ToBytes(specificLegacyScheme);
+            }
+        } else {
+            if (!bufValid || (bufLegacyScheme != specificLegacyScheme)) {
+                vecBytes = obj.ToBytes(specificLegacyScheme);
+                bufValid = true;
+                bufLegacyScheme = specificLegacyScheme;
+                hash.SetNull();
+            }
         }
         s.write(MakeByteSpan(vecBytes));
     }
@@ -475,7 +472,6 @@ public:
     {
         Unserialize(s, bufLegacyScheme);
     }
-
     void Set(const BLSObject& _obj, const bool specificLegacyScheme)
     {
         std::unique_lock<std::mutex> l(mutex);
@@ -483,6 +479,7 @@ public:
         bufLegacyScheme = specificLegacyScheme;
         objInitialized = true;
         obj = _obj;
+        std::fill(vecBytes.begin(), vecBytes.end(), 0);
         hash.SetNull();
     }
     const BLSObject& Get() const
@@ -509,6 +506,10 @@ public:
 
     bool operator==(const CBLSLazyWrapper& r) const
     {
+        std::lock(mutex, r.mutex); 
+        std::lock_guard<std::mutex> lockA(mutex, std::adopt_lock);
+        std::lock_guard<std::mutex> lockB(r.mutex, std::adopt_lock);
+
         // If neither bufValid or objInitialized are set, then the object is the default object.
         const bool is_default{!bufValid && !objInitialized};
         const bool r_is_default{!r.bufValid && !r.objInitialized};
@@ -535,7 +536,6 @@ public:
     {
         std::unique_lock<std::mutex> l(mutex);
         if (!objInitialized && !bufValid) {
-            std::fill(vecBytes.begin(), vecBytes.end(), 0);
             hash.SetNull();
         } else if (!bufValid) {
             vecBytes = obj.ToBytes(bufLegacyScheme);
@@ -555,10 +555,11 @@ public:
         return bufLegacyScheme;
     }
 
+    /*
     void SetLegacy(bool specificLegacyScheme)
     {
         bufLegacyScheme = specificLegacyScheme;
-    }
+    }*/
 
     std::string ToString() const
     {
