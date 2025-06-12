@@ -688,8 +688,8 @@ static UniValue protx_register_common_wrapper(const JSONRPCRequest& request,
     }
 
     ptx.keyIDOwner = ParsePubKeyIDFromAddress(request.params[paramIdx + 1].get_str(), "owner address");
-    ptx.pubKeyOperator.Set(ParseBLSPubKey(request.params[paramIdx + 2].get_str(), "operator BLS address", use_legacy), use_legacy);
-    CHECK_NONFATAL(ptx.pubKeyOperator.IsLegacy() == (ptx.nVersion == ProTxVersion::LegacyBLS));
+    ptx.pubKeyOperator->Set(ParseBLSPubKey(request.params[paramIdx + 2].get_str(), "operator BLS address", use_legacy), use_legacy);
+    CHECK_NONFATAL(ptx.pubKeyOperator->IsLegacy() == (ptx.nVersion == ProTxVersion::LegacyBLS));
 
     CKeyID keyIDVoting = ptx.keyIDOwner;
 
@@ -1105,13 +1105,13 @@ static RPCHelpMan protx_update_registrar_wrapper(const bool specific_legacy_bls_
 
     if (!request.params[1].get_str().empty()) {
         // new pubkey
-        ptx.pubKeyOperator.Set(ParseBLSPubKey(request.params[1].get_str(), "operator BLS address", use_legacy), use_legacy);
+        ptx.pubKeyOperator->Set(ParseBLSPubKey(request.params[1].get_str(), "operator BLS address", use_legacy), use_legacy);
     } else {
         // same pubkey, reuse as is
-        ptx.pubKeyOperator = *dmn->pdmnState->pubKeyOperator;
+        ptx.pubKeyOperator = dmn->pdmnState->pubKeyOperator;
     }
 
-    CHECK_NONFATAL(ptx.pubKeyOperator.IsLegacy() == (ptx.nVersion == ProTxVersion::LegacyBLS));
+    CHECK_NONFATAL(ptx.pubKeyOperator->IsLegacy() == (ptx.nVersion == ProTxVersion::LegacyBLS));
 
     if (!request.params[2].get_str().empty()) {
         ptx.keyIDVoting = ParsePubKeyIDFromAddress(request.params[2].get_str(), "voting address");

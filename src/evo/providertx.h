@@ -8,6 +8,7 @@
 #include <bls/bls.h>
 #include <evo/netinfo.h>
 #include <evo/specialtx.h>
+#include <gsl/pointers.h>
 #include <primitives/transaction.h>
 
 #include <consensus/validation.h>
@@ -46,7 +47,7 @@ public:
     uint16_t platformP2PPort{0};
     uint16_t platformHTTPPort{0};
     CKeyID keyIDOwner;
-    CBLSLazyPublicKey pubKeyOperator;
+    gsl::not_null<std::shared_ptr<CBLSLazyPublicKey>> pubKeyOperator{std::make_shared<CBLSLazyPublicKey>()};
     CKeyID keyIDVoting;
     uint16_t nOperatorReward{0};
     CScript scriptPayout;
@@ -69,7 +70,7 @@ public:
                 obj.collateralOutpoint,
                 obj.netInfo,
                 obj.keyIDOwner,
-                CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), (obj.nVersion == ProTxVersion::LegacyBLS)),
+                CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(*obj.pubKeyOperator), (obj.nVersion == ProTxVersion::LegacyBLS)),
                 obj.keyIDVoting,
                 obj.nOperatorReward,
                 obj.scriptPayout,
@@ -170,7 +171,7 @@ public:
     uint16_t nVersion{ProTxVersion::LegacyBLS}; // message version
     uint256 proTxHash;
     uint16_t nMode{0}; // only 0 supported for now
-    CBLSLazyPublicKey pubKeyOperator;
+    gsl::not_null<std::shared_ptr<CBLSLazyPublicKey>> pubKeyOperator{std::make_shared<CBLSLazyPublicKey>()};
     CKeyID keyIDVoting;
     CScript scriptPayout;
     uint256 inputsHash; // replay protection
@@ -188,7 +189,7 @@ public:
         READWRITE(
                 obj.proTxHash,
                 obj.nMode,
-                CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), (obj.nVersion == ProTxVersion::LegacyBLS)),
+                CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(*obj.pubKeyOperator), (obj.nVersion == ProTxVersion::LegacyBLS)),
                 obj.keyIDVoting,
                 obj.scriptPayout,
                 obj.inputsHash

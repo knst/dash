@@ -27,10 +27,10 @@ bool CProRegTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState&
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-mode");
     }
 
-    if (keyIDOwner.IsNull() || !pubKeyOperator.Get().IsValid() || keyIDVoting.IsNull()) {
+    if (keyIDOwner.IsNull() || !pubKeyOperator->Get().IsValid() || keyIDVoting.IsNull()) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-key-null");
     }
-    if (pubKeyOperator.IsLegacy() != (nVersion == ProTxVersion::LegacyBLS)) {
+    if (pubKeyOperator->IsLegacy() != (nVersion == ProTxVersion::LegacyBLS)) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-operator-pubkey");
     }
     if (!scriptPayout.IsPayToPublicKeyHash() && !scriptPayout.IsPayToScriptHash()) {
@@ -97,7 +97,7 @@ std::string CProRegTx::ToString() const
                      "platformP2PPort=%d, platformHTTPPort=%d)\n"
                      "  %s",
                      nVersion, ToUnderlying(nType), collateralOutpoint.ToStringShort(), (double)nOperatorReward / 100,
-                     EncodeDestination(PKHash(keyIDOwner)), pubKeyOperator.ToString(),
+                     EncodeDestination(PKHash(keyIDOwner)), pubKeyOperator->ToString(),
                      EncodeDestination(PKHash(keyIDVoting)), payee, platformNodeID.ToString(), platformP2PPort,
                      platformHTTPPort, netInfo.ToString());
 }
@@ -146,10 +146,10 @@ bool CProUpRegTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationStat
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-mode");
     }
 
-    if (!pubKeyOperator.Get().IsValid() || keyIDVoting.IsNull()) {
+    if (!pubKeyOperator->Get().IsValid() || keyIDVoting.IsNull()) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-key-null");
     }
-    if (pubKeyOperator.IsLegacy() != (nVersion == ProTxVersion::LegacyBLS)) {
+    if (pubKeyOperator->IsLegacy() != (nVersion == ProTxVersion::LegacyBLS)) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-operator-pubkey");
     }
     if (!scriptPayout.IsPayToPublicKeyHash() && !scriptPayout.IsPayToScriptHash()) {
@@ -167,7 +167,7 @@ std::string CProUpRegTx::ToString() const
     }
 
     return strprintf("CProUpRegTx(nVersion=%d, proTxHash=%s, pubKeyOperator=%s, votingAddress=%s, payoutAddress=%s)",
-        nVersion, proTxHash.ToString(), pubKeyOperator.ToString(), EncodeDestination(PKHash(keyIDVoting)), payee);
+        nVersion, proTxHash.ToString(), pubKeyOperator->ToString(), EncodeDestination(PKHash(keyIDVoting)), payee);
 }
 
 bool CProUpRevTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState& state) const

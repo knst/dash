@@ -8,6 +8,7 @@
 #include <evo/mnhftx.h>
 #include <evo/netinfo.h>
 #include <evo/providertx.h>
+#include <gsl/pointers.h>
 #include <llmq/commitment.h>
 
 #include <univalue.h>
@@ -73,7 +74,7 @@
     if (CTxDestination dest; ExtractDestination(scriptPayout, dest)) {
         ret.pushKV("payoutAddress", EncodeDestination(dest));
     }
-    ret.pushKV("pubKeyOperator", pubKeyOperator.ToString());
+    ret.pushKV("pubKeyOperator", pubKeyOperator->ToString());
     ret.pushKV("operatorReward", (double)nOperatorReward / 100);
     if (nType == MnType::Evo) {
         ret.pushKV("platformNodeID", platformNodeID.ToString());
@@ -93,7 +94,7 @@
     if (CTxDestination dest; ExtractDestination(scriptPayout, dest)) {
         ret.pushKV("payoutAddress", EncodeDestination(dest));
     }
-    ret.pushKV("pubKeyOperator", pubKeyOperator.ToString());
+    ret.pushKV("pubKeyOperator", pubKeyOperator->ToString());
     ret.pushKV("inputsHash", inputsHash.ToString());
     return ret;
 }
