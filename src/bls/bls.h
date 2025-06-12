@@ -555,11 +555,6 @@ public:
         return bufLegacyScheme;
     }
 
-    void SetLegacy(bool specificLegacyScheme)
-    {
-        bufLegacyScheme = specificLegacyScheme;
-    }
-
     std::string ToString() const
     {
         return Get().ToString(bufLegacyScheme);
