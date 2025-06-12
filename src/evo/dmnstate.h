@@ -53,6 +53,7 @@ public:
     uint256 confirmedHashWithProRegTxHash;
 
     CKeyID keyIDOwner;
+    // TODO - make it shared everywhere (including ProTxs)
     gsl::not_null<std::shared_ptr<CBLSLazyPublicKey>> pubKeyOperator{std::make_shared<CBLSLazyPublicKey>()};
     CKeyID keyIDVoting;
     MnNetInfo netInfo;
@@ -68,7 +69,7 @@ public:
     explicit CDeterministicMNState(const CProRegTx& proTx) :
         nVersion(proTx.nVersion),
         keyIDOwner(proTx.keyIDOwner),
-        pubKeyOperator(proTx.pubKeyOperator),
+        pubKeyOperator(std::make_shared<CBLSLazyPublicKey>(proTx.pubKeyOperator)),
         keyIDVoting(proTx.keyIDVoting),
         netInfo(proTx.netInfo),
         scriptPayout(proTx.scriptPayout),
