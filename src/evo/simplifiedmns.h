@@ -9,6 +9,7 @@
 #include <evo/dmn_types.h>
 #include <evo/netinfo.h>
 #include <evo/providertx.h>
+#include <gsl/pointers.h>
 #include <merkleblock.h>
 #include <netaddress.h>
 #include <pubkey.h>
@@ -36,8 +37,7 @@ public:
     uint256 proRegTxHash;
     uint256 confirmedHash;
     MnNetInfo netInfo;
-    // TODO: make it `using nn_shared_ptr = gsl::not_null<std::shared_ptr<T>>`;
-    std::shared_ptr<CBLSLazyPublicKey> pubKeyOperator{std::make_shared<CBLSLazyPublicKey>()};
+    gsl::not_null<std::shared_ptr<CBLSLazyPublicKey>> pubKeyOperator{std::make_shared<CBLSLazyPublicKey>()};
     CKeyID keyIDVoting;
     bool isValid{false};
     uint16_t platformHTTPPort{0};

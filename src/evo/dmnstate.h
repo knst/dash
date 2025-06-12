@@ -8,6 +8,7 @@
 #include <bls/bls.h>
 #include <crypto/sha256.h>
 #include <evo/providertx.h>
+#include <gsl/pointers.h>
 #include <netaddress.h>
 #include <pubkey.h>
 #include <script/script.h>
@@ -53,8 +54,7 @@ public:
 
     CKeyID keyIDOwner;
     // TODO - make it shared everywhere (including ProTxs)
-    // TODO: make it `using nn_shared_ptr = gsl::not_null<std::shared_ptr<T>>`;
-    std::shared_ptr<CBLSLazyPublicKey> pubKeyOperator{std::make_shared<CBLSLazyPublicKey>()};
+    gsl::not_null<std::shared_ptr<CBLSLazyPublicKey>> pubKeyOperator{std::make_shared<CBLSLazyPublicKey>()};
     CKeyID keyIDVoting;
     MnNetInfo netInfo;
     CScript scriptPayout;
