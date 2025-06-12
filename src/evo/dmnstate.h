@@ -258,7 +258,7 @@ public:
 
         if (read_pubkey) {
             SER_READ(obj, obj.fields |= Field_nVersion);
-//            SER_READ(obj, obj.state.pubKeyOperator->SetLegacy(obj.state.nVersion == ProTxVersion::LegacyBLS));
+            SER_READ(obj, obj.state.pubKeyOperator->SetLegacy(obj.state.nVersion == ProTxVersion::LegacyBLS));
         }
     }
 

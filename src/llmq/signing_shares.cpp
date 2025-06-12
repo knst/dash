@@ -787,11 +787,12 @@ void CSigSharesManager::TryRecoverSig(PeerManager& peerman, const CQuorumCPtr& q
                 return;
             }
             const auto& sigShare = sigSharesForSignHash->begin()->second;
+            CBLSSignature recoveredSig = sigShare.sigShare.Get();
             LogPrint(BCLog::LLMQ_SIGS, "CSigSharesManager::%s -- recover single-node signature. id=%s, msgHash=%s\n",
                      __func__, id.ToString(), msgHash.ToString());
 
             auto rs = std::make_shared<CRecoveredSig>(quorum->params.type, quorum->qc->quorumHash, id, msgHash,
-                                                      sigShare.sigShare);
+                                                      recoveredSig);
             sigman.ProcessRecoveredSig(rs, peerman);
             return; // end of single-quorum processing
         }
