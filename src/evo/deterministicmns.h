@@ -158,7 +158,8 @@ private:
     };
 
 public:
-    using MnMap = immer::map<uint256, CDeterministicMNCPtr, ImmerHasher>;
+//    using MnMap = immer::map<uint256, CDeterministicMNCPtr, ImmerHasher>;
+    using MnMap = std::map<uint256, CDeterministicMNCPtr>;
     using MnInternalIdMap = immer::map<uint64_t, uint256>;
     using MnUniquePropertyMap = immer::map<uint256, std::pair<uint256, uint32_t>, ImmerHasher>;
 
@@ -211,7 +212,7 @@ public:
 
     template<typename Stream>
     void Unserialize(Stream& s, const uint8_t format_version = CDeterministicMN::MN_CURRENT_FORMAT) {
-        mnMap = MnMap();
+        mnMap = MnMap{};
         mnUniquePropertyMap = MnUniquePropertyMap();
         mnInternalIdMap = MnInternalIdMap();
         m_cached_sml = nullptr;
