@@ -137,7 +137,8 @@ private:
     };
 
 public:
-    using MnMap = immer::map<uint256, CDeterministicMNCPtr, ImmerHasher>;
+//    using MnMap = immer::map<uint256, CDeterministicMNCPtr, ImmerHasher>;
+    using MnMap = std::map<uint256, CDeterministicMNCPtr>;
     using MnInternalIdMap = immer::map<uint64_t, uint256>;
     using MnUniquePropertyMap = immer::map<uint256, std::pair<uint256, uint32_t>, ImmerHasher>;
 
