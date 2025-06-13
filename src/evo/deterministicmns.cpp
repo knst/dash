@@ -66,28 +66,28 @@ UniValue CDeterministicMN::ToJson() const
 bool CDeterministicMNList::IsMNValid(const uint256& proTxHash) const
 {
     auto p = mnMap.find(proTxHash);
-    if (p == nullptr) {
+    if (p == mnMap.end()) {
         return false;
     }
-    return !(*p)->pdmnState->IsBanned();
+    return !p->second->pdmnState->IsBanned();
 }
 
 bool CDeterministicMNList::IsMNPoSeBanned(const uint256& proTxHash) const
 {
     auto p = mnMap.find(proTxHash);
-    if (p == nullptr) {
+    if (p == mnMap.end()) {
         return false;
     }
-    return (*p)->pdmnState->IsBanned();
+    return p->second->pdmnState->IsBanned();
 }
 
 CDeterministicMNCPtr CDeterministicMNList::GetMN(const uint256& proTxHash) const
 {
     auto p = mnMap.find(proTxHash);
-    if (p == nullptr) {
+    if (p == mnMap.end()) {
         return nullptr;
     }
-    return *p;
+    return p->second;
 }
 
 CDeterministicMNCPtr CDeterministicMNList::GetValidMN(const uint256& proTxHash) const
@@ -165,7 +165,7 @@ static bool CompareByLastPaid(const CDeterministicMN* _a, const CDeterministicMN
 
 CDeterministicMNCPtr CDeterministicMNList::GetMNPayee(gsl::not_null<const CBlockIndex*> pindexPrev) const
 {
-    if (mnMap.size() == 0) {
+    if (mnMap.empty()) {
         return nullptr;
     }
 
@@ -389,7 +389,7 @@ void CDeterministicMNList::AddMN(const CDeterministicMNCPtr& dmn, bool fBumpTota
 {
     assert(dmn != nullptr);
 
-    if (mnMap.find(dmn->proTxHash)) {
+    if (mnMap.find(dmn->proTxHash) != mnMap.end()) {
         throw(std::runtime_error(strprintf("%s: Can't add a masternode with a duplicate proTxHash=%s", __func__, dmn->proTxHash.ToString())));
     }
     if (mnInternalIdMap.find(dmn->GetInternalId())) {
@@ -439,7 +439,8 @@ void CDeterministicMNList::AddMN(const CDeterministicMNCPtr& dmn, bool fBumpTota
         }
     }
 
-    mnMap = mnMap.set(dmn->proTxHash, dmn);
+    mnMap.emplace(dmn->proTxHash, dmn);
+
     mnInternalIdMap = mnInternalIdMap.set(dmn->GetInternalId(), dmn->proTxHash);
     if (fBumpTotalCount) {
         // nTotalRegisteredCount acts more like a checkpoint, not as a limit,
@@ -510,16 +511,16 @@ void CDeterministicMNList::UpdateMN(const CDeterministicMN& oldDmn, const std::s
     }
 
     dmn->pdmnState = pdmnState;
-    mnMap = mnMap.set(oldDmn.proTxHash, dmn);
+    mnMap[oldDmn.proTxHash] = dmn;
 }
 
 void CDeterministicMNList::UpdateMN(const uint256& proTxHash, const std::shared_ptr<const CDeterministicMNState>& pdmnState)
 {
     auto oldDmn = mnMap.find(proTxHash);
-    if (!oldDmn) {
+    if (oldDmn == mnMap.end()) {
         throw(std::runtime_error(strprintf("%s: Can't find a masternode with proTxHash=%s", __func__, proTxHash.ToString())));
     }
-    UpdateMN(**oldDmn, pdmnState);
+    UpdateMN(*oldDmn->second, pdmnState);
 }
 
 void CDeterministicMNList::UpdateMN(const CDeterministicMN& oldDmn, const CDeterministicMNStateDiff& stateDiff)
@@ -581,7 +582,7 @@ void CDeterministicMNList::RemoveMN(const uint256& proTxHash)
         }
     }
 
-    mnMap = mnMap.erase(proTxHash);
+    mnMap.erase(proTxHash);
     mnInternalIdMap = mnInternalIdMap.erase(dmn->GetInternalId());
 }
 
