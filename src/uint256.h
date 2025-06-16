@@ -52,11 +52,11 @@ public:
         std::fill(m_data.begin(), m_data.end(), 0);
     }
 
-    constexpr int Compare(const base_blob& other) const { return std::memcmp(m_data.data(), other.m_data.data(), WIDTH); }
+    constexpr int Compare(const base_blob& other) const noexcept { return std::memcmp(m_data.data(), other.m_data.data(), WIDTH); }
 
-    friend constexpr bool operator==(const base_blob& a, const base_blob& b) { return a.Compare(b) == 0; }
-    friend constexpr bool operator!=(const base_blob& a, const base_blob& b) { return a.Compare(b) != 0; }
-    friend constexpr bool operator<(const base_blob& a, const base_blob& b) { return a.Compare(b) < 0; }
+    friend constexpr bool operator==(const base_blob& a, const base_blob& b) noexcept { return a.Compare(b) == 0; }
+    friend constexpr bool operator!=(const base_blob& a, const base_blob& b) noexcept { return a.Compare(b) != 0; }
+    friend constexpr bool operator<(const base_blob& a, const base_blob& b) noexcept { return a.Compare(b) < 0; }
 
     std::string GetHex() const;
     void SetHex(const char* psz);
