@@ -29,6 +29,7 @@
 
 static const std::string DB_LIST_SNAPSHOT = "dmn_S3";
 static const std::string DB_LIST_DIFF = "dmn_D3";
+static const int CachedSnapshotsFromTip = 10;
 
 uint64_t CDeterministicMN::GetInternalId() const
 {
@@ -1069,6 +1070,15 @@ CDeterministicMNList CDeterministicMNManager::GetListForBlockInternal(gsl::not_n
     for (const auto& diffIndex : listDiffIndexes) {
         const auto& diff = mnListDiffsCache.at(diffIndex->GetBlockHash());
         snapshot.ApplyDiff(diffIndex, diff);
+        if (tipIndex) {
+            // always keep a snapshot for the last several blocks.
+            // Keeping snapshot for last several block significantly improves performance of UndoBlock.
+            // This optimization is useful for RegTest / Testnet / Devnets mostly
+            // so far as big re-organization on MainNet almost never happens
+            if (snapshot.GetHeight() + CachedSnapshotsFromTip >= tipIndex->nHeight) {
+                mnListsCache.emplace(snapshot.GetBlockHash(), snapshot);
+            }
+        }
     }
 
     if (tipIndex) {
@@ -1139,7 +1149,7 @@ void CDeterministicMNManager::CleanupCache(int nHeight)
             toDeleteLists.emplace_back(p.first);
             continue;
         }
-        if (tipIndex != nullptr && p.first == tipIndex->GetBlockHash()) {
+        if (tipIndex != nullptr && p.second.GetHeight() + CachedSnapshotsFromTip >= tipIndex->nHeight) {
             // it's a snapshot for the tip, keep it
             continue;
         }
