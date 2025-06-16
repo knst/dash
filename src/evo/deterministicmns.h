@@ -18,6 +18,10 @@
 #include <scheduler.h>
 #include <sync.h>
 
+//#include <fc_btree.h>
+#include <parallel_hashmap/phmap.h>
+#include <parallel_hashmap/btree.h>
+
 #include <immer/map.hpp>
 
 #include <atomic>
@@ -157,7 +161,8 @@ private:
 
 public:
 //    using MnMap = immer::map<uint256, CDeterministicMNCPtr, ImmerHasher>;
-    using MnMap = std::map<uint256, CDeterministicMNCPtr>;
+    using MnMap = phmap::btree_map<uint256, CDeterministicMNCPtr>;
+//    using MnMap = frozenca::BTreeMap<uint256, CDeterministicMNCPtr>;
     using MnInternalIdMap = immer::map<uint64_t, uint256>;
     using MnUniquePropertyMap = immer::map<uint256, std::pair<uint256, uint32_t>, ImmerHasher>;
 
@@ -296,6 +301,7 @@ public:
         assert(_height >= 0);
         nHeight = _height;
     }
+    // TODO: remove nTotalRegisteredCount
     [[nodiscard]] uint32_t GetTotalRegisteredCount() const
     {
         return nTotalRegisteredCount;
@@ -458,7 +464,7 @@ private:
         }
         return true;
     }
-
+/*
     friend bool operator==(const CDeterministicMNList& a, const CDeterministicMNList& b)
     {
         return  a.blockHash == b.blockHash &&
@@ -468,6 +474,7 @@ private:
                 a.mnInternalIdMap == b.mnInternalIdMap &&
                 a.mnUniquePropertyMap == b.mnUniquePropertyMap;
     }
+    */
 };
 
 class CDeterministicMNListDiff
@@ -599,6 +606,7 @@ public:
         LOCK(cs);
         return GetListForBlockInternal(pindex);
     };
+    // return shared_ptr to list; to avoid heavy copy; same for GetListForBlockInternal, GetListForBlock, etc
     CDeterministicMNList GetListAtChainTip() EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
     // Test if given TX is a ProRegTx which also contains the collateral at index n
