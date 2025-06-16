@@ -101,13 +101,10 @@ UniValue CSimplifiedMNListEntry::ToJson(bool extended) const
 
 CSimplifiedMNList::CSimplifiedMNList(const std::vector<CSimplifiedMNListEntry>& smlEntries)
 {
-    mnList.reserve(smlEntries.size());
-    for (const auto& entry : smlEntries) {
-        mnList.emplace_back(std::make_unique<CSimplifiedMNListEntry>(entry));
-    }
+    mnList = smlEntries;
 
-    std::sort(mnList.begin(), mnList.end(), [&](const std::unique_ptr<CSimplifiedMNListEntry>& a, const std::unique_ptr<CSimplifiedMNListEntry>& b) {
-        return a->proRegTxHash.Compare(b->proRegTxHash) < 0;
+    std::sort(mnList.begin(), mnList.end(), [&](const CSimplifiedMNListEntry& a, const CSimplifiedMNListEntry& b) {
+        return a.proRegTxHash.Compare(b.proRegTxHash) < 0;
     });
 }
 
@@ -115,12 +112,46 @@ CSimplifiedMNList::CSimplifiedMNList(const CDeterministicMNList& dmnList)
 {
     mnList.reserve(dmnList.GetAllMNsCount());
     dmnList.ForEachMN(false, [this](auto& dmn) {
-        mnList.emplace_back(std::make_unique<CSimplifiedMNListEntry>(dmn));
+        mnList.emplace_back(dmn);
     });
 
-    std::sort(mnList.begin(), mnList.end(), [&](const std::unique_ptr<CSimplifiedMNListEntry>& a, const std::unique_ptr<CSimplifiedMNListEntry>& b) {
-        return a->proRegTxHash.Compare(b->proRegTxHash) < 0;
+    std::vector<size_t> indexes(mnList.size());
+    for (size_t i = 0; i < indexes.size(); ++i) {
+        indexes[i] = i;
+    }
+
+    std::sort(indexes.begin(), indexes.end(), [&](const size_t a, const size_t b) {
+        return mnList[a].proRegTxHash.Compare(mnList[b].proRegTxHash) < 0;
     });
+
+    std::vector<CSimplifiedMNListEntry> mnListNew;
+    mnListNew.reserve(mnList.size());
+    for (size_t i = 0; i < mnList.size(); ++i) {
+        mnListNew.emplace_back(std::move(mnList[indexes[i]]));
+    }
+    std::swap(mnList, mnListNew);
+    /*
+    for (size_t i = 0; i < mnList.size(); ++i) {
+//        size_t current = i;
+        if (indexes[i] != i) {
+            std::swap(mnList[i], mnList[indexes[i]]);
+            std::swap(indexes[i], indexes[indexes[i]]);
+        }
+
+        while (indexes[current] != current) {
+            std::swap(mnList[current], mnList[indexes[current]]);
+            std::swap(indexes[current], indexes[indexes[current]]);
+        }
+        */
+//    }
+
+/*    const auto mnList_old = mnList;
+    std::sort(mnList.begin(), mnList.end(), [&](const CSimplifiedMNListEntry& a, const CSimplifiedMNListEntry& b) {
+        return a.proRegTxHash.Compare(b.proRegTxHash) < 0;
+    });
+    assert(mnList == mnList_old);
+    */
+
 }
 
 uint256 CSimplifiedMNList::CalcMerkleRoot(bool* pmutated) const
@@ -128,20 +159,17 @@ uint256 CSimplifiedMNList::CalcMerkleRoot(bool* pmutated) const
     std::vector<uint256> leaves;
     leaves.reserve(mnList.size());
     for (const auto& e : mnList) {
-        leaves.emplace_back(e->CalcHash());
+        leaves.emplace_back(e.CalcHash());
     }
     return ComputeMerkleRoot(leaves, pmutated);
 }
 
 bool CSimplifiedMNList::operator==(const CSimplifiedMNList& rhs) const
 {
+    if (this == &rhs) return true;
     return mnList.size() == rhs.mnList.size() &&
-            std::equal(mnList.begin(), mnList.end(), rhs.mnList.begin(),
-                [](const std::unique_ptr<CSimplifiedMNListEntry>& left, const std::unique_ptr<CSimplifiedMNListEntry>& right)
-                {
-                    return *left == *right;
-                }
-            );
+        mnList == rhs.mnList;
+
 }
 
 CSimplifiedMNListDiff::CSimplifiedMNListDiff() = default;

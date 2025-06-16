@@ -102,7 +102,7 @@ public:
 class CSimplifiedMNList
 {
 public:
-    std::vector<std::unique_ptr<CSimplifiedMNListEntry>> mnList;
+    std::vector<CSimplifiedMNListEntry> mnList;
 
     CSimplifiedMNList() = default;
     explicit CSimplifiedMNList(const CDeterministicMNList& dmnList);
