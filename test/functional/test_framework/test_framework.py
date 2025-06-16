@@ -1923,6 +1923,7 @@ class DashTestFramework(BitcoinTestFramework):
 
         self.log.info("Mining final commitment")
         self.bump_mocktime(1)
+        self.log.info(f"template: {self.nodes[0].getblocktemplate()}")
         self.nodes[0].getblocktemplate() # this calls CreateNewBlock
         self.generate(self.nodes[0], 1, sync_fun=lambda: self.sync_blocks(nodes))
 
@@ -1933,8 +1934,9 @@ class DashTestFramework(BitcoinTestFramework):
         assert_equal(q, new_quorum)
         quorum_info = self.nodes[0].quorum("info", llmq_type, new_quorum)
 
-        # Mine 8 (SIGN_HEIGHT_OFFSET) more blocks to make sure that the new quorum gets eligible for signing sessions
-        self.generate(self.nodes[0], 8, sync_fun=lambda: self.sync_blocks(nodes))
+        if False: #skip maturity here
+            # Mine 8 (SIGN_HEIGHT_OFFSET) more blocks to make sure that the new quorum gets eligible for signing sessions
+            self.generate(self.nodes[0], 8, sync_fun=lambda: self.sync_blocks(nodes))
 
         self.log.info("New quorum: height=%d, quorumHash=%s, quorumIndex=%d, minedBlock=%s" % (quorum_info["height"], new_quorum, quorum_info["quorumIndex"], quorum_info["minedBlock"]))
 
