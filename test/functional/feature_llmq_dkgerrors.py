@@ -29,12 +29,10 @@ class LLMQDKGErrors(DashTestFramework):
         self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)
         self.wait_for_sporks_same()
 
-        self.log.info("Mine one quorum without simulating any errors")
-        qh = self.mine_quorum()
-        self.assert_member_valid(qh, self.mninfo[0].proTxHash, True)
+        qh = self.test_qc()
 
-        self.test_qc(qh)
-        raise False
+        self.log.info("Mine one regular quorum with no invalid members is mined at this point")
+        self.assert_member_valid(qh, self.mninfo[0].proTxHash, True)
 
         mninfos_valid = self.mninfo.copy()[1:]
 
@@ -82,7 +80,8 @@ class LLMQDKGErrors(DashTestFramework):
         qh = self.mine_quorum(expected_contributions=3, expected_complaints=0, expected_justifications=0, expected_commitments=2, mninfos_valid=mninfos_valid)
         self.assert_member_valid(qh, self.mninfo[0].proTxHash, True)
 
-    def test_qc(self, quorumHash):
+    def test_qc(self):
+        quorumHash = self.mine_quorum(skip_maturity=True)
         best = self.nodes[0].getbestblockhash()
         block_hex = self.nodes[0].getblock(best, 0)
 
@@ -100,6 +99,12 @@ class LLMQDKGErrors(DashTestFramework):
         # TODO: test quorumVvecHash
         # TODO: test signers
         # TODO: test validMembers
+
+        self.nodes[0].reconsiderblock(best)
+        # Mine 8 (SIGN_HEIGHT_OFFSET) more blocks to make sure that the new quorum gets eligible for signing sessions
+        self.generate(self.nodes[0], 8, sync_fun=lambda: self.sync_blocks(self.nodes))
+
+        return quorumHash
 
     def test_invalid(self, original_block, error, transform):
         node = self.nodes[0]
@@ -123,6 +128,7 @@ class LLMQDKGErrors(DashTestFramework):
             assert_equal(result_str_1, node.submitblock(hexdata=block.serialize().hex()))
             assert_equal(result_str_2, node.submitblock(hexdata=block.serialize().hex()))
 
+        # TODO: implement similar validation not only for submitblock but for p2p message
         assert_submitblock(block, error)
 
 
