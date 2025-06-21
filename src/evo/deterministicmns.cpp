@@ -1067,14 +1067,16 @@ CDeterministicMNList CDeterministicMNManager::GetListForBlockInternal(gsl::not_n
         listDiffIndexes.emplace_front(pindex);
         pindex = pindex->pprev;
     }
-    LogPrintf("knst checked %d diffs: %d\n", counter, listDiffIndexes.size());
+//    LogPrintf("knst checked %d diffs: %d\n", counter, listDiffIndexes.size());
 
+
+    // IT DOESN'T WORK because tipIndex is updated with huge delay
     for (const auto& diffIndex : listDiffIndexes) {
         const auto& diff = mnListDiffsCache.at(diffIndex->GetBlockHash());
         snapshot.ApplyDiff(diffIndex, diff);
-        if (snapshot.GetHeight() > tipIndex->nHeight + 10) {
+        if (tipIndex && snapshot.GetHeight() > tipIndex->nHeight - 10) {
             mnListsCache.emplace(snapshot.GetBlockHash(), snapshot);
-            LogPrintf("knst add to cache: %d / %d\n", snapshot.GetHeight(), tipIndex->nHeight + 10);
+//            LogPrintf("knst add to cache: %d / %d\n", snapshot.GetHeight(), tipIndex->nHeight + 10);
         }
     }
 
@@ -1165,7 +1167,7 @@ void CDeterministicMNManager::CleanupCache(int nHeight)
     for (const auto& h : toDeleteLists) {
         mnListsCache.erase(h);
     }
-    LogPrintf("knst cache cleaned %d -> %d\n", mnListCache.size(), count);
+    LogPrintf("knst cache cleaned %d -> %d\n", mnListsCache.size(), count);
     for (const auto& p : mnListDiffsCache) {
         if (p.second.nHeight + LIST_DIFFS_CACHE_SIZE < nHeight) {
             toDeleteDiffs.emplace_back(p.first);
