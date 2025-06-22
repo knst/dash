@@ -703,6 +703,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
     newList.SetBlockHash(uint256()); // we can't know the final block hash, so better not return a (invalid) block hash
     newList.SetHeight(nHeight);
 
+    // TODO: reuse here IsBlockPayeeValid from validation.cpp
     auto payee = oldList.GetMNPayee(pindexPrev);
 
     // we iterate the oldList here and update the newList
@@ -1084,7 +1085,9 @@ CDeterministicMNList CDeterministicMNManager::GetListForBlockInternal(gsl::not_n
         // always keep a snapshot for the tip
         if (snapshot.GetBlockHash() == tipIndex->GetBlockHash()) {
             mnListsCache.emplace(snapshot.GetBlockHash(), snapshot);
+            LogPrintf("Update cache? yes %d %d\n", snapshot.GetHeight(), tipIndex->nHeight);
         } else {
+            LogPrintf("Update cache? no %d %d\n", snapshot.GetHeight(), tipIndex->nHeight);
             // keep snapshots for yet alive quorums
             if (ranges::any_of(Params().GetConsensus().llmqs,
                                [&snapshot, this](const auto& params) EXCLUSIVE_LOCKS_REQUIRED(cs) {

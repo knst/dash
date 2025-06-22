@@ -101,6 +101,7 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(const CBlock& block, const CB
         std::optional<CCbTx> opt_cbTx{std::nullopt};
         if (fCheckCbTxMerkleRoots && block.vtx.size() > 0 && block.vtx[0]->nType == TRANSACTION_COINBASE) {
             const auto& tx = block.vtx[0];
+            LogPrintf("check block sigs! height: %d\n", pindex->nHeight);
             if (!tx->IsCoinBase()) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-invalid");
             }
@@ -206,6 +207,7 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(const CBlock& block, const CB
                  nTimeMerkle * 0.000001);
 
         if (opt_cbTx.has_value()) {
+            LogPrintf("check block chainlock! height: %d\n", pindex->nHeight);
             if (!CheckCbTxBestChainlock(*opt_cbTx, pindex, m_clhandler, state)) {
                 // pass the state returned by the function above
                 return false;

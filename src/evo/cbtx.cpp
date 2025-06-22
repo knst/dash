@@ -218,7 +218,7 @@ bool CalcCbTxMerkleRootQuorums(const CBlock& block, const CBlockIndex* pindexPre
     // due to the use of pindexPrev (we don't have the tip index here)
     for (size_t i = 1; i < block.vtx.size(); i++) {
         const auto& tx = block.vtx[i];
-
+        // TODO(perf): see GetCommitmentsFromBlock - duplicated parsing
         if (tx->IsSpecialTxVersion() && tx->nType == TRANSACTION_QUORUM_COMMITMENT) {
             const auto opt_qc = GetTxPayload<llmq::CFinalCommitmentTxPayload>(*tx);
             if (!opt_qc) {
