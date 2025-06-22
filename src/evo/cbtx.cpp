@@ -4,6 +4,7 @@
 
 #include <consensus/validation.h>
 #include <evo/cbtx.h>
+#include <evo/deterministicmns.h>
 #include <evo/simplifiedmns.h>
 #include <evo/specialtx.h>
 #include <llmq/blockprocessor.h>
@@ -46,7 +47,7 @@ bool CheckCbTx(const CCbTx& cbTx, const CBlockIndex* pindexPrev, TxValidationSta
 
 // This can only be done after the block has been fully processed, as otherwise we won't have the finished MN list
 bool CheckCbTxMerkleRoots(const CBlock& block, const CCbTx& cbTx, const CBlockIndex* pindex,
-                          const llmq::CQuorumBlockProcessor& quorum_block_processor, CSimplifiedMNList&& sml,
+                          const llmq::CQuorumBlockProcessor& quorum_block_processor, CDeterministicMNList&& mn_list,
                           BlockValidationState& state)
 {
     if (pindex) {
@@ -55,7 +56,7 @@ bool CheckCbTxMerkleRoots(const CBlock& block, const CCbTx& cbTx, const CBlockIn
 
         int64_t nTime1 = GetTimeMicros();
         uint256 calculatedMerkleRoot;
-        if (!CalcCbTxMerkleRootMNList(calculatedMerkleRoot, std::move(sml), state)) {
+        if (!CalcCbTxMerkleRootMNList(calculatedMerkleRoot, std::move(mn_list), state)) {
             // pass the state returned by the function above
             return false;
         }
@@ -87,7 +88,7 @@ bool CheckCbTxMerkleRoots(const CBlock& block, const CCbTx& cbTx, const CBlockIn
     return true;
 }
 
-bool CalcCbTxMerkleRootMNList(uint256& merkleRootRet, CSimplifiedMNList&& sml, BlockValidationState& state)
+bool CalcCbTxMerkleRootMNList(uint256& merkleRootRet, CDeterministicMNList&& mn_list, BlockValidationState& state)
 {
     try {
         static std::atomic<int64_t> nTimeMerkle = 0;
@@ -95,12 +96,14 @@ bool CalcCbTxMerkleRootMNList(uint256& merkleRootRet, CSimplifiedMNList&& sml, B
         int64_t nTime1 = GetTimeMicros();
 
         static Mutex cached_mutex;
-        static CSimplifiedMNList smlCached GUARDED_BY(cached_mutex);
+        static CDeterministicMNList mn_list_cached GUARDED_BY(cached_mutex);
         static uint256 merkleRootCached GUARDED_BY(cached_mutex);
         static bool mutatedCached GUARDED_BY(cached_mutex) {false};
 
         LOCK(cached_mutex);
-        if (sml == smlCached) {
+        if (mn_list.IsSameList(mn_list_cached)) {
+            LogPrintf("mn list is the same!\n");
+
             merkleRootRet = merkleRootCached;
             if (mutatedCached) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "mutated-cached-calc-cb-mnmerkleroot");
@@ -108,7 +111,13 @@ bool CalcCbTxMerkleRootMNList(uint256& merkleRootRet, CSimplifiedMNList&& sml, B
             return true;
         }
 
+        LogPrintf("mn list is the different!\n");
         bool mutated = false;
+        CSimplifiedMNList sml{mn_list};
+        CSimplifiedMNList cached_sml{mn_list_cached};
+        if (sml == cached_sml) {
+            LogPrintf("BUT SML IS SAME!!!!\n");
+        }
         merkleRootRet = sml.CalcMerkleRoot(&mutated);
 
         int64_t nTime2 = GetTimeMicros();
@@ -116,7 +125,7 @@ bool CalcCbTxMerkleRootMNList(uint256& merkleRootRet, CSimplifiedMNList&& sml, B
         LogPrint(BCLog::BENCHMARK, "            - CalcMerkleRoot: %.2fms [%.2fs]\n", 0.001 * (nTime2 - nTime1),
                  nTimeMerkle * 0.000001);
 
-        smlCached = std::move(sml);
+        mn_list_cached = std::move(mn_list);
         merkleRootCached = merkleRootRet;
         mutatedCached = mutated;
 

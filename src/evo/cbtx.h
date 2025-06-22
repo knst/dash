@@ -14,8 +14,8 @@
 class BlockValidationState;
 class CBlock;
 class CBlockIndex;
+class CDeterministicMNList;
 class TxValidationState;
-class CSimplifiedMNList;
 
 namespace llmq {
 class CChainLocksHandler;
@@ -67,9 +67,9 @@ template<> struct is_serializable_enum<CCbTx::Version> : std::true_type {};
 bool CheckCbTx(const CCbTx& cbTx, const CBlockIndex* pindexPrev, TxValidationState& state);
 
 bool CheckCbTxMerkleRoots(const CBlock& block, const CCbTx& cbTx, const CBlockIndex* pindex,
-                          const llmq::CQuorumBlockProcessor& quorum_block_processor, CSimplifiedMNList&& sml,
+                          const llmq::CQuorumBlockProcessor& quorum_block_processor, CDeterministicMNList&& mn_list,
                           BlockValidationState& state);
-bool CalcCbTxMerkleRootMNList(uint256& merkleRootRet, CSimplifiedMNList&& sml, BlockValidationState& state);
+bool CalcCbTxMerkleRootMNList(uint256& merkleRootRet, CDeterministicMNList&& mn_list, BlockValidationState& state);
 bool CalcCbTxMerkleRootQuorums(const CBlock& block, const CBlockIndex* pindexPrev,
                                const llmq::CQuorumBlockProcessor& quorum_block_processor, uint256& merkleRootRet,
                                BlockValidationState& state);

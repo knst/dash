@@ -399,6 +399,13 @@ public:
         return GetMN(p->first);
     }
 
+    bool IsSameList(const CDeterministicMNList& a) const
+    {
+        return
+                a.nTotalRegisteredCount == nTotalRegisteredCount &&
+                a.mnMap == mnMap;
+    }
+
 private:
     template <typename T>
     [[nodiscard]] uint256 GetUniquePropertyHash(const T& v) const
@@ -472,11 +479,7 @@ private:
     friend bool operator==(const CDeterministicMNList& a, const CDeterministicMNList& b)
     {
         return  a.blockHash == b.blockHash &&
-                a.nHeight == b.nHeight &&
-                a.nTotalRegisteredCount == b.nTotalRegisteredCount &&
-                a.mnMap == b.mnMap &&
-                a.mnInternalIdMap == b.mnInternalIdMap &&
-                a.mnUniquePropertyMap == b.mnUniquePropertyMap;
+                a.nHeight == b.nHeight && a.IsSameList(b);
     }
 };
 
