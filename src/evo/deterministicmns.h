@@ -330,8 +330,9 @@ public:
     /**
      * Calculates CSimplifiedMNList for current value
      * This value is cached.
+     * It never returns nullptr (TODO add gsl::not_null<>)
      */
-    std::shared_ptr<CSimplifiedMNList> GetSML() const;
+    std::shared_ptr<const CSimplifiedMNList> GetSML() const;
 
     /**
      * Calculates the maximum penalty which is allowed at the height of this MN list. It is dynamic and might change

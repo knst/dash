@@ -7,6 +7,7 @@
 #include <evo/dmnstate.h>
 #include <evo/evodb.h>
 #include <evo/providertx.h>
+#include <evo/simplifiedmns.h>
 #include <evo/specialtx.h>
 #include <index/txindex.h>
 #include <llmq/commitment.h>
@@ -260,9 +261,11 @@ std::vector<CDeterministicMNCPtr> CDeterministicMNList::GetProjectedMNPayees(gsl
     return result;
 }
 
-std::shared_ptr<CSimplifiedMNList> CDeterministicMNList::GetSML() const
+std::shared_ptr<const CSimplifiedMNList> CDeterministicMNList::GetSML() const
 {
-    m_cached_sml = std::make_shared<CSimplifiedMNList>(*this);
+    if (!m_cached_sml) {
+        m_cached_sml = std::make_shared<CSimplifiedMNList>(*this);
+    }
     return m_cached_sml;
 }
 
@@ -523,7 +526,9 @@ void CDeterministicMNList::UpdateMN(const CDeterministicMN& oldDmn, const std::s
 
     dmn->pdmnState = pdmnState;
     mnMap = mnMap.set(oldDmn.proTxHash, dmn);
-    m_cached_sml = nullptr;
+    if (m_cached_sml && CSimplifiedMNListEntry{oldDmn} != CSimplifiedMNListEntry{*dmn}) {
+        m_cached_sml = nullptr;
+    }
 }
 
 void CDeterministicMNList::UpdateMN(const uint256& proTxHash, const std::shared_ptr<const CDeterministicMNState>& pdmnState)
@@ -616,6 +621,8 @@ bool CDeterministicMNManager::ProcessBlock(const CBlock& block, gsl::not_null<co
     int nHeight = pindex->nHeight;
 
     try {
+        newList.GetSML(); // to fullfill cache of SML
+
         LOCK(cs);
 
         oldList = GetListForBlockInternal(pindex->pprev);
@@ -631,6 +638,7 @@ bool CDeterministicMNManager::ProcessBlock(const CBlock& block, gsl::not_null<co
 
         diff.nHeight = pindex->nHeight;
         mnListDiffsCache.emplace(pindex->GetBlockHash(), diff);
+        mnListsCache.emplace(newList.GetBlockHash(), newList);
     } catch (const std::exception& e) {
         LogPrintf("CDeterministicMNManager::%s -- internal error: %s\n", __func__, e.what());
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "failed-dmn-block");
@@ -1096,7 +1104,10 @@ CDeterministicMNList CDeterministicMNManager::GetListForBlockInternal(gsl::not_n
     if (tipIndex) {
         // always keep a snapshot for the tip
         if (snapshot.GetBlockHash() == tipIndex->GetBlockHash()) {
-            mnListsCache.emplace(snapshot.GetBlockHash(), snapshot);
+            auto hash = snapshot.GetBlockHash();
+            if (mnListsCache.find(hash) == mnListsCache.end()) {
+                mnListsCache.emplace(snapshot.GetBlockHash(), snapshot);
+            }
         } else {
             // keep snapshots for yet alive quorums
             if (ranges::any_of(Params().GetConsensus().llmqs,
