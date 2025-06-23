@@ -258,7 +258,12 @@ std::vector<CDeterministicMNCPtr> CDeterministicMNList::GetProjectedMNPayees(gsl
 
 std::shared_ptr<const CSimplifiedMNList> CDeterministicMNList::GetSML() const
 {
-    m_cached_sml = std::make_shared<CSimplifiedMNList>(*this);
+    // TODO: seems as fucking mutex is needed here; and not only here but everywhere since ApplyDiff() exists. HMMMMM.
+    // Or maybe not yet; but once CDeterministicMNList will be shared_ptr - definitelly need.
+    if (!m_cached_sml) {
+        m_cached_sml = std::make_shared<CSimplifiedMNList>(*this);
+        LogPrintf("m_cached_sml is null\n");
+    }
     return m_cached_sml;
 }
 
@@ -447,6 +452,9 @@ void CDeterministicMNList::AddMN(const CDeterministicMNCPtr& dmn, bool fBumpTota
 
     mnMap = mnMap.set(dmn->proTxHash, dmn);
     mnInternalIdMap = mnInternalIdMap.set(dmn->GetInternalId(), dmn->proTxHash);
+    if (m_cached_sml) {
+        LogPrintf("reset m_cached_sml - add\n");
+    }
     m_cached_sml = nullptr;
     if (fBumpTotalCount) {
         // nTotalRegisteredCount acts more like a checkpoint, not as a limit,
@@ -518,7 +526,12 @@ void CDeterministicMNList::UpdateMN(const CDeterministicMN& oldDmn, const std::s
 
     dmn->pdmnState = pdmnState;
     mnMap = mnMap.set(oldDmn.proTxHash, dmn);
-    m_cached_sml = nullptr;
+    if (m_cached_sml) {
+        if (CSimplifiedMNListEntry{oldDmn} != CSimplifiedMNListEntry{*dmn}) {
+            LogPrintf("reset m_cached_sml - update\n");
+            m_cached_sml = nullptr;
+        }
+    }
 }
 
 void CDeterministicMNList::UpdateMN(const uint256& proTxHash, const std::shared_ptr<const CDeterministicMNState>& pdmnState)
@@ -590,6 +603,10 @@ void CDeterministicMNList::RemoveMN(const uint256& proTxHash)
 
     mnMap = mnMap.erase(proTxHash);
     mnInternalIdMap = mnInternalIdMap.erase(dmn->GetInternalId());
+    if (m_cached_sml) {
+        LogPrintf("reset m_cached_sml - add\n");
+    }
+    LogPrintf("reset m_cached_sml - remove\n");
     m_cached_sml = nullptr;
 }
 
@@ -611,6 +628,7 @@ bool CDeterministicMNManager::ProcessBlock(const CBlock& block, gsl::not_null<co
     int nHeight = pindex->nHeight;
 
     try {
+        newList.GetSML(); // to fullfill cache of SML
         LOCK(cs);
 
         oldList = GetListForBlockInternal(pindex->pprev);
@@ -626,6 +644,10 @@ bool CDeterministicMNManager::ProcessBlock(const CBlock& block, gsl::not_null<co
 
         diff.nHeight = pindex->nHeight;
         mnListDiffsCache.emplace(pindex->GetBlockHash(), diff);
+        mnListsCache.emplace(newList.GetBlockHash(), newList);
+
+    // 00000000000000466c247c771198d97543faa9d67e18130989d00cf898af4458
+        // CACHE IT HERE WITH        snapshot.GetSML(); // to cache SML
     } catch (const std::exception& e) {
         LogPrintf("CDeterministicMNManager::%s -- internal error: %s\n", __func__, e.what());
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "failed-dmn-block");
@@ -1081,7 +1103,6 @@ CDeterministicMNList CDeterministicMNManager::GetListForBlockInternal(gsl::not_n
 //    LogPrintf("knst checked %d diffs: %d\n", counter, listDiffIndexes.size());
 
 
-    // IT DOESN'T WORK because tipIndex is updated with huge delay
     for (const auto& diffIndex : listDiffIndexes) {
         const auto& diff = mnListDiffsCache.at(diffIndex->GetBlockHash());
         snapshot.ApplyDiff(diffIndex, diff);
@@ -1098,7 +1119,10 @@ CDeterministicMNList CDeterministicMNManager::GetListForBlockInternal(gsl::not_n
     if (tipIndex) {
         // always keep a snapshot for the tip
         if (snapshot.GetBlockHash() == tipIndex->GetBlockHash()) {
-            mnListsCache.emplace(snapshot.GetBlockHash(), snapshot);
+            auto hash = snapshot.GetBlockHash();
+            if (mnListsCache.find(hash) == mnListsCache.end()) {
+                mnListsCache.emplace(snapshot.GetBlockHash(), snapshot);
+            }
 //            LogPrintf("Update cache? yes %d %d\n", snapshot.GetHeight(), tipIndex->nHeight);
         } else {
 //            LogPrintf("Update cache? no %d %d\n", snapshot.GetHeight(), tipIndex->nHeight);
