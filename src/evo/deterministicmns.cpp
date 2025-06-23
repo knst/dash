@@ -1075,6 +1075,10 @@ CDeterministicMNList CDeterministicMNManager::GetListForBlockInternal(gsl::not_n
     for (const auto& diffIndex : listDiffIndexes) {
         const auto& diff = mnListDiffsCache.at(diffIndex->GetBlockHash());
         snapshot.ApplyDiff(diffIndex, diff);
+        if (snapshot.GetHeight() % 32 == 0) {
+            // Temporary cache it! it will be cleaned up anyway soon by cleaner
+            mnListsCache.emplace(snapshot.GetBlockHash(), snapshot);
+        }
         if (tipIndex && snapshot.GetHeight() > tipIndex->nHeight - 10) {
             mnListsCache.emplace(snapshot.GetBlockHash(), snapshot);
 //            LogPrintf("knst add to cache: %d / %d\n", snapshot.GetHeight(), tipIndex->nHeight + 10);
@@ -1085,9 +1089,9 @@ CDeterministicMNList CDeterministicMNManager::GetListForBlockInternal(gsl::not_n
         // always keep a snapshot for the tip
         if (snapshot.GetBlockHash() == tipIndex->GetBlockHash()) {
             mnListsCache.emplace(snapshot.GetBlockHash(), snapshot);
-            LogPrintf("Update cache? yes %d %d\n", snapshot.GetHeight(), tipIndex->nHeight);
+//            LogPrintf("Update cache? yes %d %d\n", snapshot.GetHeight(), tipIndex->nHeight);
         } else {
-            LogPrintf("Update cache? no %d %d\n", snapshot.GetHeight(), tipIndex->nHeight);
+//            LogPrintf("Update cache? no %d %d\n", snapshot.GetHeight(), tipIndex->nHeight);
             // keep snapshots for yet alive quorums
             if (ranges::any_of(Params().GetConsensus().llmqs,
                                [&snapshot, this](const auto& params) EXCLUSIVE_LOCKS_REQUIRED(cs) {
