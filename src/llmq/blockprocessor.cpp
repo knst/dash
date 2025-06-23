@@ -392,6 +392,7 @@ bool CQuorumBlockProcessor::GetCommitmentsFromBlock(const CBlock& block, gsl::no
     ret.clear();
 
     for (const auto& tx : block.vtx) {
+        // TODO(perf): see CalcCbTxMerkleRootQuorums - duplicated parsing
         if (tx->nType == TRANSACTION_QUORUM_COMMITMENT) {
             const auto opt_qc = GetTxPayload<CFinalCommitmentTxPayload>(*tx);
             if (!opt_qc) {

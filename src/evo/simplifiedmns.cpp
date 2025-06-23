@@ -27,6 +27,7 @@
 #include <util/underlying.h>
 #include <util/enumerate.h>
 
+// TODO(perf): make a constructor over all of these members to avoid atomic pdmnState access for each member
 CSimplifiedMNListEntry::CSimplifiedMNListEntry(const CDeterministicMN& dmn) :
     proRegTxHash(dmn.proTxHash),
     confirmedHash(dmn.pdmnState->confirmedHash),
