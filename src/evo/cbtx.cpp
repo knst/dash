@@ -96,12 +96,13 @@ bool CalcCbTxMerkleRootMNList(uint256& merkleRootRet, CDeterministicMNList&& mn_
         int64_t nTime1 = GetTimeMicros();
 
         static Mutex cached_mutex;
-        static CDeterministicMNList mn_list_cached GUARDED_BY(cached_mutex);
+        static std::shared_ptr<const CSimplifiedMNList> cached_sml{std::make_shared<const CSimplifiedMNList>()} GUARDED_BY(cached_mutex);
         static uint256 merkleRootCached GUARDED_BY(cached_mutex);
         static bool mutatedCached GUARDED_BY(cached_mutex) {false};
 
+        std::shared_ptr<const CSimplifiedMNList> sml{mn_list.GetSML()};
         LOCK(cached_mutex);
-        if (mn_list.IsSameList(mn_list_cached)) {
+        if (sml == cached_sml || *sml == *cached_sml) {
             LogPrintf("mn list is the same!\n");
 
             merkleRootRet = merkleRootCached;
@@ -113,19 +114,20 @@ bool CalcCbTxMerkleRootMNList(uint256& merkleRootRet, CDeterministicMNList&& mn_
 
         LogPrintf("mn list is the different!\n");
         bool mutated = false;
-        CSimplifiedMNList sml{mn_list};
+        /*
         CSimplifiedMNList cached_sml{mn_list_cached};
         if (sml == cached_sml) {
             LogPrintf("BUT SML IS SAME!!!!\n");
         }
-        merkleRootRet = sml.CalcMerkleRoot(&mutated);
+        */
+        merkleRootRet = sml->CalcMerkleRoot(&mutated);
 
         int64_t nTime2 = GetTimeMicros();
         nTimeMerkle += nTime2 - nTime1;
         LogPrint(BCLog::BENCHMARK, "            - CalcMerkleRoot: %.2fms [%.2fs]\n", 0.001 * (nTime2 - nTime1),
                  nTimeMerkle * 0.000001);
 
-        mn_list_cached = std::move(mn_list);
+        cached_sml = sml;
         merkleRootCached = merkleRootRet;
         mutatedCached = mutated;
 

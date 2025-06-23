@@ -4,6 +4,7 @@
 
 #include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
+#include <evo/simplifiedmns.h>
 #include <evo/dmn_types.h>
 #include <evo/dmnstate.h>
 #include <evo/evodb.h>
@@ -255,7 +256,7 @@ std::vector<CDeterministicMNCPtr> CDeterministicMNList::GetProjectedMNPayees(gsl
     return result;
 }
 
-std::shared_ptr<CSimplifiedMNList> CDeterministicMNList::GetSML() const
+std::shared_ptr<const CSimplifiedMNList> CDeterministicMNList::GetSML() const
 {
     m_cached_sml = std::make_shared<CSimplifiedMNList>(*this);
     return m_cached_sml;

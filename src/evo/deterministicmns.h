@@ -174,7 +174,7 @@ private:
     // This SML could be null
     // it is set once is generated from CDeterministicMNList it is retrieved and will be re-used for consequent calls (even for enherited list for consequents blocks).
     // It resets everytime when UpdateMN, AddMN or RemoveMN is called
-    mutable std::shared_ptr<const SimplifiedMNList> m_cached_sml;
+    mutable std::shared_ptr<const CSimplifiedMNList> m_cached_sml;
 public:
     CDeterministicMNList() = default;
     explicit CDeterministicMNList(const uint256& _blockHash, int _height, uint32_t _totalRegisteredCount) :
@@ -339,8 +339,9 @@ public:
     /**
      * Calculates CSimplifiedMNList for current value
      * This value is cached.
+     * It never returns nullptr (TODO add gsl::not_null<>)
      */
-    std::shared_ptr<CSimplifiedMNList> GetSML() const;
+    std::shared_ptr<const CSimplifiedMNList> GetSML() const;
 
     /**
      * Calculates the maximum penalty which is allowed at the height of this MN list. It is dynamic and might change
@@ -397,13 +398,6 @@ public:
             return nullptr;
         }
         return GetMN(p->first);
-    }
-
-    bool IsSameList(const CDeterministicMNList& a) const
-    {
-        return
-                a.nTotalRegisteredCount == nTotalRegisteredCount &&
-                a.mnMap == mnMap;
     }
 
 private:
@@ -479,7 +473,11 @@ private:
     friend bool operator==(const CDeterministicMNList& a, const CDeterministicMNList& b)
     {
         return  a.blockHash == b.blockHash &&
-                a.nHeight == b.nHeight && a.IsSameList(b);
+                a.nHeight == b.nHeight &&
+                a.nTotalRegisteredCount == b.nTotalRegisteredCount &&
+                a.mnMap == b.mnMap &&
+                a.mnInternalIdMap == b.mnInternalIdMap &&
+                a.mnUniquePropertyMap == b.mnUniquePropertyMap;
     }
 };
 
