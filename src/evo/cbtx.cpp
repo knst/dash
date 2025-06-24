@@ -47,7 +47,7 @@ bool CheckCbTx(const CCbTx& cbTx, const CBlockIndex* pindexPrev, TxValidationSta
 
 // This can only be done after the block has been fully processed, as otherwise we won't have the finished MN list
 bool CheckCbTxMerkleRoots(const CBlock& block, const CCbTx& cbTx, const CBlockIndex* pindex,
-                          const llmq::CQuorumBlockProcessor& quorum_block_processor, CDeterministicMNList&& mn_list,
+                          const llmq::CQuorumBlockProcessor& quorum_block_processor, const CDeterministicMNList& mn_list,
                           BlockValidationState& state)
 {
     if (pindex) {
@@ -56,7 +56,7 @@ bool CheckCbTxMerkleRoots(const CBlock& block, const CCbTx& cbTx, const CBlockIn
 
         int64_t nTime1 = GetTimeMicros();
         uint256 calculatedMerkleRoot;
-        if (!CalcCbTxMerkleRootMNList(calculatedMerkleRoot, std::move(mn_list), state)) {
+        if (!CalcCbTxMerkleRootMNList(calculatedMerkleRoot, mn_list, state)) {
             // pass the state returned by the function above
             return false;
         }
@@ -88,7 +88,7 @@ bool CheckCbTxMerkleRoots(const CBlock& block, const CCbTx& cbTx, const CBlockIn
     return true;
 }
 
-bool CalcCbTxMerkleRootMNList(uint256& merkleRootRet, CDeterministicMNList&& mn_list, BlockValidationState& state)
+bool CalcCbTxMerkleRootMNList(uint256& merkleRootRet, const CDeterministicMNList& mn_list, BlockValidationState& state)
 {
     try {
         static std::atomic<int64_t> nTimeMerkle = 0;
