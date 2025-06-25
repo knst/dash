@@ -326,7 +326,7 @@ public:
 
     bool MasternodeRateCheck(const CGovernanceObject& govobj, bool fUpdateFailStatus, bool fForce, bool& fRateCheckBypassed);
 
-    bool ProcessVoteAndRelay(const CGovernanceVote& vote, CGovernanceException& exception, CConnman& connman, PeerManager& peerman);
+    bool ProcessVote(CNode* pfrom, const CGovernanceVote& vote, CGovernanceException& exception, CConnman& connman);
 
     void CheckPostponedObjects(PeerManager& peerman);
 
@@ -391,8 +391,6 @@ private:
     {
         cmapInvalidVotes.Insert(vote.GetHash(), vote);
     }
-
-    bool ProcessVote(CNode* pfrom, const CGovernanceVote& vote, CGovernanceException& exception, CConnman& connman);
 
     /// Called to indicate a requested object or vote has been received
     bool AcceptMessage(const uint256& nHash);

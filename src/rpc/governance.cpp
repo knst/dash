@@ -480,7 +480,8 @@ static UniValue VoteWithMasternodes(const JSONRPCRequest& request, const CWallet
         CGovernanceException exception;
         CConnman& connman = EnsureConnman(node);
         PeerManager& peerman = EnsurePeerman(node);
-        if (node.govman->ProcessVoteAndRelay(vote, exception, connman, peerman)) {
+        if (node.govman->ProcessVote(/*pfrom=*/nullptr, vote, exception, connman)) {
+            vote.Relay(peerman, *CHECK_NONFATAL(node.mn_sync), node.dmnman->GetListAtChainTip());
             nSuccessful++;
             statusObj.pushKV("result", "success");
         } else {
@@ -987,7 +988,8 @@ static RPCHelpMan voteraw()
     PeerManager& peerman = EnsurePeerman(node);
 
     CGovernanceException exception;
-    if (node.govman->ProcessVoteAndRelay(vote, exception, connman, peerman)) {
+    if (node.govman->ProcessVote(/*pfrom=*/nullptr, vote, exception, connman)) {
+        vote.Relay(peerman, *CHECK_NONFATAL(node.mn_sync), node.dmnman->GetListAtChainTip());
         return "Voted successfully";
     } else {
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Error voting : " + exception.GetMessage());

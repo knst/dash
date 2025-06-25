@@ -837,10 +837,11 @@ bool CGovernanceManager::VoteFundingTrigger(const uint256& nHash, const vote_out
     vote.Sign(mn_activeman);
 
     CGovernanceException exception;
-    if (!ProcessVoteAndRelay(vote, exception, connman, peerman)) {
+    if (!ProcessVote(/*pfrom=*/nullptr, vote, exception, connman)) {
         LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s Vote FUNDING %d for trigger:%s failed:%s\n", __func__, outcome, nHash.ToString(), exception.what());
         return false;
     }
+    vote.Relay(peerman, m_mn_sync, Assert(m_dmnman)->GetListAtChainTip());
 
     return true;
 }
@@ -1113,15 +1114,6 @@ bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bo
     }
 
     return false;
-}
-
-bool CGovernanceManager::ProcessVoteAndRelay(const CGovernanceVote& vote, CGovernanceException& exception, CConnman& connman, PeerManager& peerman)
-{
-    bool fOK = ProcessVote(/* pfrom = */ nullptr, vote, exception, connman);
-    if (fOK) {
-        vote.Relay(peerman, m_mn_sync, Assert(m_dmnman)->GetListAtChainTip());
-    }
-    return fOK;
 }
 
 bool CGovernanceManager::ProcessVote(CNode* pfrom, const CGovernanceVote& vote, CGovernanceException& exception, CConnman& connman)
