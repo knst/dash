@@ -14,6 +14,7 @@
 #include <masternode/node.h>
 #include <masternode/sync.h>
 #include <messagesigner.h>
+#include <net_processing.h>
 #include <net.h>
 #include <node/context.h>
 #include <rpc/blockchain.h>
@@ -430,6 +431,18 @@ static bool SignVote(const CWallet& wallet, const CKeyID& keyID, CGovernanceVote
     return true;
 }
 
+static void RelayVote(const CGovernanceVote& vote, const NodeContext& node, const CDeterministicMNList& mn_list)
+{
+    if (!CHECK_NONFATAL(node.mn_sync)->IsSynced()) {
+        LogPrint(BCLog::GOBJECT, "Gov Vote won't relay until fully synced\n");
+        return;
+    }
+    PeerManager& peerman = EnsurePeerman(node);
+    if (mn_list.GetMNByCollateral(vote.GetMasternodeOutpoint())) {
+        CInv inv(MSG_GOVERNANCE_OBJECT_VOTE, vote.GetHash());
+        peerman.RelayInv(inv);
+    }
+}
 static UniValue VoteWithMasternodes(const JSONRPCRequest& request, const CWallet& wallet,
                              const std::map<uint256, CKeyID>& votingKeys,
                              const uint256& hash, vote_signal_enum_t eVoteSignal,
@@ -479,9 +492,8 @@ static UniValue VoteWithMasternodes(const JSONRPCRequest& request, const CWallet
 
         CGovernanceException exception;
         CConnman& connman = EnsureConnman(node);
-        PeerManager& peerman = EnsurePeerman(node);
         if (node.govman->ProcessVote(/*pfrom=*/nullptr, vote, exception, connman)) {
-            vote.Relay(peerman, *CHECK_NONFATAL(node.mn_sync), node.dmnman->GetListAtChainTip());
+            RelayVote(vote, node, mnList);
             nSuccessful++;
             statusObj.pushKV("result", "success");
         } else {
@@ -985,11 +997,10 @@ static RPCHelpMan voteraw()
     }
 
     CConnman& connman = EnsureConnman(node);
-    PeerManager& peerman = EnsurePeerman(node);
 
     CGovernanceException exception;
     if (node.govman->ProcessVote(/*pfrom=*/nullptr, vote, exception, connman)) {
-        vote.Relay(peerman, *CHECK_NONFATAL(node.mn_sync), node.dmnman->GetListAtChainTip());
+        RelayVote(vote, node, tip_mn_list);
         return "Voted successfully";
     } else {
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Error voting : " + exception.GetMessage());
