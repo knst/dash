@@ -52,16 +52,11 @@ public:
     ~ScopedLockBool() { ref = fPrevValue; }
 };
 
-static void RelayVote(const CGovernanceVote& vote, PeerManager& peerman, const CMasternodeSync& mn_sync, const CDeterministicMNList& tip_mn_list)
+static void RelayVote(const CGovernanceVote& vote, PeerManager& peerman, const CMasternodeSync& mn_sync)
 {
     // Do not relay until fully synced
     if (!mn_sync.IsSynced()) {
         LogPrint(BCLog::GOBJECT, "RelayVote -- won't relay until fully synced\n");
-        return;
-    }
-
-    auto dmn = tip_mn_list.GetMNByCollateral(vote.GetMasternodeOutpoint());
-    if (!dmn) {
         return;
     }
 
@@ -332,7 +327,7 @@ void CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj, PeerManager
         if (pairVote.second < nNow) {
             fRemove = true;
         } else if (govobj.ProcessVote(m_mn_metaman, *this, tip_mn_list, vote, e)) {
-            RelayVote(vote, peerman, m_mn_sync, tip_mn_list);
+            RelayVote(vote, peerman, m_mn_sync);
             fRemove = true;
         }
         if (fRemove) {
@@ -881,7 +876,7 @@ bool CGovernanceManager::VoteFundingTrigger(const uint256& nHash, const vote_out
         LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s Vote FUNDING %d for trigger:%s failed:%s\n", __func__, outcome, nHash.ToString(), exception.what());
         return false;
     }
-    RelayVote(vote, peerman, m_mn_sync, Assert(m_dmnman)->GetListAtChainTip());
+    RelayVote(vote, peerman, m_mn_sync);
 
     return true;
 }
