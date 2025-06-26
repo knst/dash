@@ -146,6 +146,7 @@ bool CGovernanceVote::CheckSignature(const CKeyID& keyID) const
     return true;
 }
 
+// TODO: replace using CActiveMasternodeManager to abstract signer -> no problem with circular depends
 bool CGovernanceVote::Sign(const CActiveMasternodeManager& mn_activeman)
 {
     CBLSSignature sig = mn_activeman.Sign(GetSignatureHash(), false);

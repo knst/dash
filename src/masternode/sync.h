@@ -31,6 +31,7 @@ static constexpr int MASTERNODE_SYNC_RESET_SECONDS   = 900; // Reset fReachedBes
 // CMasternodeSync : Sync masternode assets in stages
 //
 
+// TODO: split 'status holder [nCurrentAsset]' and actually all useful jobs to 2 different classes and 2 different modules
 class CMasternodeSync
 {
 private:

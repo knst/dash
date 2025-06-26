@@ -4553,6 +4553,7 @@ void CConnman::SetMasternodeQuorumNodes(Consensus::LLMQType llmqType, const uint
     }
 }
 
+// TODO: let caller to create msg; msgMaker dependency to drop
 void CConnman::SetMasternodeQuorumRelayMembers(Consensus::LLMQType llmqType, const uint256& quorumHash, const std::unordered_set<uint256, StaticSaltedHasher>& proTxHashes)
 {
     {
