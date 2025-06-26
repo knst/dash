@@ -193,9 +193,9 @@ MessageProcessingResult CGovernanceManager::ProcessMessage(CNode& peer, CConnman
 
         LogPrint(BCLog::GOBJECT, "MNGOVERNANCESYNC -- syncing governance objects to our peer %s\n", peer.GetLogString());
         if (nProp == uint256()) {
-            return SyncObjects(peer, peerman, connman);
+            return SyncObjects(peer, connman);
         } else {
-            SyncSingleObjVotes(peer, peerman, nProp, filter, connman);
+            return SyncSingleObjVotes(peer, nProp, filter, connman);
         }
     }
 
@@ -953,10 +953,11 @@ bool CGovernanceManager::ConfirmInventoryRequest(const CInv& inv)
     return true;
 }
 
-void CGovernanceManager::SyncSingleObjVotes(CNode& peer, PeerManager& peerman, const uint256& nProp, const CBloomFilter& filter, CConnman& connman)
+MessageProcessingResult CGovernanceManager::SyncSingleObjVotes(CNode& peer, const uint256& nProp, const CBloomFilter& filter, CConnman& connman)
 {
+    MessageProcessingResult ret;
     // do not provide any data until our node is synced
-    if (!m_mn_sync.IsSynced()) return;
+    if (!m_mn_sync.IsSynced()) return ret;
 
     int nVoteCount = 0;
 
@@ -970,7 +971,7 @@ void CGovernanceManager::SyncSingleObjVotes(CNode& peer, PeerManager& peerman, c
     auto it = mapObjects.find(nProp);
     if (it == mapObjects.end()) {
         LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s -- no matching object for hash %s, peer=%d\n", __func__, nProp.ToString(), peer.GetId());
-        return;
+        return ret;
     }
     const CGovernanceObject& govobj = it->second;
     std::string strHash = it->first.ToString();
@@ -980,7 +981,7 @@ void CGovernanceManager::SyncSingleObjVotes(CNode& peer, PeerManager& peerman, c
     if (govobj.IsSetCachedDelete() || govobj.IsSetExpired()) {
         LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s -- not syncing deleted/expired govobj: %s, peer=%d\n", __func__,
             strHash, peer.GetId());
-        return;
+        return ret;
     }
 
     const auto& fileVotes = govobj.GetVoteFile();
@@ -994,16 +995,17 @@ void CGovernanceManager::SyncSingleObjVotes(CNode& peer, PeerManager& peerman, c
         if (filter.contains(nVoteHash) || !vote.IsValid(tip_mn_list, onlyVotingKeyAllowed)) {
             continue;
         }
-        peerman.PushInventory(peer.GetId(), CInv(MSG_GOVERNANCE_OBJECT_VOTE, nVoteHash));
+        ret.m_inventory.emplace_back(MSG_GOVERNANCE_OBJECT_VOTE, nVoteHash);
         ++nVoteCount;
     }
 
     CNetMsgMaker msgMaker(peer.GetCommonVersion());
     connman.PushMessage(&peer, msgMaker.Make(NetMsgType::SYNCSTATUSCOUNT, MASTERNODE_SYNC_GOVOBJ_VOTE, nVoteCount));
     LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s -- sent %d votes to peer=%d\n", __func__, nVoteCount, peer.GetId());
+    return ret;
 }
 
-MessageProcessingResult CGovernanceManager::SyncObjects(CNode& peer, PeerManager& peerman, CConnman& connman) const
+MessageProcessingResult CGovernanceManager::SyncObjects(CNode& peer, CConnman& connman) const
 {
     assert(m_netfulfilledman.IsValid());
 
