@@ -27,7 +27,6 @@ EXPECTED_CIRCULAR_DEPENDENCIES = (
     "banman -> common/bloom -> evo/assetlocktx -> llmq/signing -> net_processing -> banman",
     "coinjoin/client -> net_processing -> coinjoin/client",
     "coinjoin/client -> net_processing -> coinjoin/context -> coinjoin/client",
-    "coinjoin/coinjoin -> llmq/chainlocks -> net -> coinjoin/coinjoin",
     "coinjoin/context -> coinjoin/server -> net_processing -> coinjoin/context",
     "coinjoin/server -> net_processing -> coinjoin/server",
     "common/bloom -> evo/assetlocktx -> llmq/quorums -> net -> common/bloom",
