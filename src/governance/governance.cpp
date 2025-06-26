@@ -52,18 +52,6 @@ public:
     ~ScopedLockBool() { ref = fPrevValue; }
 };
 
-static void RelayVote(const CGovernanceVote& vote, PeerManager& peerman, const CMasternodeSync& mn_sync)
-{
-    // Do not relay until fully synced
-    if (!mn_sync.IsSynced()) {
-        LogPrint(BCLog::GOBJECT, "RelayVote -- won't relay until fully synced\n");
-        return;
-    }
-
-    CInv inv(MSG_GOVERNANCE_OBJECT_VOTE, vote.GetHash());
-    peerman.RelayInv(inv);
-}
-
 void RelayGovernanceObject(const CGovernanceObject& obj, PeerManager& peerman, const CMasternodeSync& mn_sync)
 {
     // Do not relay until fully synced
@@ -310,7 +298,7 @@ MessageProcessingResult CGovernanceManager::ProcessMessage(CNode& peer, CConnman
     return {};
 }
 
-void CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj, PeerManager& peerman)
+std::vector<CInv> CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj)
 {
     uint256 nHash = govobj.GetHash();
     std::vector<vote_time_pair_t> vecVotePairs;
@@ -319,6 +307,7 @@ void CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj, PeerManager
     ScopedLockBool guard(cs, fRateChecksEnabled, false);
 
     int64_t nNow = GetAdjustedTime();
+    std::vector<CInv> inventory;
     const auto tip_mn_list = Assert(m_dmnman)->GetListAtChainTip();
     for (const auto& pairVote : vecVotePairs) {
         bool fRemove = false;
@@ -327,13 +316,14 @@ void CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj, PeerManager
         if (pairVote.second < nNow) {
             fRemove = true;
         } else if (govobj.ProcessVote(m_mn_metaman, *this, tip_mn_list, vote, e)) {
-            RelayVote(vote, peerman, m_mn_sync);
+            inventory.emplace_back(MSG_GOVERNANCE_OBJECT_VOTE, vote.GetHash());
             fRemove = true;
         }
         if (fRemove) {
             cmmapOrphanVotes.Erase(nHash, pairVote);
         }
     }
+    return inventory;
 }
 
 void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, PeerManager& peerman, const CNode* pfrom)
@@ -390,7 +380,12 @@ void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, PeerMana
 
     // WE MIGHT HAVE PENDING/ORPHAN VOTES FOR THIS OBJECT
 
-    CheckOrphanVotes(govobj, peerman);
+    auto invs = CheckOrphanVotes(govobj);
+    if (m_mn_sync.IsSynced()) {
+        for (auto inv : invs) {
+            peerman.RelayInv(inv);    
+        }
+    }
 
     // SEND NOTIFICATION TO SCRIPT/ZMQ
     GetMainSignals().NotifyGovernanceObject(std::make_shared<const Governance::Object>(govobj.Object()), nHash.ToString());
@@ -876,7 +871,13 @@ bool CGovernanceManager::VoteFundingTrigger(const uint256& nHash, const vote_out
         LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s Vote FUNDING %d for trigger:%s failed:%s\n", __func__, outcome, nHash.ToString(), exception.what());
         return false;
     }
-    RelayVote(vote, peerman, m_mn_sync);
+    // Do not relay until fully synced
+    if (!m_mn_sync.IsSynced()) {
+        LogPrint(BCLog::GOBJECT, "%s -- won't relay until fully synced\n", __func__);
+    } else {
+        CInv inv(MSG_GOVERNANCE_OBJECT_VOTE, vote.GetHash());
+        peerman.RelayInv(inv);
+    }
 
     return true;
 }

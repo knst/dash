@@ -395,7 +395,7 @@ private:
     /// Called to indicate a requested object or vote has been received
     bool AcceptMessage(const uint256& nHash);
 
-    void CheckOrphanVotes(CGovernanceObject& govobj, PeerManager& peerman);
+    std::vector<CInv> CheckOrphanVotes(CGovernanceObject& govobj);
 
     void RebuildIndexes();
 
