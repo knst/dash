@@ -600,7 +600,6 @@ int CGovernanceObject::GetMinProtoVersion() const
         CProposalValidator validator(GetDataAsHexString(), false /* no script */);
         if (!validator.Validate(false /* ignore expiration */)) {
             // The only way we could get here is when proposal is valid but payment_address is actually p2sh.
-            LogPrint(BCLog::GOBJECT, "CGovernanceObject::GetMinProtoVersion -- won't relay %s to older peers\n", GetHash().ToString());
             return GOVSCRIPT_PROTO_VERSION;
         }
     }
