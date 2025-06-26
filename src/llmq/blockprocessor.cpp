@@ -645,7 +645,7 @@ bool CQuorumBlockProcessor::HasMineableCommitment(const uint256& hash) const
     return minableCommitments.count(hash) != 0;
 }
 
-std::optional<CInv> CQuorumBlockProcessor::AddMineableCommitment(const CFinalCommitment& fqc)
+std::vector<CInv> CQuorumBlockProcessor::AddMineableCommitment(const CFinalCommitment& fqc)
 {
     const uint256 commitmentHash = ::SerializeHash(fqc);
 
@@ -671,7 +671,11 @@ std::optional<CInv> CQuorumBlockProcessor::AddMineableCommitment(const CFinalCom
         return false;
     }();
 
-    return relay ? std::make_optional(CInv{MSG_QUORUM_FINAL_COMMITMENT, commitmentHash}) : std::nullopt;
+    std::vector<CInv> ret;
+    if (relay) {
+        ret.emplace_back(MSG_QUORUM_FINAL_COMMITMENT, commitmentHash);
+    }
+    return ret;
 }
 
 bool CQuorumBlockProcessor::GetMineableCommitmentByHash(const uint256& commitmentHash, llmq::CFinalCommitment& ret) const

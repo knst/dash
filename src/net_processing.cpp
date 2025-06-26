@@ -3501,8 +3501,8 @@ void PeerManagerImpl::PostProcessMessage(MessageProcessingResult&& result, NodeI
     for (const auto& tx : result.m_transactions) {
         WITH_LOCK(cs_main, _RelayTransaction(tx));
     }
-    if (result.m_inventory) {
-        RelayInv(result.m_inventory.value());
+    for (auto& inv : result.m_inventory) {
+        RelayInv(inv);
     }
 }
 

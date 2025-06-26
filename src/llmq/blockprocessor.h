@@ -15,6 +15,7 @@
 #include <gsl/pointers.h>
 
 #include <optional>
+#include <vector>
 
 class BlockValidationState;
 class CBlock;
@@ -59,7 +60,7 @@ public:
     bool UndoBlock(const CBlock& block, gsl::not_null<const CBlockIndex*> pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
     //! it returns hash of commitment if it should be relay, otherwise nullopt
-    std::optional<CInv> AddMineableCommitment(const CFinalCommitment& fqc);
+    std::vector<CInv> AddMineableCommitment(const CFinalCommitment& fqc);
     bool HasMineableCommitment(const uint256& hash) const;
     bool GetMineableCommitmentByHash(const uint256& commitmentHash, CFinalCommitment& ret) const;
     std::optional<std::vector<CFinalCommitment>> GetMineableCommitments(const Consensus::LLMQParams& llmqParams, int nHeight) const EXCLUSIVE_LOCKS_REQUIRED(cs_main);

@@ -601,7 +601,7 @@ struct MessageProcessingResult
     std::optional<MisbehavingError> m_error;
 
     //! @m_inventory will relay this inventory to connected peers if not nullopt
-    std::optional<CInv> m_inventory;
+    std::vector<CInv> m_inventory;
 
     //! @m_transactions will relay transactions to peers which is ready to accept it (some peers does not accept transactions)
     std::vector<uint256> m_transactions;
@@ -614,7 +614,7 @@ struct MessageProcessingResult
         m_error(error)
     {}
     MessageProcessingResult(CInv inv) :
-        m_inventory(inv)
+        m_inventory({inv})
     {
     }
 };

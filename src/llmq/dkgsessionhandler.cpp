@@ -552,8 +552,9 @@ void CDKGSessionHandler::HandleDKGRound(CConnman& connman, PeerManager& peerman)
     if (params.size == 1) {
         auto finalCommitment = curSession->FinalizeSingleCommitment();
         if (!finalCommitment.IsNull()) { // it can be null only if we are not member
-            if (auto inv_opt = quorumBlockProcessor.AddMineableCommitment(finalCommitment); inv_opt.has_value()) {
-                peerman.RelayInv(inv_opt.value());
+            auto invs{quorumBlockProcessor.AddMineableCommitment(finalCommitment)};
+            for (auto& inv : invs) {
+                peerman.RelayInv(inv);
             }
         }
         WaitForNextPhase(QuorumPhase::Initialized, QuorumPhase::Contribute, curQuorumHash);
@@ -603,8 +604,9 @@ void CDKGSessionHandler::HandleDKGRound(CConnman& connman, PeerManager& peerman)
 
     auto finalCommitments = curSession->FinalizeCommitments();
     for (const auto& fqc : finalCommitments) {
-        if (auto inv_opt = quorumBlockProcessor.AddMineableCommitment(fqc); inv_opt.has_value()) {
-            peerman.RelayInv(inv_opt.value());
+        auto invs{quorumBlockProcessor.AddMineableCommitment(fqc)};
+        for (auto& inv : invs) {
+            peerman.RelayInv(inv);
         }
     }
 }
