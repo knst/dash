@@ -20,6 +20,7 @@
 #include <util/time.h>
 #include <validation.h>
 #include <validationinterface.h>
+#include <version.h>
 
 #include <string>
 
@@ -590,15 +591,8 @@ bool CGovernanceObject::GetCurrentMNVotes(const COutPoint& mnCollateralOutpoint,
     return true;
 }
 
-void CGovernanceObject::Relay(PeerManager& peerman, const CMasternodeSync& mn_sync) const
+int CGovernanceObject::GetMinProtoVersion() const
 {
-    // Do not relay until fully synced
-    if (!mn_sync.IsSynced()) {
-        LogPrint(BCLog::GOBJECT, "CGovernanceObject::Relay -- won't relay until fully synced\n");
-        return;
-    }
-
-    int minProtoVersion = MIN_PEER_PROTO_VERSION;
     if (m_obj.type == GovernanceObject::PROPOSAL) {
         // We know this proposal is valid locally, otherwise we would not get to the point we should relay it.
         // But we don't want to relay it to pre-GOVSCRIPT_PROTO_VERSION peers if payment_address is p2sh
@@ -606,13 +600,11 @@ void CGovernanceObject::Relay(PeerManager& peerman, const CMasternodeSync& mn_sy
         CProposalValidator validator(GetDataAsHexString(), false /* no script */);
         if (!validator.Validate(false /* ignore expiration */)) {
             // The only way we could get here is when proposal is valid but payment_address is actually p2sh.
-            LogPrint(BCLog::GOBJECT, "CGovernanceObject::Relay -- won't relay %s to older peers\n", GetHash().ToString());
-            minProtoVersion = GOVSCRIPT_PROTO_VERSION;
+            LogPrint(BCLog::GOBJECT, "CGovernanceObject::GetMinProtoVersion -- won't relay %s to older peers\n", GetHash().ToString());
+            return GOVSCRIPT_PROTO_VERSION;
         }
     }
-
-    CInv inv(MSG_GOVERNANCE_OBJECT, GetHash());
-    peerman.RelayInv(inv, minProtoVersion);
+    return MIN_PEER_PROTO_VERSION;
 }
 
 void CGovernanceObject::UpdateSentinelVariables(const CDeterministicMNList& tip_mn_list)

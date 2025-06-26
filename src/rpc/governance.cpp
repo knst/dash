@@ -393,7 +393,13 @@ static RPCHelpMan gobject_submit()
     PeerManager& peerman = EnsurePeerman(node);
     if (fMissingConfirmations) {
         node.govman->AddPostponedObject(govobj);
-        govobj.Relay(peerman, *CHECK_NONFATAL(node.mn_sync));
+        if (CHECK_NONFATAL(node.mn_sync)->IsSynced()) {
+            CInv inv(MSG_GOVERNANCE_OBJECT, govobj.GetHash());
+            peerman.RelayInv(inv, govobj.GetMinProtoVersion());
+        } else {
+            // Do not relay until fully synced
+            LogPrint(BCLog::GOBJECT, "gobject(submit) -- won't relay until fully synced\n");
+        }
     } else {
         node.govman->AddGovernanceObject(govobj, peerman);
     }
