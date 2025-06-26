@@ -233,7 +233,10 @@ MessageProcessingResult CGovernanceManager::ProcessMessage(CNode& peer, CConnman
             return {};
         }
 
-        AddGovernanceObject(govobj, peerman, &peer);
+        auto invs = AddGovernanceObject(govobj, &peer);
+        for (auto& inv : invs) {
+            peerman.RelayInv(inv);
+        }
     }
 
     // A NEW GOVERNANCE OBJECT VOTE HAS ARRIVED
@@ -313,7 +316,7 @@ std::vector<CInv> CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj
     return inventory;
 }
 
-void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, PeerManager& peerman, const CNode* pfrom)
+std::vector<CInv> CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, const CNode* pfrom)
 {
     uint256 nHash = govobj.GetHash();
     std::string strHash = nHash.ToString();
@@ -324,6 +327,8 @@ void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, PeerMana
 
     govobj.UpdateSentinelVariables(tip_mn_list); //this sets local vars in object
 
+    std::vector<CInv> ret;
+
     LOCK2(cs_main, cs);
     std::string strError;
 
@@ -331,7 +336,7 @@ void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, PeerMana
 
     if (!govobj.IsValidLocally(tip_mn_list, m_chainman, strError, true)) {
         LogPrint(BCLog::GOBJECT, "CGovernanceManager::AddGovernanceObject -- invalid governance object - %s - (nCachedBlockHeight %d) \n", strError, nCachedBlockHeight);
-        return;
+        return ret;
     }
 
     LogPrint(BCLog::GOBJECT, "CGovernanceManager::AddGovernanceObject -- Adding object: hash = %s, type = %d\n", nHash.ToString(),
@@ -343,7 +348,7 @@ void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, PeerMana
 
     if (!objpair.second) {
         LogPrint(BCLog::GOBJECT, "CGovernanceManager::AddGovernanceObject -- already have governance object %s\n", nHash.ToString());
-        return;
+        return ret;
     }
 
     // SHOULD WE ADD THIS OBJECT TO ANY OTHER MANAGERS?
@@ -354,7 +359,7 @@ void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, PeerMana
     if (govobj.GetObjectType() == GovernanceObject::TRIGGER && !AddNewTrigger(nHash)) {
         LogPrint(BCLog::GOBJECT, "CGovernanceManager::AddGovernanceObject -- undo adding invalid trigger object: hash = %s\n", nHash.ToString());
         objpair.first->second.PrepareDeletion(GetTime<std::chrono::seconds>().count());
-        return;
+        return ret;
     }
 
     LogPrint(BCLog::GOBJECT, "CGovernanceManager::AddGovernanceObject -- %s new, received from peer %s\n", strHash, pfrom ? pfrom->GetLogString() : "nullptr");
@@ -362,8 +367,7 @@ void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, PeerMana
     if (!m_mn_sync.IsSynced()) {
         LogPrint(BCLog::GOBJECT, "CGovernanceManager::AddGovernanceObject -- won't relay until fully synced\n");
     } else {
-        CInv inv(MSG_GOVERNANCE_OBJECT, obj.GetHash());
-        peerman.RelayInv(inv, obj.GetMinProtoVersion());
+        ret.emplace_back(MSG_GOVERNANCE_OBJECT, govobj.GetHash());
     }
 
     // Update the rate buffer
@@ -375,13 +379,15 @@ void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, PeerMana
 
     auto invs = CheckOrphanVotes(govobj);
     if (m_mn_sync.IsSynced()) {
-        for (auto inv : invs) {
-            peerman.RelayInv(inv);    
+        for (auto& inv : invs) {
+            ret.push_back(inv);
         }
     }
 
     // SEND NOTIFICATION TO SCRIPT/ZMQ
     GetMainSignals().NotifyGovernanceObject(std::make_shared<const Governance::Object>(govobj.Object()), nHash.ToString());
+
+    return ret;
 }
 
 void CGovernanceManager::CheckAndRemove()
@@ -761,7 +767,10 @@ std::optional<const CGovernanceObject> CGovernanceManager::CreateGovernanceTrigg
     }
 
     // The trigger we just created looks good, submit it
-    AddGovernanceObject(gov_sb, peerman);
+    auto invs = AddGovernanceObject(gov_sb);
+    for (auto& inv : invs) {
+        peerman.RelayInv(inv);
+    }
     return std::make_optional<CGovernanceObject>(gov_sb);
 }
 
@@ -1211,7 +1220,10 @@ void CGovernanceManager::CheckPostponedObjects(PeerManager& peerman)
         bool fMissingConfirmations;
         if (govobj.IsCollateralValid(m_chainman, strError, fMissingConfirmations)) {
             if (govobj.IsValidLocally(Assert(m_dmnman)->GetListAtChainTip(), m_chainman, strError, false)) {
-                AddGovernanceObject(govobj, peerman);
+                auto invs = AddGovernanceObject(govobj);
+                for (auto& inv : invs) {
+                    peerman.RelayInv(inv);
+                }
             } else {
                 LogPrint(BCLog::GOBJECT, "CGovernanceManager::CheckPostponedObjects -- %s invalid\n", nHash.ToString());
             }
@@ -1245,8 +1257,8 @@ void CGovernanceManager::CheckPostponedObjects(PeerManager& peerman)
                 if (fReady) {
                     LogPrint(BCLog::GOBJECT, "CGovernanceManager::CheckPostponedObjects -- additional relay: hash = %s\n", govobj.GetHash().ToString());
 
-                    CInv inv(MSG_GOVERNANCE_OBJECT, obj.GetHash());
-                    peerman.RelayInv(inv, obj.GetMinProtoVersion());
+                    CInv inv(MSG_GOVERNANCE_OBJECT, govobj.GetHash());
+                    peerman.RelayInv(inv, govobj.GetMinProtoVersion());
                 } else {
                     it++;
                     continue;

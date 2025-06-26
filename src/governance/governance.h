@@ -291,7 +291,7 @@ public:
     std::vector<CGovernanceVote> GetCurrentVotes(const uint256& nParentHash, const COutPoint& mnCollateralOutpointFilter) const;
     void GetAllNewerThan(std::vector<CGovernanceObject>& objs, int64_t nMoreThanTime) const;
 
-    void AddGovernanceObject(CGovernanceObject& govobj, PeerManager& peerman, const CNode* pfrom = nullptr);
+    std::vector<CInv> AddGovernanceObject(CGovernanceObject& govobj, const CNode* pfrom = nullptr);
 
     void CheckAndRemove();
 
@@ -328,8 +328,10 @@ public:
 
     bool ProcessVote(CNode* pfrom, const CGovernanceVote& vote, CGovernanceException& exception, CConnman& connman);
 
+private:
     void CheckPostponedObjects(PeerManager& peerman);
 
+public:
     bool AreRateChecksEnabled() const
     {
         LOCK(cs);

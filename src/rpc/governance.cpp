@@ -401,7 +401,10 @@ static RPCHelpMan gobject_submit()
             LogPrint(BCLog::GOBJECT, "gobject(submit) -- won't relay until fully synced\n");
         }
     } else {
-        node.govman->AddGovernanceObject(govobj, peerman);
+        auto invs = node.govman->AddGovernanceObject(govobj);
+        for (auto inv : invs) {
+            peerman.RelayInv(inv);
+        }
     }
 
     return govobj.GetHash().ToString();
