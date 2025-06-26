@@ -176,7 +176,7 @@ MessageProcessingResult CGovernanceManager::ProcessMessage(CNode& peer, CConnman
     if (!IsValid()) return {};
     if (!m_mn_sync.IsBlockchainSynced()) return {};
 
-    const auto tip_mn_list = Assert(m_dmnman)->GetListAtChainTip();
+
     // ANOTHER USER IS ASKING US TO HELP THEM SYNC GOVERNANCE OBJECT DATA
     if (msg_type == NetMsgType::MNGOVERNANCESYNC) {
         // Ignore such requests until we are fully synced.
@@ -188,20 +188,24 @@ MessageProcessingResult CGovernanceManager::ProcessMessage(CNode& peer, CConnman
         CBloomFilter filter;
 
         vRecv >> nProp;
-
         vRecv >> filter;
 
         LogPrint(BCLog::GOBJECT, "MNGOVERNANCESYNC -- syncing governance objects to our peer %s\n", peer.GetLogString());
         if (nProp == uint256()) {
             return SyncObjects(peer, connman);
-        } else {
-            return SyncSingleObjVotes(peer, nProp, filter, connman);
-        }
+
+        return SyncSingleObjVotes(peer, nProp, filter, connman);
     }
 
+    if (msg_type != NetMsgType::MNGOVERNANCEOBJECT && 
+        msg_type != NetMsgType::MNGOVERNANCEOBJECTVOTE) {
+        return {};
+    }
+
+    const auto tip_mn_list = Assert(m_dmnman)->GetListAtChainTip();
     // A NEW GOVERNANCE OBJECT HAS ARRIVED
     // TODO: duplicated code to remove NetMsgType::MNGOVERNANCEOBJECT
-    else if (msg_type == NetMsgType::MNGOVERNANCEOBJECT) {
+    if (msg_type == NetMsgType::MNGOVERNANCEOBJECT) {
         // MAKE SURE WE HAVE A VALID REFERENCE TO THE TIP BEFORE CONTINUING
 
         CGovernanceObject govobj;
@@ -210,11 +214,6 @@ MessageProcessingResult CGovernanceManager::ProcessMessage(CNode& peer, CConnman
         uint256 nHash = govobj.GetHash();
 
         WITH_LOCK(::cs_main, peerman.EraseObjectRequest(peer.GetId(), CInv(MSG_GOVERNANCE_OBJECT, nHash)));
-
-        if (!m_mn_sync.IsBlockchainSynced()) {
-            LogPrint(BCLog::GOBJECT, "MNGOVERNANCEOBJECT -- masternode list not synced\n");
-            return {};
-        }
 
         std::string strHash = nHash.ToString();
 
@@ -264,22 +263,17 @@ MessageProcessingResult CGovernanceManager::ProcessMessage(CNode& peer, CConnman
         }
 
         AddGovernanceObject(govobj, peerman, &peer);
+        return {};
     }
 
     // A NEW GOVERNANCE OBJECT VOTE HAS ARRIVED
     // TODO: duplicated code to remove NetMsgType::MNGOVERNANCEOBJECTVOTE
-    else if (msg_type == NetMsgType::MNGOVERNANCEOBJECTVOTE) {
+    if (msg_type == NetMsgType::MNGOVERNANCEOBJECTVOTE) {
         CGovernanceVote vote;
         vRecv >> vote;
 
         uint256 nHash = vote.GetHash();
         WITH_LOCK(::cs_main, peerman.EraseObjectRequest(peer.GetId(), CInv(MSG_GOVERNANCE_OBJECT_VOTE, nHash)));
-
-        // Ignore such messages until masternode list is synced
-        if (!m_mn_sync.IsBlockchainSynced()) {
-            LogPrint(BCLog::GOBJECT, "MNGOVERNANCEOBJECTVOTE -- masternode list not synced\n");
-            return {};
-        }
 
         LogPrint(BCLog::GOBJECT, "MNGOVERNANCEOBJECTVOTE -- Received vote: %s\n", vote.ToString(tip_mn_list));
 
@@ -299,7 +293,7 @@ MessageProcessingResult CGovernanceManager::ProcessMessage(CNode& peer, CConnman
             if (is_synced) {
                 if (tip_mn_list.GetMNByCollateral(vote.GetMasternodeOutpoint())) {
                     CInv inv(MSG_GOVERNANCE_OBJECT_VOTE, vote.GetHash());
-                    peerman.RelayInv(inv);
+                    return MessageProcessingResult({inv});
                 }
             } else {
                 LogPrint(BCLog::GOBJECT, "MNGOVERNANCEOBJECTVOTE no relay until is not fully synced\n");
@@ -309,10 +303,9 @@ MessageProcessingResult CGovernanceManager::ProcessMessage(CNode& peer, CConnman
             if ((exception.GetNodePenalty() != 0) && is_synced) {
                 return MisbehavingError{exception.GetNodePenalty()};
             }
-            return {};
         }
+        return {};
     }
-    return {};
 }
 
 void CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj, PeerManager& peerman)
