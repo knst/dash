@@ -51,19 +51,6 @@ public:
 
     ~ScopedLockBool() { ref = fPrevValue; }
 };
-
-void RelayGovernanceObject(const CGovernanceObject& obj, PeerManager& peerman, const CMasternodeSync& mn_sync)
-{
-    // Do not relay until fully synced
-    if (!mn_sync.IsSynced()) {
-        LogPrint(BCLog::GOBJECT, "CGovernanceObject::Relay -- won't relay until fully synced\n");
-        return;
-    }
-
-    CInv inv(MSG_GOVERNANCE_OBJECT, obj.GetHash());
-    peerman.RelayInv(inv, obj.GetMinProtoVersion());
-}
-
 } // anonymous namespace
 
 GovernanceStore::GovernanceStore() :
@@ -371,7 +358,13 @@ void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, PeerMana
     }
 
     LogPrint(BCLog::GOBJECT, "CGovernanceManager::AddGovernanceObject -- %s new, received from peer %s\n", strHash, pfrom ? pfrom->GetLogString() : "nullptr");
-    RelayGovernanceObject(govobj, peerman, m_mn_sync);
+    // Do not relay until fully synced
+    if (!m_mn_sync.IsSynced()) {
+        LogPrint(BCLog::GOBJECT, "CGovernanceManager::AddGovernanceObject -- won't relay until fully synced\n");
+    } else {
+        CInv inv(MSG_GOVERNANCE_OBJECT, obj.GetHash());
+        peerman.RelayInv(inv, obj.GetMinProtoVersion());
+    }
 
     // Update the rate buffer
     MasternodeRateUpdate(govobj);
@@ -1251,7 +1244,9 @@ void CGovernanceManager::CheckPostponedObjects(PeerManager& peerman)
             if (fValid) {
                 if (fReady) {
                     LogPrint(BCLog::GOBJECT, "CGovernanceManager::CheckPostponedObjects -- additional relay: hash = %s\n", govobj.GetHash().ToString());
-                    RelayGovernanceObject(govobj, peerman, m_mn_sync);
+
+                    CInv inv(MSG_GOVERNANCE_OBJECT, obj.GetHash());
+                    peerman.RelayInv(inv, obj.GetMinProtoVersion());
                 } else {
                     it++;
                     continue;
