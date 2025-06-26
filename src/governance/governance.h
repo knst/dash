@@ -272,9 +272,9 @@ public:
     bool ConfirmInventoryRequest(const CInv& inv);
 
     void SyncSingleObjVotes(CNode& peer, PeerManager& peerman, const uint256& nProp, const CBloomFilter& filter, CConnman& connman);
-    PeerMsgRet SyncObjects(CNode& peer, PeerManager& peerman, CConnman& connman) const;
+    MessageProcessingResult SyncObjects(CNode& peer, PeerManager& peerman, CConnman& connman) const;
 
-    PeerMsgRet ProcessMessage(CNode& peer, CConnman& connman, PeerManager& peerman, std::string_view msg_type, CDataStream& vRecv);
+    MessageProcessingResult ProcessMessage(CNode& peer, CConnman& connman, PeerManager& peerman, std::string_view msg_type, CDataStream& vRecv);
 
 private:
     void ResetVotedFundingTrigger();

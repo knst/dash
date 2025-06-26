@@ -5266,7 +5266,7 @@ void PeerManagerImpl::ProcessMessage(
         ProcessPeerMsgRet(m_cj_ctx->server->ProcessMessage(pfrom, msg_type, vRecv), pfrom);
         ProcessPeerMsgRet(m_sporkman.ProcessMessage(pfrom, m_connman, *this, msg_type, vRecv), pfrom);
         m_mn_sync.ProcessMessage(pfrom, msg_type, vRecv);
-        ProcessPeerMsgRet(m_govman.ProcessMessage(pfrom, m_connman, *this, msg_type, vRecv), pfrom);
+        PostProcessMessage(m_govman.ProcessMessage(pfrom, m_connman, *this, msg_type, vRecv), pfrom.GetId());
         ProcessPeerMsgRet(CMNAuth::ProcessMessage(pfrom, peer->m_their_services, m_connman, m_mn_metaman, m_mn_activeman, m_mn_sync, m_dmnman->GetListAtChainTip(), msg_type, vRecv), pfrom);
         PostProcessMessage(m_llmq_ctx->quorum_block_processor->ProcessMessage(pfrom, msg_type, vRecv), pfrom.GetId());
         ProcessPeerMsgRet(m_llmq_ctx->qdkgsman->ProcessMessage(pfrom, *this, is_masternode, msg_type, vRecv), pfrom);
