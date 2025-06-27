@@ -328,11 +328,14 @@ public:
     [[nodiscard]] std::vector<CDeterministicMNCPtr> GetProjectedMNPayees(gsl::not_null<const CBlockIndex* const> pindexPrev, int nCount = std::numeric_limits<int>::max()) const;
 
     /**
-     * Calculates CSimplifiedMNList for current value
+     * return cached CSimplifiedMNList for current list.
      * This value is cached.
-     * It never returns nullptr (TODO add gsl::not_null<>)
+     * The cache is reset if called AddMN, RemovedMN, some cases of UpdateMN
+     * (including indirect calls such as by ApplyDiff)
      */
     std::shared_ptr<const CSimplifiedMNList> GetSML() const;
+
+    void SetSML(std::shared_ptr<const CSimplifiedMNList>& list);
 
     /**
      * Calculates the maximum penalty which is allowed at the height of this MN list. It is dynamic and might change

@@ -180,6 +180,9 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(const CBlock& block, const CB
                 return false;
             }
             mn_list.SetBlockHash(pindex->GetBlockHash());
+            if (mn_list.GetSML() == nullptr) {
+                mn_list.SetSML(std::make_shared<const CSimplifiedMNList>(mn_list));
+            }
 
             if (!fJustCheck && !m_dmnman.ProcessBlock(block, pindex, state, view, m_qsnapman, mn_list, updatesRet)) {
                 // pass the state returned by the function above
