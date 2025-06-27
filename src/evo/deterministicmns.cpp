@@ -256,7 +256,13 @@ std::vector<CDeterministicMNCPtr> CDeterministicMNList::GetProjectedMNPayees(gsl
     return result;
 }
 
-std::shared_ptr<const CSimplifiedMNList> CDeterministicMNList::GetSML() const { return m_cached_sml; }
+std::shared_ptr<const CSimplifiedMNList> CDeterministicMNList::GetSML() const
+{
+    if (!m_cached_sml) {
+        m_cached_sml = std::make_shared<CSimplifiedMNList>(*this);
+    }
+    return m_cached_sml;
+}
 
 int CDeterministicMNList::CalcMaxPoSePenalty() const
 {
@@ -609,6 +615,8 @@ bool CDeterministicMNManager::ProcessBlock(const CBlock& block, gsl::not_null<co
     int nHeight = pindex->nHeight;
 
     try {
+        newList.GetSML(); // to fullfill cache of SML
+
         LOCK(cs);
 
         oldList = GetListForBlockInternal(pindex->pprev);
