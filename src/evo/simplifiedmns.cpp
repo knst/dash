@@ -11,7 +11,6 @@
 #include <serialize.h>
 #include <univalue.h>
 #include <util/underlying.h>
-#include <version.h>
 
 CSimplifiedMNListEntry::CSimplifiedMNListEntry(const CDeterministicMN& dmn) :
     proRegTxHash(dmn.proTxHash),
@@ -55,34 +54,6 @@ std::string CSimplifiedMNListEntry::ToString() const
                      nVersion, ToUnderlying(nType), proRegTxHash.ToString(), confirmedHash.ToString(),
                      pubKeyOperator.ToString(), EncodeDestination(PKHash(keyIDVoting)), isValid, payoutAddress,
                      operatorPayoutAddress, platformHTTPPort, platformNodeID.ToString(), netInfo.ToString());
-}
-
-UniValue CSimplifiedMNListEntry::ToJson(bool extended) const
-{
-    UniValue obj(UniValue::VOBJ);
-    obj.pushKV("nVersion", nVersion);
-    obj.pushKV("nType", ToUnderlying(nType));
-    obj.pushKV("proRegTxHash", proRegTxHash.ToString());
-    obj.pushKV("confirmedHash", confirmedHash.ToString());
-    obj.pushKV("service", netInfo.GetPrimary().ToStringAddrPort());
-    obj.pushKV("pubKeyOperator", pubKeyOperator.ToString());
-    obj.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
-    obj.pushKV("isValid", isValid);
-    if (nType == MnType::Evo) {
-        obj.pushKV("platformHTTPPort", platformHTTPPort);
-        obj.pushKV("platformNodeID", platformNodeID.ToString());
-    }
-
-    if (extended) {
-        CTxDestination dest;
-        if (ExtractDestination(scriptPayout, dest)) {
-            obj.pushKV("payoutAddress", EncodeDestination(dest));
-        }
-        if (ExtractDestination(scriptOperatorPayout, dest)) {
-            obj.pushKV("operatorPayoutAddress", EncodeDestination(dest));
-        }
-    }
-    return obj;
 }
 
 CSimplifiedMNList::CSimplifiedMNList(const std::vector<CSimplifiedMNListEntry>& smlEntries)
