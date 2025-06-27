@@ -4,10 +4,8 @@
 
 #include <evo/smldiff.h>
 
-
 #include <chainparams.h>
 #include <consensus/merkle.h>
-#include <core_io.h>
 #include <deploymentstatus.h>
 #include <evo/cbtx.h>
 #include <evo/deterministicmns.h>
@@ -18,9 +16,9 @@
 #include <node/blockstorage.h>
 #include <serialize.h>
 #include <univalue.h>
-#include <validation.h>
 #include <util/enumerate.h>
-
+#include <validation.h>
+#include <version.h>
 
 using node::ReadBlockFromDisk;
 
@@ -115,69 +113,6 @@ bool CSimplifiedMNListDiff::BuildQuorumChainlockInfo(const llmq::CQuorumManager&
     }
 
     return true;
-}
-
-UniValue CSimplifiedMNListDiff::ToJson(bool extended) const
-{
-    UniValue obj(UniValue::VOBJ);
-
-    obj.pushKV("nVersion", nVersion);
-    obj.pushKV("baseBlockHash", baseBlockHash.ToString());
-    obj.pushKV("blockHash", blockHash.ToString());
-
-    CDataStream ssCbTxMerkleTree(SER_NETWORK, PROTOCOL_VERSION);
-    ssCbTxMerkleTree << cbTxMerkleTree;
-    obj.pushKV("cbTxMerkleTree", HexStr(ssCbTxMerkleTree));
-
-    obj.pushKV("cbTx", EncodeHexTx(*cbTx));
-
-    UniValue deletedMNsArr(UniValue::VARR);
-    for (const auto& h : deletedMNs) {
-        deletedMNsArr.push_back(h.ToString());
-    }
-    obj.pushKV("deletedMNs", deletedMNsArr);
-
-    UniValue mnListArr(UniValue::VARR);
-    for (const auto& e : mnList) {
-        mnListArr.push_back(e.ToJson(extended));
-    }
-    obj.pushKV("mnList", mnListArr);
-
-    UniValue deletedQuorumsArr(UniValue::VARR);
-    for (const auto& e : deletedQuorums) {
-        UniValue eObj(UniValue::VOBJ);
-        eObj.pushKV("llmqType", e.first);
-        eObj.pushKV("quorumHash", e.second.ToString());
-        deletedQuorumsArr.push_back(eObj);
-    }
-    obj.pushKV("deletedQuorums", deletedQuorumsArr);
-
-    UniValue newQuorumsArr(UniValue::VARR);
-    for (const auto& e : newQuorums) {
-        newQuorumsArr.push_back(e.ToJson());
-    }
-    obj.pushKV("newQuorums", newQuorumsArr);
-
-    // Do not assert special tx type here since this can be called prior to DIP0003 activation
-    if (const auto opt_cbTxPayload = GetTxPayload<CCbTx>(*cbTx, /*assert_type=*/false)) {
-        obj.pushKV("merkleRootMNList", opt_cbTxPayload->merkleRootMNList.ToString());
-        if (opt_cbTxPayload->nVersion >= CCbTx::Version::MERKLE_ROOT_QUORUMS) {
-            obj.pushKV("merkleRootQuorums", opt_cbTxPayload->merkleRootQuorums.ToString());
-        }
-    }
-
-    UniValue quorumsCLSigsArr(UniValue::VARR);
-    for (const auto& [signature, quorumsIndexes] : quorumsCLSigs) {
-        UniValue j(UniValue::VOBJ);
-        UniValue idxArr(UniValue::VARR);
-        for (const auto& idx : quorumsIndexes) {
-            idxArr.push_back(idx);
-        }
-        j.pushKV(signature.ToString(),idxArr);
-        quorumsCLSigsArr.push_back(j);
-    }
-    obj.pushKV("quorumsCLSigs", quorumsCLSigsArr);
-    return obj;
 }
 
 CSimplifiedMNListDiff BuildSimplifiedDiff(const CDeterministicMNList& from, const CDeterministicMNList& to, bool extended)

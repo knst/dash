@@ -34,7 +34,6 @@ EXPECTED_CIRCULAR_DEPENDENCIES = (
     "common/bloom -> evo/assetlocktx -> llmq/signing -> net_processing -> merkleblock -> common/bloom",
     "consensus/tx_verify -> evo/assetlocktx -> llmq/commitment -> validation -> consensus/tx_verify",
     "consensus/tx_verify -> evo/assetlocktx -> llmq/signing -> net_processing -> txmempool -> consensus/tx_verify",
-    "core_io -> evo/assetlocktx -> llmq/signing -> net_processing -> evo/smldiff -> core_io",
     "evo/assetlocktx -> llmq/signing -> net_processing -> txmempool -> evo/assetlocktx",
     "evo/cbtx -> llmq/chainlocks -> llmq/instantsend -> net_processing -> evo/smldiff -> evo/cbtx",
     "evo/chainhelper -> evo/specialtxman -> validation -> evo/chainhelper",
