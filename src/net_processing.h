@@ -145,6 +145,7 @@ public:
     virtual void EraseObjectRequest(NodeId nodeid, const CInv& inv) = 0;
     virtual void RequestObject(NodeId nodeid, const CInv& inv, std::chrono::microseconds current_time,
                                bool is_masternode, bool fForce = false) = 0;
+    // TODO - maybe drop it - wtf is it????
     virtual size_t GetRequestedObjectCount(NodeId nodeid) const = 0;
 };
 
