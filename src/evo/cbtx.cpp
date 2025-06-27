@@ -102,9 +102,6 @@ bool CalcCbTxMerkleRootMNList(uint256& merkleRootRet, const CDeterministicMNList
         static uint256 merkleRootCached GUARDED_BY(cached_mutex);
         static bool mutatedCached GUARDED_BY(cached_mutex) {false};
 
-        if (mn_list.GetSML() == nullptr) {
-            mn_list.SetSML(std::make_shared<const CSimplifiedMNList>(mn_list));
-        }
         std::shared_ptr<const CSimplifiedMNList> sml{mn_list.GetSML()};
         LOCK(cached_mutex);
         if (sml == cached_sml || *sml == *cached_sml) {
