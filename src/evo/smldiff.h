@@ -30,6 +30,19 @@ class CQuorumManager;
 
 extern RecursiveMutex cs_main;
 
+
+/// P2P messages
+class CGetSimplifiedMNListDiff
+{
+public:
+    uint256 baseBlockHash;
+    uint256 blockHash;
+
+    SERIALIZE_METHODS(CGetSimplifiedMNListDiff, obj)
+    {
+        READWRITE(obj.baseBlockHash, obj.blockHash);
+    }
+};
 class CSimplifiedMNListDiff
 {
 public:

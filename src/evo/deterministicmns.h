@@ -31,6 +31,7 @@ class CBlockIndex;
 class CCoinsViewCache;
 class CEvoDB;
 class CSimplifiedMNList;
+class CSimplifiedMNListEntry;
 class TxValidationState;
 
 extern RecursiveMutex cs_main;
@@ -104,7 +105,8 @@ public:
     }
 
     [[nodiscard]] uint64_t GetInternalId() const;
-
+    
+    [[nodiscard]] CSimplifiedMNListEntry to_sml_entry() const;
     [[nodiscard]] std::string ToString() const;
     [[nodiscard]] UniValue ToJson() const;
 };
@@ -344,7 +346,8 @@ public:
      * This value is cached.
      * It never returns nullptr (TODO add gsl::not_null<>)
      */
-    std::shared_ptr<const CSimplifiedMNList> GetSML() const;
+    std::shared_ptr<const CSimplifiedMNList> to_sml() const;
+//    std::shared_ptr<const CSimplifiedMNList> GetSML() const;
 
     /**
      * Calculates the maximum penalty which is allowed at the height of this MN list. It is dynamic and might change

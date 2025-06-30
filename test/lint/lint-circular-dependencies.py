@@ -43,7 +43,6 @@ EXPECTED_CIRCULAR_DEPENDENCIES = (
     "evo/chainhelper -> llmq/instantsend -> evo/chainhelper",
     "evo/chainhelper -> masternode/payments -> governance/classes -> governance/object -> evo/chainhelper",
     "evo/chainhelper -> node/transaction -> node/context -> evo/chainhelper",
-    "evo/deterministicmns -> evo/simplifiedmns -> evo/deterministicmns",
     "evo/deterministicmns -> llmq/commitment -> evo/deterministicmns",
     "evo/deterministicmns -> llmq/commitment -> validation -> evo/deterministicmns",
     "evo/deterministicmns -> llmq/commitment -> validation -> txmempool -> evo/deterministicmns",
