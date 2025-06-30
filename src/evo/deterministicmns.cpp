@@ -39,6 +39,24 @@ uint64_t CDeterministicMN::GetInternalId() const
     return internalId;
 }
 
+CSimplifiedMNListEntry CDeterministicMN::to_sml_entry() const
+{
+    const CDeterministicMNState& state{*pdmnState};
+    return CSimplifiedMNListEntry(
+            proTxHash,
+            state.confirmedHash,
+            state.netInfo,
+            state.pubKeyOperator,
+            state.keyIDVoting,
+            !state.IsBanned(),
+            state.platformHTTPPort,
+            state.platformNodeID,
+            state.scriptPayout,
+            state.scriptOperatorPayout,
+            state.nVersion,
+            nType);
+}
+
 std::string CDeterministicMN::ToString() const
 {
     return strprintf("CDeterministicMN(proTxHash=%s, collateralOutpoint=%s, nOperatorReward=%f, state=%s", proTxHash.ToString(), collateralOutpoint.ToStringShort(), (double)nOperatorReward / 100, pdmnState->ToString());
@@ -261,11 +279,18 @@ std::vector<CDeterministicMNCPtr> CDeterministicMNList::GetProjectedMNPayees(gsl
     return result;
 }
 
-std::shared_ptr<const CSimplifiedMNList> CDeterministicMNList::GetSML() const
+std::shared_ptr<const CSimplifiedMNList> CDeterministicMNList::to_sml() const
 {
     if (!m_cached_sml) {
-        m_cached_sml = std::make_shared<CSimplifiedMNList>(*this);
+        std::vector<std::unique_ptr<CSimplifiedMNListEntry>> sml_entries;
+        sml_entries.reserve(mnMap.size());
+
+        ForEachMN(false, [this, &sml_entries](auto& dmn) {
+            sml_entries.emplace_back(std::make_unique<CSimplifiedMNListEntry>(dmn.to_sml_entry()));
+        });
+        m_cached_sml = std::make_shared<CSimplifiedMNList>(std::move(sml_entries));
     }
+
     return m_cached_sml;
 }
 
@@ -526,7 +551,7 @@ void CDeterministicMNList::UpdateMN(const CDeterministicMN& oldDmn, const std::s
 
     dmn->pdmnState = pdmnState;
     mnMap = mnMap.set(oldDmn.proTxHash, dmn);
-    if (m_cached_sml && CSimplifiedMNListEntry{oldDmn} != CSimplifiedMNListEntry{*dmn}) {
+    if (m_cached_sml && oldDmn.to_sml_entry() != dmn->to_sml_entry()) {
         m_cached_sml = nullptr;
     }
 }
@@ -621,7 +646,7 @@ bool CDeterministicMNManager::ProcessBlock(const CBlock& block, gsl::not_null<co
     int nHeight = pindex->nHeight;
 
     try {
-        newList.GetSML(); // to fullfill cache of SML
+        newList.to_sml(); // to fullfill cache of SML
 
         LOCK(cs);
 
