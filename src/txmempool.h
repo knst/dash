@@ -317,6 +317,7 @@ struct entry_time {};
 struct ancestor_score {};
 
 class CBlockPolicyEstimator;
+class CDeterministicMNList;;
 class CDeterministicMNManager;
 
 namespace llmq {
@@ -630,9 +631,10 @@ public:
     void removeProTxPubKeyConflicts(const CTransaction &tx, const CKeyID &keyId) EXCLUSIVE_LOCKS_REQUIRED(cs);
     void removeProTxPubKeyConflicts(const CTransaction &tx, const CBLSLazyPublicKey &pubKey) EXCLUSIVE_LOCKS_REQUIRED(cs);
     void removeProTxCollateralConflicts(const CTransaction &tx, const COutPoint &collateralOutpoint) EXCLUSIVE_LOCKS_REQUIRED(cs);
-    void removeProTxSpentCollateralConflicts(const CTransaction &tx) EXCLUSIVE_LOCKS_REQUIRED(cs);
+    void removeProTxSpentCollateralConflicts(const CTransaction &tx, const CDeterministicMNList& mn_list) EXCLUSIVE_LOCKS_REQUIRED(cs);
     void removeProTxKeyChangedConflicts(const CTransaction &tx, const uint256& proTxHash, const uint256& newKeyHash) EXCLUSIVE_LOCKS_REQUIRED(cs);
     void removeProTxConflicts(const CTransaction &tx) EXCLUSIVE_LOCKS_REQUIRED(cs);
+    void removeProTxConflicts(const CTransaction &tx, const CDeterministicMNList& mn_list) EXCLUSIVE_LOCKS_REQUIRED(cs);
     void removeForBlock(const std::vector<CTransactionRef>& vtx, unsigned int nBlockHeight) EXCLUSIVE_LOCKS_REQUIRED(cs);
     void removeExpiredAssetUnlock(int nBlockHeight) EXCLUSIVE_LOCKS_REQUIRED(cs);
 

@@ -516,6 +516,7 @@ void CTxMemPool::addUnchecked(const CTxMemPoolEntry &entry, setEntries &setAnces
     // Invalid ProTxes should never get this far because transactions should be
     // fully checked by AcceptToMemoryPool() at this point, so we just assume that
     // everything is fine here.
+    // TODO: everything is fine ---- GetListAtChainTip() can't change because cs_main
     if (m_dmnman) {
         addUncheckedProTx(newit, tx);
     }
@@ -924,10 +925,8 @@ void CTxMemPool::removeProTxCollateralConflicts(const CTransaction &tx, const CO
     }
 }
 
-void CTxMemPool::removeProTxSpentCollateralConflicts(const CTransaction &tx)
+void CTxMemPool::removeProTxSpentCollateralConflicts(const CTransaction &tx, const CDeterministicMNList& mn_list)
 {
-    assert(m_dmnman);
-
     // Remove TXs that refer to a MN for which the collateral was spent
     auto removeSpentCollateralConflict = [&](const uint256& proTxHash) EXCLUSIVE_LOCKS_REQUIRED(cs) {
         // Can't use equal_range here as every call to removeRecursive might invalidate iterators
@@ -948,15 +947,12 @@ void CTxMemPool::removeProTxSpentCollateralConflicts(const CTransaction &tx)
             }
         }
     };
-    auto mnList = m_dmnman->GetListAtChainTip();
     for (const auto& in : tx.vin) {
         auto collateralIt = mapProTxCollaterals.find(in.prevout);
         if (collateralIt != mapProTxCollaterals.end()) {
             // These are not yet mined ProRegTxs
             removeSpentCollateralConflict(collateralIt->second);
-        }
-        auto dmn = mnList.GetMNByCollateral(in.prevout);
-        if (dmn) {
+        } else if (auto dmn = mn_list.GetMNByCollateral(in.prevout); dmn) {
             // These are updates referring to a mined ProRegTx
             removeSpentCollateralConflict(dmn->proTxHash);
         }
@@ -983,7 +979,13 @@ void CTxMemPool::removeProTxKeyChangedConflicts(const CTransaction &tx, const ui
 
 void CTxMemPool::removeProTxConflicts(const CTransaction &tx)
 {
-    removeProTxSpentCollateralConflicts(tx);
+    const auto mn_list{m_dmnman ? m_dmnman->GetListAtChainTip() : CDeterministicMNList{}};
+    removeProTxConflicts(tx, mn_list);
+}
+
+void CTxMemPool::removeProTxConflicts(const CTransaction &tx, const CDeterministicMNList& mn_list)
+{
+    removeProTxSpentCollateralConflicts(tx, mn_list);
 
     const uint256 tx_hash{tx.GetHash()};
     if (tx.nType == TRANSACTION_PROVIDER_REGISTER) {
@@ -1061,6 +1063,7 @@ void CTxMemPool::removeForBlock(const std::vector<CTransactionRef>& vtx, unsigne
     }
     // Before the txs in the new block have been removed from the mempool, update policy estimates
     if (minerPolicyEstimator) {minerPolicyEstimator->processBlock(nBlockHeight, entries);}
+    const auto mn_list{m_dmnman ? m_dmnman->GetListAtChainTip() : CDeterministicMNList{}};
     for (const auto& tx : vtx)
     {
         txiter it = mapTx.find(tx->GetHash());
@@ -1071,7 +1074,7 @@ void CTxMemPool::removeForBlock(const std::vector<CTransactionRef>& vtx, unsigne
         }
         removeConflicts(*tx);
         if (m_dmnman) {
-            removeProTxConflicts(*tx);
+            removeProTxConflicts(*tx, mn_list);
         }
         ClearPrioritisation(tx->GetHash());
     }
