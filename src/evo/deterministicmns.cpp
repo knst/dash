@@ -176,8 +176,10 @@ static bool CompareByLastPaid(const CDeterministicMN& _a, const CDeterministicMN
 {
     int ah = CompareByLastPaid_GetHeight(*_a.pdmnState);
     int bh = CompareByLastPaid_GetHeight(*_b.pdmnState);
-    return std::tie(ah, _a.proTxHash) <
-        std::tie(bh, _b.proTxHash);
+    if (ah != bh) {
+        return ah < bh;
+    }
+    return _a.proTxHash < _b.proTxHash;
 }
 
 CDeterministicMNCPtr CDeterministicMNList::GetMNPayee(gsl::not_null<const CBlockIndex*> pindexPrev) const
