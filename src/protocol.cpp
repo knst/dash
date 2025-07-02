@@ -4,10 +4,16 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <protocol.h>
-
-#include <util/system.h>
-
+#include <stdlib.h>
+#include <string.h>
 #include <atomic>
+#include <algorithm>
+#include <iterator>
+#include <set>
+#include <stdexcept>
+
+#include "tinyformat.h"
+#include "uint256.h"
 
 static std::atomic<bool> g_initial_block_download_completed(false);
 

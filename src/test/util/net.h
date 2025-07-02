@@ -14,7 +14,7 @@
 #include <node/eviction.h>
 #include <sync.h>
 #include <util/sock.h>
-
+#include <bits/chrono.h>
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -26,10 +26,13 @@
 #include <unordered_map>
 #include <vector>
 
-class FastRandomContext;
+#include "protocol.h"
+#include "threadsafety.h"
 
+class FastRandomContext;
 template <typename C>
 class Span;
+class PeerManager;
 
 struct ConnmanTestMsg : public CConnman {
     using CConnman::CConnman;

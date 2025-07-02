@@ -4,7 +4,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <validationinterface.h>
-
 #include <chain.h>
 #include <consensus/validation.h>
 #include <governance/common.h>
@@ -16,10 +15,17 @@
 #include <governance/vote.h>
 #include <llmq/clsig.h>
 #include <llmq/signing.h>
-
+#include <assert.h>
 #include <future>
 #include <unordered_map>
 #include <utility>
+#include <iterator>
+#include <list>
+#include <vector>
+
+#include "attributes.h"
+#include "sync.h"
+#include "uint256.h"
 
 //! The MainSignalsInstance manages a list of shared_ptr<CValidationInterface>
 //! callbacks.

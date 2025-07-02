@@ -10,14 +10,48 @@
 #include <test/util/str.h>
 #include <util/strencodings.h>
 #include <univalue.h>
-
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <boost/preprocessor/arithmetic/limits/dec_256.hpp>
+#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
+#include <boost/preprocessor/control/expr_iif.hpp>
+#include <boost/preprocessor/control/iif.hpp>
+#include <boost/preprocessor/detail/limits/auto_rec_256.hpp>
+#include <boost/preprocessor/logical/compl.hpp>
+#include <boost/preprocessor/logical/limits/bool_256.hpp>
+#include <boost/preprocessor/repetition/detail/limits/for_256.hpp>
+#include <boost/preprocessor/repetition/for.hpp>
+#include <boost/preprocessor/seq/limits/elem_256.hpp>
+#include <boost/preprocessor/seq/limits/enum_256.hpp>
+#include <boost/preprocessor/seq/limits/size_256.hpp>
+#include <boost/preprocessor/tuple/elem.hpp>
+#include <boost/preprocessor/variadic/limits/elem_64.hpp>
+#include <boost/test/tools/old/interface.hpp>
+#include <boost/test/unit_test_suite.hpp>
+#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
+#include <boost/test/utils/lazy_ostream.hpp>
 #include <array>
 #include <optional>
 #include <cstdint>
-#include <cstring>
 #include <vector>
+#include <algorithm>
+#include <initializer_list>
+#include <list>
+#include <map>
+#include <set>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <system_error>
+#include <utility>
 
-#include <boost/test/unit_test.hpp>
+#include "chainparamsbase.h"
+#include "crypto/sha256.h"
+#include "hash.h"
+#include "span.h"
+#include "util/settings.h"
+#include "util/string.h"
 
 BOOST_FIXTURE_TEST_SUITE(argsman_tests, BasicTestingSetup)
 

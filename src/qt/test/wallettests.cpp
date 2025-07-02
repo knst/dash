@@ -3,8 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/test/wallettests.h>
-#include <qt/test/util.h>
-
 #include <interfaces/chain.h>
 #include <interfaces/node.h>
 #include <qt/bitcoinamountfield.h>
@@ -25,20 +23,69 @@
 #include <qt/receivecoinsdialog.h>
 #include <qt/recentrequeststablemodel.h>
 #include <qt/receiverequestdialog.h>
-
-#include <chrono>
+#include <QtCore/qglobal.h>
+#include <QtCore/qobjectdefs.h>
+#include <assert.h>
+#include <qabstractbutton.h>
+#include <qabstractitemmodel.h>
+#include <qapplication.h>
+#include <qboxlayout.h>
+#include <qdatetime.h>
+#include <qlabel.h>
+#include <qlayoutitem.h>
+#include <qlineedit.h>
+#include <qlist.h>
+#include <qmessagebox.h>
+#include <qpushbutton.h>
+#include <qstringbuilder.h>
+#include <qtableview.h>
+#include <qtestcase.h>
+#include <qtimer.h>
+#include <qvariant.h>
+#include <qwidget.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <boost/function/function_template.hpp>
+#include <boost/signals2/connection.hpp>
+#include <boost/signals2/detail/lwm_pthreads.hpp>
+#include <boost/signals2/detail/signal_template.hpp>
+#include <boost/smart_ptr/detail/operator_bool.hpp>
+#include <boost/smart_ptr/make_shared_object.hpp>
 #include <memory>
+#include <list>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include <QAbstractButton>
-#include <QAction>
-#include <QApplication>
-#include <QCheckBox>
-#include <QPushButton>
-#include <QTimer>
-#include <QVBoxLayout>
-#include <QTextEdit>
-#include <QListView>
-#include <QDialogButtonBox>
+#include "chain.h"
+#include "chainparams.h"
+#include "clientversion.h"
+#include "consensus/amount.h"
+#include "consensus/params.h"
+#include "interfaces/coinjoin.h"
+#include "interfaces/wallet.h"
+#include "key.h"
+#include "primitives/block.h"
+#include "primitives/transaction.h"
+#include "qt/sendcoinsrecipient.h"
+#include "script/descriptor.h"
+#include "script/script.h"
+#include "script/signingprovider.h"
+#include "script/standard.h"
+#include "serialize.h"
+#include "span.h"
+#include "streams.h"
+#include "sync.h"
+#include "uint256.h"
+#include "util/system.h"
+#include "util/ui_change_type.h"
+#include "wallet/walletdb.h"
+#include "wallet/walletutil.h"
+
+namespace wallet {
+struct WalletContext;
+}  // namespace wallet
 
 using wallet::AddWallet;
 using wallet::CWallet;

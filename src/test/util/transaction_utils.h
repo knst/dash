@@ -6,11 +6,14 @@
 #define BITCOIN_TEST_UTIL_TRANSACTION_UTILS_H
 
 #include <primitives/transaction.h>
-
 #include <array>
+#include <vector>
+
+#include "consensus/amount.h"
 
 class FillableSigningProvider;
 class CCoinsViewCache;
+class CScript;
 
 // create crediting transaction
 // [1 coinbase input => 1 output with given scriptPubkey and value]

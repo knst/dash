@@ -18,10 +18,11 @@
 #include <util/string.h>
 #include <util/system.h>
 #include <util/translation.h>
-
 #include <algorithm>
 #include <string>
 #include <vector>
+
+#include "util/time.h"
 
 namespace init {
 void SetGlobals()

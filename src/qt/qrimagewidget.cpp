@@ -3,17 +3,28 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/qrimagewidget.h>
-
 #include <qt/guiutil.h>
+#include <QtCore/qglobal.h>
+#include <QtCore/qobjectdefs.h>
+#include <qapplication.h>
+#include <qbytearray.h>
+#include <qclipboard.h>
+#include <qcolor.h>
+#include <qdrag.h>
+#include <qevent.h>
+#include <qfont.h>
+#include <qmenu.h>
+#include <qmetatype.h>
+#include <qmimedata.h>
+#include <qnamespace.h>
+#include <qpainter.h>
+#include <qpixmap.h>
+#include <qrect.h>
+#include <qstringbuilder.h>
+#include <qvariant.h>
+#include <utility>
 
-#include <QApplication>
-#include <QClipboard>
-#include <QDrag>
-#include <QFontDatabase>
-#include <QMenu>
-#include <QMimeData>
-#include <QMouseEvent>
-#include <QPainter>
+class QWidget;
 
 #if defined(HAVE_CONFIG_H)
 #include <config/bitcoin-config.h> /* for USE_QRCODE */

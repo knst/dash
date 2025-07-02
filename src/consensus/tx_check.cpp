@@ -3,13 +3,18 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <version.h>
-
 #include <consensus/consensus.h>
 #include <consensus/tx_check.h>
-
 #include <consensus/amount.h>
 #include <primitives/transaction.h>
 #include <consensus/validation.h>
+#include <stddef.h>
+#include <set>
+#include <utility>
+#include <vector>
+
+#include "script/script.h"
+#include "serialize.h"
 
 bool CheckTransaction(const CTransaction& tx, TxValidationState& state)
 {

@@ -2,16 +2,21 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <coins.h>
-#include <consensus/tx_verify.h>
-#include <policy/policy.h>
-#include <policy/settings.h>
 #include <psbt.h>
-#include <tinyformat.h>
 #include <util/check.h>
 #include <util/strencodings.h>
+#include <assert.h>
+#include <exception>
+#include <iterator>
 
-#include <numeric>
+#include "primitives/transaction.h"
+#include "pubkey.h"
+#include "script/keyorigin.h"
+#include "script/sign.h"
+#include "script/signingprovider.h"
+#include "span.h"
+#include "streams.h"
+#include "version.h"
 
 PartiallySignedTransaction::PartiallySignedTransaction(const CMutableTransaction& tx) : tx(tx)
 {

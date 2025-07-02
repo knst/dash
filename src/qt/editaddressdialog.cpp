@@ -5,12 +5,16 @@
 
 #include <qt/editaddressdialog.h>
 #include <qt/forms/ui_editaddressdialog.h>
-
 #include <qt/addresstablemodel.h>
 #include <qt/guiutil.h>
+#include <QtCore/qobjectdefs.h>
+#include <qdatawidgetmapper.h>
+#include <qlineedit.h>
+#include <qmessagebox.h>
 
-#include <QDataWidgetMapper>
-#include <QMessageBox>
+#include "qt/qvalidatedlineedit.h"
+
+class QWidget;
 
 EditAddressDialog::EditAddressDialog(Mode _mode, QWidget *parent) :
     QDialog(parent, GUIUtil::dialog_flags),

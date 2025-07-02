@@ -3,10 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/csvmodelwriter.h>
-
-#include <QAbstractItemModel>
-#include <QFile>
-#include <QTextStream>
+#include <qabstractitemmodel.h>
+#include <qfile.h>
+#include <qiodevice.h>
+#include <qtextstream.h>
+#include <qvariant.h>
 
 CSVModelWriter::CSVModelWriter(const QString &_filename, QObject *parent) :
     QObject(parent),

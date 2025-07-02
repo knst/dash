@@ -3,21 +3,17 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <rpc/server_util.h>
-
-#include <net_processing.h>
 #include <node/context.h>
-#include <policy/fees.h>
 #include <rpc/protocol.h>
 #include <rpc/request.h>
-#include <txmempool.h>
-#include <util/system.h>
-#include <validation.h>
+#include <memory>
+
+#include "bitcoin-config.h"
+#include "context.h"
 
 #ifdef ENABLE_WALLET
 #include <wallet/context.h>
 #endif // ENABLE_WALLET
-
-#include <any>
 
 using node::NodeContext;
 #ifdef ENABLE_WALLET

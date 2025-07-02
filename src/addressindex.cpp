@@ -4,10 +4,14 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <addressindex.h>
-
-#include <key_io.h>
 #include <hash.h>
 #include <script/script.h>
+#include <algorithm>
+#include <vector>
+
+#include "prevector.h"
+#include "span.h"
+#include "uint256.h"
 
 template <typename T1>
 inline std::vector<uint8_t> TrimScriptP2PKH(const T1& input) {

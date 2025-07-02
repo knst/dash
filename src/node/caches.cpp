@@ -3,10 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <node/caches.h>
-
 #include <txdb.h>
 #include <util/system.h>
 #include <validation.h>
+#include <algorithm>
+#include <memory>
 
 namespace node {
 CacheSizes CalculateCacheSizes(const ArgsManager& args, size_t n_indexes)

@@ -13,9 +13,22 @@
 #include <test/util/net.h>
 #include <test/util/setup_common.h>
 #include <test/util/validation.h>
-#include <txorphanage.h>
 #include <validation.h>
 #include <validationinterface.h>
+#include <algorithm>
+#include <functional>
+#include <ios>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "chainparamsbase.h"
+#include "primitives/transaction.h"
+#include "script/script.h"
+#include "sync.h"
+#include "util/time.h"
 
 namespace {
 const TestingSetup* g_setup;

@@ -7,10 +7,9 @@
 #define BITCOIN_RPC_REQUEST_H
 
 #include <context.h>
-
-#include <string>
-
 #include <univalue.h>
+#include <string>
+#include <vector>
 
 UniValue JSONRPCRequestObj(const std::string& strMethod, const UniValue& params, const UniValue& id);
 UniValue JSONRPCReplyObj(const UniValue& result, const UniValue& error, const UniValue& id);

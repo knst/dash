@@ -4,14 +4,15 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <warnings.h>
-
 #include <sync.h>
 #include <util/string.h>
-#include <util/system.h>
 #include <util/translation.h>
-#include <hash.h>
-
 #include <vector>
+#include <algorithm>
+#include <string>
+
+#include "bitcoin-config.h"
+#include "threadsafety.h"
 
 static Mutex g_warnings_mutex;
 static bilingual_str g_misc_warnings GUARDED_BY(g_warnings_mutex);

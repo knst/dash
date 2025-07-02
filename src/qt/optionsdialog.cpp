@@ -8,13 +8,11 @@
 
 #include <qt/optionsdialog.h>
 #include <qt/forms/ui_optionsdialog.h>
-
 #include <qt/appearancewidget.h>
 #include <qt/bitcoinunits.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
-
 #include <interfaces/coinjoin.h>
 #include <interfaces/node.h>
 #include <interfaces/wallet.h>
@@ -22,19 +20,47 @@
 #include <netbase.h>
 #include <txdb.h> // for -dbcache defaults
 #include <util/underlying.h>
+#include <QtCore/qglobal.h>
+#include <QtCore/qobjectdefs.h>
+#include <bits/chrono.h>
+#include <qabstractbutton.h>
+#include <qboxlayout.h>
+#include <qbuttongroup.h>
+#include <qcheckbox.h>
+#include <qdatawidgetmapper.h>
+#include <qdir.h>
+#include <qevent.h>
+#include <qfontmetrics.h>
+#include <qframe.h>
+#include <qlabel.h>
+#include <qlineedit.h>
+#include <qlist.h>
+#include <qlocale.h>
+#include <qmessagebox.h>
+#include <qnamespace.h>
+#include <qpushbutton.h>
+#include <qsettings.h>
+#include <qspinbox.h>
+#include <qstackedwidget.h>
+#include <qstringbuilder.h>
+#include <qstringlist.h>
+#include <qsystemtrayicon.h>
+#include <qtimer.h>
+#include <qvariant.h>
+#include <qwidget.h>
+#include <algorithm>
+#include <limits>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
 
-#include <QButtonGroup>
-#include <chrono>
+#include "netaddress.h"
+#include "qt/qvalidatedlineedit.h"
+#include "qt/qvaluecombobox.h"
+#include "util/system.h"
 
-#include <QDataWidgetMapper>
-#include <QDir>
-#include <QIntValidator>
-#include <QLocale>
-#include <QMessageBox>
-#include <QSettings>
-#include <QShowEvent>
-#include <QSystemTrayIcon>
-#include <QTimer>
+class QObject;
 
 OptionsDialog::OptionsDialog(QWidget *parent, bool enableWallet) :
     QDialog(parent, GUIUtil::dialog_flags),

@@ -8,9 +8,15 @@
 #include <consensus/amount.h>
 #include <uint256.h>
 #include <key_io.h>
-
+#include <qglobal.h>
+#include <qlist.h>
+#include <qstring.h>
+#include <stdint.h>
 #include <QList>
 #include <QString>
+#include <string>
+
+#include "script/standard.h"
 
 namespace interfaces {
 class Node;

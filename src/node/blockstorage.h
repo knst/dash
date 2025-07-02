@@ -11,10 +11,22 @@
 #include <protocol.h>
 #include <sync.h>
 #include <txdb.h>
-
+#include <stdio.h>
 #include <cstdint>
 #include <unordered_map>
 #include <vector>
+#include <atomic>
+#include <limits>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+
+#include "threadsafety.h"
+#include "uint256.h"
+#include "util/hasher.h"
+
+class CBlockHeader;
 
 extern RecursiveMutex cs_main;
 
@@ -31,6 +43,7 @@ class CDSNotificationInterface;
 class ChainstateManager;
 struct CCheckpointData;
 struct FlatFilePos;
+
 namespace Consensus {
 struct Params;
 }

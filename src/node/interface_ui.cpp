@@ -3,11 +3,18 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <node/interface_ui.h>
-
-#include <util/translation.h>
-
 #include <boost/signals2/optional_last_value.hpp>
-#include <boost/signals2/signal.hpp>
+#include <boost/function/function_template.hpp>
+#include <boost/iterator/iterator_facade.hpp>
+#include <boost/optional/optional.hpp>
+#include <boost/signals2/connection.hpp>
+#include <boost/signals2/detail/lwm_pthreads.hpp>
+#include <boost/signals2/detail/signal_template.hpp>
+#include <boost/smart_ptr/detail/operator_bool.hpp>
+#include <boost/smart_ptr/make_shared_object.hpp>
+#include <list>
+#include <memory>
+#include <vector>
 
 CClientUIInterface uiInterface;
 

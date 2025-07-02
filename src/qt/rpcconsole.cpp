@@ -9,9 +9,7 @@
 
 #include <qt/rpcconsole.h>
 #include <qt/forms/ui_debugwindow.h>
-
 #include <evo/deterministicmns.h>
-
 #include <chainparams.h>
 #include <interfaces/node.h>
 #include <node/connection_types.h>
@@ -27,38 +25,77 @@
 #include <util/system.h>
 #include <util/threadnames.h>
 #include <util/underlying.h>
-
 #include <univalue.h>
+#include <QtCore/qglobal.h>
+#include <QtCore/qobjectdefs.h>
+#include <assert.h>
+#include <qabstractbutton.h>
+#include <qabstractitemmodel.h>
+#include <qabstractitemview.h>
+#include <qapplication.h>
+#include <qbuttongroup.h>
+#include <qchar.h>
+#include <qcombobox.h>
+#include <qcompleter.h>
+#include <qcoreevent.h>
+#include <qcursor.h>
+#include <qdatetime.h>
+#include <qdir.h>
+#include <qevent.h>
+#include <qfont.h>
+#include <qfontinfo.h>
+#include <qguiapplication.h>
+#include <qheaderview.h>
+#include <qitemselectionmodel.h>
+#include <qlabel.h>
+#include <qlineedit.h>
+#include <qmenu.h>
+#include <qmessagebox.h>
+#include <qmetatype.h>
+#include <qobject.h>
+#include <qpoint.h>
+#include <qpushbutton.h>
+#include <qrect.h>
+#include <qscreen.h>
+#include <qscrollbar.h>
+#include <qsettings.h>
+#include <qsize.h>
+#include <qsplitter.h>
+#include <qstackedwidget.h>
+#include <qstringbuilder.h>
+#include <qstyleditemdelegate.h>
+#include <qtableview.h>
+#include <qtextdocument.h>
+#include <qtextedit.h>
+#include <qtimer.h>
+#include <qtoolbutton.h>
+#include <qurl.h>
+#include <qvariant.h>
+#include <exception>
+#include <functional>
+#include <map>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <utility>
+
+#include "evo/dmnstate.h"
+#include "net.h"
+#include "net_permissions.h"
+#include "net_processing.h"
+#include "protocol.h"
+#include "qt/guiconstants.h"
+#include "qt/peertablemodel.h"
+#include "qt/trafficgraphdata.h"
+#include "qt/trafficgraphwidget.h"
+#include "uint256.h"
+#include "util/time.h"
+
+class QLocale;
 
 #ifdef ENABLE_WALLET
-#ifdef USE_BDB
-#include <wallet/bdb.h>
-#endif
-#include <wallet/db.h>
 #include <wallet/walletutil.h>
 #endif
-
-#include <QAbstractButton>
-#include <QAbstractItemModel>
-#include <QButtonGroup>
-#include <QDir>
-#include <QFont>
-#include <QFontDatabase>
-#include <QDateTime>
-#include <QKeyEvent>
-#include <QKeySequence>
-#include <QLatin1String>
-#include <QLocale>
-#include <QMenu>
-#include <QMessageBox>
-#include <QScreen>
-#include <QScrollBar>
-#include <QSettings>
-#include <QStringList>
-#include <QStyledItemDelegate>
-#include <QTime>
-#include <QTimer>
-#include <QVariant>
 
 #ifdef ENABLE_WALLET
 using wallet::GetWalletDir;

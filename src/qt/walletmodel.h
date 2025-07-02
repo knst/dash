@@ -7,19 +7,26 @@
 
 #include <key.h>
 #include <script/standard.h>
+#include <qbytearray.h>
+#include <qglobal.h>
+#include <qobject.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
+#include <stdint.h>
 
 #if defined(HAVE_CONFIG_H)
 #include <config/bitcoin-config.h>
 #endif
 
 #include <qt/walletmodeltransaction.h>
-
 #include <interfaces/wallet.h>
 #include <support/allocators/secure.h>
-
 #include <vector>
-
 #include <QObject>
+#include <memory>
+#include <utility>
+
+#include "uint256.h"
 
 class AddressTableModel;
 class ClientModel;
@@ -28,7 +35,6 @@ class RecentRequestsTableModel;
 class SendCoinsRecipient;
 class TransactionTableModel;
 class WalletModelTransaction;
-
 class CKeyID;
 class COutPoint;
 class COutput;
@@ -37,6 +43,8 @@ class uint256;
 
 namespace interfaces {
 class Node;
+class Handler;
+
 namespace CoinJoin {
 class Client;
 } // namespace CoinJoin
@@ -47,6 +55,7 @@ class CCoinControl;
 
 QT_BEGIN_NAMESPACE
 class QTimer;
+
 QT_END_NAMESPACE
 
 /** Interface to Bitcoin wallet from Qt view code. */

@@ -5,10 +5,17 @@
 #ifndef BITCOIN_QT_ADDRESSBOOKPAGE_H
 #define BITCOIN_QT_ADDRESSBOOKPAGE_H
 
+#include <qdialog.h>
+#include <qglobal.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
 #include <QDialog>
 
 class AddressBookSortFilterProxyModel;
 class AddressTableModel;
+class QObject;
+class QPoint;
+class QWidget;
 
 namespace Ui {
     class AddressBookPage;
@@ -18,6 +25,7 @@ QT_BEGIN_NAMESPACE
 class QItemSelection;
 class QMenu;
 class QModelIndex;
+
 QT_END_NAMESPACE
 
 /** Widget that shows a list of sending or receiving addresses.

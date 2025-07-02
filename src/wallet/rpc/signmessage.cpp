@@ -7,8 +7,15 @@
 #include <util/message.h>
 #include <wallet/rpc/util.h>
 #include <wallet/wallet.h>
-
 #include <univalue.h>
+#include <memory>
+#include <string>
+#include <variant>
+
+#include "rpc/protocol.h"
+#include "rpc/request.h"
+#include "script/standard.h"
+#include "sync.h"
 
 namespace wallet {
 RPCHelpMan signmessage()

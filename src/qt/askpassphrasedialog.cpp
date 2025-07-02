@@ -2,23 +2,35 @@
 // Copyright (c) 2014-2023 The Dash Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
-#if defined(HAVE_CONFIG_H)
-#include <config/bitcoin-config.h>
-#endif
-
 #include <qt/askpassphrasedialog.h>
 #include <qt/forms/ui_askpassphrasedialog.h>
-
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/walletmodel.h>
-
 #include <support/allocators/secure.h>
+#include <QtCore/qglobal.h>
+#include <QtCore/qobjectdefs.h>
+#include <assert.h>
+#include <qchar.h>
+#include <qcheckbox.h>
+#include <qcoreevent.h>
+#include <qdialogbuttonbox.h>
+#include <qevent.h>
+#include <qlabel.h>
+#include <qlineedit.h>
+#include <qmessagebox.h>
+#include <qnamespace.h>
+#include <qpushbutton.h>
+#include <qstringbuilder.h>
+#include <qwidget.h>
+#include <algorithm>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
-#include <QKeyEvent>
-#include <QMessageBox>
-#include <QPushButton>
+#include "interfaces/wallet.h"
+
+class QObject;
 
 AskPassphraseDialog::AskPassphraseDialog(Mode _mode, QWidget *parent, SecureString* passphrase_out) :
     QDialog(parent, GUIUtil::dialog_flags),

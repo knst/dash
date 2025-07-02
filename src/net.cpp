@@ -10,14 +10,12 @@
 
 #include <net.h>
 #include <netmessagemaker.h>
-
 #include <addrdb.h>
 #include <addrman.h>
 #include <banman.h>
 #include <clientversion.h>
 #include <compat/compat.h>
 #include <consensus/consensus.h>
-#include <crypto/sha256.h>
 #include <node/eviction.h>
 #include <fs.h>
 #include <i2p.h>
@@ -38,22 +36,17 @@
 #include <util/translation.h>
 #include <util/vector.h>
 #include <util/wpipe.h>
-
 #include <masternode/meta.h>
 #include <masternode/sync.h>
-#include <coinjoin/coinjoin.h>
 #include <evo/deterministicmns.h>
-
 #include <stats/client.h>
+#include <string.h>
+#include <sys/sdt.h>
+#include <sys/time.h>
 
 #ifdef WIN32
 #include <string.h>
 #else
-#include <fcntl.h>
-#endif
-
-#if HAVE_DECL_GETIFADDRS && HAVE_DECL_FREEIFADDRS
-#include <ifaddrs.h>
 #endif
 
 #ifdef USE_POLL
@@ -73,8 +66,38 @@
 #include <cstdint>
 #include <functional>
 #include <unordered_map>
+#include <compare>
+#include <exception>
+#include <iterator>
+#include <ratio>
+#include <string_view>
 
-#include <math.h>
+#include "bip324.h"
+#include "chainparams.h"
+#include "crypto/common.h"
+#include "crypto/siphash.h"
+#include "evo/dmnstate.h"
+#include "evo/netinfo.h"
+#include "hash.h"
+#include "key.h"
+#include "logging.h"
+#include "netgroup.h"
+#include "node/connection_types.h"
+#include "pubkey.h"
+#include "saltedhasher.h"
+#include "serialize.h"
+#include "span.h"
+#include "streams.h"
+#include "sync.h"
+#include "threadinterrupt.h"
+#include "tinyformat.h"
+#include "uint256.h"
+#include "util/check.h"
+#include "util/edge.h"
+
+namespace Consensus {
+enum class LLMQType : uint8_t;
+}  // namespace Consensus
 
 /** Maximum number of block-relay-only anchor connections */
 static constexpr size_t MAX_BLOCK_RELAY_ONLY_ANCHORS = 2;

@@ -8,12 +8,13 @@
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
-
 #include <algorithm>
 #include <cstddef>
 #include <cstdlib>
 #include <type_traits>
 #include <utility>
+#include <iterator>
+#include <new>
 
 /** Implements a drop-in replacement for std::vector<T> which stores up to N
  *  elements directly (without heap allocation). The types Size and Diff are

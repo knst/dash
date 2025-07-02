@@ -3,15 +3,16 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/bench.h>
-#include <net.h>
 #include <netaddress.h>
 #include <random.h>
 #include <test/util/net.h>
-#include <test/util/setup_common.h>
-
+#include <bits/chrono.h>
 #include <algorithm>
 #include <functional>
 #include <vector>
+
+#include "nanobench.h"
+#include "node/eviction.h"
 
 static void EvictionProtectionCommon(
     benchmark::Bench& bench,

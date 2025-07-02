@@ -6,15 +6,24 @@
 #define BITCOIN_WALLET_TEST_WALLET_TEST_FIXTURE_H
 
 #include <test/util/setup_common.h>
-
 #include <interfaces/chain.h>
 #include <interfaces/coinjoin.h>
 #include <interfaces/wallet.h>
 #include <node/context.h>
 #include <util/check.h>
 #include <wallet/wallet.h>
-
 #include <memory>
+#include <string>
+
+#include "chainparamsbase.h"
+
+namespace interfaces {
+class Handler;
+class WalletLoader;
+namespace CoinJoin {
+class Loader;
+}  // namespace CoinJoin
+}  // namespace interfaces
 
 namespace wallet {
 /** Testing setup and teardown for wallet.

@@ -3,16 +3,17 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <init.h>
-#include <qt/bitcoin.h>
 #include <qt/guiutil.h>
 #include <qt/test/optiontests.h>
-#include <test/util/setup_common.h>
 #include <util/system.h>
-
-#include <QSettings>
-#include <QTest>
-
 #include <univalue.h>
+#include <qsettings.h>
+#include <qtestcase.h>
+#include <map>
+#include <string>
+
+#include "qt/optionsmodel.h"
+#include "util/settings.h"
 
 //! Entry point for BitcoinApplication tests.
 void OptionTests::optionTests()

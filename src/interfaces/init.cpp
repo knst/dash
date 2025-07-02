@@ -2,12 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <interfaces/chain.h>
-#include <interfaces/coinjoin.h>
-#include <interfaces/echo.h>
 #include <interfaces/init.h>
-#include <interfaces/node.h>
-#include <interfaces/wallet.h>
 
 namespace interfaces {
 std::unique_ptr<Node> Init::makeNode() { return {}; }

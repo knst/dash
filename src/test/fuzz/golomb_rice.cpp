@@ -10,13 +10,17 @@
 #include <test/fuzz/util.h>
 #include <util/bytevectorhash.h>
 #include <util/golombrice.h>
-
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <iosfwd>
 #include <unordered_set>
 #include <vector>
+#include <ios>
+#include <optional>
+
+#include "crypto/siphash.h"
+#include "span.h"
+#include "util/fastrange.h"
 
 namespace {
 

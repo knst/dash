@@ -7,8 +7,15 @@
 
 #include <fs.h>
 #include <script/descriptor.h>
-
+#include <stdint.h>
 #include <vector>
+#include <ios>
+#include <memory>
+#include <string>
+
+#include "script/signingprovider.h"
+#include "serialize.h"
+#include "uint256.h"
 
 namespace wallet {
 /** (client) version numbers for particular wallet features */

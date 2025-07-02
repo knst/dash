@@ -3,13 +3,17 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/peertablesortproxy.h>
-
 #include <qt/peertablemodel.h>
 #include <util/check.h>
+#include <assert.h>
+#include <bits/chrono.h>
+#include <qabstractitemmodel.h>
+#include <qvariant.h>
+#include <compare>
 
-#include <QModelIndex>
-#include <QString>
-#include <QVariant>
+#include "net.h"
+
+class QObject;
 
 PeerTableSortProxy::PeerTableSortProxy(QObject* parent)
     : QSortFilterProxyModel(parent)

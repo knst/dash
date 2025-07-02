@@ -10,10 +10,13 @@
 #include <fs.h>
 #include <net_types.h> // For banmap_t
 #include <sync.h>
-
+#include <bits/chrono.h>
 #include <chrono>
 #include <cstdint>
 #include <memory>
+
+#include "netaddress.h"
+#include "threadsafety.h"
 
 // NOTE: When adjusting this, update rpcnet:setban's help ("24h")
 static constexpr unsigned int DEFAULT_MISBEHAVING_BANTIME = 60 * 60 * 24; // Default 24-hour ban

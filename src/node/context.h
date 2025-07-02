@@ -10,6 +10,9 @@
 #include <memory>
 #include <vector>
 
+#include "interfaces/chain.h"
+#include "interfaces/coinjoin.h"
+
 class ArgsManager;
 class BanMan;
 class CActiveMasternodeManager;
@@ -39,6 +42,7 @@ class Chain;
 class ChainClient;
 class Init;
 class WalletLoader;
+
 namespace CoinJoin {
 class Loader;
 } // namspace CoinJoin

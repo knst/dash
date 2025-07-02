@@ -14,12 +14,20 @@
 #include <support/allocators/pool.h>
 #include <uint256.h>
 #include <util/hasher.h>
-
 #include <assert.h>
 #include <stdint.h>
-
+#include <stddef.h>
 #include <functional>
 #include <unordered_map>
+#include <algorithm>
+#include <memory>
+#include <stdexcept>
+#include <utility>
+#include <vector>
+
+#include "script/script.h"
+
+struct TxOutCompression;
 
 /**
  * A UTXO entry.

@@ -3,15 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <test/util/setup_common.h>
-
 #include <addrman.h>
 #include <banman.h>
 #include <chainparams.h>
-#include <consensus/consensus.h>
 #include <consensus/merkle.h>
-#include <consensus/params.h>
 #include <consensus/validation.h>
-#include <deploymentstatus.h>
 #include <crypto/sha256.h>
 #include <index/txindex.h>
 #include <init.h>
@@ -24,17 +20,14 @@
 #include <node/miner.h>
 #include <policy/fees.h>
 #include <pow.h>
-#include <rpc/blockchain.h>
 #include <rpc/register.h>
 #include <rpc/server.h>
 #include <scheduler.h>
 #include <script/sigcache.h>
-#include <shutdown.h>
 #include <streams.h>
 #include <test/util/index.h>
 #include <txdb.h>
 #include <util/strencodings.h>
-#include <util/string.h>
 #include <util/thread.h>
 #include <util/threadnames.h>
 #include <util/time.h>
@@ -43,8 +36,6 @@
 #include <util/vector.h>
 #include <validation.h>
 #include <validationinterface.h>
-#include <walletinitinterface.h>
-
 #include <bls/bls.h>
 #include <coinjoin/context.h>
 #include <evo/cbtx.h>
@@ -54,7 +45,6 @@
 #include <evo/mnhftx.h>
 #include <evo/simplifiedmns.h>
 #include <evo/specialtx.h>
-#include <flat-database.h>
 #include <governance/governance.h>
 #include <llmq/context.h>
 #include <masternode/meta.h>
@@ -62,6 +52,8 @@
 #include <netfulfilledman.h>
 #include <spork.h>
 #include <stats/client.h>
+#include <assert.h>
+#include <bits/chrono.h>
 
 #ifdef ENABLE_WALLET
 #include <interfaces/coinjoin.h>
@@ -71,6 +63,40 @@
 #include <algorithm>
 #include <memory>
 #include <stdexcept>
+#include <array>
+#include <atomic>
+#include <cstdlib>
+#include <deque>
+#include <iterator>
+#include <map>
+#include <optional>
+#include <ostream>
+#include <thread>
+#include <utility>
+
+#include "bitcoin-config.h"
+#include "chain.h"
+#include "coins.h"
+#include "fs.h"
+#include "governance/object.h"
+#include "key.h"
+#include "logging.h"
+#include "netgroup.h"
+#include "node/caches.h"
+#include "primitives/block.h"
+#include "random.h"
+#include "script/interpreter.h"
+#include "script/script.h"
+#include "script/sign.h"
+#include "script/signingprovider.h"
+#include "serialize.h"
+#include "span.h"
+#include "sync.h"
+#include "tinyformat.h"
+#include "txmempool.h"
+#include "util/check.h"
+#include "util/system.h"
+#include "version.h"
 
 using node::BlockAssembler;
 using node::CalculateCacheSizes;

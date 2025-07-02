@@ -4,10 +4,15 @@
 
 #include <chainparams.h>
 #include <key.h>
-#include <pubkey.h>
 #include <script/descriptor.h>
-#include <script/standard.h>
 #include <test/fuzz/fuzz.h>
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <string>
+
+#include "chainparamsbase.h"
+#include "script/signingprovider.h"
 
 void initialize_descriptor_parse()
 {

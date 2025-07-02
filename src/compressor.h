@@ -11,6 +11,9 @@
 #include <script/script.h>
 #include <serialize.h>
 #include <span.h>
+#include <stdint.h>
+
+class CTxOut;
 
 /**
  * This saves us from making many heap allocations when serializing

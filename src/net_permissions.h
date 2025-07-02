@@ -3,7 +3,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <netaddress.h>
-
+#include <assert.h>
+#include <stdint.h>
 #include <string>
 #include <type_traits>
 #include <vector>

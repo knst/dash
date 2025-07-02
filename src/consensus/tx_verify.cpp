@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <consensus/tx_verify.h>
-
 #include <chain.h>
 #include <coins.h>
 #include <consensus/consensus.h>
@@ -14,6 +13,12 @@
 #include <tinyformat.h>
 #include <util/check.h>
 #include <util/moneystr.h>
+#include <assert.h>
+#include <stddef.h>
+#include <algorithm>
+
+#include "consensus/amount.h"
+#include "script/script.h"
 
 
 bool IsFinalTx(const CTransaction &tx, int nBlockHeight, int64_t nBlockTime)

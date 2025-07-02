@@ -8,13 +8,23 @@
 
 #include <interfaces/node.h>
 #include <sync.h>
-
+#include <uint256.h>
+#include <qglobal.h>
+#include <qobject.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <QObject>
 #include <QDateTime>
-
 #include <atomic>
 #include <memory>
-#include <uint256.h>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "interfaces/handler.h"
+#include "threadsafety.h"
 
 class BanTableModel;
 class CBlockIndex;
@@ -22,6 +32,8 @@ class OptionsModel;
 class PeerTableModel;
 class PeerTableSortProxy;
 enum class SynchronizationState;
+class QDateTime;
+class QThread;
 
 namespace interfaces {
 struct BlockTip;
@@ -29,6 +41,7 @@ struct BlockTip;
 
 QT_BEGIN_NAMESPACE
 class QTimer;
+
 QT_END_NAMESPACE
 
 enum class BlockSource {
@@ -46,6 +59,7 @@ enum NumConnections {
 
 class CDeterministicMNList;
 class CGovernanceObject;
+
 typedef std::shared_ptr<CDeterministicMNList> CDeterministicMNListPtr;
 
 /** Model for Dash network client. */

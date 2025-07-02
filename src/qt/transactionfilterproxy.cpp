@@ -3,13 +3,17 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/transactionfilterproxy.h>
-
 #include <qt/transactiontablemodel.h>
 #include <qt/transactionrecord.h>
-
+#include <qnamespace.h>
+#include <qvariant.h>
 #include <algorithm>
 #include <cstdlib>
 #include <optional>
+
+#include "consensus/amount.h"
+
+class QObject;
 
 TransactionFilterProxy::TransactionFilterProxy(QObject *parent) :
     QSortFilterProxyModel(parent),

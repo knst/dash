@@ -8,6 +8,15 @@
 #include <serialize.h>
 #include <support/allocators/secure.h>
 #include <script/signingprovider.h>
+#include <algorithm>
+#include <string>
+#include <vector>
+
+#include "support/cleanse.h"
+
+class CKey;
+class CPubKey;
+class uint256;
 
 namespace wallet {
 const unsigned int WALLET_CRYPTO_KEY_SIZE = 32;

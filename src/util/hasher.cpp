@@ -7,8 +7,6 @@
 #include <span.h>
 #include <util/hasher.h>
 
-#include <limits>
-
 SaltedTxidHasher::SaltedTxidHasher() : k0(), k1() {}
 
 SaltedOutpointHasher::SaltedOutpointHasher(bool deterministic) :

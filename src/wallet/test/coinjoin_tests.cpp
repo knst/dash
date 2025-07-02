@@ -3,22 +3,64 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <test/util/setup_common.h>
-
 #include <coinjoin/client.h>
 #include <coinjoin/coinjoin.h>
 #include <coinjoin/context.h>
 #include <coinjoin/options.h>
 #include <coinjoin/util.h>
 #include <consensus/amount.h>
-#include <node/context.h>
 #include <util/translation.h>
 #include <policy/settings.h>
 #include <validation.h>
 #include <wallet/context.h>
 #include <wallet/spend.h>
 #include <wallet/wallet.h>
+#include <assert.h>
+#include <stdint.h>
+#include <boost/preprocessor/arithmetic/limits/dec_256.hpp>
+#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
+#include <boost/preprocessor/control/expr_iif.hpp>
+#include <boost/preprocessor/control/iif.hpp>
+#include <boost/preprocessor/detail/limits/auto_rec_256.hpp>
+#include <boost/preprocessor/logical/compl.hpp>
+#include <boost/preprocessor/logical/limits/bool_256.hpp>
+#include <boost/preprocessor/repetition/detail/limits/for_256.hpp>
+#include <boost/preprocessor/repetition/for.hpp>
+#include <boost/preprocessor/seq/limits/elem_256.hpp>
+#include <boost/preprocessor/seq/limits/size_256.hpp>
+#include <boost/preprocessor/tuple/elem.hpp>
+#include <boost/preprocessor/variadic/limits/elem_64.hpp>
+#include <boost/test/tools/old/interface.hpp>
+#include <boost/test/unit_test_suite.hpp>
+#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
+#include <boost/test/utils/lazy_ostream.hpp>
+#include <algorithm>
+#include <map>
+#include <memory>
+#include <optional>
+#include <utility>
+#include <vector>
 
-#include <boost/test/unit_test.hpp>
+#include "chain.h"
+#include "coinjoin/common.h"
+#include "interfaces/chain.h"
+#include "interfaces/coinjoin.h"
+#include "key.h"
+#include "policy/feerate.h"
+#include "policy/fees.h"
+#include "policy/policy.h"
+#include "prevector.h"
+#include "primitives/block.h"
+#include "primitives/transaction.h"
+#include "script/script.h"
+#include "script/standard.h"
+#include "sync.h"
+#include "uint256.h"
+#include "util/time.h"
+#include "wallet/coincontrol.h"
+#include "wallet/scriptpubkeyman.h"
+#include "wallet/transaction.h"
+#include "wallet/walletdb.h"
 
 namespace wallet {
 BOOST_FIXTURE_TEST_SUITE(coinjoin_tests, BasicTestingSetup)

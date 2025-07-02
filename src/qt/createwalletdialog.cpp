@@ -8,10 +8,15 @@
 
 #include <qt/createwalletdialog.h>
 #include <qt/forms/ui_createwalletdialog.h>
-
 #include <qt/guiutil.h>
+#include <QtCore/qobjectdefs.h>
+#include <qcheckbox.h>
+#include <qdialogbuttonbox.h>
+#include <qlineedit.h>
+#include <qnamespace.h>
+#include <qpushbutton.h>
 
-#include <QPushButton>
+class QWidget;
 
 CreateWalletDialog::CreateWalletDialog(QWidget* parent) :
     QDialog(parent, GUIUtil::dialog_flags),

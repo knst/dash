@@ -6,8 +6,14 @@
 #define BITCOIN_QT_QRDIALOG_H
 
 #include <qt/walletmodel.h>
-
+#include <qdialog.h>
+#include <qglobal.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
 #include <QDialog>
+
+class QObject;
+class QWidget;
 
 namespace Ui {
     class QRDialog;
@@ -15,6 +21,7 @@ namespace Ui {
 
 QT_BEGIN_NAMESPACE
 class QMenu;
+
 QT_END_NAMESPACE
 
 class QRDialog : public QDialog

@@ -1,14 +1,20 @@
 // Copyright (c) 2011-2020 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
-#ifdef HAVE_CONFIG_H
-#include <config/bitcoin-config.h>
-#endif
-
 #include <qt/walletmodeltransaction.h>
-
 #include <key_io.h>
+#include <qstring.h>
+#include <memory>
+#include <vector>
+
+#include "consensus/amount.h"
+#include "prevector.h"
+#include "primitives/transaction.h"
+#include "qt/sendcoinsrecipient.h"
+#include "script/script.h"
+#include "script/standard.h"
+#include "serialize.h"
+#include "version.h"
 
 WalletModelTransaction::WalletModelTransaction(const QList<SendCoinsRecipient> &_recipients) :
     recipients(_recipients),

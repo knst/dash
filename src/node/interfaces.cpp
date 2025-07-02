@@ -3,19 +3,15 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <interfaces/node.h>
-
-#include <addrdb.h>
 #include <banman.h>
 #include <chain.h>
 #include <chainparams.h>
 #include <coinjoin/common.h>
-#include <deploymentstatus.h>
 #include <evo/deterministicmns.h>
 #include <governance/governance.h>
 #include <governance/object.h>
 #include <init.h>
 #include <interfaces/chain.h>
-#include <interfaces/coinjoin.h>
 #include <interfaces/handler.h>
 #include <interfaces/wallet.h>
 #include <llmq/chainlocks.h>
@@ -41,7 +37,6 @@
 #include <rpc/protocol.h>
 #include <rpc/server.h>
 #include <shutdown.h>
-#include <support/allocators/secure.h>
 #include <sync.h>
 #include <txmempool.h>
 #include <uint256.h>
@@ -51,22 +46,47 @@
 #include <validation.h>
 #include <validationinterface.h>
 #include <warnings.h>
-
-#if defined(HAVE_CONFIG_H)
-#include <config/bitcoin-config.h>
-#endif
-
 #include <coinjoin/coinjoin.h>
 #include <coinjoin/options.h>
-
 #include <univalue.h>
-
-#include <boost/signals2/signal.hpp>
-
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <boost/multi_index/detail/hash_index_iterator.hpp>
+#include <boost/multi_index/detail/iter_adaptor.hpp>
+#include <boost/multi_index/detail/safe_mode.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/operators.hpp>
+#include <boost/signals2/connection.hpp>
 #include <memory>
 #include <optional>
 #include <utility>
-#include <variant>
+#include <algorithm>
+#include <array>
+#include <functional>
+#include <map>
+#include <string>
+#include <tuple>
+#include <vector>
+
+#include "coins.h"
+#include "consensus/amount.h"
+#include "llmq/signing.h"
+#include "logging.h"
+#include "net_types.h"
+#include "rpc/request.h"
+#include "util/error.h"
+#include "util/settings.h"
+
+enum vote_signal_enum_t : int;
+namespace interfaces {
+namespace CoinJoin {
+class Loader;
+}  // namespace CoinJoin
+}  // namespace interfaces
+namespace llmq {
+class CChainLockSig;
+}  // namespace llmq
 
 using interfaces::BlockTip;
 using interfaces::Chain;

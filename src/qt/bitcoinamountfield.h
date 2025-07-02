@@ -7,15 +7,21 @@
 
 #include <consensus/amount.h>
 #include <qt/bitcoinunits.h>
-
+#include <qglobal.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
+#include <qwidget.h>
 #include <QValidator>
 #include <QWidget>
 
 class AmountLineEdit;
 class BitcoinUnits;
+class QEvent;
+class QObject;
 
 QT_BEGIN_NAMESPACE
 class QValueComboBox;
+
 QT_END_NAMESPACE
 
 /** Widget for entering bitcoin amounts.

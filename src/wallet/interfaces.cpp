@@ -3,11 +3,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <interfaces/wallet.h>
-
-#include <coinjoin/client.h>
 #include <consensus/amount.h>
 #include <interfaces/chain.h>
-#include <interfaces/coinjoin.h>
 #include <interfaces/handler.h>
 #include <policy/fees.h>
 #include <primitives/transaction.h>
@@ -17,10 +14,8 @@
 #include <sync.h>
 #include <uint256.h>
 #include <util/check.h>
-#include <util/system.h>
 #include <util/translation.h>
 #include <util/ui_change_type.h>
-#include <validation.h>
 #include <wallet/coinjoin.h>
 #include <wallet/context.h>
 #include <wallet/fees.h>
@@ -30,11 +25,55 @@
 #include <wallet/rpc/wallet.h>
 #include <wallet/spend.h>
 #include <wallet/wallet.h>
-
+#include <stddef.h>
+#include <stdint.h>
+#include <boost/function/function_template.hpp>
+#include <boost/signals2/detail/lwm_pthreads.hpp>
+#include <boost/signals2/detail/signal_template.hpp>
+#include <boost/smart_ptr/detail/operator_bool.hpp>
+#include <boost/smart_ptr/make_shared_object.hpp>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
+#include <algorithm>
+#include <limits>
+#include <list>
+#include <map>
+#include <optional>
+
+#include "coinjoin/common.h"
+#include "fs.h"
+#include "rpc/request.h"
+#include "script/signingprovider.h"
+#include "span.h"
+#include "threadsafety.h"
+#include "util/time.h"
+#include "wallet/coincontrol.h"
+#include "wallet/coinselection.h"
+#include "wallet/db.h"
+#include "wallet/scriptpubkeyman.h"
+#include "wallet/transaction.h"
+#include "wallet/walletdb.h"
+#include "wallet/walletutil.h"
+
+class ArgsManager;
+class CKeyID;
+class CPubKey;
+class CScheduler;
+class CScript;
+class UniValue;
+enum class SigningResult;
+enum class TransactionError;
+namespace interfaces {
+namespace CoinJoin {
+class Loader;
+}  // namespace CoinJoin
+}  // namespace interfaces
+namespace node {
+struct NodeContext;
+}  // namespace node
+struct PartiallySignedTransaction;
 
 using interfaces::Chain;
 using interfaces::FoundBlock;

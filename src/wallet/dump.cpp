@@ -3,17 +3,30 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/dump.h>
-
 #include <fs.h>
 #include <util/translation.h>
 #include <wallet/wallet.h>
-
+#include <stdint.h>
 #include <algorithm>
 #include <fstream>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
+#include <optional>
+
+#include "clientversion.h"
+#include "hash.h"
+#include "serialize.h"
+#include "span.h"
+#include "streams.h"
+#include "sync.h"
+#include "tinyformat.h"
+#include "uint256.h"
+#include "util/strencodings.h"
+#include "util/system.h"
+#include "wallet/db.h"
+#include "wallet/walletdb.h"
 
 namespace wallet {
 static const std::string DUMP_MAGIC = "BITCOIN_CORE_WALLET_DUMP";

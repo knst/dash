@@ -4,11 +4,20 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <script/bitcoinconsensus.h>
-
 #include <primitives/transaction.h>
-#include <pubkey.h>
 #include <script/interpreter.h>
 #include <version.h>
+#include <string.h>
+#include <cstddef>
+#include <exception>
+#include <ios>
+#include <string>
+#include <vector>
+
+#include "consensus/amount.h"
+#include "script/script.h"
+#include "serialize.h"
+#include "span.h"
 
 namespace {
 

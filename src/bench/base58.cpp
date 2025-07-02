@@ -3,11 +3,13 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/bench.h>
-
 #include <base58.h>
-
+#include <string.h>
 #include <array>
 #include <vector>
+
+#include "nanobench.h"
+#include "span.h"
 
 
 static void Base58Encode(benchmark::Bench& bench)

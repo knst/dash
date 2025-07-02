@@ -10,16 +10,27 @@
 #include <dbwrapper.h>
 #include <spentindex.h>
 #include <timestampindex.h>
-
+#include <stddef.h>
+#include <stdint.h>
 #include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
+#include <functional>
+
+#include "addressindex.h"
+#include "fs.h"
+#include "sync.h"
+#include "threadsafety.h"
 
 class CBlockFileInfo;
 class CBlockIndex;
 class uint256;
+class COutPoint;
+class uint160;
+struct CTimestampIndexKey;
+
 namespace Consensus {
 struct Params;
 };

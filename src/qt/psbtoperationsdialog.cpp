@@ -3,22 +3,48 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/psbtoperationsdialog.h>
-
-#include <core_io.h>
-#include <fs.h>
 #include <interfaces/node.h>
 #include <key_io.h>
 #include <node/psbt.h>
-#include <policy/policy.h>
 #include <qt/bitcoinunits.h>
 #include <qt/forms/ui_psbtoperationsdialog.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <util/strencodings.h>
-
+#include <QtCore/qglobal.h>
+#include <QtCore/qobjectdefs.h>
+#include <qbytearray.h>
+#include <qlabel.h>
+#include <qlist.h>
+#include <qpushbutton.h>
+#include <qstringbuilder.h>
+#include <qstringlist.h>
+#include <qtextedit.h>
 #include <fstream>
-#include <iostream>
 #include <string>
+#include <memory>
+#include <optional>
+#include <vector>
+
+#include "consensus/amount.h"
+#include "interfaces/chain.h"
+#include "interfaces/wallet.h"
+#include "node/transaction.h"
+#include "policy/feerate.h"
+#include "primitives/transaction.h"
+#include "psbt.h"
+#include "qt/clientmodel.h"
+#include "qt/walletmodel.h"
+#include "script/interpreter.h"
+#include "script/standard.h"
+#include "serialize.h"
+#include "streams.h"
+#include "uint256.h"
+#include "util/error.h"
+#include "util/translation.h"
+#include "version.h"
+
+class QWidget;
 
 using node::AnalyzePSBT;
 using node::DEFAULT_MAX_RAW_TX_FEE_RATE;

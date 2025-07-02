@@ -7,12 +7,17 @@
 
 #include <qt/bitcoinunits.h>
 #include <qt/guiconstants.h>
-
-#include <cstdint>
-
-#include <QAbstractListModel>
-
 #include <assert.h>
+#include <qabstractitemmodel.h>
+#include <qnamespace.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
+#include <qvariant.h>
+#include <cstdint>
+#include <QAbstractListModel>
+#include <string>
+
+class QObject;
 
 namespace interfaces {
 class Node;

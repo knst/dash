@@ -3,17 +3,17 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <test/fuzz/fuzz.h>
-
 #include <base58.h>
-#include <core_io.h>
 #include <psbt.h>
 #include <util/strencodings.h>
 #include <util/string.h>
-
 #include <cassert>
-#include <cstdint>
 #include <string>
 #include <vector>
+#include <optional>
+#include <string_view>
+
+#include "span.h"
 
 FUZZ_TARGET(base_encode_decode)
 {

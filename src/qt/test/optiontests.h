@@ -6,8 +6,14 @@
 #define BITCOIN_QT_TEST_OPTIONTESTS_H
 
 #include <qt/optionsmodel.h>
-
+#include <qobject.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
 #include <QObject>
+
+namespace interfaces {
+class Node;
+}  // namespace interfaces
 
 class OptionTests : public QObject
 {

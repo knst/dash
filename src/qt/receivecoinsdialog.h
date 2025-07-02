@@ -6,7 +6,10 @@
 #define BITCOIN_QT_RECEIVECOINSDIALOG_H
 
 #include <qt/guiutil.h>
-
+#include <qdialog.h>
+#include <qglobal.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
 #include <QDialog>
 #include <QHeaderView>
 #include <QItemSelection>
@@ -16,6 +19,12 @@
 #include <QVariant>
 
 class WalletModel;
+class QAction;
+class QItemSelection;
+class QMenu;
+class QObject;
+class QPoint;
+class QWidget;
 
 namespace Ui {
     class ReceiveCoinsDialog;
@@ -23,6 +32,7 @@ namespace Ui {
 
 QT_BEGIN_NAMESPACE
 class QModelIndex;
+
 QT_END_NAMESPACE
 
 /** Dialog for requesting payment of bitcoins */

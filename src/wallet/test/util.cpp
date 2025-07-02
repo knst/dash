@@ -3,17 +3,34 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/test/util.h>
-
 #include <chain.h>
-#include <key.h>
 #include <key_io.h>
-#include <test/util/setup_common.h>
 #include <wallet/wallet.h>
 #include <wallet/walletdb.h>
-
-#include <boost/test/unit_test.hpp>
-
+#include <assert.h>
+#include <boost/preprocessor/arithmetic/limits/dec_256.hpp>
+#include <boost/preprocessor/control/expr_iif.hpp>
+#include <boost/preprocessor/control/iif.hpp>
+#include <boost/preprocessor/detail/limits/auto_rec_256.hpp>
+#include <boost/preprocessor/logical/limits/bool_256.hpp>
+#include <boost/preprocessor/repetition/detail/limits/for_256.hpp>
+#include <boost/preprocessor/repetition/for.hpp>
+#include <boost/preprocessor/seq/limits/elem_256.hpp>
+#include <boost/preprocessor/seq/limits/size_256.hpp>
+#include <boost/preprocessor/tuple/elem.hpp>
+#include <boost/preprocessor/variadic/limits/elem_64.hpp>
+#include <boost/test/tools/old/interface.hpp>
+#include <boost/test/utils/lazy_ostream.hpp>
 #include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+
+#include "script/descriptor.h"
+#include "script/signingprovider.h"
+#include "sync.h"
+#include "uint256.h"
+#include "wallet/walletutil.h"
 
 namespace wallet {
 std::unique_ptr<CWallet> CreateSyncedWallet(interfaces::Chain& chain, interfaces::CoinJoin::Loader& coinjoin_loader, CChain& cchain, ArgsManager& args, const CKey& key)

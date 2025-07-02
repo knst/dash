@@ -5,9 +5,19 @@
 #ifndef BITCOIN_QT_INTRO_H
 #define BITCOIN_QT_INTRO_H
 
+#include <qdialog.h>
+#include <qglobal.h>
+#include <qmutex.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
+#include <stdint.h>
 #include <QDialog>
 #include <QMutex>
 #include <QThread>
+
+class QObject;
+class QThread;
+class QWidget;
 
 static const bool DEFAULT_CHOOSE_DATADIR = false;
 

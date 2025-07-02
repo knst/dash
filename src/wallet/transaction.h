@@ -14,10 +14,16 @@
 #include <util/overloaded.h>
 #include <util/strencodings.h>
 #include <util/string.h>
-
+#include <stdint.h>
 #include <list>
 #include <variant>
 #include <vector>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+
+#include "uint256.h"
 
 namespace wallet {
 //! State of transaction confirmed in a block.

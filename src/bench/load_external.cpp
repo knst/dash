@@ -7,6 +7,22 @@
 #include <chainparams.h>
 #include <test/util/setup_common.h>
 #include <validation.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <map>
+#include <memory>
+#include <stdexcept>
+#include <vector>
+
+#include "chainparamsbase.h"
+#include "flatfile.h"
+#include "fs.h"
+#include "nanobench.h"
+#include "node/blockstorage.h"
+#include "serialize.h"
+#include "span.h"
+#include "streams.h"
+#include "uint256.h"
 
 /**
  * The LoadExternalBlockFile() function is used during -reindex and -loadblock.

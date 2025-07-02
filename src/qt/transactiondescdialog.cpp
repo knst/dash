@@ -4,13 +4,13 @@
 
 #include <qt/transactiondescdialog.h>
 #include <qt/forms/ui_transactiondescdialog.h>
-
 #include <qt/guiutil.h>
 #include <qt/transactiontablemodel.h>
+#include <qabstractitemmodel.h>
+#include <qtextedit.h>
+#include <qvariant.h>
 
-#include <QModelIndex>
-#include <QSettings>
-#include <QString>
+class QWidget;
 
 TransactionDescDialog::TransactionDescDialog(const QModelIndex &idx, QWidget *parent) :
     QDialog(parent, GUIUtil::dialog_flags),

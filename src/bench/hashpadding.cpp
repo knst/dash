@@ -3,9 +3,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/bench.h>
-#include <hash.h>
 #include <random.h>
 #include <uint256.h>
+#include <memory>
+
+#include "crypto/sha256.h"
+#include "nanobench.h"
 
 
 static void PrePadded(benchmark::Bench& bench)

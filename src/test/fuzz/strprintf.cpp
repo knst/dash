@@ -8,11 +8,10 @@
 #include <tinyformat.h>
 #include <util/strencodings.h>
 #include <util/translation.h>
-
 #include <algorithm>
 #include <cstdint>
 #include <string>
-#include <vector>
+#include <ostream>
 
 FUZZ_TARGET(str_printf)
 {

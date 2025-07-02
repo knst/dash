@@ -6,10 +6,12 @@
 #define BITCOIN_THREADINTERRUPT_H
 
 #include <sync.h>
-
+#include <bits/chrono.h>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+
+#include "threadsafety.h"
 
 /*
     A helper class for interruptible sleeps. Calling operator() will interrupt

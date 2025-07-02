@@ -3,22 +3,26 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/sqlite.h>
-
 #include <chainparams.h>
 #include <crypto/common.h>
 #include <logging.h>
 #include <sync.h>
-#include <util/strencodings.h>
 #include <util/system.h>
 #include <util/translation.h>
 #include <wallet/db.h>
-
 #include <sqlite3.h>
 #include <stdint.h>
-
 #include <optional>
 #include <utility>
 #include <vector>
+#include <cstddef>
+#include <stdexcept>
+
+#include "bitcoin-config.h"
+#include "span.h"
+#include "streams.h"
+#include "threadsafety.h"
+#include "tinyformat.h"
 
 namespace wallet {
 static constexpr int32_t WALLET_SCHEMA_VERSION = 0;

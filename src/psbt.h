@@ -15,8 +15,29 @@
 #include <script/signingprovider.h>
 #include <span.h>
 #include <streams.h>
-
+#include <stdint.h>
 #include <optional>
+#include <algorithm>
+#include <compare>
+#include <cstddef>
+#include <ios>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "crypto/ripemd160.h"
+#include "crypto/sha256.h"
+#include "hash.h"
+#include "script/interpreter.h"
+#include "script/script.h"
+#include "serialize.h"
+#include "uint256.h"
+#include "util/error.h"
+
+class SigningProvider;
 
 // Magic bytes
 static constexpr uint8_t PSBT_MAGIC_BYTES[5] = {'p', 's', 'b', 't', 0xff};

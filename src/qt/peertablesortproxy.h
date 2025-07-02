@@ -5,10 +5,17 @@
 #ifndef BITCOIN_QT_PEERTABLESORTPROXY_H
 #define BITCOIN_QT_PEERTABLESORTPROXY_H
 
+#include <qglobal.h>
+#include <qobjectdefs.h>
+#include <qsortfilterproxymodel.h>
+#include <qstring.h>
 #include <QSortFilterProxyModel>
+
+class QObject;
 
 QT_BEGIN_NAMESPACE
 class QModelIndex;
+
 QT_END_NAMESPACE
 
 class PeerTableSortProxy : public QSortFilterProxyModel

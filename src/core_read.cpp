@@ -3,20 +3,31 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <core_io.h>
-
-#include <primitives/block.h>
-#include <primitives/transaction.h>
 #include <script/script.h>
-#include <script/sign.h>
 #include <serialize.h>
 #include <streams.h>
 #include <univalue.h>
 #include <util/string.h>
 #include <util/strencodings.h>
 #include <version.h>
-
+#include <stdint.h>
 #include <algorithm>
 #include <string>
+#include <compare>
+#include <exception>
+#include <map>
+#include <optional>
+#include <stdexcept>
+#include <utility>
+#include <vector>
+
+#include "script/interpreter.h"
+#include "span.h"
+#include "uint256.h"
+
+class CBlock;
+class CBlockHeader;
+struct CMutableTransaction;
 
 namespace {
 class OpCodeParser

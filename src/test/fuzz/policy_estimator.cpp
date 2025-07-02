@@ -9,11 +9,12 @@
 #include <test/fuzz/util.h>
 #include <test/util/setup_common.h>
 #include <txmempool.h>
-
-#include <cstdint>
 #include <optional>
-#include <string>
 #include <vector>
+#include <algorithm>
+#include <functional>
+
+#include "streams.h"
 
 void initialize_policy_estimator()
 {

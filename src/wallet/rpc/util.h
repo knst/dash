@@ -6,7 +6,6 @@
 #define BITCOIN_WALLET_RPC_UTIL_H
 
 #include <context.h>
-
 #include <memory>
 #include <string>
 #include <vector>

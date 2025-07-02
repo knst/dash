@@ -5,6 +5,20 @@
 #include <rpc/util.h>
 #include <wallet/rpc/util.h>
 #include <wallet/wallet.h>
+#include <stdint.h>
+#include <functional>
+#include <memory>
+#include <string>
+
+#include "interfaces/chain.h"
+#include "rpc/protocol.h"
+#include "rpc/request.h"
+#include "support/allocators/secure.h"
+#include "sync.h"
+#include "tinyformat.h"
+#include "univalue.h"
+#include "util/time.h"
+#include "wallet/walletutil.h"
 
 namespace wallet {
 RPCHelpMan walletpassphrase()

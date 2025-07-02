@@ -3,11 +3,13 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <net_types.h>
-
 #include <logging.h>
 #include <netaddress.h>
 #include <netbase.h>
 #include <univalue.h>
+#include <string>
+#include <utility>
+#include <vector>
 
 static const char* BANMAN_JSON_VERSION_KEY{"version"};
 

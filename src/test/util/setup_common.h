@@ -18,13 +18,27 @@
 #include <util/check.h>
 #include <util/string.h>
 #include <util/vector.h>
-
+#include <stddef.h>
+#include <stdint.h>
 #include <functional>
 #include <stdexcept>
 #include <type_traits>
 #include <vector>
+#include <algorithm>
+#include <exception>
+#include <iosfwd>
+#include <memory>
+#include <string>
+
+#include "consensus/amount.h"
+#include "node/context.h"
+#include "primitives/transaction.h"
+#include "uint256.h"
 
 class CChainParams;
+class CChainState;
+class ChainstateManager;
+
 namespace Consensus {
 struct Params;
 };

@@ -12,14 +12,21 @@
 #include <streams.h>
 #include <util/system.h>
 #include <wallet/db.h>
-
+#include <assert.h>
+#include <db.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <condition_variable>
+#include <functional>
+#include <utility>
 
 struct bilingual_str;
+class CDataStream;
 
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic push

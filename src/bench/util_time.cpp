@@ -3,8 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/bench.h>
-
 #include <util/time.h>
+#include <bits/chrono.h>
+#include <memory>
+
+#include "nanobench.h"
 
 static void BenchTimeDeprecated(benchmark::Bench& bench)
 {

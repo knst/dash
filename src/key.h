@@ -11,9 +11,17 @@
 #include <serialize.h>
 #include <support/allocators/secure.h>
 #include <uint256.h>
-
+#include <stdint.h>
+#include <string.h>
 #include <stdexcept>
 #include <vector>
+#include <algorithm>
+#include <array>
+#include <cstddef>
+
+#include "crypto/sha256.h"
+
+template <typename C> class Span;
 
 
 /**

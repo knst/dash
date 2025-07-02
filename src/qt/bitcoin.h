@@ -11,11 +11,15 @@
 
 #include <interfaces/node.h>
 #include <qt/initexecutor.h>
-
 #include <assert.h>
+#include <qapplication.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
+#include <qstringlist.h>
+#include <qwindowdefs.h>
+#include <stdint.h>
 #include <memory>
 #include <optional>
-
 #include <QApplication>
 
 class BitcoinGUI;
@@ -26,8 +30,15 @@ class PaymentServer;
 class SplashScreen;
 class WalletController;
 class WalletModel;
+class QEvent;
+class QObject;
+class QTimer;
+class QWidget;
+
 namespace interfaces {
 class Init;
+class Node;
+struct BlockAndHeaderTipInfo;
 } // namespace interfaces
 
 

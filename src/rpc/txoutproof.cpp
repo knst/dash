@@ -16,6 +16,22 @@
 #include <univalue.h>
 #include <util/strencodings.h>
 #include <validation.h>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "node/transaction.h"
+#include "primitives/block.h"
+#include "rpc/protocol.h"
+#include "rpc/request.h"
+#include "serialize.h"
+#include "span.h"
+#include "streams.h"
+#include "sync.h"
+#include "uint256.h"
+#include "version.h"
 
 using node::GetTransaction;
 using node::ReadBlockFromDisk;

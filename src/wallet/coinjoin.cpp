@@ -4,7 +4,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/coinjoin.h>
-
 #include <key_io.h>
 #include <coinjoin/common.h>
 #include <coinjoin/options.h>
@@ -13,6 +12,47 @@
 #include <wallet/spend.h>
 #include <wallet/wallet.h>
 #include <wallet/transaction.h>
+#include <assert.h>
+#include <stdint.h>
+#include <boost/function/function_template.hpp>
+#include <boost/iterator/iterator_facade.hpp>
+#include <boost/signals2/detail/lwm_pthreads.hpp>
+#include <boost/signals2/detail/signal_template.hpp>
+#include <boost/signals2/optional_last_value.hpp>
+#include <boost/smart_ptr/detail/operator_bool.hpp>
+#include <boost/smart_ptr/make_shared_object.hpp>
+#include <algorithm>
+#include <bitset>
+#include <list>
+#include <map>
+#include <memory>
+#include <set>
+#include <stdexcept>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <variant>
+#include <vector>
+
+#include "consensus/amount.h"
+#include "crypto/common.h"
+#include "crypto/sha256.h"
+#include "primitives/transaction.h"
+#include "random.h"
+#include "script/script.h"
+#include "script/standard.h"
+#include "serialize.h"
+#include "streams.h"
+#include "sync.h"
+#include "tinyformat.h"
+#include "uint256.h"
+#include "util/system.h"
+#include "util/ui_change_type.h"
+#include "version.h"
+#include "wallet/coincontrol.h"
+#include "wallet/coinselection.h"
+#include "wallet/ismine.h"
+#include "wallet/walletdb.h"
 
 namespace wallet {
 void CWallet::InitCJSaltFromDb()

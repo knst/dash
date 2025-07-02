@@ -4,14 +4,16 @@
 
 #include <qt/qrdialog.h>
 #include <qt/forms/ui_qrdialog.h>
-
-#include <qt/bitcoinunits.h>
-#include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/qrimagewidget.h>
+#include <QtCore/qobjectdefs.h>
+#include <qlabel.h>
+#include <qpushbutton.h>
+#include <qtextedit.h>
+#include <algorithm>
+#include <vector>
 
-#include <QPainter>
-#include <QPixmap>
+class QWidget;
 
 #if defined(HAVE_CONFIG_H)
 #include <config/bitcoin-config.h> /* for USE_QRCODE */

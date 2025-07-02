@@ -6,10 +6,14 @@
 #define BITCOIN_QT_RECEIVEREQUESTDIALOG_H
 
 #include <qt/sendcoinsrecipient.h>
-
+#include <qdialog.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
 #include <QDialog>
 
 class WalletModel;
+class QObject;
+class QWidget;
 
 namespace Ui {
     class ReceiveRequestDialog;

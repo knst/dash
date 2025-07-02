@@ -5,16 +5,20 @@
 #ifndef BITCOIN_QT_APPEARANCEWIDGET_H
 #define BITCOIN_QT_APPEARANCEWIDGET_H
 
+#include <qt/guiutil.h>
+#include <qfont.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
+#include <qwidget.h>
 #include <QWidget>
 
-#include <qt/guiutil.h>
+class QObject;
 
 namespace Ui {
 class AppearanceWidget;
 }
 
 class OptionsModel;
-
 class QDataWidgetMapper;
 class QSlider;
 class QComboBox;

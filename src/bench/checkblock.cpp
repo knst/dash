@@ -4,11 +4,23 @@
 
 #include <bench/bench.h>
 #include <bench/data.h>
-
 #include <chainparams.h>
 #include <consensus/validation.h>
 #include <streams.h>
 #include <validation.h>
+#include <assert.h>
+#include <cstddef>
+#include <memory>
+#include <optional>
+#include <vector>
+
+#include "chainparamsbase.h"
+#include "nanobench.h"
+#include "primitives/block.h"
+#include "serialize.h"
+#include "span.h"
+#include "util/system.h"
+#include "version.h"
 
 // These are the two major time-sinks which happen after we have fully received
 // a block off the wire, but before we can relay the block on to peers using

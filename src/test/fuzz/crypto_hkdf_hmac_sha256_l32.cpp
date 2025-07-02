@@ -6,10 +6,9 @@
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
-
 #include <cstdint>
-#include <string>
 #include <vector>
+#include <algorithm>
 
 FUZZ_TARGET(crypto_hkdf_hmac_sha256_l32)
 {

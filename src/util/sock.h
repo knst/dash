@@ -8,10 +8,14 @@
 #include <compat/compat.h>
 #include <threadinterrupt.h>
 #include <util/time.h>
-
+#include <bits/chrono.h>
+#include <stdint.h>
 #include <chrono>
 #include <memory>
 #include <string>
+#include <string_view>
+
+class CThreadInterrupt;
 
 /**
  * Maximum time to wait for I/O readiness.

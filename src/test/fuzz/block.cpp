@@ -5,17 +5,24 @@
 #include <chainparams.h>
 #include <consensus/merkle.h>
 #include <consensus/validation.h>
-#include <core_io.h>
 #include <core_memusage.h>
 #include <primitives/block.h>
-#include <pubkey.h>
 #include <streams.h>
 #include <test/fuzz/fuzz.h>
 #include <validation.h>
 #include <version.h>
-
+#include <stddef.h>
 #include <cassert>
-#include <string>
+#include <functional>
+#include <ios>
+#include <memory>
+
+#include "chainparamsbase.h"
+#include "serialize.h"
+
+namespace Consensus {
+struct Params;
+}  // namespace Consensus
 
 void initialize_block()
 {

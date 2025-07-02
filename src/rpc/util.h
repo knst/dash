@@ -18,10 +18,23 @@
 #include <univalue.h>
 #include <util/check.h>
 #include <util/strencodings.h>
-
+#include <stddef.h>
+#include <stdint.h>
 #include <string>
 #include <variant>
 #include <vector>
+#include <functional>
+#include <initializer_list>
+#include <list>
+#include <map>
+#include <utility>
+
+#include "consensus/amount.h"
+#include "uint256.h"
+
+enum ServiceFlags : uint64_t;
+enum class TransactionError;
+struct FlatSigningProvider;
 
 /**
  * String used to describe UNIX epoch time in documentation, factored out to a

@@ -7,10 +7,21 @@
 #define BITCOIN_QT_BITCOINUNITS_H
 
 #include <consensus/amount.h>
-
+#include <QtCore/qglobal.h>
+#include <qabstractitemmodel.h>
+#include <qchar.h>
+#include <qglobal.h>
+#include <qlist.h>
+#include <qnamespace.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
+#include <qvariant.h>
 #include <QAbstractListModel>
 #include <QDataStream>
 #include <QString>
+
+class QDataStream;
+class QObject;
 
 // U+2009 THIN SPACE = UTF-8 E2 80 89
 #define REAL_THIN_SP_CP 0x2009

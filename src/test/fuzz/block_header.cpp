@@ -7,12 +7,8 @@
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
 #include <uint256.h>
-
 #include <cassert>
-#include <cstdint>
 #include <optional>
-#include <string>
-#include <vector>
 
 FUZZ_TARGET(block_header)
 {

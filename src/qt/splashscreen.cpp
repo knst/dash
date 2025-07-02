@@ -8,9 +8,6 @@
 #endif
 
 #include <qt/splashscreen.h>
-
-
-#include <chainparams.h>
 #include <clientversion.h>
 #include <interfaces/handler.h>
 #include <interfaces/node.h>
@@ -18,15 +15,28 @@
 #include <qt/guiutil.h>
 #include <qt/networkstyle.h>
 #include <qt/walletmodel.h>
-#include <util/system.h>
-#include <util/translation.h>
-
+#include <QtCore/qglobal.h>
+#include <assert.h>
+#include <qapplication.h>
+#include <qcoreevent.h>
+#include <qevent.h>
+#include <qfont.h>
+#include <qfontmetrics.h>
+#include <qguiapplication.h>
+#include <qimage.h>
+#include <qnamespace.h>
+#include <qobject.h>
+#include <qpainter.h>
+#include <qpoint.h>
+#include <qrect.h>
+#include <qrgb.h>
+#include <qscreen.h>
+#include <qsize.h>
 #include <functional>
+#include <string>
+#include <utility>
 
-#include <QApplication>
-#include <QCloseEvent>
-#include <QPainter>
-#include <QScreen>
+#include "tinyformat.h"
 
 
 SplashScreen::SplashScreen(const NetworkStyle *networkStyle) :

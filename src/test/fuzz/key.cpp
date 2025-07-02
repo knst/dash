@@ -10,22 +10,29 @@
 #include <pubkey.h>
 #include <rpc/util.h>
 #include <script/script.h>
-#include <script/sign.h>
 #include <script/standard.h>
 #include <streams.h>
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
 #include <util/strencodings.h>
-
 #include <array>
 #include <cassert>
 #include <cstddef>
-#include <cstdint>
 #include <numeric>
 #include <optional>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <functional>
+#include <initializer_list>
+#include <variant>
+
+#include "hash.h"
+#include "serialize.h"
+#include "span.h"
+#include "uint256.h"
+#include "version.h"
 
 void initialize_key()
 {

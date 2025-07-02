@@ -9,6 +9,9 @@
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
 #include <univalue.h>
+#include <functional>
+
+#include "chainparamsbase.h"
 
 void initialize_script_format()
 {

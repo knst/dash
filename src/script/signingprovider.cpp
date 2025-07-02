@@ -6,8 +6,14 @@
 #include <script/keyorigin.h>
 #include <script/signingprovider.h>
 #include <script/standard.h>
-
 #include <util/system.h>
+#include <algorithm>
+#include <variant>
+
+#include "key.h"
+#include "pubkey.h"
+#include "script/script.h"
+#include "sync.h"
 
 const SigningProvider& DUMMY_SIGNING_PROVIDER = SigningProvider();
 

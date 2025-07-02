@@ -3,8 +3,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <chainparams.h>
-#include <init.h>
 #include <interfaces/chain.h>
 #include <interfaces/coinjoin.h>
 #include <interfaces/init.h>
@@ -12,13 +10,10 @@
 #include <net.h>
 #include <node/context.h>
 #include <node/interface_ui.h>
-#include <univalue.h>
 #include <util/check.h>
-#include <util/error.h>
 #include <util/system.h>
 #include <util/moneystr.h>
 #include <util/translation.h>
-#include <validation.h>
 #ifdef USE_BDB
 #include <wallet/bdb.h>
 #endif
@@ -27,9 +22,23 @@
 #include <wallet/hdchain.h>
 #include <wallet/wallet.h>
 #include <walletinitinterface.h>
-
-#include <coinjoin/client.h>
 #include <coinjoin/options.h>
+#include <algorithm>
+#include <filesystem>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "bitcoin-config.h"
+#include "logging.h"
+#include "policy/feerate.h"
+#include "support/allocators/secure.h"
+#include "tinyformat.h"
+#include "util/strencodings.h"
+#include "wallet/db.h"
+#include "wallet/scriptpubkeyman.h"
+#include "wallet/walletdb.h"
 
 using node::NodeContext;
 

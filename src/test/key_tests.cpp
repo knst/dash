@@ -3,19 +3,35 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <key.h>
-
 #include <key_io.h>
 #include <streams.h>
 #include <test/util/setup_common.h>
 #include <uint256.h>
 #include <util/strencodings.h>
 #include <util/string.h>
-#include <util/system.h>
-
+#include <stdint.h>
+#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
+#include <boost/preprocessor/control/iif.hpp>
+#include <boost/preprocessor/logical/compl.hpp>
+#include <boost/preprocessor/logical/limits/bool_256.hpp>
+#include <boost/test/tools/old/interface.hpp>
+#include <boost/test/unit_test_suite.hpp>
+#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
+#include <boost/test/utils/lazy_ostream.hpp>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <initializer_list>
+#include <variant>
 
-#include <boost/test/unit_test.hpp>
+#include "hash.h"
+#include "pubkey.h"
+#include "random.h"
+#include "script/standard.h"
+#include "serialize.h"
+#include "span.h"
+#include "tinyformat.h"
+#include "version.h"
 
 static const std::string strSecret1 = "7qh6LYnLN2w2ntz2wwUhRUEgkQ2j8XB16FGw77ZRDZmC29bn7cD";
 static const std::string strSecret2 = "7rve4MxeWFQHGbSYH6J2yaaZd3MBUqoDEwN6ZAZ6ZHmhTT4r3hW";

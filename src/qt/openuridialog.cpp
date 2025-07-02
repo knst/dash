@@ -5,13 +5,18 @@
 
 #include <qt/openuridialog.h>
 #include <qt/forms/ui_openuridialog.h>
-
 #include <qt/guiutil.h>
 #include <qt/sendcoinsrecipient.h>
+#include <QtCore/qobjectdefs.h>
+#include <qabstractbutton.h>
+#include <qcoreevent.h>
+#include <qlineedit.h>
+#include <qobject.h>
+#include <qtoolbutton.h>
 
-#include <QAbstractButton>
-#include <QLineEdit>
-#include <QUrl>
+#include "qt/qvalidatedlineedit.h"
+
+class QWidget;
 
 OpenURIDialog::OpenURIDialog(QWidget* parent) : QDialog(parent, GUIUtil::dialog_flags),
                                                 ui(new Ui::OpenURIDialog)

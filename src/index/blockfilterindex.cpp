@@ -2,13 +2,33 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <map>
-
 #include <dbwrapper.h>
 #include <hash.h>
 #include <index/blockfilterindex.h>
 #include <node/blockstorage.h>
 #include <serialize.h>
+#include <assert.h>
+#include <stdint.h>
+#include <map>
+#include <algorithm>
+#include <exception>
+#include <ios>
+#include <stdexcept>
+#include <tuple>
+#include <utility>
+
+#include "blockfilter.h"
+#include "chain.h"
+#include "clientversion.h"
+#include "flatfile.h"
+#include "fs.h"
+#include "index/base.h"
+#include "logging.h"
+#include "streams.h"
+#include "uint256.h"
+#include "undo.h"
+#include "util/hasher.h"
+#include "util/system.h"
 
 using node::UndoReadFromDisk;
 

@@ -4,17 +4,17 @@
 
 #include <core_io.h>
 #include <primitives/block.h>
-#include <pubkey.h>
 #include <rpc/util.h>
 #include <test/fuzz/fuzz.h>
 #include <uint256.h>
 #include <univalue.h>
 #include <util/strencodings.h>
-
 #include <cassert>
-#include <cstdint>
 #include <string>
 #include <vector>
+#include <cstddef>
+
+#include "span.h"
 
 FUZZ_TARGET(hex)
 {

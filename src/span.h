@@ -9,6 +9,7 @@
 #include <cassert>
 #include <cstddef>
 #include <type_traits>
+#include <utility>
 
 #ifdef DEBUG_CORE
 #define CONSTEXPR_IF_NOT_DEBUG

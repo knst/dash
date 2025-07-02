@@ -10,11 +10,14 @@
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
-
 #include <cstdint>
 #include <optional>
-#include <string>
 #include <vector>
+#include <functional>
+
+#include "consensus/amount.h"
+#include "primitives/transaction.h"
+#include "script/interpreter.h"
 
 void initialize_script_sigcache()
 {

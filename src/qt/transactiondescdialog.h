@@ -5,7 +5,14 @@
 #ifndef BITCOIN_QT_TRANSACTIONDESCDIALOG_H
 #define BITCOIN_QT_TRANSACTIONDESCDIALOG_H
 
+#include <qdialog.h>
+#include <qglobal.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
 #include <QDialog>
+
+class QObject;
+class QWidget;
 
 namespace Ui {
     class TransactionDescDialog;
@@ -13,6 +20,7 @@ namespace Ui {
 
 QT_BEGIN_NAMESPACE
 class QModelIndex;
+
 QT_END_NAMESPACE
 
 /** Dialog showing transaction details. */

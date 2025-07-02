@@ -4,15 +4,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <addrdb.h>
-
 #include <addrman.h>
 #include <chainparams.h>
 #include <clientversion.h>
 #include <fs.h>
 #include <hash.h>
 #include <logging/timer.h>
-#include <netbase.h>
-#include <netgroup.h>
 #include <random.h>
 #include <streams.h>
 #include <tinyformat.h>
@@ -20,8 +17,25 @@
 #include <util/settings.h>
 #include <util/system.h>
 #include <util/translation.h>
-
+#include <bits/chrono.h>
+#include <stdio.h>
+#include <string.h>
 #include <cstdint>
+#include <algorithm>
+#include <exception>
+#include <map>
+#include <stdexcept>
+#include <string>
+#include <utility>
+
+#include "bitcoin-config.h"
+#include "logging.h"
+#include "net_types.h"
+#include "netaddress.h"
+#include "protocol.h"
+#include "serialize.h"
+#include "uint256.h"
+#include "util/time.h"
 
 namespace {
 

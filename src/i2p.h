@@ -12,12 +12,17 @@
 #include <sync.h>
 #include <threadinterrupt.h>
 #include <util/sock.h>
-
+#include <stdint.h>
 #include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <algorithm>
+
+#include "threadsafety.h"
+
+class CThreadInterrupt;
 
 namespace i2p {
 

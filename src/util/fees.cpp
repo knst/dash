@@ -4,15 +4,15 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <util/fees.h>
-
 #include <policy/fees.h>
 #include <util/strencodings.h>
 #include <util/string.h>
-
 #include <map>
 #include <string>
 #include <vector>
 #include <utility>
+
+#include "policy/feerate.h"
 
 std::string StringForFeeReason(FeeReason reason)
 {

@@ -3,18 +3,17 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/test/rpcnestedtests.h>
-
 #include <interfaces/node.h>
 #include <rpc/server.h>
 #include <qt/rpcconsole.h>
 #include <test/util/setup_common.h>
 #include <univalue.h>
-#include <util/system.h>
-
-#include <QTest>
-
+#include <qtestcase.h>
 #include <string>
 #include <stdexcept>
+
+#include "rpc/request.h"
+#include "rpc/util.h"
 
 static RPCHelpMan rpcNestedTest_rpc()
 {

@@ -6,9 +6,9 @@
 #define BITCOIN_CONSENSUS_TX_VERIFY_H
 
 #include <consensus/amount.h>
-
 #include <stdint.h>
 #include <vector>
+#include <utility>
 
 class CBlockIndex;
 class CCoinsViewCache;

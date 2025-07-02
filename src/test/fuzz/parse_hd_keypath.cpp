@@ -6,9 +6,9 @@
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
 #include <util/bip32.h>
-
 #include <cstdint>
 #include <vector>
+#include <string>
 
 FUZZ_TARGET(parse_hd_keypath)
 {

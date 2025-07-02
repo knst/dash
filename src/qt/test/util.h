@@ -5,12 +5,13 @@
 #ifndef BITCOIN_QT_TEST_UTIL_H
 #define BITCOIN_QT_TEST_UTIL_H
 
-#include <chrono>
-
 #include <qglobal.h>
+#include <bits/chrono.h>
+#include <chrono>
 
 QT_BEGIN_NAMESPACE
 class QString;
+
 QT_END_NAMESPACE
 
 /**

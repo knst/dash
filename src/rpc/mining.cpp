@@ -15,10 +15,7 @@
 #include <deploymentinfo.h>
 #include <deploymentstatus.h>
 #include <key_io.h>
-#include <llmq/blockprocessor.h>
 #include <llmq/context.h>
-#include <llmq/chainlocks.h>
-#include <llmq/instantsend.h>
 #include <evo/evodb.h>
 #include <net.h>
 #include <node/context.h>
@@ -31,26 +28,50 @@
 #include <rpc/util.h>
 #include <script/descriptor.h>
 #include <script/script.h>
-#include <script/sign.h>
 #include <shutdown.h>
-#include <spork.h>
 #include <txmempool.h>
 #include <univalue.h>
 #include <util/check.h>
 #include <util/strencodings.h>
 #include <util/string.h>
-#include <util/system.h>
 #include <util/translation.h>
 #include <validation.h>
 #include <validationinterface.h>
 #include <warnings.h>
-
 #include <governance/classes.h>
 #include <governance/governance.h>
 #include <masternode/sync.h>
-
-#include <memory>
 #include <stdint.h>
+#include <bits/chrono.h>
+#include <stddef.h>
+#include <memory>
+#include <algorithm>
+#include <condition_variable>
+#include <limits>
+#include <map>
+#include <optional>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "arith_uint256.h"
+#include "bitcoin-config.h"
+#include "governance/object.h"
+#include "netbase.h"
+#include "node/blockstorage.h"
+#include "primitives/block.h"
+#include "primitives/transaction.h"
+#include "rpc/protocol.h"
+#include "rpc/request.h"
+#include "script/signingprovider.h"
+#include "script/standard.h"
+#include "span.h"
+#include "sync.h"
+#include "tinyformat.h"
+#include "uint256.h"
+#include "util/time.h"
+#include "versionbits.h"
 
 using node::BlockAssembler;
 using node::CBlockTemplate;

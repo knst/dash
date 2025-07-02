@@ -8,13 +8,13 @@
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
 #include <util/message.h>
-#include <util/strencodings.h>
-
 #include <cassert>
-#include <cstdint>
-#include <iostream>
 #include <string>
-#include <vector>
+#include <functional>
+
+#include "chainparamsbase.h"
+#include "key.h"
+#include "script/standard.h"
 
 void initialize_message()
 {

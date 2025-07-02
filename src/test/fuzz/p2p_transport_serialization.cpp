@@ -11,12 +11,31 @@
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
 #include <test/util/xoroshiro128plusplus.h>
-
+#include <bits/chrono.h>
 #include <cassert>
 #include <cstdint>
 #include <limits>
 #include <optional>
 #include <vector>
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <deque>
+#include <functional>
+#include <memory>
+#include <ratio>
+#include <string>
+#include <utility>
+
+#include "chainparamsbase.h"
+#include "crypto/sha256.h"
+#include "key.h"
+#include "node/eviction.h"
+#include "serialize.h"
+#include "span.h"
+#include "streams.h"
+#include "uint256.h"
+#include "version.h"
 
 std::vector<std::string> g_all_messages;
 

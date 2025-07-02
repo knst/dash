@@ -4,15 +4,24 @@
 
 #include <bench/bench.h>
 #include <interfaces/chain.h>
-#include <node/context.h>
 #include <test/util/mining.h>
 #include <test/util/setup_common.h>
 #include <test/util/wallet.h>
 #include <validationinterface.h>
 #include <wallet/receive.h>
 #include <wallet/wallet.h>
-
+#include <assert.h>
+#include <stdint.h>
 #include <optional>
+#include <memory>
+#include <string>
+
+#include "nanobench.h"
+#include "primitives/transaction.h"
+#include "sync.h"
+#include "util/system.h"
+#include "wallet/walletdb.h"
+#include "wallet/walletutil.h"
 
 using wallet::CreateMockWalletDatabase;
 using wallet::CWallet;

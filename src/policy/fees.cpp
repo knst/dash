@@ -4,14 +4,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <policy/fees.h>
-
 #include <clientversion.h>
-#include <consensus/amount.h>
 #include <fs.h>
 #include <logging.h>
 #include <policy/feerate.h>
 #include <primitives/transaction.h>
-#include <random.h>
 #include <serialize.h>
 #include <streams.h>
 #include <sync.h>
@@ -21,7 +18,6 @@
 #include <util/serfloat.h>
 #include <util/system.h>
 #include <util/time.h>
-
 #include <algorithm>
 #include <cassert>
 #include <cmath>

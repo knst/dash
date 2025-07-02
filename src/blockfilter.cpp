@@ -2,9 +2,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <mutex>
-#include <set>
-
 #include <blockfilter.h>
 #include <crypto/siphash.h>
 #include <hash.h>
@@ -13,6 +10,23 @@
 #include <streams.h>
 #include <util/golombrice.h>
 #include <util/string.h>
+#include <assert.h>
+#include <mutex>
+#include <set>
+#include <algorithm>
+#include <map>
+#include <memory>
+#include <stdexcept>
+
+#include "coins.h"
+#include "prevector.h"
+#include "primitives/block.h"
+#include "serialize.h"
+#include "span.h"
+#include "uint256.h"
+#include "undo.h"
+#include "util/bytevectorhash.h"
+#include "util/fastrange.h"
 
 /// SerType used to serialize parameters in GCS filter encoding.
 static constexpr int GCS_SER_TYPE = SER_NETWORK;

@@ -6,9 +6,14 @@
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
-
+#include <assert.h>
+#include <stddef.h>
 #include <cstdint>
 #include <vector>
+#include <algorithm>
+#include <utility>
+
+#include "span.h"
 
 /*
 From https://cr.yp.to/chacha.html

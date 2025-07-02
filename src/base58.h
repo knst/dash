@@ -16,9 +16,10 @@
 
 #include <attributes.h>
 #include <span.h>
-
 #include <string>
 #include <vector>
+
+template <typename C> class Span;
 
 /**
  * Encode a byte span as a base58-encoded string

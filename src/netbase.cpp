@@ -8,7 +8,6 @@
 #endif
 
 #include <netbase.h>
-
 #include <compat/compat.h>
 #include <sync.h>
 #include <tinyformat.h>
@@ -17,23 +16,19 @@
 #include <util/string.h>
 #include <util/system.h>
 #include <util/time.h>
-
+#include <assert.h>
+#include <bits/chrono.h>
+#include <string.h>
 #include <atomic>
-#include <chrono>
-#include <cstdint>
 #include <functional>
 #include <memory>
+#include <algorithm>
+
+#include "logging.h"
+#include "netaddress.h"
 
 #if HAVE_SOCKADDR_UN
 #include <sys/un.h>
-#endif
-
-#ifndef WIN32
-#include <fcntl.h>
-#endif
-
-#ifdef USE_POLL
-#include <poll.h>
 #endif
 
 // Settings

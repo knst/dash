@@ -8,8 +8,18 @@
 #include <policy/policy.h>
 #include <policy/settings.h>
 #include <tinyformat.h>
-
+#include <assert.h>
 #include <numeric>
+#include <algorithm>
+#include <memory>
+#include <utility>
+
+#include "primitives/transaction.h"
+#include "psbt.h"
+#include "script/interpreter.h"
+#include "script/script.h"
+#include "script/sign.h"
+#include "script/signingprovider.h"
 
 namespace node {
 PSBTAnalysis AnalyzePSBT(PartiallySignedTransaction psbtx)

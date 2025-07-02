@@ -10,7 +10,6 @@
 #include <interfaces/chain.h>
 #include <key_io.h>
 #include <merkleblock.h>
-#include <rpc/server.h>
 #include <rpc/util.h>
 #include <script/descriptor.h>
 #include <script/script.h>
@@ -20,16 +19,66 @@
 #include <util/system.h>
 #include <util/time.h>
 #include <util/translation.h>
-#include <validation.h>
 #include <wallet/wallet.h>
 #include <wallet/rpc/util.h>
-
+#include <univalue.h>
+#include <stddef.h>
+#include <boost/function/function_template.hpp>
+#include <boost/iterator/iterator_facade.hpp>
+#include <boost/signals2/detail/lwm_pthreads.hpp>
+#include <boost/signals2/detail/signal_template.hpp>
+#include <boost/signals2/optional_last_value.hpp>
+#include <boost/smart_ptr/detail/operator_bool.hpp>
+#include <boost/smart_ptr/make_shared_object.hpp>
 #include <cstdint>
 #include <fstream>
 #include <tuple>
 #include <string>
+#include <algorithm>
+#include <iterator>
+#include <limits>
+#include <list>
+#include <map>
+#include <memory>
+#include <optional>
+#include <set>
+#include <sstream>
+#include <utility>
+#include <variant>
+#include <vector>
 
-#include <univalue.h>
+#include "bitcoin-config.h"
+#include "key.h"
+#include "primitives/block.h"
+#include "primitives/transaction.h"
+#include "pubkey.h"
+#include "rpc/protocol.h"
+#include "rpc/request.h"
+#include "script/keyorigin.h"
+#include "script/signingprovider.h"
+#include "serialize.h"
+#include "span.h"
+#include "streams.h"
+#include "support/allocators/secure.h"
+#include "threadsafety.h"
+#include "tinyformat.h"
+#include "uint256.h"
+#include "util/check.h"
+#include "util/hash_type.h"
+#include "util/strencodings.h"
+#include "util/string.h"
+#include "version.h"
+#include "wallet/hdchain.h"
+#include "wallet/ismine.h"
+#include "wallet/scriptpubkeyman.h"
+#include "wallet/transaction.h"
+#include "wallet/walletdb.h"
+#include "wallet/walletutil.h"
+
+namespace wallet {
+enum class DatabaseStatus;
+struct WalletContext;
+}  // namespace wallet
 
 using interfaces::FoundBlock;
 

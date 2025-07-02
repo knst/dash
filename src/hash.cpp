@@ -6,9 +6,12 @@
 #include <span.h>
 #include <crypto/common.h>
 #include <crypto/hmac_sha512.h>
-
 #include <bit>
 #include <string>
+
+#include "crypto/sha256.h"
+#include "serialize.h"
+#include "uint256.h"
 
 unsigned int MurmurHash3(unsigned int nHashSeed, Span<const unsigned char> vDataToHash)
 {

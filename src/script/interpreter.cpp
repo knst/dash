@@ -4,13 +4,25 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <script/interpreter.h>
-
 #include <crypto/ripemd160.h>
 #include <crypto/sha1.h>
 #include <crypto/sha256.h>
 #include <pubkey.h>
 #include <script/script.h>
 #include <uint256.h>
+#include <assert.h>
+#include <stddef.h>
+#include <algorithm>
+#include <limits>
+#include <stdexcept>
+#include <utility>
+
+#include "hash.h"
+#include "prevector.h"
+#include "primitives/transaction.h"
+#include "script/script_error.h"
+#include "serialize.h"
+#include "span.h"
 
 typedef std::vector<unsigned char> valtype;
 

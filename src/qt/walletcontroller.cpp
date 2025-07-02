@@ -3,33 +3,37 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/walletcontroller.h>
-
 #include <qt/askpassphrasedialog.h>
 #include <qt/clientmodel.h>
 #include <qt/createwalletdialog.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/walletmodel.h>
-
-#include <coinjoin/client.h>
-#include <node/context.h>
 #include <interfaces/handler.h>
 #include <interfaces/node.h>
 #include <util/string.h>
 #include <util/threadnames.h>
 #include <util/translation.h>
-#include <wallet/wallet.h>
-
+#include <QtCore/qglobal.h>
+#include <QtCore/qobjectdefs.h>
+#include <assert.h>
+#include <bits/chrono.h>
+#include <qapplication.h>
+#include <qdialog.h>
+#include <qmessagebox.h>
+#include <qnamespace.h>
+#include <qprogressdialog.h>
+#include <qstringbuilder.h>
+#include <qthread.h>
+#include <qtimer.h>
+#include <qwidget.h>
+#include <stdint.h>
 #include <algorithm>
-#include <chrono>
+#include <utility>
 
-#include <QApplication>
-#include <QMessageBox>
-#include <QMetaObject>
-#include <QMutexLocker>
-#include <QThread>
-#include <QTimer>
-#include <QWindow>
+#include "fs.h"
+#include "interfaces/wallet.h"
+#include "wallet/walletutil.h"
 
 using wallet::WALLET_FLAG_BLANK_WALLET;
 using wallet::WALLET_FLAG_DESCRIPTORS;

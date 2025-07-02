@@ -5,12 +5,10 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <node/miner.h>
-
 #include <chain.h>
 #include <chainparams.h>
 #include <consensus/amount.h>
 #include <consensus/consensus.h>
-#include <consensus/merkle.h>
 #include <consensus/tx_verify.h>
 #include <consensus/validation.h>
 #include <deploymentstatus.h>
@@ -23,7 +21,6 @@
 #include <util/moneystr.h>
 #include <util/system.h>
 #include <validation.h>
-
 #include <evo/specialtx.h>
 #include <evo/cbtx.h>
 #include <evo/chainhelper.h>
@@ -31,7 +28,6 @@
 #include <evo/deterministicmns.h>
 #include <evo/mnhftx.h>
 #include <evo/simplifiedmns.h>
-#include <governance/governance.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
 #include <llmq/context.h>
@@ -39,10 +35,34 @@
 #include <llmq/options.h>
 #include <llmq/snapshot.h>
 #include <masternode/payments.h>
-#include <spork.h>
-
+#include <assert.h>
+#include <boost/multi_index/detail/bidir_node_iterator.hpp>
+#include <boost/multi_index/detail/safe_mode.hpp>
 #include <algorithm>
 #include <utility>
+#include <functional>
+#include <limits>
+#include <map>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+
+#include "bls/bls.h"
+#include "chainparamsbase.h"
+#include "consensus/params.h"
+#include "logging.h"
+#include "primitives/block.h"
+#include "script/script.h"
+#include "sync.h"
+#include "tinyformat.h"
+#include "txmempool.h"
+#include "util/check.h"
+#include "util/time.h"
+#include "versionbits.h"
+
+namespace Consensus {
+struct LLMQParams;
+}  // namespace Consensus
 
 namespace node {
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev)

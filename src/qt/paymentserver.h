@@ -37,11 +37,16 @@
 #endif
 
 #include <qt/sendcoinsrecipient.h>
-
+#include <qglobal.h>
+#include <qobject.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
 #include <QObject>
 #include <QString>
 
 class OptionsModel;
+class QEvent;
+class SendCoinsRecipient;
 
 namespace interfaces {
 class Node;
@@ -52,6 +57,7 @@ class QApplication;
 class QByteArray;
 class QLocalServer;
 class QUrl;
+
 QT_END_NAMESPACE
 
 class PaymentServer : public QObject

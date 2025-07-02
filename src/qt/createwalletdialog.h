@@ -5,9 +5,14 @@
 #ifndef BITCOIN_QT_CREATEWALLETDIALOG_H
 #define BITCOIN_QT_CREATEWALLETDIALOG_H
 
+#include <qdialog.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
 #include <QDialog>
 
 class WalletModel;
+class QObject;
+class QWidget;
 
 namespace Ui {
     class CreateWalletDialog;

@@ -9,9 +9,19 @@
 #include <script/script.h>
 #include <script/sign.h>
 #include <script/signingprovider.h>
-
+#include <stdint.h>
 #include <optional>
 #include <vector>
+#include <memory>
+#include <string>
+#include <unordered_map>
+
+#include "pubkey.h"
+#include "uint256.h"
+
+class CScript;
+class SigningProvider;
+struct FlatSigningProvider;
 
 using ExtPubKeyMap = std::unordered_map<uint32_t, CExtPubKey>;
 

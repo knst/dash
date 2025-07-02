@@ -7,11 +7,11 @@
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
 #include <uint256.h>
-
 #include <cassert>
-#include <cstdint>
-#include <string>
 #include <vector>
+#include <limits>
+
+#include "span.h"
 
 FUZZ_TARGET(rolling_bloom_filter)
 {

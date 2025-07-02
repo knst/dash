@@ -4,13 +4,19 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <rpc/index_util.h>
-
 #include <node/blockstorage.h>
 #include <rpc/protocol.h>
 #include <rpc/request.h>
 #include <txdb.h>
 #include <txmempool.h>
-#include <uint256.h>
+#include <bits/chrono.h>
+#include <algorithm>
+#include <compare>
+
+#include "addressindex.h"
+#include "spentindex.h"
+#include "sync.h"
+#include "util/system.h"
 
 static void EnsureAddressIndexAvailable()
 {

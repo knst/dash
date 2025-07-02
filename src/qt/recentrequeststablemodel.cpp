@@ -3,22 +3,25 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/recentrequeststablemodel.h>
-
 #include <qt/bitcoinunits.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/walletmodel.h>
-
 #include <clientversion.h>
 #include <interfaces/wallet.h>
 #include <key_io.h>
 #include <streams.h>
 #include <util/string.h>
-
+#include <QtCore/qobjectdefs.h>
+#include <qchar.h>
+#include <qglobal.h>
+#include <qstringbuilder.h>
 #include <utility>
+#include <algorithm>
+#include <vector>
 
-#include <QLatin1Char>
-#include <QLatin1String>
+#include "qt/sendcoinsrecipient.h"
+#include "span.h"
 
 RecentRequestsTableModel::RecentRequestsTableModel(WalletModel *parent) :
     QAbstractTableModel(parent), walletModel(parent)

@@ -9,8 +9,16 @@
 #include <net.h>
 #include <validationinterface.h>
 #include <version.h>
-
+#include <bits/chrono.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <atomic>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "threadsafety.h"
 
 class CActiveMasternodeManager;
 class AddrMan;
@@ -27,6 +35,14 @@ class CSporkManager;
 class CTransaction;
 struct CJContext;
 struct LLMQContext;
+class BanMan;
+class CBlockIndex;
+class CChainParams;
+class CDataStream;
+class CScheduler;
+class uint256;
+enum ServiceFlags : uint64_t;
+struct MessageProcessingResult;
 
 /** Default for -maxorphantxsize, maximum size in megabytes the orphan map can grow before entries are removed */
 static const unsigned int DEFAULT_MAX_ORPHAN_TRANSACTIONS_SIZE = 10; // this allows around 100 TXs of max size (and many more of normal size)

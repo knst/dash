@@ -7,8 +7,18 @@
 #include <rpc/mempool.h>
 #include <test/util/setup_common.h>
 #include <txmempool.h>
-
 #include <univalue.h>
+#include <algorithm>
+#include <memory>
+#include <vector>
+
+#include "consensus/amount.h"
+#include "nanobench.h"
+#include "primitives/transaction.h"
+#include "script/script.h"
+#include "sync.h"
+#include "threadsafety.h"
+#include "util/check.h"
 
 
 static void AddTx(const CTransactionRef& tx, const CAmount& fee, CTxMemPool& pool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, pool.cs)

@@ -18,12 +18,16 @@
 #include <tinyformat.h>
 #include <util/strencodings.h>
 #include <util/string.h>
-
+#include <assert.h>
+#include <string.h>
+#include <sys/un.h>
 #include <array>
 #include <cstdint>
 #include <ios>
 #include <string>
 #include <vector>
+
+#include "span.h"
 
 extern bool fAllowPrivateNet;
 

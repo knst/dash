@@ -10,8 +10,39 @@
 #include <wallet/receive.h>
 #include <wallet/rpc/util.h>
 #include <wallet/wallet.h>
-
 #include <univalue.h>
+#include <stddef.h>
+#include <algorithm>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <variant>
+#include <vector>
+
+#include "consensus/amount.h"
+#include "policy/feerate.h"
+#include "pubkey.h"
+#include "rpc/protocol.h"
+#include "rpc/request.h"
+#include "script/descriptor.h"
+#include "script/keyorigin.h"
+#include "script/script.h"
+#include "script/sign.h"
+#include "script/signingprovider.h"
+#include "script/standard.h"
+#include "span.h"
+#include "sync.h"
+#include "tinyformat.h"
+#include "uint256.h"
+#include "util/check.h"
+#include "util/strencodings.h"
+#include "wallet/hdchain.h"
+#include "wallet/ismine.h"
+#include "wallet/scriptpubkeyman.h"
+#include "wallet/walletdb.h"
+#include "wallet/walletutil.h"
 
 namespace wallet {
 RPCHelpMan getnewaddress()

@@ -4,14 +4,15 @@
 
 #include <fs.h>
 #include <util/settings.h>
-
 #include <tinyformat.h>
 #include <univalue.h>
-
 #include <fstream>
 #include <map>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <iterator>
+#include <utility>
 
 namespace util {
 namespace {

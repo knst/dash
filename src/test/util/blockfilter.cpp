@@ -3,10 +3,15 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <test/util/blockfilter.h>
-
 #include <chainparams.h>
 #include <node/blockstorage.h>
 #include <validation.h>
+
+#include "blockfilter.h"
+#include "chain.h"
+#include "primitives/block.h"
+#include "sync.h"
+#include "undo.h"
 
 using node::ReadBlockFromDisk;
 using node::UndoReadFromDisk;

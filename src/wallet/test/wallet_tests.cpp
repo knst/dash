@@ -3,23 +3,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/wallet.h>
-
-#include <future>
-#include <iostream>
-#include <memory>
 #include <stdint.h>
-#include <vector>
-
-#include <coinjoin/client.h>
-#include <coinjoin/context.h>
 #include <interfaces/chain.h>
 #include <interfaces/coinjoin.h>
 #include <key_io.h>
 #include <node/blockstorage.h>
-#include <node/context.h>
 #include <policy/policy.h>
-#include <rpc/rawtransaction_util.h>
-#include <rpc/server.h>
 #include <test/util/logging.h>
 #include <test/util/setup_common.h>
 #include <util/translation.h>
@@ -31,9 +20,88 @@
 #include <wallet/spend.h>
 #include <wallet/test/util.h>
 #include <wallet/test/wallet_test_fixture.h>
-
-#include <boost/test/unit_test.hpp>
 #include <univalue.h>
+#include <assert.h>
+#include <stddef.h>
+#include <boost/preprocessor/arithmetic/limits/dec_256.hpp>
+#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
+#include <boost/preprocessor/control/expr_iif.hpp>
+#include <boost/preprocessor/control/iif.hpp>
+#include <boost/preprocessor/detail/limits/auto_rec_256.hpp>
+#include <boost/preprocessor/logical/compl.hpp>
+#include <boost/preprocessor/logical/limits/bool_256.hpp>
+#include <boost/preprocessor/repetition/detail/limits/for_256.hpp>
+#include <boost/preprocessor/repetition/for.hpp>
+#include <boost/preprocessor/seq/limits/elem_256.hpp>
+#include <boost/preprocessor/seq/limits/size_256.hpp>
+#include <boost/preprocessor/tuple/elem.hpp>
+#include <boost/preprocessor/variadic/limits/elem_64.hpp>
+#include <boost/test/tools/assertion_result.hpp>
+#include <boost/test/tools/old/interface.hpp>
+#include <boost/test/unit_test_suite.hpp>
+#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
+#include <boost/test/utils/lazy_ostream.hpp>
+#include <future>
+#include <iostream>
+#include <memory>
+#include <vector>
+#include <algorithm>
+#include <functional>
+#include <map>
+#include <optional>
+#include <set>
+#include <string>
+#include <tuple>
+#include <unordered_map>
+#include <utility>
+#include <variant>
+
+#include "chain.h"
+#include "coins.h"
+#include "consensus/amount.h"
+#include "flatfile.h"
+#include "fs.h"
+#include "hash.h"
+#include "interfaces/handler.h"
+#include "key.h"
+#include "policy/feerate.h"
+#include "policy/fees.h"
+#include "primitives/block.h"
+#include "primitives/transaction.h"
+#include "pubkey.h"
+#include "random.h"
+#include "rpc/request.h"
+#include "rpc/util.h"
+#include "script/descriptor.h"
+#include "script/interpreter.h"
+#include "script/script.h"
+#include "script/sign.h"
+#include "script/signingprovider.h"
+#include "script/standard.h"
+#include "serialize.h"
+#include "span.h"
+#include "streams.h"
+#include "sync.h"
+#include "tinyformat.h"
+#include "uint256.h"
+#include "util/check.h"
+#include "util/hasher.h"
+#include "util/strencodings.h"
+#include "util/system.h"
+#include "util/time.h"
+#include "validationinterface.h"
+#include "version.h"
+#include "wallet/coinselection.h"
+#include "wallet/db.h"
+#include "wallet/ismine.h"
+#include "wallet/scriptpubkeyman.h"
+#include "wallet/transaction.h"
+#include "wallet/walletdb.h"
+#include "wallet/walletutil.h"
+
+namespace interfaces {
+class Wallet;
+}  // namespace interfaces
 
 using node::MAX_BLOCKFILE_SIZE;
 using node::UnlinkPrunedFiles;

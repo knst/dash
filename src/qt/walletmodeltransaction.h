@@ -7,9 +7,9 @@
 
 #include <primitives/transaction.h>
 #include <qt/sendcoinsrecipient.h>
-
 #include <consensus/amount.h>
-
+#include <QtCore/qglobal.h>
+#include <qlist.h>
 #include <QObject>
 
 class SendCoinsRecipient;

@@ -8,9 +8,10 @@
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
 #include <util/check.h>
-
 #include <map>
 #include <numeric>
+#include <limits>
+#include <utility>
 
 using node::MakeMinisketch32;
 

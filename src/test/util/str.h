@@ -5,6 +5,7 @@
 #ifndef BITCOIN_TEST_UTIL_STR_H
 #define BITCOIN_TEST_UTIL_STR_H
 
+#include <stddef.h>
 #include <string>
 
 bool CaseInsensitiveEqual(const std::string& s1, const std::string& s2);

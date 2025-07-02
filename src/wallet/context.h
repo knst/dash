@@ -6,15 +6,18 @@
 #define BITCOIN_WALLET_CONTEXT_H
 
 #include <sync.h>
-
 #include <functional>
 #include <list>
 #include <memory>
 #include <vector>
 
+#include "threadsafety.h"
+
 class ArgsManager;
+
 namespace interfaces {
 class Chain;
+
 namespace CoinJoin {
 class Loader;
 } // namspace CoinJoin

@@ -7,13 +7,12 @@
 #include <tinyformat.h>
 #include <util/strencodings.h>
 #include <util/string.h>
-
 #include <cassert>
 #include <clocale>
 #include <cstdint>
 #include <locale>
 #include <string>
-#include <vector>
+#include <stdexcept>
 
 namespace {
 const std::string locale_identifiers[] = {

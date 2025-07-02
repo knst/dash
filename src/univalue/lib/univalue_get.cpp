@@ -12,6 +12,7 @@
 #include <limits>
 #include <string>
 #include <sstream>
+#include <locale>
 
 #include "univalue.h"
 

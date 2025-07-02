@@ -4,9 +4,13 @@
 
 #include <qt/test/trafficgraphdatatests.h>
 #include <qt/trafficgraphdata.h>
+#include <QtCore/qglobal.h>
+#include <qglobal.h>
+#include <qrandom.h>
+#include <qtestcase.h>
 #include <algorithm>
 #include <sstream>
-#include <QRandomGenerator>
+#include <memory>
 
 void TrafficGraphDataTests::simpleCurrentSampleQueueTests()
 {

@@ -5,7 +5,14 @@
 #ifndef BITCOIN_QT_OPENURIDIALOG_H
 #define BITCOIN_QT_OPENURIDIALOG_H
 
+#include <qdialog.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
 #include <QDialog>
+
+class QEvent;
+class QObject;
+class QWidget;
 
 namespace Ui {
     class OpenURIDialog;

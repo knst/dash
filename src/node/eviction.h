@@ -7,11 +7,15 @@
 
 #include <node/connection_types.h>
 #include <net_permissions.h>
-
+#include <bits/chrono.h>
 #include <chrono>
 #include <cstdint>
 #include <optional>
 #include <vector>
+
+#include "netaddress.h"
+
+enum class ConnectionType;
 
 typedef int64_t NodeId;
 

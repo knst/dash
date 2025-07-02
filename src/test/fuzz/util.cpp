@@ -2,16 +2,32 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <net_processing.h>
-#include <netaddress.h>
-#include <netmessagemaker.h>
 #include <test/fuzz/util.h>
-#include <test/util/script.h>
 #include <util/overflow.h>
 #include <util/time.h>
 #include <version.h>
-
+#include <bits/types/cookie_io_functions_t.h>
 #include <memory>
+#include <array>
+#include <cstdlib>
+#include <cstring>
+#include <thread>
+
+#include "coins.h"
+#include "compat/compat.h"
+#include "consensus/amount.h"
+#include "consensus/consensus.h"
+#include "crypto/sha256.h"
+#include "key.h"
+#include "primitives/transaction.h"
+#include "pubkey.h"
+#include "script/script.h"
+#include "test/fuzz/FuzzedDataProvider.h"
+#include "test/util/net.h"
+#include "txmempool.h"
+#include "uint256.h"
+
+class CNode;
 
 FuzzedSock::FuzzedSock(FuzzedDataProvider& fuzzed_data_provider)
     : m_fuzzed_data_provider{fuzzed_data_provider}, m_selectable{fuzzed_data_provider.ConsumeBool()}

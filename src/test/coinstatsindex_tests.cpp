@@ -7,10 +7,29 @@
 #include <test/util/index.h>
 #include <test/util/setup_common.h>
 #include <test/util/validation.h>
-#include <util/time.h>
 #include <validation.h>
+#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
+#include <boost/preprocessor/control/iif.hpp>
+#include <boost/preprocessor/logical/compl.hpp>
+#include <boost/preprocessor/logical/limits/bool_256.hpp>
+#include <boost/test/tools/old/interface.hpp>
+#include <boost/test/unit_test_suite.hpp>
+#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
+#include <boost/test/utils/lazy_ostream.hpp>
+#include <memory>
+#include <vector>
 
-#include <boost/test/unit_test.hpp>
+#include "chain.h"
+#include "coins.h"
+#include "consensus/validation.h"
+#include "key.h"
+#include "node/coinstats.h"
+#include "primitives/block.h"
+#include "primitives/transaction.h"
+#include "script/script.h"
+#include "sync.h"
+#include "util/check.h"
+#include "validationinterface.h"
 
 using node::CCoinsStats;
 using node::CoinStatsHashType;

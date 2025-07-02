@@ -3,19 +3,27 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/notificator.h>
+#include <qapplication.h>
+#include <qbytearray.h>
+#include <qcbormap.h>
+#include <qdbusargument.h>
+#include <qdbusconnection.h>
+#include <qdbusinterface.h>
+#include <qdbusmetatype.h>
+#include <qimage.h>
+#include <qlist.h>
+#include <qmap.h>
+#include <qmessagebox.h>
+#include <qmetatype.h>
+#include <qpixmap.h>
+#include <qstringlist.h>
+#include <qstyle.h>
+#include <qsystemtrayicon.h>
+#include <qvariant.h>
+#include <qwidget.h>
 
-#include <QApplication>
-#include <QByteArray>
-#include <QImageWriter>
-#include <QMessageBox>
-#include <QMetaType>
-#include <QStyle>
-#include <QSystemTrayIcon>
-#include <QTemporaryFile>
-#include <QVariant>
+#include "bitcoin-config.h"
 #ifdef USE_DBUS
-#include <QDBusMetaType>
-#include <QtDBus>
 #include <stdint.h>
 #endif
 #ifdef Q_OS_MAC

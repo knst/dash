@@ -10,13 +10,17 @@
 #include <crypto/common.h>
 #include <span.h>
 #include <uint256.h>
-
+#include <bits/chrono.h>
 #include <bit>
 #include <cassert>
 #include <chrono> // For std::chrono::microseconds
 #include <cstdint>
 #include <limits>
 #include <vector>
+#include <array>
+#include <cstddef>
+#include <type_traits>
+#include <variant>
 
 /**
  * Overall design of the RNG and entropy sources.

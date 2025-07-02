@@ -6,10 +6,19 @@
 #define BITCOIN_ZMQ_ZMQPUBLISHNOTIFIER_H
 
 #include <zmq/zmqabstractnotifier.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <memory>
 
 class CBlockIndex;
 class CDeterministicMNList;
 class CGovernanceVote;
+class CTransaction;
+namespace llmq {
+class CChainLockSig;
+class CRecoveredSig;
+struct CInstantSendLock;
+}  // namespace llmq
 
 namespace Governance
 {

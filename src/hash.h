@@ -15,9 +15,14 @@
 #include <serialize.h>
 #include <uint256.h>
 #include <version.h>
-
+#include <assert.h>
+#include <stdint.h>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <cstddef>
+
+#include "span.h"
 
 typedef uint256 ChainCode;
 

@@ -8,7 +8,6 @@
 #endif
 
 #include <interfaces/init.h>
-#include <interfaces/node.h>
 #include <qt/bitcoin.h>
 #include <qt/test/apptests.h>
 #include <qt/test/optiontests.h>
@@ -16,21 +15,26 @@
 #include <qt/test/uritests.h>
 #include <qt/test/trafficgraphdatatests.h>
 #include <test/util/setup_common.h>
+#include <QtCore/qglobal.h>
+#include <qconfig.h>
+#include <qplugin.h>
+#include <qtestcase.h>
+#include <stdlib.h>
 
 #ifdef ENABLE_WALLET
 #include <qt/test/addressbooktests.h>
 #include <qt/test/wallettests.h>
 #endif // ENABLE_WALLET
 
-#include <QApplication>
-#include <QDebug>
-#include <QObject>
-#include <QTest>
-
 #include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "chainparamsbase.h"
+#include "util/system.h"
 
 #if defined(QT_STATIC)
-#include <QtPlugin>
 #if defined(QT_QPA_PLATFORM_MINIMAL)
 Q_IMPORT_PLUGIN(QMinimalIntegrationPlugin);
 #endif

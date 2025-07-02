@@ -8,18 +8,43 @@
 #include <qt/guiutil.h>
 #include <qt/peertablemodel.h>
 #include <qt/trafficgraphdata.h>
-
 #include <net.h>
 #include <uint256.h>
-
+#include <bits/chrono.h>
+#include <qbytearray.h>
+#include <qglobal.h>
+#include <qkeysequence.h>
+#include <qlist.h>
+#include <qnamespace.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
+#include <qstringlist.h>
+#include <qthread.h>
+#include <qwidget.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <QByteArray>
 #include <QCompleter>
 #include <QThread>
 #include <QWidget>
+#include <algorithm>
+#include <ratio>
+#include <string>
+#include <vector>
+
+#include "bitcoin-config.h"
 
 class ClientModel;
 class RPCTimerInterface;
 class WalletModel;
+class QCompleter;
+class QEvent;
+class QHideEvent;
+class QKeyEvent;
+class QObject;
+class QPoint;
+class QResizeEvent;
+class QShowEvent;
 
 namespace interfaces {
     class Node;
@@ -34,6 +59,7 @@ class QButtonGroup;
 class QDateTime;
 class QMenu;
 class QItemSelection;
+
 QT_END_NAMESPACE
 
 /** Local Bitcoin RPC console. */

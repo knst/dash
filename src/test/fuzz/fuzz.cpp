@@ -3,15 +3,13 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <test/fuzz/fuzz.h>
-
 #include <fs.h>
-#include <netaddress.h>
 #include <netbase.h>
-#include <test/util/setup_common.h>
 #include <util/check.h>
-#include <util/sock.h>
 #include <util/time.h>
-
+#include <unistd.h>
+#include <bits/chrono.h>
+#include <sys/un.h>
 #include <csignal>
 #include <cstdint>
 #include <cstdio>
@@ -23,9 +21,15 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <unistd.h>
 #include <utility>
 #include <vector>
+#include <algorithm>
+#include <map>
+
+#include "span.h"
+
+class CNetAddr;
+class Sock;
 
 #if defined(PROVIDE_FUZZ_MAIN_FUNCTION) && defined(__AFL_FUZZ_INIT)
 __AFL_FUZZ_INIT();

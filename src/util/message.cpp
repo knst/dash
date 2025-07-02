@@ -12,12 +12,13 @@
 #include <uint256.h>
 #include <util/message.h>
 #include <util/strencodings.h>
-
 #include <cassert>
 #include <optional>
 #include <string>
 #include <variant>
 #include <vector>
+
+#include "span.h"
 
 /**
  * Text used to signify that a signed message follows and to prevent

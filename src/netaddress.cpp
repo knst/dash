@@ -7,17 +7,22 @@
 #include <netbase.h>
 #include <crypto/common.h>
 #include <crypto/sha3.h>
-#include <hash.h>
 #include <prevector.h>
 #include <tinyformat.h>
 #include <util/strencodings.h>
 #include <util/string.h>
-
 #include <algorithm>
 #include <array>
 #include <cstdint>
 #include <ios>
 #include <tuple>
+#include <compare>
+#include <iterator>
+#include <optional>
+#include <string_view>
+
+#include "compat/compat.h"
+#include "crypto/sha256.h"
 
 CNetAddr::BIP155Network CNetAddr::GetBIP155Network() const
 {

@@ -4,35 +4,60 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <chainparams.h>
 #include <core_io.h>
-#include <httpserver.h>
-#include <policy/policy.h>
-#include <rpc/blockchain.h>
-#include <rpc/rawtransaction_util.h>
 #include <rpc/server.h>
 #include <rpc/util.h>
-#include <util/bip32.h>
-#include <util/fees.h>
 #include <util/translation.h>
-#include <util/url.h>
-#include <util/vector.h>
 #include <wallet/context.h>
 #include <wallet/receive.h>
 #include <wallet/rpc/wallet.h>
 #include <wallet/rpc/util.h>
 #include <wallet/scriptpubkeyman.h>
-#include <wallet/spend.h>
 #include <wallet/wallet.h>
 #include <key_io.h>
-
-#include <coinjoin/client.h>
 #include <coinjoin/options.h>
-#include <llmq/chainlocks.h>
-
-#include <optional>
-
 #include <univalue.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <boost/function/function_template.hpp>
+#include <boost/iterator/iterator_facade.hpp>
+#include <boost/signals2/detail/lwm_pthreads.hpp>
+#include <boost/signals2/detail/signal_template.hpp>
+#include <boost/signals2/optional_last_value.hpp>
+#include <boost/smart_ptr/detail/operator_bool.hpp>
+#include <boost/smart_ptr/make_shared_object.hpp>
+#include <optional>
+#include <algorithm>
+#include <list>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "bitcoin-config.h"
+#include "consensus/amount.h"
+#include "fs.h"
+#include "interfaces/chain.h"
+#include "key.h"
+#include "policy/feerate.h"
+#include "pubkey.h"
+#include "rpc/protocol.h"
+#include "rpc/request.h"
+#include "script/signingprovider.h"
+#include "script/standard.h"
+#include "span.h"
+#include "support/allocators/secure.h"
+#include "sync.h"
+#include "tinyformat.h"
+#include "uint256.h"
+#include "util/check.h"
+#include "util/string.h"
+#include "wallet/db.h"
+#include "wallet/hdchain.h"
+#include "wallet/transaction.h"
+#include "wallet/walletdb.h"
+#include "wallet/walletutil.h"
 
 namespace wallet {
 /** Checks if a CKey is in the given CWallet compressed or otherwise*/

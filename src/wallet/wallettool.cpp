@@ -7,7 +7,6 @@
 #endif
 
 #include <wallet/wallettool.h>
-
 #include <fs.h>
 #include <util/translation.h>
 #include <util/system.h>
@@ -15,6 +14,25 @@
 #include <wallet/salvage.h>
 #include <wallet/wallet.h>
 #include <wallet/walletutil.h>
+#include <stdint.h>
+#include <algorithm>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <utility>
+#include <vector>
+
+#include "support/allocators/secure.h"
+#include "sync.h"
+#include "tinyformat.h"
+#include "uint256.h"
+#include "wallet/db.h"
+#include "wallet/hdchain.h"
+#include "wallet/scriptpubkeyman.h"
+#include "wallet/transaction.h"
+#include "wallet/walletdb.h"
 
 namespace wallet {
 namespace WalletTool {

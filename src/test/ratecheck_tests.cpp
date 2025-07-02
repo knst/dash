@@ -1,11 +1,19 @@
 // Copyright (c) 2014-2022 The Dash Core developers
 
 #include <governance/governance.h>
-
-
-#include <boost/test/unit_test.hpp>
-
+#include <stdint.h>
+#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
+#include <boost/preprocessor/control/iif.hpp>
+#include <boost/preprocessor/logical/compl.hpp>
+#include <boost/preprocessor/logical/limits/bool_256.hpp>
+#include <boost/test/tools/old/interface.hpp>
+#include <boost/test/unit_test_log.hpp>
+#include <boost/test/unit_test_suite.hpp>
+#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
+#include <boost/test/utils/lazy_ostream.hpp>
 #include <cmath>
+#include <algorithm>
+#include <limits>
 
 BOOST_AUTO_TEST_SUITE(ratecheck_tests)
 

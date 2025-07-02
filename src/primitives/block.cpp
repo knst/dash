@@ -4,11 +4,19 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <primitives/block.h>
-
-#include <hash.h>
 #include <hash_x11.h>
 #include <streams.h>
 #include <tinyformat.h>
+#include <algorithm>
+#include <iterator>
+#include <limits>
+#include <memory>
+#include <sstream>
+
+#include "primitives/transaction.h"
+#include "serialize.h"
+#include "uint256.h"
+#include "version.h"
 
 uint256 CBlockHeader::GetHash() const
 {

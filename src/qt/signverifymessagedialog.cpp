@@ -5,20 +5,39 @@
 
 #include <qt/signverifymessagedialog.h>
 #include <qt/forms/ui_signverifymessagedialog.h>
-
 #include <qt/addressbookpage.h>
 #include <qt/guiutil.h>
 #include <qt/walletmodel.h>
-
 #include <key_io.h>
-#include <util/strencodings.h>
 #include <util/message.h> // For MessageSign(), MessageVerify()
-#include <validation.h>
-
+#include <QtCore/qglobal.h>
+#include <QtCore/qobjectdefs.h>
+#include <qabstractbutton.h>
+#include <qapplication.h>
+#include <qbuttongroup.h>
+#include <qclipboard.h>
+#include <qcoreevent.h>
+#include <qevent.h>
+#include <qlabel.h>
+#include <qlineedit.h>
+#include <qlist.h>
+#include <qplaintextedit.h>
+#include <qpushbutton.h>
+#include <qstackedwidget.h>
+#include <qstringbuilder.h>
+#include <qtextdocument.h>
+#include <qtoolbutton.h>
+#include <qwidget.h>
 #include <vector>
+#include <algorithm>
+#include <string>
+#include <variant>
 
-#include <QButtonGroup>
-#include <QClipboard>
+#include "interfaces/wallet.h"
+#include "qt/qvalidatedlineedit.h"
+#include "script/standard.h"
+
+class QObject;
 
 SignVerifyMessageDialog::SignVerifyMessageDialog(QWidget* parent) :
     QDialog(parent, GUIUtil::dialog_flags),

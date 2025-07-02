@@ -10,6 +10,19 @@
 #include <flatfile.h>
 #include <index/base.h>
 #include <node/coinstats.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <memory>
+#include <string>
+
+#include "consensus/amount.h"
+#include "primitives/block.h"
+
+class CBlockIndex;
+class CDBBatch;
+namespace node {
+struct CCoinsStats;
+}  // namespace node
 
 /**
  * CoinStatsIndex maintains statistics on the UTXO set.

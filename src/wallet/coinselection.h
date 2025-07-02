@@ -9,8 +9,15 @@
 #include <policy/feerate.h>
 #include <primitives/transaction.h>
 #include <random.h>
-
+#include <stddef.h>
+#include <stdint.h>
 #include <optional>
+#include <algorithm>
+#include <set>
+#include <string>
+#include <vector>
+
+class FastRandomContext;
 
 namespace wallet {
 //! lower bound for randomly-chosen target change amount

@@ -4,11 +4,10 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <outputtype.h>
-
 #include <script/signingprovider.h>
 #include <script/standard.h>
 
-#include <assert.h>
+class CScript;
 
 CTxDestination AddAndGetDestinationForScript(FillableSigningProvider& keystore, const CScript& script)
 {

@@ -5,7 +5,6 @@
 
 #include <addrman.h>
 #include <addrman_impl.h>
-
 #include <hash.h>
 #include <logging.h>
 #include <logging/timer.h>
@@ -18,9 +17,20 @@
 #include <uint256.h>
 #include <util/check.h>
 #include <util/time.h>
-
+#include <assert.h>
 #include <cmath>
 #include <optional>
+#include <algorithm>
+#include <compare>
+#include <iterator>
+#include <ratio>
+#include <set>
+#include <unordered_map>
+#include <unordered_set>
+
+#include "bitcoin-config.h"
+#include "netgroup.h"
+#include "sync.h"
 
 /** Over how many buckets entries with tried addresses from a single group (/16 for IPv4) are spread */
 static constexpr uint32_t ADDRMAN_TRIED_BUCKETS_PER_GROUP{8};

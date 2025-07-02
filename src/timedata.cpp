@@ -7,7 +7,6 @@
 #endif
 
 #include <timedata.h>
-
 #include <netaddress.h>
 #include <node/interface_ui.h>
 #include <sync.h>
@@ -15,6 +14,14 @@
 #include <util/system.h>
 #include <util/translation.h>
 #include <warnings.h>
+#include <algorithm>
+#include <set>
+#include <string>
+#include <utility>
+
+#include "logging.h"
+#include "threadsafety.h"
+#include "util/time.h"
 
 static Mutex g_timeoffset_mutex;
 static int64_t nTimeOffset GUARDED_BY(g_timeoffset_mutex) = 0;

@@ -5,16 +5,26 @@
 #ifndef BITCOIN_QT_OPTIONSDIALOG_H
 #define BITCOIN_QT_OPTIONSDIALOG_H
 
+#include <qdialog.h>
+#include <qglobal.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
+#include <qvalidator.h>
+#include <stdint.h>
 #include <QDialog>
 #include <QValidator>
 
 class AppearanceWidget;
 class OptionsModel;
 class QValidatedLineEdit;
+class QObject;
+class QShowEvent;
+class QWidget;
 
 QT_BEGIN_NAMESPACE
 class QButtonGroup;
 class QDataWidgetMapper;
+
 QT_END_NAMESPACE
 
 namespace Ui {

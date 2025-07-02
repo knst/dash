@@ -3,8 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/coincontrol.h>
-
 #include <util/system.h>
+#include <memory>
+
+#include "policy/feerate.h"
+#include "primitives/transaction.h"
 
 namespace wallet {
 CCoinControl::CCoinControl(CoinType coinType)

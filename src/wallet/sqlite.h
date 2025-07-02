@@ -6,10 +6,16 @@
 #define BITCOIN_WALLET_SQLITE_H
 
 #include <wallet/db.h>
-
 #include <sqlite3.h>
+#include <assert.h>
+#include <atomic>
+#include <memory>
+#include <string>
+
+#include "fs.h"
 
 struct bilingual_str;
+class CDataStream;
 
 namespace wallet {
 class SQLiteDatabase;

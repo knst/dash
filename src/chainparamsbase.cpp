@@ -4,11 +4,10 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <chainparamsbase.h>
-
 #include <tinyformat.h>
 #include <util/system.h>
-
 #include <assert.h>
+#include <stdexcept>
 
 const std::string CBaseChainParams::MAIN = "main";
 const std::string CBaseChainParams::TESTNET = "test";

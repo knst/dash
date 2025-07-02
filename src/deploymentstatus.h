@@ -7,8 +7,10 @@
 
 #include <chain.h>
 #include <versionbits.h>
-
+#include <assert.h>
 #include <limits>
+
+#include "consensus/params.h"
 
 /** Global cache for versionbits deployment status */
 extern VersionBitsCache g_versionbitscache;

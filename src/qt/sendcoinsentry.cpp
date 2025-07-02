@@ -2,22 +2,32 @@
 // Copyright (c) 2014-2022 The Dash Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
-#if defined(HAVE_CONFIG_H)
-#include <config/bitcoin-config.h>
-#endif
-
 #include <qt/sendcoinsentry.h>
 #include <qt/forms/ui_sendcoinsentry.h>
-
 #include <qt/addressbookpage.h>
 #include <qt/addresstablemodel.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/walletmodel.h>
+#include <QtCore/qglobal.h>
+#include <QtCore/qobjectdefs.h>
+#include <qapplication.h>
+#include <qcheckbox.h>
+#include <qclipboard.h>
+#include <qcoreevent.h>
+#include <qframe.h>
+#include <qlabel.h>
+#include <qlineedit.h>
+#include <qnamespace.h>
+#include <qpushbutton.h>
+#include <qtoolbutton.h>
+#include <qwidget.h>
+#include <algorithm>
+#include <vector>
 
-#include <QApplication>
-#include <QClipboard>
+#include "qt/bitcoinamountfield.h"
+#include "qt/qvalidatedlineedit.h"
+#include "qt/sendcoinsrecipient.h"
 
 SendCoinsEntry::SendCoinsEntry(QWidget* parent) :
     QStackedWidget(parent),

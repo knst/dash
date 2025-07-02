@@ -3,23 +3,34 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <script/descriptor.h>
-
 #include <key_io.h>
 #include <pubkey.h>
 #include <script/script.h>
 #include <script/standard.h>
-
 #include <span.h>
 #include <util/bip32.h>
 #include <util/spanparsing.h>
 #include <util/strencodings.h>
-#include <util/system.h>
 #include <util/vector.h>
-
+#include <assert.h>
+#include <stddef.h>
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <iterator>
+#include <map>
+#include <stdexcept>
+#include <utility>
+
+#include "crypto/sha256.h"
+#include "key.h"
+#include "outputtype.h"
+#include "prevector.h"
+#include "script/keyorigin.h"
+#include "script/signingprovider.h"
+#include "tinyformat.h"
 
 namespace {
 

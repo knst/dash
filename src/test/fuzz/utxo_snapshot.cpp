@@ -11,7 +11,29 @@
 #include <test/util/mining.h>
 #include <test/util/setup_common.h>
 #include <validation.h>
-#include <validationinterface.h>
+#include <stdint.h>
+#include <functional>
+#include <ios>
+#include <memory>
+#include <optional>
+#include <vector>
+
+#include "chain.h"
+#include "chainparamsbase.h"
+#include "clientversion.h"
+#include "coins.h"
+#include "consensus/consensus.h"
+#include "fs.h"
+#include "node/blockstorage.h"
+#include "primitives/block.h"
+#include "primitives/transaction.h"
+#include "serialize.h"
+#include "span.h"
+#include "streams.h"
+#include "sync.h"
+#include "uint256.h"
+#include "util/check.h"
+#include "util/system.h"
 
 using node::SnapshotMetadata;
 

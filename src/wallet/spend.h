@@ -9,8 +9,25 @@
 #include <wallet/coinselection.h>
 #include <wallet/transaction.h>
 #include <wallet/wallet.h>
+#include <stdint.h>
+#include <map>
+#include <optional>
+#include <set>
+#include <vector>
+
+#include "consensus/amount.h"
+#include "interfaces/chain.h"
+#include "primitives/transaction.h"
+#include "script/standard.h"
+#include "threadsafety.h"
+
+class uint256;
+struct FeeCalculation;
+struct bilingual_str;
 
 namespace wallet {
+class CWalletTx;
+
 /** Get the marginal bytes if spending the specified output from this transaction.
  * use_max_sig indicates whether to use the maximum sized, 72 byte signature when calculating the
  * size of the input spend. This should only be set when watch-only outputs are allowed */

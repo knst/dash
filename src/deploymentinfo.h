@@ -6,7 +6,7 @@
 #define BITCOIN_DEPLOYMENTINFO_H
 
 #include <consensus/params.h>
-
+#include <assert.h>
 #include <string>
 
 struct VBDeploymentInfo {

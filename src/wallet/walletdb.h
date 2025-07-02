@@ -10,15 +10,27 @@
 #include <wallet/db.h>
 #include <wallet/walletutil.h>
 #include <key.h>
-
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <atomic>
+#include <functional>
+#include <list>
+#include <memory>
+
+#include "script/keyorigin.h"
+#include "serialize.h"
 
 struct CBlockLocator;
 class CScript;
 class uint160;
 class uint256;
+class CDataStream;
+class COutPoint;
+class CPubKey;
+class DescriptorCache;
+struct CExtPubKey;
+
 namespace Governance {
 class Object;
 } // namespace Governance
@@ -31,6 +43,7 @@ class CMasterKey;
 class CWallet;
 class CWalletTx;
 struct WalletContext;
+class WalletDescriptor;
 
 /**
  * Overview of wallet database classes:

@@ -9,6 +9,9 @@
 #include <script/signingprovider.h>
 #include <script/standard.h>
 
+class CScript;
+class FillableSigningProvider;
+
 enum class OutputType {
     LEGACY,
     UNKNOWN,

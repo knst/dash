@@ -5,10 +5,24 @@
 #include <test/util/setup_common.h>
 #include <util/strencodings.h>
 #include <wallet/crypter.h>
-
+#include <stdint.h>
+#include <string.h>
+#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
+#include <boost/preprocessor/control/iif.hpp>
+#include <boost/preprocessor/logical/compl.hpp>
+#include <boost/preprocessor/logical/limits/bool_256.hpp>
+#include <boost/test/tools/old/interface.hpp>
+#include <boost/test/unit_test_suite.hpp>
+#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
+#include <boost/test/utils/lazy_ostream.hpp>
 #include <vector>
+#include <algorithm>
+#include <string>
 
-#include <boost/test/unit_test.hpp>
+#include "random.h"
+#include "span.h"
+#include "support/allocators/secure.h"
+#include "uint256.h"
 
 namespace wallet {
 BOOST_FIXTURE_TEST_SUITE(wallet_crypto_tests, BasicTestingSetup)

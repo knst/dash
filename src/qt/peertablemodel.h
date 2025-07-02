@@ -7,7 +7,16 @@
 
 #include <net_processing.h> // For CNodeStateStats
 #include <net.h>
-
+#include <QtCore/qglobal.h>
+#include <qabstractitemmodel.h>
+#include <qglobal.h>
+#include <qlist.h>
+#include <qmetatype.h>
+#include <qnamespace.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
+#include <qstringlist.h>
+#include <qvariant.h>
 #include <QAbstractTableModel>
 #include <QList>
 #include <QModelIndex>
@@ -15,6 +24,7 @@
 #include <QVariant>
 
 class PeerTablePriv;
+class QObject;
 
 namespace interfaces {
 class Node;
@@ -22,6 +32,7 @@ class Node;
 
 QT_BEGIN_NAMESPACE
 class QTimer;
+
 QT_END_NAMESPACE
 
 struct CNodeCombinedStats {

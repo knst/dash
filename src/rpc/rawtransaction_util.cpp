@@ -4,22 +4,34 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <rpc/rawtransaction_util.h>
-
 #include <coins.h>
 #include <consensus/amount.h>
 #include <core_io.h>
-#include <interfaces/chain.h>
 #include <key_io.h>
-#include <policy/policy.h>
 #include <primitives/transaction.h>
 #include <rpc/request.h>
 #include <rpc/util.h>
 #include <script/signingprovider.h>
 #include <univalue.h>
 #include <util/strencodings.h>
-#include <validation.h>
-#include <txmempool.h>
 #include <util/translation.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <algorithm>
+#include <set>
+#include <string>
+#include <utility>
+#include <variant>
+#include <vector>
+
+#include "prevector.h"
+#include "rpc/protocol.h"
+#include "script/script.h"
+#include "script/sign.h"
+#include "script/standard.h"
+#include "span.h"
+#include "tinyformat.h"
+#include "uint256.h"
 
 CMutableTransaction ConstructTransaction(const UniValue& inputs_in, const UniValue& outputs_in, const UniValue& locktime)
 {

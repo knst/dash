@@ -4,19 +4,18 @@
 
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
-
 #include <node/psbt.h>
 #include <psbt.h>
-#include <pubkey.h>
-#include <script/script.h>
-#include <streams.h>
 #include <util/check.h>
-#include <version.h>
-
-#include <cstdint>
+#include <stddef.h>
 #include <optional>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <map>
+
+#include "primitives/transaction.h"
+#include "span.h"
 
 using node::AnalyzePSBT;
 using node::PSBTAnalysis;

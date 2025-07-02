@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/transactionview.h>
-
 #include <qt/addresstablemodel.h>
 #include <qt/bitcoinunits.h>
 #include <qt/csvmodelwriter.h>
@@ -16,32 +15,57 @@
 #include <qt/transactionrecord.h>
 #include <qt/transactiontablemodel.h>
 #include <qt/walletmodel.h>
-
 #include <interfaces/node.h>
 #include <node/interface_ui.h>
-
+#include <QtCore/qobjectdefs.h>
+#include <bits/chrono.h>
+#include <qabstractitemmodel.h>
+#include <qabstractitemview.h>
+#include <qaction.h>
+#include <qboxlayout.h>
+#include <qbrush.h>
+#include <qcalendarwidget.h>
+#include <qcombobox.h>
+#include <qcoreevent.h>
+#include <qdatetime.h>
+#include <qdatetimeedit.h>
+#include <qdesktopservices.h>
+#include <qevent.h>
+#include <qframe.h>
+#include <qheaderview.h>
+#include <qitemselectionmodel.h>
+#include <qlabel.h>
+#include <qlineedit.h>
+#include <qlist.h>
+#include <qlistview.h>
+#include <qlocale.h>
+#include <qmenu.h>
+#include <qmetatype.h>
+#include <qnamespace.h>
+#include <qobject.h>
+#include <qscrollbar.h>
+#include <qsettings.h>
+#include <qsize.h>
+#include <qstringbuilder.h>
+#include <qstringlist.h>
+#include <qtableview.h>
+#include <qtextformat.h>
+#include <qtimer.h>
+#include <qurl.h>
+#include <qvalidator.h>
+#include <qvariant.h>
 #include <optional>
+#include <algorithm>
+#include <utility>
+#include <vector>
 
-#include <QCalendarWidget>
-#include <chrono>
-#include <QComboBox>
-#include <QDateTimeEdit>
-#include <QDesktopServices>
-#include <QDoubleValidator>
-#include <QHBoxLayout>
-#include <QHeaderView>
-#include <QLabel>
-#include <QLineEdit>
-#include <QListView>
-#include <QMenu>
-#include <QPoint>
-#include <QScrollBar>
-#include <QSettings>
-#include <QTableView>
-#include <QTextCharFormat>
-#include <QTimer>
-#include <QUrl>
-#include <QVBoxLayout>
+#include "bitcoin-config.h"
+#include "consensus/amount.h"
+#include "interfaces/wallet.h"
+#include "uint256.h"
+#include "util/system.h"
+
+class QPoint;
 
 /** Date format for persistence */
 static const char* PERSISTENCE_DATE_FORMAT = "yyyy-MM-dd";

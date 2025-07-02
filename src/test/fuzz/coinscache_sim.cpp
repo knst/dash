@@ -8,12 +8,22 @@
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/util.h>
-
 #include <assert.h>
+#include <stdint.h>
+#include <stddef.h>
 #include <optional>
 #include <memory>
-#include <stdint.h>
 #include <vector>
+#include <algorithm>
+#include <iterator>
+#include <map>
+#include <unordered_map>
+#include <utility>
+
+#include "consensus/amount.h"
+#include "prevector.h"
+#include "script/script.h"
+#include "uint256.h"
 
 namespace {
 

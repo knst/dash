@@ -1,22 +1,22 @@
 // Copyright (c) 2020-2023 The Dash Core developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
-#if defined(HAVE_CONFIG_H)
-#include <config/bitcoin-config.h>
-#endif
-
 #include <qt/forms/ui_appearancewidget.h>
-
 #include <qt/appearancewidget.h>
 #include <qt/optionsmodel.h>
+#include <QtCore/qobjectdefs.h>
+#include <assert.h>
+#include <qcombobox.h>
+#include <qdatawidgetmapper.h>
+#include <qglobal.h>
+#include <qnamespace.h>
+#include <qobject.h>
+#include <qsettings.h>
+#include <qslider.h>
+#include <qvariant.h>
+#include <vector>
 
-#include <util/system.h>
-
-#include <QComboBox>
-#include <QDataWidgetMapper>
-#include <QSettings>
-#include <QSlider>
+#include "qt/guiutil.h"
 
 AppearanceWidget::AppearanceWidget(QWidget* parent) :
     QWidget(parent),

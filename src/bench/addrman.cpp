@@ -8,8 +8,17 @@
 #include <netgroup.h>
 #include <random.h>
 #include <util/time.h>
-
+#include <assert.h>
+#include <netinet/in.h>
+#include <string.h>
 #include <vector>
+#include <algorithm>
+
+#include "nanobench.h"
+#include "netaddress.h"
+#include "protocol.h"
+#include "span.h"
+#include "uint256.h"
 
 /* A "source" is a source address from which we have received a bunch of other addresses. */
 

@@ -5,9 +5,20 @@
 #ifndef BITCOIN_QT_MODALOVERLAY_H
 #define BITCOIN_QT_MODALOVERLAY_H
 
+#include <qdatetime.h>
+#include <qglobal.h>
+#include <qobjectdefs.h>
+#include <qpropertyanimation.h>
+#include <qstring.h>
+#include <qvector.h>
+#include <qwidget.h>
 #include <QDateTime>
 #include <QPropertyAnimation>
 #include <QWidget>
+
+class QEvent;
+class QObject;
+template <class T1, class T2> struct QPair;
 
 //! The required delta of headers to the estimated number of available headers until we show the IBD progress
 static constexpr int HEADER_HEIGHT_DELTA_SYNC = 24;

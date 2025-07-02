@@ -5,6 +5,10 @@
 #ifndef BITCOIN_QT_TRAFFICGRAPHDATA_H
 #define BITCOIN_QT_TRAFFICGRAPHDATA_H
 
+#include <QtCore/qglobal.h>
+#include <qglobal.h>
+#include <qhash.h>
+#include <qqueue.h>
 #include <QHash>
 #include <QQueue>
 

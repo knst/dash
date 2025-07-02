@@ -4,9 +4,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <script/script.h>
-#include <util/strencodings.h>
-
 #include <string>
+#include <initializer_list>
+
+#include "crypto/common.h"
+#include "prevector.h"
 
 std::string GetOpName(opcodetype opcode)
 {

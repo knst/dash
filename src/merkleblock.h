@@ -10,8 +10,12 @@
 #include <primitives/block.h>
 #include <serialize.h>
 #include <uint256.h>
-
 #include <vector>
+#include <set>
+#include <utility>
+#include <algorithm>
+
+class CBloomFilter;
 
 // Helper functions for serialization.
 std::vector<unsigned char> BitsToBytes(const std::vector<bool>& bits);

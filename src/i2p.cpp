@@ -2,7 +2,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <chainparams.h>
 #include <compat/compat.h>
 #include <compat/endian.h>
 #include <crypto/sha256.h>
@@ -18,12 +17,16 @@
 #include <util/sock.h>
 #include <util/spanparsing.h>
 #include <util/strencodings.h>
-#include <util/system.h>
-
-#include <chrono>
+#include <bits/chrono.h>
+#include <string.h>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
+
+#include "span.h"
+#include "threadinterrupt.h"
+#include "uint256.h"
 
 namespace i2p {
 

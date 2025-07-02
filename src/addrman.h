@@ -11,12 +11,19 @@
 #include <protocol.h>
 #include <streams.h>
 #include <util/time.h>
-
+#include <bits/chrono.h>
+#include <stddef.h>
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <utility>
 #include <vector>
+#include <exception>
+#include <ios>
+#include <string>
+#include <tuple>
+
+class NetGroupManager;
 
 class DbInconsistentError : public std::exception
 {

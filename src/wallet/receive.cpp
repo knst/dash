@@ -3,11 +3,26 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <coinjoin/options.h>
-#include <consensus/consensus.h>
 #include <wallet/coinjoin.h>
 #include <wallet/receive.h>
 #include <wallet/transaction.h>
 #include <wallet/wallet.h>
+#include <bitset>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <variant>
+#include <vector>
+
+#include "consensus/amount.h"
+#include "primitives/transaction.h"
+#include "script/script.h"
+#include "sync.h"
+#include "uint256.h"
+#include "wallet/ismine.h"
+#include "wallet/walletutil.h"
 
 namespace wallet {
 isminetype InputIsMine(const CWallet& wallet, const CTxIn& txin)

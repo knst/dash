@@ -4,14 +4,16 @@
 
 #include <chainparams.h>
 #include <core_io.h>
-#include <key.h>
 #include <rpc/client.h>
 #include <rpc/util.h>
-#include <script/sign.h>
 #include <test/fuzz/fuzz.h>
-
 #include <limits>
 #include <string>
+#include <functional>
+#include <stdexcept>
+
+#include "chainparamsbase.h"
+#include "univalue.h"
 
 void initialize_parse_univalue()
 {

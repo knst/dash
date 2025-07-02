@@ -3,15 +3,15 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/test/util.h>
-
-#include <chrono>
-
-#include <QApplication>
-#include <QMessageBox>
-#include <QPushButton>
-#include <QString>
-#include <QTimer>
-#include <QWidget>
+#include <QtCore/qobjectdefs.h>
+#include <qapplication.h>
+#include <qlist.h>
+#include <qmessagebox.h>
+#include <qobject.h>
+#include <qpushbutton.h>
+#include <qstring.h>
+#include <qtimer.h>
+#include <qwidget.h>
 
 void ConfirmMessage(QString* text, std::chrono::milliseconds msec)
 {

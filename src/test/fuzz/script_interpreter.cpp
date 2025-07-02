@@ -7,11 +7,11 @@
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
-
-#include <cstdint>
 #include <optional>
-#include <string>
 #include <vector>
+
+#include "script/script.h"
+#include "uint256.h"
 
 bool CastToBool(const std::vector<unsigned char>& vch);
 

@@ -5,7 +5,6 @@
 #include <qt/test/addressbooktests.h>
 #include <qt/test/util.h>
 #include <test/util/setup_common.h>
-
 #include <interfaces/chain.h>
 #include <interfaces/node.h>
 #include <qt/addressbookpage.h>
@@ -14,18 +13,32 @@
 #include <qt/optionsmodel.h>
 #include <qt/qvalidatedlineedit.h>
 #include <qt/walletmodel.h>
-
 #include <key.h>
 #include <key_io.h>
 #include <wallet/wallet.h>
-#include <walletinitinterface.h>
+#include <bits/chrono.h>
+#include <qabstractitemmodel.h>
+#include <qlineedit.h>
+#include <qtableview.h>
+#include <qtestcase.h>
+#include <map>
+#include <memory>
+#include <optional>
+#include <tuple>
+#include <utility>
+#include <variant>
 
-#include <chrono>
+#include "interfaces/coinjoin.h"
+#include "interfaces/wallet.h"
+#include "script/standard.h"
+#include "sync.h"
+#include "util/system.h"
+#include "wallet/walletdb.h"
+#include "wallet/walletutil.h"
 
-#include <QApplication>
-#include <QMessageBox>
-#include <QTableView>
-#include <QTimer>
+namespace wallet {
+struct WalletContext;
+}  // namespace wallet
 
 using wallet::AddWallet;
 using wallet::CreateMockWalletDatabase;

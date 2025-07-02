@@ -5,6 +5,10 @@
 #include <bench/bench.h>
 #include <bench/data.h>
 #include <util/strencodings.h>
+#include <vector>
+
+#include "nanobench.h"
+#include "span.h"
 
 static void HexStrBench(benchmark::Bench& bench)
 {

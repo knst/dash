@@ -6,9 +6,14 @@
 #include <netgroup.h>
 #include <test/fuzz/fuzz.h>
 #include <util/asmap.h>
-
+#include <assert.h>
+#include <netinet/in.h>
+#include <string.h>
 #include <cstdint>
 #include <vector>
+#include <algorithm>
+
+#include "span.h"
 
 //! asmap code that consumes nothing
 static const std::vector<bool> IPV6_PREFIX_ASMAP = {};

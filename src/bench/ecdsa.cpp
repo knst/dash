@@ -3,8 +3,15 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/bench.h>
-
 #include <key.h>
+#include <stddef.h>
+#include <algorithm>
+#include <vector>
+
+#include "hash.h"
+#include "nanobench.h"
+#include "pubkey.h"
+#include "uint256.h"
 
 static void ECDSASign(benchmark::Bench& bench)
 {

@@ -10,9 +10,14 @@
 #include <fs.h>
 #include <streams.h>
 #include <sync.h>
-
 #include <stdint.h>
 #include <vector>
+#include <utility>
+
+#include "threadsafety.h"
+
+class CAutoFile;
+enum class TxVerbosity;
 
 extern RecursiveMutex cs_main;
 
@@ -20,6 +25,7 @@ class CBlock;
 class CBlockIndex;
 class CChainState;
 class UniValue;
+
 namespace llmq {
 class CChainLocksHandler;
 class CInstantSendManager;

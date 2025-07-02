@@ -3,12 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <test/util/logging.h>
-
 #include <logging.h>
 #include <noui.h>
 #include <tinyformat.h>
-
 #include <stdexcept>
+#include <utility>
 
 DebugLogHelper::DebugLogHelper(std::string message, MatchFn match)
     : m_message{std::move(message)}, m_match(std::move(match))

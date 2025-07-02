@@ -3,13 +3,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <util/thread.h>
-
 #include <logging.h>
 #include <util/system.h>
 #include <util/threadnames.h>
-
 #include <exception>
 #include <functional>
+#include <memory>
 
 void util::TraceThread(const char* thread_name, std::function<void()> thread_func)
 {

@@ -4,11 +4,10 @@
 
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
-#include <test/fuzz/util.h>
 #include <timedata.h>
-
+#include <assert.h>
+#include <stddef.h>
 #include <cstdint>
-#include <string>
 #include <vector>
 
 FUZZ_TARGET(timedata)

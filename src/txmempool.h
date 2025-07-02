@@ -6,14 +6,6 @@
 #ifndef BITCOIN_TXMEMPOOL_H
 #define BITCOIN_TXMEMPOOL_H
 
-#include <atomic>
-#include <map>
-#include <optional>
-#include <set>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include <addressindex.h>
 #include <coins.h>
 #include <consensus/amount.h>
@@ -30,7 +22,6 @@
 #include <sync.h>
 #include <util/epochguard.h>
 #include <util/hasher.h>
-
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/identity.hpp>
 #include <boost/multi_index/indexed_by.hpp>
@@ -38,15 +29,42 @@
 #include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index/tag.hpp>
 #include <boost/multi_index_container.hpp>
+#include <assert.h>
+#include <bits/chrono.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <boost/multi_index/detail/bidir_node_iterator.hpp>
+#include <boost/multi_index/detail/hash_index_iterator.hpp>
+#include <boost/multi_index/detail/iter_adaptor.hpp>
+#include <boost/multi_index/detail/safe_mode.hpp>
+#include <boost/operators.hpp>
+#include <atomic>
+#include <map>
+#include <optional>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+#include <compare>
+#include <functional>
+#include <memory>
+#include <unordered_map>
+
+#include "core_memusage.h"
+#include "memusage.h"
+#include "threadsafety.h"
+#include "uint256.h"
 
 class CBlockIndex;
 class CChain;
 class CChainState;
+
 extern RecursiveMutex cs_main;
 
 // Forward declaration for CBLSLazyPublicKey:
 template<typename T> class CBLSLazyWrapper;
 class CBLSPublicKey;
+
 using CBLSLazyPublicKey = CBLSLazyWrapper<CBLSPublicKey>;
 
 /** Fake height value used in Coin to signify they are only in the memory pool (since 0.8) */

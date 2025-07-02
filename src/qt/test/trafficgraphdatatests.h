@@ -5,6 +5,9 @@
 #ifndef BITCOIN_QT_TEST_TRAFFICGRAPHDATATESTS_H
 #define BITCOIN_QT_TEST_TRAFFICGRAPHDATATESTS_H
 
+#include <qobject.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
 #include <QObject>
 #include <QTest>
 

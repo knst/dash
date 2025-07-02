@@ -6,14 +6,25 @@
 #define BITCOIN_QT_RECENTREQUESTSTABLEMODEL_H
 
 #include <qt/sendcoinsrecipient.h>
-
+#include <QtCore/qglobal.h>
+#include <qabstractitemmodel.h>
+#include <qdatetime.h>
+#include <qlist.h>
+#include <qnamespace.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
+#include <qstringlist.h>
+#include <qvariant.h>
+#include <stdint.h>
 #include <string>
-
 #include <QAbstractTableModel>
 #include <QStringList>
 #include <QDateTime>
 
+#include "serialize.h"
+
 class WalletModel;
+class QObject;
 
 class RecentRequestEntry
 {

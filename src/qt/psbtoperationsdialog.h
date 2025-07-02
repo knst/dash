@@ -5,11 +5,20 @@
 #ifndef BITCOIN_QT_PSBTOPERATIONSDIALOG_H
 #define BITCOIN_QT_PSBTOPERATIONSDIALOG_H
 
-#include <QDialog>
-
 #include <psbt.h>
 #include <qt/clientmodel.h>
 #include <qt/walletmodel.h>
+#include <qdialog.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
+#include <stddef.h>
+#include <QDialog>
+#include <string>
+
+class ClientModel;
+class QObject;
+class QWidget;
+class WalletModel;
 
 namespace Ui {
 class PSBTOperationsDialog;

@@ -7,10 +7,12 @@
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util/net.h>
-
+#include <assert.h>
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <optional>
 
 FUZZ_TARGET(netbase_dns_lookup)
 {

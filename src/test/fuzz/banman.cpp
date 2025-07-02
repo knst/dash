@@ -12,12 +12,16 @@
 #include <util/readwritefile.h>
 #include <test/util/setup_common.h>
 #include <util/system.h>
-
 #include <cassert>
 #include <cstdint>
 #include <limits>
-#include <string>
-#include <vector>
+#include <algorithm>
+#include <functional>
+#include <map>
+#include <memory>
+
+#include "net_types.h"
+#include "util/time.h"
 
 namespace {
 int64_t ConsumeBanTimeOffset(FuzzedDataProvider& fuzzed_data_provider) noexcept

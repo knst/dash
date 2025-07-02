@@ -4,13 +4,22 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <banman.h>
-
 #include <netaddress.h>
 #include <node/interface_ui.h>
 #include <sync.h>
-#include <util/system.h>
 #include <util/time.h>
 #include <util/translation.h>
+#include <initializer_list>
+#include <map>
+#include <memory>
+#include <utility>
+
+#include "addrdb.h"
+#include "common/bloom.h"
+#include "fs.h"
+#include "logging.h"
+#include "net_types.h"
+#include "span.h"
 
 
 BanMan::BanMan(fs::path ban_file, CClientUIInterface* client_interface, int64_t default_ban_time)

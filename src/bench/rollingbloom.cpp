@@ -6,8 +6,12 @@
 #include <bench/bench.h>
 #include <common/bloom.h>
 #include <crypto/common.h>
-
+#include <stdint.h>
 #include <vector>
+#include <algorithm>
+
+#include "nanobench.h"
+#include "span.h"
 
 static void RollingBloom(benchmark::Bench& bench)
 {

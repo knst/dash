@@ -18,6 +18,10 @@
 #define GSL_ASSERT_H
 
 #include <source_location.h>
+
+namespace nostd {
+struct source_location;
+}  // namespace nostd
 //
 // Temporary until MSVC STL supports no-exceptions mode.
 // Currently terminate is a no-op in this mode, so we add termination behavior back
@@ -27,6 +31,7 @@
 
 #define GSL_MSVC_USE_STL_NOEXCEPTION_WORKAROUND
 #include <intrin.h>
+
 #define RANGE_CHECKS_FAILURE 0
 
 #if defined(__clang__)

@@ -4,7 +4,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <script/sign.h>
-
 #include <consensus/amount.h>
 #include <key.h>
 #include <policy/policy.h>
@@ -14,6 +13,18 @@
 #include <script/standard.h>
 #include <uint256.h>
 #include <util/translation.h>
+#include <assert.h>
+#include <stddef.h>
+#include <algorithm>
+#include <iterator>
+
+#include "coins.h"
+#include "prevector.h"
+#include "pubkey.h"
+#include "script/interpreter.h"
+#include "script/script_error.h"
+#include "span.h"
+#include "util/hash_type.h"
 
 typedef std::vector<unsigned char> valtype;
 

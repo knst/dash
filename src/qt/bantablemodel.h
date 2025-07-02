@@ -7,13 +7,21 @@
 
 #include <addrdb.h>
 #include <net.h>
-
+#include <qabstractitemmodel.h>
+#include <qnamespace.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
+#include <qstringlist.h>
+#include <qvariant.h>
 #include <memory>
-
 #include <QAbstractTableModel>
 #include <QStringList>
 
+#include "net_types.h"
+#include "netaddress.h"
+
 class BanTablePriv;
+class QObject;
 
 namespace interfaces {
     class Node;

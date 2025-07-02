@@ -5,6 +5,11 @@
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <util/spanparsing.h>
+#include <stddef.h>
+#include <algorithm>
+#include <string>
+
+#include "span.h"
 
 FUZZ_TARGET(spanparsing)
 {

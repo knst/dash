@@ -7,6 +7,8 @@
 #define BITCOIN_RPC_CLIENT_H
 
 #include <univalue.h>
+#include <string>
+#include <vector>
 
 /** Convert positional arguments to command-specific RPC representation */
 UniValue RPCConvertValues(const std::string& strMethod, const std::vector<std::string>& strParams);

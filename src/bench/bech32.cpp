@@ -3,12 +3,14 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/bench.h>
-
 #include <bech32.h>
 #include <util/strencodings.h>
-
+#include <stdint.h>
 #include <string>
 #include <vector>
+#include <algorithm>
+
+#include "nanobench.h"
 
 
 static void Bech32Encode(benchmark::Bench& bench)

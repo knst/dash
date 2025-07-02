@@ -4,9 +4,13 @@
 // file COPYING or https://opensource.org/licenses/mit-license.php.
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <iomanip>
 #include <sstream>
-#include <stdlib.h>
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "univalue.h"
 

@@ -8,12 +8,13 @@
 #include <logging.h>
 #include <util/system.h>
 #include <wallet/db.h>
-
+#include <string.h>
 #include <exception>
 #include <fstream>
 #include <string>
 #include <system_error>
 #include <vector>
+#include <algorithm>
 
 namespace wallet {
 std::vector<fs::path> ListDatabases(const fs::path& wallet_dir)

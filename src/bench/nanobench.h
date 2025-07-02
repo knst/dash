@@ -39,12 +39,22 @@
 // public facing api - as minimal as possible
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+#include <bits/chrono.h>
+#include <stdint.h>
 #include <chrono>        // high_resolution_clock
 #include <cstring>       // memcpy
 #include <iosfwd>        // for std::ostream* custom output target in Config
 #include <string>        // all names
 #include <unordered_map> // holds context information of results
 #include <vector>        // holds all results
+#include <cmath>
+#include <compare>
+#include <iterator>
+#include <limits>
+#include <locale>
+#include <ratio>
+#include <type_traits>
+#include <utility>
 
 #define ANKERL_NANOBENCH(x) ANKERL_NANOBENCH_PRIVATE_##x()
 
@@ -79,6 +89,7 @@
 
 #if defined(ANKERL_NANOBENCH_LOG_ENABLED)
 #    include <iostream>
+
 #    define ANKERL_NANOBENCH_LOG(x)                                                 \
         do {                                                                        \
             std::cout << __FUNCTION__ << "@" << __LINE__ << ": " << x << std::endl; \
@@ -352,7 +363,6 @@ namespace detail {
 
 template <typename T>
 struct PerfCountSet;
-
 class IterationLogic;
 class PerformanceCounters;
 
@@ -1072,6 +1082,7 @@ public:
 
 private:
     struct Impl;
+
     Impl* mPimpl;
 };
 ANKERL_NANOBENCH(IGNORE_EFFCPP_POP)

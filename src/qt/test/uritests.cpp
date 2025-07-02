@@ -3,11 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/test/uritests.h>
-
 #include <qt/guiutil.h>
-#include <qt/walletmodel.h>
+#include <qtestcase.h>
+#include <qurl.h>
 
-#include <QUrl>
+#include "qt/sendcoinsrecipient.h"
 
 void URITests::uriTests()
 {

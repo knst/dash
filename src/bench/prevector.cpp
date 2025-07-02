@@ -5,10 +5,12 @@
 #include <prevector.h>
 #include <serialize.h>
 #include <streams.h>
+#include <bench/bench.h>
 #include <type_traits>
 #include <vector>
+#include <algorithm>
 
-#include <bench/bench.h>
+#include "nanobench.h"
 
 struct nontrivial_t {
     int x;

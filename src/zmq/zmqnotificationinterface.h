@@ -6,11 +6,27 @@
 #define BITCOIN_ZMQ_ZMQNOTIFICATIONINTERFACE_H
 
 #include <validationinterface.h>
+#include <stdint.h>
 #include <list>
 #include <memory>
 
+#include "primitives/transaction.h"
+#include "zmq/zmqabstractnotifier.h"
+
 class CBlockIndex;
 class CZMQAbstractNotifier;
+class CBlock;
+class CDeterministicMNList;
+class CGovernanceVote;
+enum class MemPoolRemovalReason;
+namespace Governance {
+class Object;
+}  // namespace Governance
+namespace llmq {
+class CChainLockSig;
+class CRecoveredSig;
+struct CInstantSendLock;
+}  // namespace llmq
 
 class CZMQNotificationInterface final : public CValidationInterface
 {

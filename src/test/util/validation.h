@@ -6,8 +6,11 @@
 #define BITCOIN_TEST_UTIL_VALIDATION_H
 
 #include <validation.h>
+#include <memory>
 
 class CValidationInterface;
+class CBlock;
+class CBlockIndex;
 
 struct TestChainState : public CChainState {
     /** Reset the ibd cache to its initial state */

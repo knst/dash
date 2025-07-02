@@ -7,8 +7,33 @@
 #include <hash.h>
 #include <test/util/setup_common.h>
 #include <util/strencodings.h>
+#include <stdint.h>
+#include <boost/preprocessor/arithmetic/limits/dec_256.hpp>
+#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
+#include <boost/preprocessor/control/expr_iif.hpp>
+#include <boost/preprocessor/control/iif.hpp>
+#include <boost/preprocessor/detail/limits/auto_rec_256.hpp>
+#include <boost/preprocessor/logical/compl.hpp>
+#include <boost/preprocessor/logical/limits/bool_256.hpp>
+#include <boost/preprocessor/repetition/detail/limits/for_256.hpp>
+#include <boost/preprocessor/repetition/for.hpp>
+#include <boost/preprocessor/seq/limits/elem_256.hpp>
+#include <boost/preprocessor/seq/limits/size_256.hpp>
+#include <boost/preprocessor/tuple/elem.hpp>
+#include <boost/preprocessor/variadic/limits/elem_64.hpp>
+#include <boost/test/tools/old/interface.hpp>
+#include <boost/test/unit_test_suite.hpp>
+#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
+#include <boost/test/utils/lazy_ostream.hpp>
+#include <iterator>
+#include <vector>
 
-#include <boost/test/unit_test.hpp>
+#include "crypto/common.h"
+#include "primitives/transaction.h"
+#include "random.h"
+#include "serialize.h"
+#include "span.h"
+#include "uint256.h"
 
 BOOST_AUTO_TEST_SUITE(hash_tests)
 

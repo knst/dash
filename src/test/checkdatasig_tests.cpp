@@ -4,13 +4,28 @@
 
 #include <policy/policy.h>
 #include <script/interpreter.h>
-
 #include <test/lcg.h>
 #include <test/util/setup_common.h>
-
-#include <boost/test/unit_test.hpp>
-
+#include <stdint.h>
+#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
+#include <boost/preprocessor/control/iif.hpp>
+#include <boost/preprocessor/logical/compl.hpp>
+#include <boost/preprocessor/logical/limits/bool_256.hpp>
+#include <boost/test/tools/old/interface.hpp>
+#include <boost/test/unit_test_suite.hpp>
+#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
+#include <boost/test/utils/lazy_ostream.hpp>
 #include <array>
+#include <algorithm>
+#include <vector>
+
+#include "crypto/sha256.h"
+#include "key.h"
+#include "pubkey.h"
+#include "script/script.h"
+#include "script/script_error.h"
+#include "span.h"
+#include "uint256.h"
 
 typedef std::vector<uint8_t> valtype;
 typedef std::vector<valtype> stacktype;

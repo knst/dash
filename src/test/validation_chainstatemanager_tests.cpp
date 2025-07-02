@@ -5,26 +5,53 @@
 #include <chainparams.h>
 #include <consensus/validation.h>
 #include <evo/evodb.h>
-#include <index/txindex.h>
-#include <llmq/blockprocessor.h>
 #include <llmq/context.h>
-#include <node/chainstate.h>
 #include <node/utxo_snapshot.h>
 #include <random.h>
-#include <rpc/blockchain.h>
-#include <spork.h>
 #include <sync.h>
 #include <test/util/chainstate.h>
 #include <test/util/setup_common.h>
 #include <uint256.h>
 #include <validation.h>
 #include <validationinterface.h>
-
 #include <tinyformat.h>
-
+#include <stddef.h>
+#include <boost/preprocessor/arithmetic/limits/dec_256.hpp>
+#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
+#include <boost/preprocessor/control/expr_iif.hpp>
+#include <boost/preprocessor/control/iif.hpp>
+#include <boost/preprocessor/detail/limits/auto_rec_256.hpp>
+#include <boost/preprocessor/logical/compl.hpp>
+#include <boost/preprocessor/logical/limits/bool_256.hpp>
+#include <boost/preprocessor/repetition/detail/limits/for_256.hpp>
+#include <boost/preprocessor/repetition/for.hpp>
+#include <boost/preprocessor/seq/limits/elem_256.hpp>
+#include <boost/preprocessor/seq/limits/enum_256.hpp>
+#include <boost/preprocessor/seq/limits/size_256.hpp>
+#include <boost/preprocessor/tuple/elem.hpp>
+#include <boost/preprocessor/variadic/limits/elem_64.hpp>
+#include <boost/test/tools/old/interface.hpp>
+#include <boost/test/unit_test_log.hpp>
+#include <boost/test/unit_test_suite.hpp>
+#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
+#include <boost/test/utils/lazy_ostream.hpp>
 #include <vector>
+#include <algorithm>
+#include <memory>
+#include <optional>
+#include <set>
 
-#include <boost/test/unit_test.hpp>
+#include "chain.h"
+#include "coins.h"
+#include "node/blockstorage.h"
+#include "primitives/transaction.h"
+#include "streams.h"
+#include "txmempool.h"
+#include "util/check.h"
+
+namespace Consensus {
+struct Params;
+}  // namespace Consensus
 
 using node::SnapshotMetadata;
 

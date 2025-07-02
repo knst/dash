@@ -5,8 +5,15 @@
 #include <consensus/params.h>
 #include <util/check.h>
 #include <versionbits.h>
-
+#include <assert.h>
 #include <limits>
+#include <algorithm>
+#include <utility>
+#include <vector>
+
+#include "chain.h"
+#include "gsl/pointers.h"
+#include "sync.h"
 
 static int calculateStartHeight(const CBlockIndex* pindexPrev, ThresholdState state, const int nPeriod, const ThresholdConditionCache& cache) {
     int nStartHeight{std::numeric_limits<int>::max()};

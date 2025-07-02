@@ -4,7 +4,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <net_processing.h>
-
 #include <addrman.h>
 #include <banman.h>
 #include <blockencodings.h>
@@ -18,11 +17,8 @@
 #include <merkleblock.h>
 #include <netmessagemaker.h>
 #include <netbase.h>
-#include <net_types.h>
 #include <node/blockstorage.h>
 #include <node/txreconciliation.h>
-#include <policy/policy.h>
-#include <policy/settings.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <random.h>
@@ -38,27 +34,71 @@
 #include <util/system.h>
 #include <util/strencodings.h>
 #include <util/trace.h>
-
+#include <spork.h>
+#include <governance/governance.h>
+#include <masternode/sync.h>
+#include <masternode/meta.h>
+#include <assert.h>
+#include <sys/sdt.h>
+#include <boost/multi_index/detail/hash_index_iterator.hpp>
+#include <boost/multi_index/detail/safe_mode.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/operators.hpp>
 #include <algorithm>
 #include <atomic>
-#include <chrono>
 #include <future>
 #include <list>
 #include <memory>
 #include <optional>
 #include <ranges>
 #include <typeinfo>
+#include <array>
+#include <compare>
+#include <deque>
+#include <exception>
+#include <functional>
+#include <iterator>
+#include <limits>
+#include <map>
+#include <queue>
+#include <ratio>
+#include <set>
+#include <tuple>
+#include <unordered_map>
+#include <utility>
 
-#include <spork.h>
-#include <governance/governance.h>
-#include <masternode/sync.h>
-#include <masternode/meta.h>
+#include "arith_uint256.h"
+#include "bitcoin-config.h"
+#include "chain.h"
+#include "chainparamsbase.h"
+#include "coinjoin/coinjoin.h"
+#include "common/bloom.h"
+#include "consensus/consensus.h"
+#include "consensus/params.h"
+#include "core_memusage.h"
+#include "crypto/siphash.h"
+#include "evo/dmnstate.h"
+#include "interfaces/chain.h"
+#include "limitedmap.h"
+#include "llmq/clsig.h"
+#include "logging.h"
+#include "net.h"
+#include "net_permissions.h"
+#include "netaddress.h"
+#include "node/connection_types.h"
+#include "protocol.h"
+#include "saltedhasher.h"
+#include "script/script.h"
+#include "serialize.h"
+#include "span.h"
+#include "uint256.h"
+#include "util/time.h"
+#include "version.h"
 #ifdef ENABLE_WALLET
 #include <coinjoin/client.h>
 #endif // ENABLE_WALLET
 #include <coinjoin/context.h>
 #include <coinjoin/server.h>
-
 #include <evo/deterministicmns.h>
 #include <evo/mnauth.h>
 #include <evo/simplifiedmns.h>
@@ -74,7 +114,6 @@
 #include <llmq/signing.h>
 #include <llmq/signing_shares.h>
 #include <llmq/snapshot.h>
-
 #include <stats/client.h>
 
 using node::ReadBlockFromDisk;

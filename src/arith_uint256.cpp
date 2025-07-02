@@ -4,9 +4,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <arith_uint256.h>
-
 #include <uint256.h>
 #include <crypto/common.h>
+#include <assert.h>
 
 
 template <unsigned int BITS>

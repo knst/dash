@@ -9,18 +9,37 @@
 
 #include <qt/addressbookpage.h>
 #include <qt/forms/ui_addressbookpage.h>
-
 #include <qt/addresstablemodel.h>
 #include <qt/csvmodelwriter.h>
 #include <qt/editaddressdialog.h>
 #include <qt/guiutil.h>
-#include <qt/optionsmodel.h>
 #include <qt/qrdialog.h>
+#include <QtCore/qobjectdefs.h>
+#include <qabstractitemmodel.h>
+#include <qabstractitemview.h>
+#include <qcursor.h>
+#include <qheaderview.h>
+#include <qicon.h>
+#include <qitemselectionmodel.h>
+#include <qlabel.h>
+#include <qlineedit.h>
+#include <qlist.h>
+#include <qmenu.h>
+#include <qmessagebox.h>
+#include <qmetatype.h>
+#include <qnamespace.h>
+#include <qpushbutton.h>
+#include <qregexp.h>
+#include <qsortfilterproxymodel.h>
+#include <qstringbuilder.h>
+#include <qtableview.h>
+#include <qvariant.h>
+#include <qwidget.h>
+#include <utility>
 
-#include <QIcon>
-#include <QMenu>
-#include <QMessageBox>
-#include <QSortFilterProxyModel>
+class QAction;
+class QObject;
+class QPoint;
 
 class AddressBookSortFilterProxyModel final : public QSortFilterProxyModel
 {

@@ -6,6 +6,7 @@
 #ifndef BITCOIN_NODE_INTERFACE_UI_H
 #define BITCOIN_NODE_INTERFACE_UI_H
 
+#include <stdint.h>
 #include <functional>
 #include <memory>
 #include <string>
@@ -13,7 +14,6 @@
 class CBlockIndex;
 enum class SynchronizationState;
 struct bilingual_str;
-
 class CDeterministicMNList;
 
 namespace boost {

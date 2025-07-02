@@ -2,8 +2,9 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or https://opensource.org/licenses/mit-license.php.
 
-#include <iomanip>
-#include <stdio.h>
+#include <string>
+#include <vector>
+
 #include "univalue.h"
 #include "univalue_escapes.h"
 

@@ -6,9 +6,13 @@
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
-
-#include <cstdint>
+#include <assert.h>
 #include <vector>
+#include <algorithm>
+#include <array>
+#include <cstddef>
+
+#include "span.h"
 
 FUZZ_TARGET(crypto_poly1305)
 {

@@ -4,7 +4,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <core_io.h>
-#include <node/context.h>
 #include <policy/feerate.h>
 #include <policy/fees.h>
 #include <policy/policy.h>
@@ -18,13 +17,15 @@
 #include <univalue.h>
 #include <util/fees.h>
 #include <util/system.h>
-
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <list>
 #include <string>
-#include <vector>
+
+namespace node {
+struct NodeContext;
+}  // namespace node
 
 using node::NodeContext;
 

@@ -6,10 +6,17 @@
 #define BITCOIN_QT_SENDCOINSENTRY_H
 
 #include <qt/sendcoinsrecipient.h>
-
+#include <qobjectdefs.h>
+#include <qstackedwidget.h>
+#include <qstring.h>
 #include <QStackedWidget>
 
+#include "consensus/amount.h"
+
 class WalletModel;
+class QEvent;
+class QObject;
+class QWidget;
 
 namespace interfaces {
 class Node;

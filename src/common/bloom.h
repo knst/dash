@@ -7,7 +7,7 @@
 
 #include <serialize.h>
 #include <span.h>
-
+#include <stdint.h>
 #include <vector>
 
 class COutPoint;
@@ -15,6 +15,7 @@ class CScript;
 class CTransaction;
 class CTxOut;
 class uint256;
+template <typename C> class Span;
 
 //! 20,000 items with fp rate < 0.1% or 10,000 items and <0.0001%
 static constexpr unsigned int MAX_BLOOM_FILTER_SIZE = 36000; // bytes

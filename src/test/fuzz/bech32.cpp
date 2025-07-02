@@ -6,12 +6,11 @@
 #include <test/fuzz/fuzz.h>
 #include <test/util/str.h>
 #include <util/strencodings.h>
-
 #include <cassert>
-#include <cstdint>
 #include <string>
-#include <utility>
 #include <vector>
+#include <algorithm>
+#include <initializer_list>
 
 FUZZ_TARGET(bech32)
 {

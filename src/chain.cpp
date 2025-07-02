@@ -5,8 +5,14 @@
 
 #include <chain.h>
 #include <util/time.h>
-
 #include <tinyformat.h>
+#include <limits>
+#include <utility>
+
+#include "arith_uint256.h"
+#include "consensus/params.h"
+#include "primitives/block.h"
+#include "uint256.h"
 
 std::string CBlockFileInfo::ToString() const
 {

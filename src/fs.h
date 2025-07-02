@@ -6,7 +6,6 @@
 #define BITCOIN_FS_H
 
 #include <tinyformat.h>
-
 #include <cstdio>
 #include <filesystem> // IWYU pragma: export
 #include <iomanip>

@@ -11,7 +11,6 @@
 #include <spentindex.h>
 #include <sync.h>
 #include <threadsafety.h>
-
 #include <cstdint>
 #include <vector>
 
@@ -19,7 +18,6 @@ class CBlockTreeDB;
 class CTxMemPool;
 class uint160;
 class uint256;
-
 enum class AddressType : uint8_t;
 
 extern RecursiveMutex cs_main;

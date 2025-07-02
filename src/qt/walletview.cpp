@@ -3,10 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/walletview.h>
-
-#include <node/psbt.h>
-#include <node/transaction.h>
-#include <policy/policy.h>
 #include <qt/addressbookpage.h>
 #include <qt/askpassphrasedialog.h>
 #include <qt/clientmodel.h>
@@ -20,20 +16,30 @@
 #include <qt/transactiontablemodel.h>
 #include <qt/transactionview.h>
 #include <qt/walletmodel.h>
-
 #include <interfaces/node.h>
 #include <node/interface_ui.h>
-#include <util/strencodings.h>
+#include <QtCore/qobjectdefs.h>
+#include <assert.h>
+#include <qabstractitemmodel.h>
+#include <qboxlayout.h>
+#include <qbytearray.h>
+#include <qdialog.h>
+#include <qlabel.h>
+#include <qnamespace.h>
+#include <qprogressdialog.h>
+#include <qpushbutton.h>
+#include <qsettings.h>
+#include <qstringbuilder.h>
+#include <qvariant.h>
+#include <qwidget.h>
+#include <algorithm>
+#include <vector>
 
-#include <QAction>
-#include <QActionGroup>
-#include <QFileDialog>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QProgressDialog>
-#include <QPushButton>
-#include <QSettings>
-#include <QVBoxLayout>
+#include "interfaces/wallet.h"
+#include "qt/governancelist.h"
+#include "qt/masternodelist.h"
+
+class uint256;
 
 WalletView::WalletView(WalletModel* wallet_model, QWidget* parent)
     : QStackedWidget(parent),

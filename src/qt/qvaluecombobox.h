@@ -5,8 +5,15 @@
 #ifndef BITCOIN_QT_QVALUECOMBOBOX_H
 #define BITCOIN_QT_QVALUECOMBOBOX_H
 
+#include <qcombobox.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
+#include <qvariant.h>
 #include <QComboBox>
 #include <QVariant>
+
+class QObject;
+class QWidget;
 
 /* QComboBox that can be used with QDataWidgetMapper to select ordinal values from a model. */
 class QValueComboBox : public QComboBox

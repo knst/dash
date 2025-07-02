@@ -3,13 +3,16 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <zmq/zmqrpc.h>
-
 #include <rpc/server.h>
 #include <rpc/util.h>
 #include <zmq/zmqabstractnotifier.h>
 #include <zmq/zmqnotificationinterface.h>
-
 #include <univalue.h>
+#include <list>
+#include <memory>
+#include <string>
+
+class JSONRPCRequest;
 
 namespace {
 

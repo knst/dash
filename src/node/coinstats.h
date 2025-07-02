@@ -11,12 +11,16 @@
 #include <consensus/amount.h>
 #include <streams.h>
 #include <uint256.h>
-
 #include <cstdint>
 #include <functional>
 #include <optional>
 
 class CCoinsView;
+class CBlockIndex;
+class COutPoint;
+class CScript;
+class Coin;
+
 namespace node {
 class BlockManager;
 } // namespace node

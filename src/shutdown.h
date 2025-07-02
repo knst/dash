@@ -7,6 +7,7 @@
 #define BITCOIN_SHUTDOWN_H
 
 #include <util/translation.h> // For bilingual_str
+#include <string>
 
 /** Abort with a message */
 bool AbortNode(const std::string& strMessage, bilingual_str user_message = bilingual_str{});

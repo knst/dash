@@ -3,13 +3,20 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <txorphanage.h>
-
-#include <consensus/validation.h>
 #include <logging.h>
 #include <policy/policy.h>
 #include <stats/client.h>
-
 #include <cassert>
+#include <algorithm>
+#include <memory>
+
+#include "net.h"
+#include "primitives/block.h"
+#include "primitives/transaction.h"
+#include "random.h"
+#include "serialize.h"
+#include "sync.h"
+#include "util/time.h"
 
 /** Expiration time for orphan transactions in seconds */
 static constexpr int64_t ORPHAN_TX_EXPIRE_TIME = 20 * 60;

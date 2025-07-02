@@ -11,20 +11,35 @@
 #include <fs.h>
 #include <qt/intro.h>
 #include <qt/forms/ui_intro.h>
-
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
-
-#include <interfaces/node.h>
 #include <util/system.h>
 #include <validation.h>
-
-#include <QFileDialog>
-#include <QSettings>
-#include <QMessageBox>
-
+#include <QtCore/qobjectdefs.h>
+#include <qcheckbox.h>
+#include <qdialogbuttonbox.h>
+#include <qdir.h>
+#include <qfiledialog.h>
+#include <qicon.h>
+#include <qlabel.h>
+#include <qlineedit.h>
+#include <qmessagebox.h>
+#include <qnamespace.h>
+#include <qobject.h>
+#include <qpushbutton.h>
+#include <qradiobutton.h>
+#include <qsettings.h>
+#include <qspinbox.h>
+#include <qstringbuilder.h>
+#include <qthread.h>
+#include <qvariant.h>
 #include <cmath>
+#include <exception>
+#include <limits>
+#include <memory>
+
+class QWidget;
 
 /* Check free space asynchronously to prevent hanging the UI thread.
 

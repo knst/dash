@@ -5,6 +5,8 @@
 #include <core_io.h>
 #include <script/script.h>
 #include <test/fuzz/fuzz.h>
+#include <stdexcept>
+#include <string>
 
 FUZZ_TARGET(parse_script)
 {

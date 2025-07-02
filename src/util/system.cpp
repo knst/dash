@@ -5,8 +5,14 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <util/system.h>
-
-#include <support/allocators/secure.h>
+#include <bits/chrono.h>
+#include <bits/types/struct_sched_param.h>
+#include <errno.h>
+#include <features.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #ifdef HAVE_BOOST_PROCESS
 #include <boost/process.hpp>
@@ -24,7 +30,6 @@
 #include <util/syserror.h>
 #include <util/threadnames.h>
 #include <util/translation.h>
-
 #include <tinyformat.h>
 
 #if (defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__))
@@ -44,21 +49,19 @@
 
 #endif // __linux__
 
-#include <algorithm>
-#include <atomic>
-#include <cassert>
 #include <fcntl.h>
 #include <sched.h>
 #include <sys/resource.h>
-#include <sys/stat.h>
+#include <algorithm>
+#include <atomic>
+#include <cassert>
 
 #else
-
-#include <codecvt>
 
 #include <io.h> /* for _commit */
 #include <shellapi.h>
 #include <shlobj.h>
+#include <codecvt>
 #endif
 
 #ifdef HAVE_MALLOPT_ARENA_MAX
@@ -66,7 +69,6 @@
 #endif
 
 #include <univalue.h>
-
 #include <fstream>
 #include <map>
 #include <memory>
@@ -74,7 +76,20 @@
 #include <string>
 #include <system_error>
 #include <thread>
-#include <typeinfo>
+#include <condition_variable>
+#include <future>
+#include <initializer_list>
+#include <iostream>
+#include <locale>
+#include <mutex>
+#include <stdexcept>
+#include <string_view>
+#include <utility>
+
+#include "bitcoin-config.h"
+#include "logging.h"
+#include "util/settings.h"
+#include "util/time.h"
 
 // Application startup time (used for uptime calculation)
 const int64_t nStartupTime = GetTime();

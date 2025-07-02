@@ -2,41 +2,50 @@
 // Copyright (c) 2014-2024 The Dash Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
-#if defined(HAVE_CONFIG_H)
-#include <config/bitcoin-config.h>
-#endif
-
 #include <qt/walletmodel.h>
-
 #include <qt/addresstablemodel.h>
 #include <qt/clientmodel.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
-#include <qt/optionsmodel.h>
-#include <qt/paymentserver.h>
 #include <qt/recentrequeststablemodel.h>
 #include <qt/transactiontablemodel.h>
-
 #include <interfaces/coinjoin.h>
 #include <interfaces/handler.h>
 #include <interfaces/node.h>
 #include <key_io.h>
 #include <node/interface_ui.h>
-#include <psbt.h>
 #include <util/system.h> // for GetBoolArg
 #include <util/translation.h>
-#include <wallet/coincontrol.h>
 #include <wallet/wallet.h> // for CRecipient
-
-#include <spork.h>
-
 #include <stdint.h>
+#include <QtCore/qglobal.h>
+#include <QtCore/qobjectdefs.h>
+#include <assert.h>
+#include <qdebug.h>
+#include <qlist.h>
+#include <qnamespace.h>
+#include <qset.h>
+#include <qstringbuilder.h>
+#include <qtimer.h>
 #include <functional>
+#include <algorithm>
+#include <string>
+#include <vector>
 
-#include <QDebug>
-#include <QSet>
-#include <QTimer>
+#include "consensus/amount.h"
+#include "interfaces/wallet.h"
+#include "primitives/transaction.h"
+#include "qt/sendcoinsrecipient.h"
+#include "qt/walletmodeltransaction.h"
+#include "script/script.h"
+#include "script/standard.h"
+#include "serialize.h"
+#include "streams.h"
+#include "support/allocators/secure.h"
+#include "util/string.h"
+#include "util/ui_change_type.h"
+#include "version.h"
+#include "wallet/transaction.h"
 
 using wallet::CCoinControl;
 using wallet::CRecipient;

@@ -3,8 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/walletframe.h>
-
-#include <fs.h>
 #include <node/interface_ui.h>
 #include <psbt.h>
 #include <qt/governancelist.h>
@@ -12,20 +10,34 @@
 #include <qt/masternodelist.h>
 #include <qt/overviewpage.h>
 #include <qt/psbtoperationsdialog.h>
-#include <qt/walletmodel.h>
 #include <qt/walletview.h>
 #include <util/system.h>
-
+#include <QtCore/qglobal.h>
+#include <QtCore/qobjectdefs.h>
+#include <qapplication.h>
+#include <qboxlayout.h>
+#include <qbytearray.h>
+#include <qclipboard.h>
+#include <qgroupbox.h>
+#include <qlabel.h>
+#include <qnamespace.h>
+#include <qobject.h>
+#include <qpushbutton.h>
+#include <qsizepolicy.h>
+#include <qstackedwidget.h>
+#include <qstringbuilder.h>
+#include <qwidget.h>
 #include <cassert>
 #include <fstream>
 #include <string>
+#include <algorithm>
+#include <iterator>
+#include <optional>
+#include <utility>
+#include <vector>
 
-#include <QApplication>
-#include <QClipboard>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QPushButton>
-#include <QVBoxLayout>
+#include "span.h"
+#include "util/strencodings.h"
 
 WalletFrame::WalletFrame(QWidget* parent)
     : QFrame(parent),

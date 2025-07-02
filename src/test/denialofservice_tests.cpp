@@ -8,22 +8,46 @@
 #include <chainparams.h>
 #include <net.h>
 #include <net_processing.h>
-#include <pubkey.h>
-#include <script/sign.h>
-#include <script/signingprovider.h>
-#include <script/standard.h>
 #include <test/util/net.h>
 #include <test/util/setup_common.h>
 #include <timedata.h>
-#include <util/string.h>
 #include <util/system.h>
 #include <util/time.h>
 #include <validation.h>
-
-#include <array>
 #include <stdint.h>
+#include <bits/chrono.h>
+#include <netinet/in.h>
+#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
+#include <boost/preprocessor/control/iif.hpp>
+#include <boost/preprocessor/logical/compl.hpp>
+#include <boost/preprocessor/logical/limits/bool_256.hpp>
+#include <boost/test/tools/old/interface.hpp>
+#include <boost/test/unit_test_suite.hpp>
+#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
+#include <boost/test/utils/lazy_ostream.hpp>
+#include <array>
+#include <algorithm>
+#include <atomic>
+#include <deque>
+#include <memory>
+#include <ratio>
+#include <vector>
 
-#include <boost/test/unit_test.hpp>
+#include "addrdb.h"
+#include "arith_uint256.h"
+#include "chain.h"
+#include "consensus/params.h"
+#include "fs.h"
+#include "netaddress.h"
+#include "netgroup.h"
+#include "node/connection_types.h"
+#include "node/eviction.h"
+#include "protocol.h"
+#include "random.h"
+#include "span.h"
+#include "sync.h"
+#include "txmempool.h"
+#include "version.h"
 
 
 static CService ip(uint32_t i)

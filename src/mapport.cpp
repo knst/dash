@@ -7,15 +7,17 @@
 #endif
 
 #include <mapport.h>
-
 #include <clientversion.h>
 #include <logging.h>
 #include <net.h>
 #include <netaddress.h>
 #include <netbase.h>
 #include <threadinterrupt.h>
-#include <util/system.h>
 #include <util/thread.h>
+#include <bits/chrono.h>
+#include <miniupnpc/igd_desc_parse.h>
+#include <miniupnpc/upnpdev.h>
+#include <stdint.h>
 
 #ifdef USE_NATPMP
 #include <compat/compat.h>
@@ -26,6 +28,7 @@
 #include <miniupnpc/miniupnpc.h>
 #include <miniupnpc/upnpcommands.h>
 #include <miniupnpc/upnperrors.h>
+
 // The minimum supported miniUPnPc API version is set to 10. This keeps compatibility
 // with Ubuntu 16.04 LTS and Debian 8 libminiupnpc-dev packages.
 static_assert(MINIUPNPC_API_VERSION >= 10, "miniUPnPc API version >= 10 assumed");
@@ -33,10 +36,11 @@ static_assert(MINIUPNPC_API_VERSION >= 10, "miniUPnPc API version >= 10 assumed"
 
 #include <atomic>
 #include <cassert>
-#include <chrono>
-#include <functional>
 #include <string>
 #include <thread>
+#include <optional>
+
+#include "tinyformat.h"
 
 #if defined(USE_NATPMP) || defined(USE_UPNP)
 static CThreadInterrupt g_mapport_interrupt;

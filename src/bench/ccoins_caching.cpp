@@ -7,8 +7,16 @@
 #include <policy/policy.h>
 #include <script/signingprovider.h>
 #include <test/util/transaction_utils.h>
-
+#include <assert.h>
 #include <vector>
+#include <algorithm>
+
+#include "consensus/amount.h"
+#include "key.h"
+#include "nanobench.h"
+#include "primitives/transaction.h"
+#include "script/script.h"
+#include "uint256.h"
 
 // Microbenchmark for simple accesses to a CCoinsViewCache database. Note from
 // laanwj, "replicating the actual usage patterns of the client is hard though,

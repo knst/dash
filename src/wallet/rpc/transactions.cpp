@@ -9,6 +9,36 @@
 #include <wallet/receive.h>
 #include <wallet/rpc/util.h>
 #include <wallet/wallet.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <algorithm>
+#include <iterator>
+#include <limits>
+#include <list>
+#include <map>
+#include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <utility>
+#include <variant>
+#include <vector>
+
+#include "consensus/amount.h"
+#include "interfaces/chain.h"
+#include "policy/feerate.h"
+#include "primitives/block.h"
+#include "primitives/transaction.h"
+#include "rpc/protocol.h"
+#include "rpc/request.h"
+#include "script/standard.h"
+#include "sync.h"
+#include "threadsafety.h"
+#include "uint256.h"
+#include "univalue.h"
+#include "util/check.h"
+#include "wallet/ismine.h"
+#include "wallet/transaction.h"
 
 using interfaces::FoundBlock;
 

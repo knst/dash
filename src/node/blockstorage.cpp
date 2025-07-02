@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <node/blockstorage.h>
-
 #include <chain.h>
 #include <chainparams.h>
 #include <clientversion.h>
@@ -20,11 +19,29 @@
 #include <undo.h>
 #include <util/system.h>
 #include <validation.h>
-#include <walletinitinterface.h>
-
+#include <assert.h>
+#include <bits/chrono.h>
 #include <map>
 #include <ranges>
 #include <unordered_map>
+#include <algorithm>
+#include <exception>
+#include <functional>
+#include <iterator>
+#include <utility>
+
+#include "arith_uint256.h"
+#include "coins.h"
+#include "logging.h"
+#include "primitives/block.h"
+#include "protocol.h"
+#include "serialize.h"
+#include "sync.h"
+#include "txdb.h"
+#include "util/strencodings.h"
+#include "util/time.h"
+#include "util/translation.h"
+#include "version.h"
 
 namespace node {
 std::atomic_bool fImporting(false);

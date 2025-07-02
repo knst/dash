@@ -4,7 +4,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <node/coinstats.h>
-
 #include <coins.h>
 #include <crypto/muhash.h>
 #include <hash.h>
@@ -15,8 +14,21 @@
 #include <util/overflow.h>
 #include <util/system.h>
 #include <validation.h>
-
+#include <assert.h>
 #include <map>
+#include <iosfwd>
+#include <iterator>
+#include <memory>
+#include <utility>
+
+#include "chain.h"
+#include "node/blockstorage.h"
+#include "primitives/transaction.h"
+#include "script/script.h"
+#include "span.h"
+#include "streams.h"
+#include "sync.h"
+#include "version.h"
 
 namespace node {
 // Database-independent metric indicating the UTXO set size

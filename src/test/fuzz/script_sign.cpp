@@ -15,14 +15,20 @@
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
 #include <util/translation.h>
-
 #include <cassert>
 #include <cstdint>
 #include <iostream>
 #include <map>
 #include <optional>
-#include <string>
 #include <vector>
+#include <functional>
+
+#include "coins.h"
+#include "primitives/transaction.h"
+#include "script/interpreter.h"
+#include "script/script.h"
+#include "serialize.h"
+#include "version.h"
 
 void initialize_script_sign()
 {

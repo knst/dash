@@ -8,12 +8,39 @@
 #include <messagesigner.h>
 #include <script/descriptor.h>
 #include <script/sign.h>
-#include <shutdown.h>
 #include <util/bip32.h>
 #include <util/strencodings.h>
 #include <util/system.h>
 #include <util/translation.h>
 #include <wallet/scriptpubkeyman.h>
+#include <assert.h>
+#include <boost/iterator/iterator_facade.hpp>
+#include <boost/smart_ptr/detail/operator_bool.hpp>
+#include <iterator>
+#include <limits>
+#include <list>
+#include <stdexcept>
+
+#include "coins.h"
+#include "hash.h"
+#include "outputtype.h"
+#include "primitives/transaction.h"
+#include "psbt.h"
+#include "script/keyorigin.h"
+#include "script/signingprovider.h"
+#include "script/standard.h"
+#include "span.h"
+#include "tinyformat.h"
+#include "util/error.h"
+#include "util/message.h"
+#include "util/time.h"
+#include "wallet/crypter.h"
+#include "wallet/hdchain.h"
+#include "wallet/ismine.h"
+#include "wallet/walletdb.h"
+#include "wallet/walletutil.h"
+
+struct PrecomputedTransactionData;
 
 namespace wallet {
 bool LegacyScriptPubKeyMan::GetNewDestination(CTxDestination& dest, bilingual_str& error)
