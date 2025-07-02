@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <evo/simplifiedmns.h>
-
 #include <evo/cbtx.h>
 #include <core_io.h>
 #include <deploymentstatus.h>
@@ -13,12 +12,8 @@
 #include <llmq/quorums.h>
 #include <node/blockstorage.h>
 #include <evo/specialtx.h>
-
-#include <pubkey.h>
 #include <serialize.h>
 #include <version.h>
-
-#include <base58.h>
 #include <chainparams.h>
 #include <consensus/merkle.h>
 #include <univalue.h>
@@ -26,6 +21,32 @@
 #include <key_io.h>
 #include <util/underlying.h>
 #include <util/enumerate.h>
+#include <iterator>
+#include <optional>
+
+#include "bls/bls.h"
+#include "chain.h"
+#include "clientversion.h"
+#include "consensus/params.h"
+#include "evo/dmn_types.h"
+#include "evo/dmnstate.h"
+#include "evo/netinfo.h"
+#include "hash.h"
+#include "logging.h"
+#include "merkleblock.h"
+#include "netaddress.h"
+#include "prevector.h"
+#include "primitives/block.h"
+#include "script/standard.h"
+#include "span.h"
+#include "streams.h"
+#include "sync.h"
+#include "tinyformat.h"
+#include "util/strencodings.h"
+
+namespace Consensus {
+enum class LLMQType : uint8_t;
+}  // namespace Consensus
 
 using node::ReadBlockFromDisk;
 

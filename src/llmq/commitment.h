@@ -11,14 +11,18 @@
 #include <util/irange.h>
 #include <util/strencodings.h>
 #include <util/underlying.h>
-
 #include <gsl/pointers.h>
 #include <univalue.h>
-
+#include <stdint.h>
 #include <limits>
 #include <memory>
 #include <string>
 #include <vector>
+#include <algorithm>
+
+#include "serialize.h"
+#include "span.h"
+#include "uint256.h"
 
 class CBlockIndex;
 class CDeterministicMNManager;

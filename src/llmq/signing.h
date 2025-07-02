@@ -14,8 +14,23 @@
 #include <sync.h>
 #include <threadinterrupt.h>
 #include <unordered_lru_cache.h>
-
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <unordered_map>
+#include <atomic>
+#include <list>
+#include <memory>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
+
+#include "dbwrapper.h"
+#include "hash.h"
+#include "serialize.h"
+#include "threadsafety.h"
+#include "uint256.h"
 
 class CActiveMasternodeManager;
 class CChainState;
@@ -26,12 +41,14 @@ class CInv;
 class CNode;
 class PeerManager;
 class UniValue;
+struct StaticSaltedHasher;
 
 using NodeId = int64_t;
 
 namespace llmq
 {
 class CQuorum;
+
 using CQuorumCPtr = std::shared_ptr<const CQuorum>;
 class CQuorumManager;
 class CSigSharesManager;

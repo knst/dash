@@ -6,6 +6,10 @@
 #define BITCOIN_DSNOTIFICATIONINTERFACE_H
 
 #include <validationinterface.h>
+#include <stdint.h>
+#include <memory>
+
+#include "interfaces/chain.h"
 
 class CActiveMasternodeManager;
 class CConnman;
@@ -16,6 +20,14 @@ class CMasternodeSync;
 class PeerManager;
 struct CJContext;
 struct LLMQContext;
+class CBlock;
+class CBlockIndex;
+class CDeterministicMNList;
+class CDeterministicMNListDiff;
+enum class MemPoolRemovalReason;
+namespace llmq {
+class CChainLockSig;
+}  // namespace llmq
 
 class CDSNotificationInterface : public CValidationInterface
 {

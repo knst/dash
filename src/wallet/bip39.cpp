@@ -29,6 +29,12 @@
 #include <crypto/pkcs5_pbkdf2_hmac_sha512.h>
 #include <crypto/sha256.h>
 #include <random.h>
+#include <stdint.h>
+#include <string.h>
+#include <string>
+
+#include "span.h"
+#include "support/allocators/secure.h"
 
 SecureString CMnemonic::Generate(int strength)
 {

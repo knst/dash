@@ -9,12 +9,15 @@
 #include <serialize.h>
 #include <streams.h>
 #include <uint256.h>
-
 #include <list>
 #include <map>
 #include <vector>
+#include <algorithm>
+#include <set>
 
 class CDeterministicMNList;
+class CDataStream;
+class COutPoint;
 
 /**
  * Represents the collection of votes associated with a given CGovernanceObject

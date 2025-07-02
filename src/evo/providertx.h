@@ -9,7 +9,6 @@
 #include <evo/netinfo.h>
 #include <evo/specialtx.h>
 #include <primitives/transaction.h>
-
 #include <consensus/validation.h>
 #include <evo/dmn_types.h>
 #include <key_io.h>
@@ -17,6 +16,13 @@
 #include <pubkey.h>
 #include <univalue.h>
 #include <util/underlying.h>
+#include <stdint.h>
+#include <string>
+#include <vector>
+
+#include "script/script.h"
+#include "serialize.h"
+#include "uint256.h"
 
 class TxValidationState;
 

@@ -8,8 +8,10 @@
 #include <netaddress.h>
 #include <serialize.h>
 #include <sync.h>
-
+#include <stdint.h>
 #include <memory>
+#include <map>
+#include <string>
 
 template<typename T>
 class CFlatDB;

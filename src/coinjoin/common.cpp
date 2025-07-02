@@ -3,9 +3,10 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <coinjoin/common.h>
-
 #include <core_io.h>
 #include <univalue.h>
+
+#include "consensus/amount.h"
 
 namespace CoinJoin
 {

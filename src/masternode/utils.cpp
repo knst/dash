@@ -4,6 +4,7 @@
 
 #include <masternode/utils.h>
 #include <evo/deterministicmns.h>
+#include <bits/chrono.h>
 
 #ifdef ENABLE_WALLET
 #include <coinjoin/client.h>
@@ -11,9 +12,20 @@
 #include <masternode/sync.h>
 #include <net.h>
 #include <shutdown.h>
-#include <validation.h>
-#include <util/ranges.h>
 #include <coinjoin/context.h>
+#include <algorithm>
+#include <atomic>
+#include <compare>
+#include <functional>
+#include <memory>
+#include <vector>
+
+#include "bitcoin-config.h"
+#include "logging.h"
+#include "netaddress.h"
+#include "protocol.h"
+#include "uint256.h"
+#include "util/time.h"
 
 void CMasternodeUtils::DoMaintenance(CConnman& connman, CDeterministicMNManager& dmnman,
                                      const CMasternodeSync& mn_sync, const CJContext& cj_ctx)

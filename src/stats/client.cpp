@@ -5,13 +5,19 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <stats/client.h>
-
 #include <stats/rawsender.h>
 #include <util/system.h>
-
 #include <cmath>
-#include <cstdio>
 #include <random>
+#include <algorithm>
+#include <optional>
+#include <type_traits>
+#include <utility>
+
+#include "logging.h"
+#include "random.h"
+#include "sync.h"
+#include "tinyformat.h"
 
 namespace {
 /** Threshold below which a value is considered effectively zero */

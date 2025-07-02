@@ -7,6 +7,13 @@
 
 #include <primitives/transaction.h>
 #include <uint256.h>
+#include <stdint.h>
+#include <algorithm>
+#include <string>
+#include <type_traits>
+#include <vector>
+
+#include "serialize.h"
 
 class CActiveMasternodeManager;
 class CBLSPublicKey;

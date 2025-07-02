@@ -2,12 +2,10 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <llmq/debug.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/options.h>
 #include <llmq/params.h>
 #include <llmq/utils.h>
-
 #include <bls/bls_ies.h>
 #include <chainparams.h>
 #include <dbwrapper.h>
@@ -18,6 +16,40 @@
 #include <util/irange.h>
 #include <util/underlying.h>
 #include <validation.h>
+#include <assert.h>
+#include <stddef.h>
+#include <algorithm>
+#include <atomic>
+#include <initializer_list>
+#include <limits>
+#include <optional>
+#include <tuple>
+
+#include "bls/bls.h"
+#include "chain.h"
+#include "clientversion.h"
+#include "consensus/params.h"
+#include "fs.h"
+#include "llmq/dkgsessionhandler.h"
+#include "logging.h"
+#include "net.h"
+#include "node/blockstorage.h"
+#include "saltedhasher.h"
+#include "serialize.h"
+#include "streams.h"
+#include "util/expected.h"
+#include "util/system.h"
+#include "util/time.h"
+
+class CBLSWorker;
+namespace llmq {
+class CDKGComplaint;
+class CDKGContribution;
+class CDKGDebugManager;
+class CDKGJustification;
+class CDKGPrematureCommitment;
+class CQuorumBlockProcessor;
+}  // namespace llmq
 
 static bool IsQuorumDKGEnabled(const CSporkManager& sporkman)
 {

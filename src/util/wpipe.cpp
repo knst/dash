@@ -3,10 +3,13 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <util/wpipe.h>
-
 #include <logging.h>
 #include <util/edge.h>
 #include <util/sock.h>
+#include <stdint.h>
+#include <memory>
+
+#include "compat/compat.h"
 
 static constexpr int EXPECTED_PIPE_WRITTEN_BYTES = 1;
 

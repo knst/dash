@@ -4,18 +4,30 @@
 
 #include <llmq/ehf_signals.h>
 #include <llmq/quorums.h>
-#include <llmq/signing_shares.h>
 #include <llmq/commitment.h>
-
 #include <evo/mnhftx.h>
-#include <evo/specialtx.h>
-
 #include <chainparams.h>
 #include <consensus/validation.h>
 #include <deploymentstatus.h>
 #include <index/txindex.h> // g_txindex
 #include <primitives/transaction.h>
 #include <validation.h>
+#include <algorithm>
+#include <memory>
+#include <optional>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "bls/bls.h"
+#include "chain.h"
+#include "consensus/params.h"
+#include "llmq/signing.h"
+#include "logging.h"
+
+namespace Consensus {
+enum class LLMQType : uint8_t;
+}  // namespace Consensus
 
 namespace llmq {
 

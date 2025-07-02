@@ -8,10 +8,20 @@
 #include <primitives/transaction.h>
 #include <sync.h>
 #include <util/system.h>
-
+#include <qglobal.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
+#include <qwidget.h>
+#include <stdint.h>
 #include <QMenu>
 #include <QTimer>
 #include <QWidget>
+#include <memory>
+
+class QMenu;
+class QObject;
+class QPoint;
+class QTimer;
 
 #define MASTERNODELIST_UPDATE_SECONDS 3
 #define MASTERNODELIST_FILTER_COOLDOWN_SECONDS 3
@@ -22,6 +32,7 @@ class MasternodeList;
 }
 
 class CDeterministicMN;
+
 using CDeterministicMNCPtr = std::shared_ptr<const CDeterministicMN>;
 
 class ClientModel;
@@ -29,6 +40,7 @@ class WalletModel;
 
 QT_BEGIN_NAMESPACE
 class QModelIndex;
+
 QT_END_NAMESPACE
 
 /** Masternode Manager page widget */

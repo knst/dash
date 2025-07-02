@@ -3,8 +3,13 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <evo/evodb.h>
-
 #include <uint256.h>
+#include <assert.h>
+
+#include "dbwrapper.h"
+#include "fs.h"
+#include "sync.h"
+#include "util/system.h"
 
 CEvoDBScopedCommitter::CEvoDBScopedCommitter(CEvoDB &_evoDB) :
     evoDB(_evoDB)

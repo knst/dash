@@ -10,8 +10,16 @@
 #include <primitives/transaction.h>
 #include <threadsafety.h>
 #include <validationinterface.h>
+#include <stddef.h>
+#include <memory>
+#include <string>
+
+#include "sync.h"
+#include "uint256.h"
 
 class CDeterministicMNManager;
+class CBlockIndex;
+class CConnman;
 
 struct CActiveMasternodeInfo {
     // Keys for the active Masternode

@@ -5,8 +5,10 @@
 #ifndef BITCOIN_EVO_CHAINHELPER_H
 #define BITCOIN_EVO_CHAINHELPER_H
 
+#include <stdint.h>
 #include <memory>
 #include <optional>
+#include <utility>
 
 class CCreditPoolManager;
 class CDeterministicMNManager;
@@ -20,8 +22,10 @@ class CSporkManager;
 class CTransaction;
 class CTxMemPool;
 class uint256;
+namespace Consensus {
+struct Params;
+}  // namespace Consensus
 
-namespace Consensus { struct Params; }
 namespace llmq {
 class CChainLocksHandler;
 class CInstantSendManager;

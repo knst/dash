@@ -6,6 +6,21 @@
 #include <key.h>
 #include <script/keyorigin.h>
 #include <sync.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "pubkey.h"
+#include "serialize.h"
+#include "support/allocators/secure.h"
+#include "threadsafety.h"
+#include "uint256.h"
+
+struct CExtKey;
+struct KeyOriginInfo;
 
 namespace wallet {
 /* hd account data model */

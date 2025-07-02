@@ -6,6 +6,14 @@
 #define BITCOIN_BATCHEDLOGGER_H
 
 #include <logging.h>
+#include <string>
+
+#include "tinyformat.h"
+
+namespace BCLog {
+enum LogFlags : uint64_t;
+enum class Level;
+}  // namespace BCLog
 
 class CBatchedLogger
 {

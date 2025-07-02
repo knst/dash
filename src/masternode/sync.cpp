@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <masternode/sync.h>
-
 #include <chainparams.h>
 #include <governance/governance.h>
 #include <netfulfilledman.h>
@@ -13,8 +12,23 @@
 #include <util/time.h>
 #include <util/translation.h>
 #include <validation.h>
+#include <assert.h>
+#include <bits/chrono.h>
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <vector>
 
-class CMasternodeSync;
+#include "chain.h"
+#include "common/bloom.h"
+#include "logging.h"
+#include "net.h"
+#include "net_permissions.h"
+#include "protocol.h"
+#include "streams.h"
+#include "tinyformat.h"
+#include "uint256.h"
+#include "util/system.h"
 
 CMasternodeSync::CMasternodeSync(CConnman& _connman, CNetFulfilledRequestManager& netfulfilledman) :
     nTimeAssetSyncStarted(GetTime()),

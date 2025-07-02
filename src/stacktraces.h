@@ -5,11 +5,10 @@
 #ifndef BITCOIN_STACKTRACES_H
 #define BITCOIN_STACKTRACES_H
 
+#include <cxxabi.h>
 #include <string>
 #include <sstream>
 #include <exception>
-
-#include <cxxabi.h>
 
 std::string DemangleSymbol(const std::string& name);
 

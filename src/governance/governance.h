@@ -7,13 +7,31 @@
 
 #include <governance/classes.h>
 #include <governance/object.h>
-
 #include <cachemap.h>
 #include <cachemultimap.h>
 #include <protocol.h>
 #include <util/check.h>
-
+#include <bits/chrono.h>
+#include <stdint.h>
 #include <optional>
+#include <algorithm>
+#include <limits>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include "consensus/amount.h"
+#include "governance/vote.h"
+#include "primitives/transaction.h"
+#include "serialize.h"
+#include "sync.h"
+#include "threadsafety.h"
+#include "uint256.h"
+#include "univalue.h"
 
 class CBloomFilter;
 class CBlockIndex;
@@ -22,7 +40,6 @@ template<typename T>
 class CFlatDB;
 class CInv;
 class PeerManager;
-
 class CDeterministicMNManager;
 class CGovernanceManager;
 class CGovernanceObject;
@@ -31,11 +48,18 @@ class CMasternodeMetaMan;
 class CMasternodeSync;
 class CNetFulfilledRequestManager;
 class CSporkManager;
+class CActiveMasternodeManager;
+class CChain;
+class CDataStream;
+class CGovernanceException;
+class CNode;
+class ChainstateManager;
 
 static constexpr int RATE_BUFFER_SIZE = 5;
 static constexpr bool DEFAULT_GOVERNANCE_ENABLE{true};
 
 class CDeterministicMNList;
+
 using CDeterministicMNListPtr = std::shared_ptr<CDeterministicMNList>;
 
 class CRateCheckBuffer

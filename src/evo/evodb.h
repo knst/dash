@@ -7,8 +7,15 @@
 
 #include <dbwrapper.h>
 #include <sync.h>
+#include <stddef.h>
+#include <map>
+#include <memory>
+#include <string>
+
+#include "threadsafety.h"
 
 class uint256;
+
 // "b_b" was used in the initial version of deterministic MN storage
 // "b_b2" was used after compact diffs were introduced
 // "b_b3" was used after masternode type introduction in evoDB

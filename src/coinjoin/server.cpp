@@ -3,8 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <coinjoin/server.h>
-
-#include <consensus/validation.h>
 #include <core_io.h>
 #include <evo/deterministicmns.h>
 #include <masternode/meta.h>
@@ -17,13 +15,31 @@
 #include <shutdown.h>
 #include <streams.h>
 #include <txmempool.h>
-#include <util/moneystr.h>
-#include <util/ranges.h>
-#include <util/system.h>
 #include <validation.h>
-#include <version.h>
-
 #include <univalue.h>
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <algorithm>
+#include <atomic>
+#include <functional>
+#include <string>
+
+#include "coinjoin/coinjoin.h"
+#include "coinjoin/common.h"
+#include "consensus/amount.h"
+#include "evo/dmnstate.h"
+#include "logging.h"
+#include "netaddress.h"
+#include "protocol.h"
+#include "random.h"
+#include "script/script.h"
+#include "timedata.h"
+#include "uint256.h"
+#include "util/check.h"
+#include "util/expected.h"
+#include "util/time.h"
+#include "util/translation.h"
 
 PeerMsgRet CCoinJoinServer::ProcessMessage(CNode& peer, std::string_view msg_type, CDataStream& vRecv)
 {

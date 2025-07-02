@@ -11,8 +11,6 @@
 #include <evo/specialtx.h>
 #include <llmq/commitment.h>
 #include <llmq/utils.h>
-
-#include <base58.h>
 #include <chainparams.h>
 #include <coins.h>
 #include <consensus/validation.h>
@@ -23,9 +21,33 @@
 #include <uint256.h>
 #include <univalue.h>
 #include <validationinterface.h>
-
 #include <optional>
 #include <memory>
+#include <exception>
+#include <list>
+#include <ranges>
+#include <stdexcept>
+#include <variant>
+
+#include "bls/bls.h"
+#include "chain.h"
+#include "chainparamsbase.h"
+#include "consensus/amount.h"
+#include "consensus/params.h"
+#include "evo/netinfo.h"
+#include "gsl/pointers.h"
+#include "key_io.h"
+#include "logging.h"
+#include "netaddress.h"
+#include "prevector.h"
+#include "primitives/block.h"
+#include "pubkey.h"
+#include "saltedhasher.h"
+#include "script/script.h"
+#include "sync.h"
+#include "tinyformat.h"
+#include "util/irange.h"
+#include "util/system.h"
 
 static const std::string DB_LIST_SNAPSHOT = "dmn_S3";
 static const std::string DB_LIST_DIFF = "dmn_D3";

@@ -13,12 +13,25 @@
 #include <saltedhasher.h>
 #include <sync.h>
 #include <uint256.h>
-
+#include <stdint.h>
 #include <array>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
+#include <algorithm>
+#include <cstddef>
+#include <limits>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <type_traits>
+#include <variant>
+
+#include "protocol.h"
+#include "serialize.h"
+#include "threadsafety.h"
 
 class CConnman;
 template<typename T>
@@ -26,7 +39,6 @@ class CFlatDB;
 class CNode;
 class CDataStream;
 class PeerManager;
-
 class CSporkMessage;
 class CSporkManager;
 

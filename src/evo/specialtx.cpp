@@ -3,9 +3,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <evo/specialtx.h>
-
 #include <clientversion.h>
 #include <hash.h>
+
+#include "primitives/transaction.h"
+#include "serialize.h"
+#include "uint256.h"
 
 uint256 CalcTxInputsHash(const CTransaction& tx)
 {

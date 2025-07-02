@@ -6,7 +6,6 @@
 #define BITCOIN_LLMQ_QUORUMS_H
 
 #include <llmq/params.h>
-
 #include <bls/bls.h>
 #include <bls/bls_worker.h>
 #include <ctpl_stl.h>
@@ -16,10 +15,22 @@
 #include <threadinterrupt.h>
 #include <unordered_lru_cache.h>
 #include <util/time.h>
-
+#include <stdint.h>
 #include <atomic>
 #include <map>
 #include <utility>
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <vector>
+
+#include "crypto/siphash.h"
+#include "dbwrapper.h"
+#include "serialize.h"
+#include "sync.h"
+#include "threadsafety.h"
+#include "uint256.h"
 
 class CActiveMasternodeManager;
 class CBlockIndex;
@@ -34,6 +45,8 @@ class CEvoDB;
 class CMasternodeSync;
 class CNode;
 class CSporkManager;
+struct StaticSaltedHasher;
+template <typename C> class Span;
 
 using CDeterministicMNCPtr = std::shared_ptr<const CDeterministicMN>;
 
@@ -171,10 +184,12 @@ public:
  */
 
 class CQuorum;
+
 using CQuorumPtr = std::shared_ptr<CQuorum>;
 using CQuorumCPtr = std::shared_ptr<const CQuorum>;
 
 class CFinalCommitment;
+
 using CFinalCommitmentPtr = std::unique_ptr<CFinalCommitment>;
 
 
@@ -326,6 +341,7 @@ VerifyRecSigStatus VerifyRecoveredSig(Consensus::LLMQType llmqType, const CChain
 } // namespace llmq
 
 template<typename T> struct SaltedHasherImpl;
+
 template<>
 struct SaltedHasherImpl<llmq::CQuorumDataRequestKey>
 {

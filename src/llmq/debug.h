@@ -8,9 +8,17 @@
 #include <consensus/params.h>
 #include <sync.h>
 #include <univalue.h>
-
+#include <stddef.h>
+#include <stdint.h>
 #include <functional>
 #include <set>
+#include <map>
+#include <utility>
+#include <vector>
+
+#include "llmq/params.h"
+#include "threadsafety.h"
+#include "uint256.h"
 
 class CDataStream;
 class CDeterministicMNManager;
@@ -21,7 +29,6 @@ class CScheduler;
 namespace llmq
 {
 class CQuorumSnapshotManager;
-
 enum class QuorumPhase;
 
 class CDKGDebugMemberStatus

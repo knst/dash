@@ -6,7 +6,6 @@
 #define BITCOIN_COINJOIN_COINJOIN_H
 
 #include <coinjoin/common.h>
-
 #include <core_io.h>
 #include <netaddress.h>
 #include <primitives/block.h>
@@ -16,11 +15,25 @@
 #include <univalue.h>
 #include <util/translation.h>
 #include <version.h>
-
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <atomic>
 #include <map>
 #include <optional>
 #include <utility>
+#include <algorithm>
+#include <array>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <vector>
+
+#include "consensus/amount.h"
+#include "serialize.h"
+#include "threadsafety.h"
+#include "uint256.h"
+#include "util/ranges.h"
 
 class CActiveMasternodeManager;
 class CChainState;
@@ -30,6 +43,7 @@ class ChainstateManager;
 class CMasternodeSync;
 class CTxMemPool;
 class TxValidationState;
+class CBlock;
 
 namespace llmq {
 class CChainLocksHandler;

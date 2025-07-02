@@ -7,10 +7,10 @@
 
 #include <llmq/params.h>
 #include <gsl/pointers.h>
-
 #include <map>
 #include <optional>
 #include <vector>
+#include <functional>
 
 class CBlockIndex;
 class CSporkManager;

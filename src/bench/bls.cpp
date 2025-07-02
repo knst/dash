@@ -6,8 +6,22 @@
 #include <bls/bls_worker.h>
 #include <random.h>
 #include <util/time.h>
-
+#include <assert.h>
+#include <bits/chrono.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <iostream>
+#include <algorithm>
+#include <future>
+#include <list>
+#include <set>
+#include <utility>
+#include <vector>
+
+#include "bls/bls.h"
+#include "nanobench.h"
+#include "span.h"
+#include "uint256.h"
 
 static void BuildTestVectors(size_t count, size_t invalidCount,
                              std::vector<CBLSPublicKey>& pubKeys, std::vector<CBLSSecretKey>& secKeys, std::vector<CBLSSignature>& sigs,

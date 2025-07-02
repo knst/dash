@@ -3,13 +3,10 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <test/util/setup_common.h>
-
-#include <base58.h>
 #include <chainparams.h>
 #include <consensus/validation.h>
 #include <deploymentstatus.h>
 #include <messagesigner.h>
-#include <netbase.h>
 #include <node/transaction.h>
 #include <policy/policy.h>
 #include <script/interpreter.h>
@@ -19,14 +16,59 @@
 #include <spork.h>
 #include <txmempool.h>
 #include <validation.h>
-
 #include <evo/deterministicmns.h>
 #include <evo/providertx.h>
 #include <evo/specialtx.h>
 #include <llmq/context.h>
-#include <llmq/instantsend.h>
+#include <assert.h>
+#include <stddef.h>
+#include <boost/assert.hpp>
+#include <boost/preprocessor/arithmetic/limits/dec_256.hpp>
+#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
+#include <boost/preprocessor/control/expr_iif.hpp>
+#include <boost/preprocessor/control/iif.hpp>
+#include <boost/preprocessor/detail/limits/auto_rec_256.hpp>
+#include <boost/preprocessor/logical/compl.hpp>
+#include <boost/preprocessor/logical/limits/bool_256.hpp>
+#include <boost/preprocessor/repetition/detail/limits/for_256.hpp>
+#include <boost/preprocessor/repetition/for.hpp>
+#include <boost/preprocessor/seq/limits/elem_256.hpp>
+#include <boost/preprocessor/seq/limits/size_256.hpp>
+#include <boost/preprocessor/tuple/elem.hpp>
+#include <boost/preprocessor/variadic/limits/elem_64.hpp>
+#include <boost/test/tools/old/interface.hpp>
+#include <boost/test/unit_test_suite.hpp>
+#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
+#include <boost/test/utils/lazy_ostream.hpp>
+#include <algorithm>
+#include <atomic>
+#include <map>
+#include <memory>
+#include <utility>
+#include <vector>
 
-#include <boost/test/unit_test.hpp>
+#include "bls/bls.h"
+#include "chain.h"
+#include "chainparamsbase.h"
+#include "coins.h"
+#include "consensus/amount.h"
+#include "consensus/params.h"
+#include "evo/dmn_types.h"
+#include "evo/dmnstate.h"
+#include "evo/netinfo.h"
+#include "hash.h"
+#include "key.h"
+#include "key_io.h"
+#include "netaddress.h"
+#include "prevector.h"
+#include "primitives/block.h"
+#include "primitives/transaction.h"
+#include "pubkey.h"
+#include "script/script.h"
+#include "sync.h"
+#include "tinyformat.h"
+#include "uint256.h"
+#include "util/check.h"
 
 using node::GetTransaction;
 

@@ -10,11 +10,18 @@
 #include <sync.h>
 #include <threadsafety.h>
 #include <univalue.h>
-
-#include <optional>
 #include <saltedhasher.h>
 #include <unordered_lru_cache.h>
 #include <versionbits.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <optional>
+#include <string>
+
+#include "chain.h"
+#include "primitives/transaction.h"
+#include "serialize.h"
+#include "uint256.h"
 
 class BlockValidationState;
 class CBlock;
@@ -23,6 +30,7 @@ class CEvoDB;
 class CTransaction;
 class ChainstateManager;
 class TxValidationState;
+
 namespace llmq {
 class CQuorumManager;
 }

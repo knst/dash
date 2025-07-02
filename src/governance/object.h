@@ -10,8 +10,18 @@
 #include <governance/vote.h>
 #include <governance/votedb.h>
 #include <sync.h>
-
 #include <univalue.h>
+#include <stdint.h>
+#include <map>
+#include <set>
+#include <string>
+#include <utility>
+
+#include "consensus/amount.h"
+#include "primitives/transaction.h"
+#include "serialize.h"
+#include "threadsafety.h"
+#include "uint256.h"
 
 class CActiveMasternodeManager;
 class CBLSPublicKey;
@@ -24,6 +34,7 @@ class CMasternodeMetaMan;
 class CMasternodeSync;
 class CNode;
 class PeerManager;
+class CGovernanceException;
 
 extern RecursiveMutex cs_main;
 

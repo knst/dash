@@ -3,16 +3,33 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <coinjoin/util.h>
-#include <net.h>
 #include <policy/fees.h>
 #include <policy/policy.h>
-#include <script/sign.h>
 #include <util/translation.h>
 #include <wallet/fees.h>
 #include <wallet/spend.h>
 #include <wallet/wallet.h>
-
+#include <assert.h>
+#include <stdint.h>
 #include <numeric>
+#include <algorithm>
+#include <limits>
+#include <optional>
+#include <utility>
+
+#include "interfaces/chain.h"
+#include "key.h"
+#include "logging.h"
+#include "policy/feerate.h"
+#include "primitives/transaction.h"
+#include "pubkey.h"
+#include "serialize.h"
+#include "tinyformat.h"
+#include "uint256.h"
+#include "validationinterface.h"
+#include "version.h"
+#include "wallet/walletdb.h"
+#include "wallet/walletutil.h"
 
 using wallet::CompactTallyItem;
 using wallet::CRecipient;

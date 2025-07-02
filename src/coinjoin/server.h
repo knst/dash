@@ -6,8 +6,14 @@
 #define BITCOIN_COINJOIN_SERVER_H
 
 #include <coinjoin/coinjoin.h>
-
 #include <protocol.h>
+#include <memory>
+#include <string_view>
+#include <vector>
+
+#include "primitives/transaction.h"
+#include "sync.h"
+#include "threadsafety.h"
 
 class CActiveMasternodeManager;
 class CCoinJoinServer;
@@ -20,8 +26,11 @@ class CMasternodeMetaMan;
 class CNode;
 class CTxMemPool;
 class PeerManager;
-
 class UniValue;
+class CMasternodeSync;
+namespace llmq {
+class CInstantSendManager;
+}  // namespace llmq
 
 /** Used to keep track of current status of mixing pool
  */

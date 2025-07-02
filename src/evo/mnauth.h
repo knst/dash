@@ -8,6 +8,10 @@
 #include <bls/bls.h>
 #include <protocol.h>
 #include <serialize.h>
+#include <stdint.h>
+#include <string_view>
+
+#include "uint256.h"
 
 class CActiveMasternodeManager;
 class CBlockIndex;
@@ -18,7 +22,6 @@ class CDeterministicMNListDiff;
 class CMasternodeMetaMan;
 class CMasternodeSync;
 class CNode;
-
 enum ServiceFlags : uint64_t;
 
 /**

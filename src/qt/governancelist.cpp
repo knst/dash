@@ -4,24 +4,43 @@
 
 #include <qt/forms/ui_governancelist.h>
 #include <qt/governancelist.h>
-
 #include <chainparams.h>
-#include <clientversion.h>
-#include <coins.h>
 #include <evo/deterministicmns.h>
-#include <netbase.h>
 #include <qt/clientmodel.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
-
 #include <univalue.h>
+#include <QtCore/qobjectdefs.h>
+#include <qabstractitemview.h>
+#include <qchar.h>
+#include <qcursor.h>
+#include <qdesktopservices.h>
+#include <qheaderview.h>
+#include <qlabel.h>
+#include <qlineedit.h>
+#include <qmenu.h>
+#include <qmessagebox.h>
+#include <qmetatype.h>
+#include <qsortfilterproxymodel.h>
+#include <qtableview.h>
+#include <qtimer.h>
+#include <qurl.h>
+#include <algorithm>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include <QAbstractItemView>
-#include <QDesktopServices>
-#include <QMessageBox>
-#include <QTableWidgetItem>
-#include <QUrl>
-#include <QtGui/QClipboard>
+#include "consensus/amount.h"
+#include "consensus/params.h"
+#include "governance/common.h"
+#include "governance/object.h"
+#include "governance/vote.h"
+#include "interfaces/node.h"
+#include "qt/bitcoinunits.h"
+#include "span.h"
+#include "uint256.h"
+
+class QPoint;
 
 ///
 /// Proposal wrapper

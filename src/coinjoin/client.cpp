@@ -3,11 +3,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <coinjoin/client.h>
-
 #include <chain.h>
 #include <chainparams.h>
 #include <coinjoin/options.h>
-#include <consensus/validation.h>
 #include <core_io.h>
 #include <evo/deterministicmns.h>
 #include <masternode/meta.h>
@@ -19,19 +17,48 @@
 #include <util/check.h>
 #include <util/irange.h>
 #include <util/moneystr.h>
-#include <util/ranges.h>
 #include <util/system.h>
 #include <util/translation.h>
-#include <version.h>
 #include <wallet/coincontrol.h>
 #include <wallet/coinjoin.h>
-#include <wallet/fees.h>
 #include <wallet/receive.h>
 #include <wallet/spend.h>
-#include <walletinitinterface.h>
-
-#include <memory>
 #include <univalue.h>
+#include <assert.h>
+#include <bits/chrono.h>
+#include <stddef.h>
+#include <memory>
+#include <array>
+#include <functional>
+#include <iterator>
+#include <set>
+
+#include "chainparamsbase.h"
+#include "coinjoin/coinjoin.h"
+#include "coinjoin/common.h"
+#include "coinjoin/util.h"
+#include "coins.h"
+#include "evo/dmnstate.h"
+#include "evo/netinfo.h"
+#include "interfaces/chain.h"
+#include "logging.h"
+#include "netaddress.h"
+#include "protocol.h"
+#include "random.h"
+#include "script/interpreter.h"
+#include "script/script.h"
+#include "script/standard.h"
+#include "serialize.h"
+#include "streams.h"
+#include "tinyformat.h"
+#include "util/expected.h"
+#include "util/string.h"
+#include "wallet/coinselection.h"
+
+class CChainState;
+namespace llmq {
+class CInstantSendManager;
+}  // namespace llmq
 
 using wallet::CCoinControl;
 using wallet::CompactTallyItem;

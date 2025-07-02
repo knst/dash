@@ -3,9 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <masternode/payments.h>
-
 #include <chain.h>
-#include <chainparams.h>
 #include <consensus/amount.h>
 #include <deploymentstatus.h>
 #include <evo/deterministicmns.h>
@@ -17,11 +15,18 @@
 #include <primitives/block.h>
 #include <script/standard.h>
 #include <tinyformat.h>
-#include <util/ranges.h>
 #include <validation.h>
-
 #include <cassert>
 #include <string>
+#include <algorithm>
+#include <functional>
+#include <memory>
+
+#include "consensus/params.h"
+#include "evo/dmnstate.h"
+#include "prevector.h"
+#include "primitives/transaction.h"
+#include "script/script.h"
 
 CAmount PlatformShare(const CAmount reward)
 {

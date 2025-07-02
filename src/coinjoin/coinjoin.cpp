@@ -3,26 +3,33 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <coinjoin/coinjoin.h>
-
 #include <bls/bls.h>
 #include <chain.h>
 #include <chainparams.h>
-#include <consensus/validation.h>
-#include <governance/common.h>
 #include <llmq/chainlocks.h>
 #include <llmq/instantsend.h>
 #include <masternode/node.h>
 #include <masternode/sync.h>
-#include <messagesigner.h>
-#include <netmessagemaker.h>
 #include <txmempool.h>
-#include <util/moneystr.h>
-#include <util/system.h>
 #include <util/translation.h>
 #include <validation.h>
-
 #include <tinyformat.h>
 #include <string>
+#include <functional>
+#include <set>
+
+#include "coinjoin/common.h"
+#include "coins.h"
+#include "core_io.h"
+#include "hash.h"
+#include "logging.h"
+#include "primitives/block.h"
+#include "primitives/transaction.h"
+#include "script/script.h"
+#include "span.h"
+#include "sync.h"
+#include "util/time.h"
+#include "version.h"
 
 constexpr static CAmount DEFAULT_MAX_RAW_TX_FEE{COIN / 10};
 

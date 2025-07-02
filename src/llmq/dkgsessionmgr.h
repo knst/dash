@@ -9,15 +9,23 @@
 #include <bls/bls_worker.h>
 #include <llmq/dkgsessionhandler.h>
 #include <net_types.h>
-
+#include <stdint.h>
 #include <map>
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "dbwrapper.h"
+#include "protocol.h"
+#include "sync.h"
+#include "threadsafety.h"
+#include "uint256.h"
 
 template <class T>
 class CBLSIESMultiRecipientObjects;
 template <class T>
 class CBLSIESEncryptedObject;
-
 class CActiveMasternodeManager;
 class CBlockIndex;
 class CChainState;
@@ -31,12 +39,24 @@ class CDKGContribution;
 class CDKGComplaint;
 class CDKGJustification;
 class CDKGPrematureCommitment;
-
 class UniValue;
+class CBLSWorker;
+class CConnman;
+class CDataStream;
+class CNode;
+namespace Consensus {
+enum class LLMQType : uint8_t;
+}  // namespace Consensus
 
 namespace llmq
 {
 class CQuorumSnapshotManager;
+class CDKGComplaint;
+class CDKGContribution;
+class CDKGDebugManager;
+class CDKGJustification;
+class CDKGPrematureCommitment;
+class CQuorumBlockProcessor;
 
 class CDKGSessionManager
 {

@@ -3,19 +3,24 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <interfaces/coinjoin.h>
-
 #include <coinjoin/client.h>
 #include <coinjoin/context.h>
 #include <coinjoin/options.h>
 #include <node/context.h>
 #include <util/check.h>
-#include <wallet/wallet.h>
 #include <walletinitinterface.h>
-
-#include <univalue.h>
-
 #include <memory>
 #include <string>
+#include <limits>
+#include <vector>
+
+class UniValue;
+namespace interfaces {
+class WalletLoader;
+}  // namespace interfaces
+namespace wallet {
+class CWallet;
+}  // namespace wallet
 
 using node::NodeContext;
 using wallet::CWallet;

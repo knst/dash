@@ -11,16 +11,37 @@
 #include <llmq/quorums.h>
 #include <llmq/signing.h>
 #include <node/blockstorage.h>
-
 #include <chain.h>
 #include <chainparams.h>
 #include <validation.h>
 #include <versionbits.h>
-
+#include <assert.h>
 #include <algorithm>
 #include <stack>
 #include <string>
 #include <vector>
+#include <atomic>
+#include <exception>
+#include <map>
+#include <memory>
+#include <stdexcept>
+#include <unordered_map>
+#include <utility>
+
+#include "bls/bls.h"
+#include "consensus/params.h"
+#include "gsl/pointers.h"
+#include "hash.h"
+#include "logging.h"
+#include "primitives/block.h"
+#include "saltedhasher.h"
+#include "sync.h"
+#include "tinyformat.h"
+#include "unordered_lru_cache.h"
+
+namespace Consensus {
+enum class LLMQType : uint8_t;
+}  // namespace Consensus
 
 using node::ReadBlockFromDisk;
 

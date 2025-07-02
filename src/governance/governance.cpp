@@ -3,11 +3,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <governance/governance.h>
-
 #include <chain.h>
 #include <chainparams.h>
 #include <common/bloom.h>
-#include <consensus/validation.h>
 #include <deploymentstatus.h>
 #include <evo/deterministicmns.h>
 #include <flat-database.h>
@@ -24,9 +22,44 @@
 #include <shutdown.h>
 #include <spork.h>
 #include <timedata.h>
-#include <util/ranges.h>
 #include <util/time.h>
 #include <validation.h>
+#include <assert.h>
+#include <stddef.h>
+#include <atomic>
+#include <compare>
+#include <exception>
+#include <functional>
+#include <list>
+#include <ratio>
+#include <stdexcept>
+#include <unordered_map>
+
+#include "arith_uint256.h"
+#include "cachemap.h"
+#include "chainparamsbase.h"
+#include "consensus/params.h"
+#include "evo/dmnstate.h"
+#include "governance/exceptions.h"
+#include "governance/object.h"
+#include "governance/votedb.h"
+#include "gsl/pointers.h"
+#include "key_io.h"
+#include "logging.h"
+#include "net.h"
+#include "netaddress.h"
+#include "pubkey.h"
+#include "random.h"
+#include "script/standard.h"
+#include "span.h"
+#include "streams.h"
+#include "tinyformat.h"
+#include "util/check.h"
+#include "util/expected.h"
+#include "util/system.h"
+#include "util/underlying.h"
+#include "validationinterface.h"
+#include "version.h"
 
 int nSubmittedFinalBudget;
 

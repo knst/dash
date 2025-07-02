@@ -8,6 +8,11 @@
 #include <hash.h>
 #include <uint256.h>
 #include <crypto/siphash.h>
+#include <stdint.h>
+#include <cstddef>
+#include <utility>
+
+class uint256;
 
 /** Helper classes for std::unordered_map and std::unordered_set hashing */
 

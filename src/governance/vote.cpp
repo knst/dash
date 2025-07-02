@@ -4,19 +4,29 @@
 
 #include <evo/dmn_types.h>
 #include <governance/vote.h>
-
 #include <bls/bls.h>
 #include <chainparams.h>
-#include <key.h>
 #include <masternode/node.h>
 #include <masternode/sync.h>
 #include <messagesigner.h>
 #include <net_processing.h>
 #include <timedata.h>
 #include <util/string.h>
-#include <util/system.h>
-
 #include <evo/deterministicmns.h>
+#include <map>
+#include <memory>
+#include <utility>
+
+#include "chainparamsbase.h"
+#include "evo/dmnstate.h"
+#include "hash.h"
+#include "logging.h"
+#include "primitives/transaction.h"
+#include "protocol.h"
+#include "span.h"
+#include "tinyformat.h"
+#include "uint256.h"
+#include "version.h"
 
 std::string CGovernanceVoting::ConvertOutcomeToString(vote_outcome_enum_t nOutcome)
 {

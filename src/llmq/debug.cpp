@@ -3,15 +3,24 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <llmq/debug.h>
-
 #include <chainparams.h>
 #include <timedata.h>
 #include <validation.h>
-
 #include <evo/deterministicmns.h>
 #include <llmq/utils.h>
 #include <util/irange.h>
 #include <util/underlying.h>
+#include <algorithm>
+#include <memory>
+#include <optional>
+#include <string>
+
+#include "node/blockstorage.h"
+#include "sync.h"
+#include "univalue.h"
+#include "util/time.h"
+
+class CBlockIndex;
 
 namespace llmq
 {

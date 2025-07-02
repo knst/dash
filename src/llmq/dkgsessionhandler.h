@@ -6,7 +6,7 @@
 #define BITCOIN_LLMQ_DKGSESSIONHANDLER_H
 
 #include <net.h> // for NodeId
-
+#include <stddef.h>
 #include <atomic>
 #include <list>
 #include <map>
@@ -16,6 +16,17 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <functional>
+#include <iterator>
+#include <utility>
+
+#include "llmq/params.h"
+#include "serialize.h"
+#include "streams.h"
+#include "sync.h"
+#include "threadsafety.h"
+#include "uint256.h"
+#include "version.h"
 
 class CActiveMasternodeManager;
 class CBLSWorker;

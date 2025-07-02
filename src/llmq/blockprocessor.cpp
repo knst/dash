@@ -6,10 +6,8 @@
 #include <llmq/commitment.h>
 #include <llmq/options.h>
 #include <llmq/utils.h>
-
 #include <evo/evodb.h>
 #include <evo/specialtx.h>
-
 #include <chain.h>
 #include <chainparams.h>
 #include <consensus/params.h>
@@ -23,8 +21,29 @@
 #include <util/irange.h>
 #include <util/underlying.h>
 #include <validation.h>
-
+#include <assert.h>
+#include <stdint.h>
 #include <map>
+#include <algorithm>
+#include <compare>
+#include <functional>
+#include <iterator>
+#include <limits>
+#include <sstream>
+#include <string>
+#include <tuple>
+
+#include "bls/bls.h"
+#include "compat/endian.h"
+#include "dbwrapper.h"
+#include "gsl/pointers.h"
+#include "hash.h"
+#include "llmq/params.h"
+#include "logging.h"
+#include "node/blockstorage.h"
+#include "protocol.h"
+#include "streams.h"
+#include "unordered_lru_cache.h"
 
 static void PreComputeQuorumMembers(CDeterministicMNManager& dmnman, llmq::CQuorumSnapshotManager& qsnapman,
                                     const CBlockIndex* pindex, bool reset_cache)

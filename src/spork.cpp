@@ -3,9 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <spork.h>
-
 #include <chainparams.h>
-#include <consensus/params.h>
 #include <flat-database.h>
 #include <key_io.h>
 #include <logging.h>
@@ -13,7 +11,6 @@
 #include <net.h>
 #include <net_processing.h>
 #include <netmessagemaker.h>
-#include <primitives/block.h>
 #include <protocol.h>
 #include <script/standard.h>
 #include <timedata.h>
@@ -21,8 +18,20 @@
 #include <util/ranges.h>
 #include <util/string.h>
 #include <validation.h>
-
+#include <assert.h>
 #include <string>
+#include <utility>
+
+#include "chainparamsbase.h"
+#include "hash.h"
+#include "key.h"
+#include "pubkey.h"
+#include "saltedhasher.h"
+#include "streams.h"
+#include "sync.h"
+#include "tinyformat.h"
+#include "uint256.h"
+#include "util/expected.h"
 
 const std::string SporkStore::SERIALIZATION_VERSION_STRING = "CSporkManager-Version-2";
 

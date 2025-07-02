@@ -8,6 +8,8 @@
 #include <bls/bls.h>
 #include <serialize.h>
 #include <uint256.h>
+#include <stdint.h>
+#include <string>
 
 namespace llmq
 {

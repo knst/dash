@@ -10,11 +10,12 @@
 #include <saltedhasher.h>
 #include <sync.h>
 #include <uint256.h>
-
+#include <stddef.h>
 #include <map>
 #include <set>
 #include <unordered_set>
 #include <vector>
+#include <memory>
 
 class CConnman;
 class CBlockIndex;
@@ -23,6 +24,10 @@ class CDeterministicMNList;
 class CDeterministicMNManager;
 class CMasternodeMetaMan;
 class CSporkManager;
+namespace Consensus {
+enum class LLMQType : uint8_t;
+struct LLMQParams;
+}  // namespace Consensus
 
 using CDeterministicMNCPtr = std::shared_ptr<const CDeterministicMN>;
 

@@ -6,7 +6,14 @@
 #include <flat-database.h>
 #include <netfulfilledman.h>
 #include <shutdown.h>
-#include <util/system.h>
+#include <assert.h>
+#include <utility>
+
+#include "sync.h"
+#include "tinyformat.h"
+#include "util/time.h"
+
+class CService;
 
 CNetFulfilledRequestManager::CNetFulfilledRequestManager() :
     m_db{std::make_unique<db_type>("netfulfilled.dat", "magicFulfilledCache")}

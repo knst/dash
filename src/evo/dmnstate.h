@@ -11,17 +11,26 @@
 #include <netaddress.h>
 #include <pubkey.h>
 #include <script/script.h>
-
-#include <memory>
-#include <utility>
-
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/tuple.hpp>
+#include <stdint.h>
+#include <boost/hana/fwd/core/make.hpp>
+#include <boost/hana/fwd/for_each.hpp>
+#include <boost/hana/fwd/tuple.hpp>
+#include <memory>
+#include <utility>
+#include <algorithm>
+#include <string>
+#include <type_traits>
+
+#include "evo/netinfo.h"
+#include "serialize.h"
+#include "uint256.h"
 
 class CProRegTx;
 class UniValue;
-
 class CDeterministicMNState;
+enum class MnType : uint16_t;
 
 namespace llmq
 {

@@ -14,6 +14,21 @@
 #include <pubkey.h>
 #include <sync.h>
 #include <threadsafety.h>
+#include <stdint.h>
+#include <algorithm>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "llmq/commitment.h"
+#include "primitives/transaction.h"
+#include "script/script.h"
+#include "serialize.h"
+#include "uint256.h"
+#include "version.h"
 
 class UniValue;
 class CBlockIndex;

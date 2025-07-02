@@ -22,6 +22,7 @@ class CMasternodeMetaMan;
 class CMasternodeSync;
 class CTxMemPool;
 class PeerManager;
+
 namespace llmq {
 class CInstantSendManager;
 };

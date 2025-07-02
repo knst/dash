@@ -3,9 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <evo/mnauth.h>
-
 #include <bls/bls.h>
-#include <chain.h>
 #include <chainparams.h>
 #include <evo/deterministicmns.h>
 #include <llmq/utils.h>
@@ -13,10 +11,27 @@
 #include <masternode/node.h>
 #include <masternode/sync.h>
 #include <net.h>
-#include <net_types.h>
 #include <netmessagemaker.h>
 #include <util/time.h>
-#include <validation.h>
+#include <assert.h>
+#include <bits/chrono.h>
+#include <atomic>
+#include <memory>
+#include <set>
+#include <string>
+#include <tuple>
+#include <unordered_map>
+#include <utility>
+
+#include "chainparamsbase.h"
+#include "evo/dmnstate.h"
+#include "hash.h"
+#include "logging.h"
+#include "protocol.h"
+#include "streams.h"
+#include "util/expected.h"
+#include "util/system.h"
+#include "version.h"
 
 void CMNAuth::PushMNAUTH(CNode& peer, CConnman& connman, const CActiveMasternodeManager& mn_activeman)
 {

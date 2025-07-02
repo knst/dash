@@ -5,13 +5,10 @@
 #include <coinjoin/context.h>
 #include <coinjoin/server.h>
 #include <node/context.h>
-#include <rpc/blockchain.h>
 #include <rpc/server.h>
 #include <rpc/server_util.h>
 #include <rpc/util.h>
 #include <util/check.h>
-#include <util/strencodings.h>
-#include <validation.h>
 #include <wallet/receive.h>
 #include <wallet/rpc/util.h>
 #include <walletinitinterface.h>
@@ -23,6 +20,22 @@
 #endif // ENABLE_WALLET
 
 #include <univalue.h>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "bitcoin-config.h"
+#include "policy/feerate.h"
+#include "random.h"
+#include "rpc/protocol.h"
+#include "rpc/request.h"
+#include "span.h"
+#include "sync.h"
+#include "tinyformat.h"
+#include "uint256.h"
+#include "util/system.h"
+#include "wallet/wallet.h"
+#include "wallet/walletutil.h"
 
 using node::NodeContext;
 #ifdef ENABLE_WALLET

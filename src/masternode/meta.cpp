@@ -3,12 +3,15 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <masternode/meta.h>
-
 #include <flat-database.h>
 #include <univalue.h>
 #include <util/time.h>
+#include <assert.h>
+#include <bits/chrono.h>
 
-#include <sstream>
+#include "sync.h"
+#include "tinyformat.h"
+#include "uint256.h"
 
 const std::string MasternodeMetaStore::SERIALIZATION_VERSION_STRING = "CMasternodeMetaMan-Version-3";
 

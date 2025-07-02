@@ -4,9 +4,7 @@
 
 #include <governance/exceptions.h>
 #include <tinyformat.h>
-
 #include <iostream>
-#include <sstream>
 
 std::ostream& operator<<(std::ostream& os, governance_exception_type_enum_t eType)
 {

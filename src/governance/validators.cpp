@@ -4,14 +4,21 @@
 
 #include <governance/common.h>
 #include <governance/validators.h>
-
 #include <key_io.h>
 #include <timedata.h>
 #include <tinyformat.h>
 #include <util/strencodings.h>
 #include <util/underlying.h>
-
+#include <stddef.h>
 #include <algorithm>
+#include <exception>
+#include <stdexcept>
+#include <string_view>
+#include <variant>
+#include <vector>
+
+#include "script/standard.h"
+#include "univalue.h"
 
 const size_t MAX_DATA_SIZE = 512;
 const size_t MAX_NAME_SIZE = 40;

@@ -11,12 +11,18 @@
 #include <primitives/transaction.h>
 #include <serialize.h>
 #include <univalue.h>
-
+#include <stddef.h>
+#include <stdint.h>
 #include <optional>
+#include <string>
+#include <vector>
+
+#include "uint256.h"
 
 class CBlockIndex;
 class CRangesSet;
 class TxValidationState;
+
 namespace llmq {
 class CQuorumManager;
 } // namespace llmq

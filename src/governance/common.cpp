@@ -3,11 +3,15 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <governance/common.h>
-
 #include <util/strencodings.h>
-#include <util/underlying.h>
 #include <hash.h>
 #include <univalue.h>
+
+#include "primitives/transaction.h"
+#include "serialize.h"
+#include "span.h"
+#include "uint256.h"
+#include "version.h"
 
 namespace Governance
 {

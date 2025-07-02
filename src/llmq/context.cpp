@@ -3,13 +3,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <llmq/context.h>
-
-#include <dbwrapper.h>
 #include <validation.h>
-
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
-#include <llmq/commitment.h>
 #include <llmq/debug.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/ehf_signals.h>
@@ -18,6 +14,8 @@
 #include <llmq/signing.h>
 #include <llmq/signing_shares.h>
 #include <llmq/snapshot.h>
+
+#include "bls/bls_worker.h"
 
 LLMQContext::LLMQContext(ChainstateManager& chainman, CDeterministicMNManager& dmnman, CEvoDB& evo_db,
                          CMasternodeMetaMan& mn_metaman, CMNHFManager& mnhfman, CSporkManager& sporkman,

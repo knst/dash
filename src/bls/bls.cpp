@@ -3,15 +3,20 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bls/bls.h>
-
 #include <random.h>
+#include <relic_bn.h>
+#include <dashbls/bls.hpp>
+#include <dashbls/schemes.hpp>
+#include <dashbls/threshold.hpp>
 
 #ifndef BUILD_BITCOIN_INTERNAL
 #include <support/allocators/mt_pooled_secure.h>
 #endif
 
 #include <cassert>
-#include <cstring>
+
+#include "support/lockedpool.h"
+#include "uint256.h"
 
 namespace bls {
     std::atomic<bool> bls_legacy_scheme = std::atomic<bool>(true);

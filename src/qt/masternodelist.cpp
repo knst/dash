@@ -4,20 +4,50 @@
 
 #include <qt/masternodelist.h>
 #include <qt/forms/ui_masternodelist.h>
-
 #include <evo/deterministicmns.h>
 #include <qt/clientmodel.h>
-#include <clientversion.h>
 #include <coins.h>
 #include <qt/guiutil.h>
-#include <netbase.h>
 #include <qt/walletmodel.h>
-
 #include <univalue.h>
+#include <QtCore/qobjectdefs.h>
+#include <qabstractitemmodel.h>
+#include <qapplication.h>
+#include <qbytearray.h>
+#include <qcheckbox.h>
+#include <qclipboard.h>
+#include <qcursor.h>
+#include <qheaderview.h>
+#include <qitemselectionmodel.h>
+#include <qlabel.h>
+#include <qlist.h>
+#include <qmenu.h>
+#include <qmessagebox.h>
+#include <qmetatype.h>
+#include <qnamespace.h>
+#include <qstringbuilder.h>
+#include <qtablewidget.h>
+#include <qtimer.h>
+#include <stddef.h>
+#include <algorithm>
+#include <map>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include <QMessageBox>
-#include <QTableWidgetItem>
-#include <QtGui/QClipboard>
+#include "evo/dmn_types.h"
+#include "interfaces/node.h"
+#include "interfaces/wallet.h"
+#include "key_io.h"
+#include "primitives/transaction.h"
+#include "script/script.h"
+#include "script/standard.h"
+#include "sync.h"
+#include "uint256.h"
+#include "util/time.h"
+
+class QPoint;
 
 template <typename T>
 class CMasternodeListWidgetItem : public QTableWidgetItem

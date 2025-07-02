@@ -3,22 +3,35 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <governance/classes.h>
-
 #include <chainparams.h>
-#include <consensus/validation.h>
 #include <core_io.h>
-#include <deploymentstatus.h>
 #include <key_io.h>
 #include <primitives/transaction.h>
 #include <script/standard.h>
-#include <util/moneystr.h>
 #include <util/strencodings.h>
-#include <util/time.h>
 #include <util/underlying.h>
 #include <validation.h>
-#include <versionbits.h>
-
 #include <univalue.h>
+#include <stddef.h>
+#include <algorithm>
+#include <exception>
+#include <sstream>
+#include <stdexcept>
+#include <utility>
+
+#include "arith_uint256.h"
+#include "chainparamsbase.h"
+#include "consensus/amount.h"
+#include "consensus/params.h"
+#include "governance/common.h"
+#include "governance/object.h"
+#include "logging.h"
+#include "prevector.h"
+#include "script/script.h"
+#include "span.h"
+#include "tinyformat.h"
+#include "uint256.h"
+#include "util/string.h"
 
 CAmount ParsePaymentAmount(const std::string& strAmount)
 {

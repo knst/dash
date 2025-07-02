@@ -3,9 +3,10 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <util/edge.h>
-
 #include <logging.h>
 #include <util/sock.h>
+
+#include "compat/compat.h"
 
 #ifdef USE_EPOLL
 #include <sys/epoll.h>

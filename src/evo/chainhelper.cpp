@@ -3,15 +3,18 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <evo/chainhelper.h>
-
-#include <consensus/params.h>
 #include <evo/specialtxman.h>
 #include <index/txindex.h>
 #include <llmq/chainlocks.h>
 #include <llmq/instantsend.h>
 #include <masternode/payments.h>
 #include <node/transaction.h>
-#include <txmempool.h>
+
+#include "chainparams.h"
+#include "hash.h"
+#include "llmq/clsig.h"
+#include "primitives/transaction.h"
+#include "uint256.h"
 
 using node::GetTransaction;
 
