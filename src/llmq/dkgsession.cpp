@@ -10,22 +10,19 @@
 #include <llmq/options.h>
 #include <llmq/utils.h>
 
-#include <evo/deterministicmns.h>
-#include <evo/specialtx.h>
-
 #include <batchedlogger.h>
 #include <chainparams.h>
 #include <cxxtimer.hpp>
 #include <deploymentstatus.h>
+#include <evo/deterministicmns.h>
 #include <logging.h>
 #include <masternode/meta.h>
 #include <masternode/node.h>
-#include <netmessagemaker.h>
 #include <util/irange.h>
 #include <util/underlying.h>
 
-#include <univalue.h>
 #include <atomic>
+#include <array>
 #include <memory>
 
 namespace llmq

@@ -5,7 +5,6 @@
 #include <evo/dmn_types.h>
 #include <evo/providertx.h>
 
-#include <chainparams.h>
 #include <consensus/validation.h>
 #include <hash.h>
 #include <script/standard.h>

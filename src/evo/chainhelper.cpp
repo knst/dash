@@ -4,14 +4,13 @@
 
 #include <evo/chainhelper.h>
 
-#include <consensus/params.h>
+#include <chainparams.h>
 #include <evo/specialtxman.h>
 #include <index/txindex.h>
 #include <llmq/chainlocks.h>
 #include <llmq/instantsend.h>
 #include <masternode/payments.h>
 #include <node/transaction.h>
-#include <txmempool.h>
 
 using node::GetTransaction;
 
