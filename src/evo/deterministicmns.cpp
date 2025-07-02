@@ -156,30 +156,23 @@ CDeterministicMNCPtr CDeterministicMNList::GetMNByInternalId(uint64_t internalId
     return GetMN(*proTxHash);
 }
 
-static int CompareByLastPaid_GetHeight(const CDeterministicMN& dmn)
+static int CompareByLastPaid_GetHeight(const CDeterministicMNState& state)
 {
-    int height = dmn.pdmnState->nLastPaidHeight;
-    if (dmn.pdmnState->nPoSeRevivedHeight != -1 && dmn.pdmnState->nPoSeRevivedHeight > height) {
-        height = dmn.pdmnState->nPoSeRevivedHeight;
+    int height = state.nLastPaidHeight;
+    if (state.nPoSeRevivedHeight != -1 && state.nPoSeRevivedHeight > height) {
+        height = state.nPoSeRevivedHeight;
     } else if (height == 0) {
-        height = dmn.pdmnState->nRegisteredHeight;
+        height = state.nRegisteredHeight;
     }
     return height;
 }
 
 static bool CompareByLastPaid(const CDeterministicMN& _a, const CDeterministicMN& _b)
 {
-    int ah = CompareByLastPaid_GetHeight(_a);
-    int bh = CompareByLastPaid_GetHeight(_b);
-    if (ah == bh) {
-        return _a.proTxHash < _b.proTxHash;
-    } else {
-        return ah < bh;
-    }
-}
-static bool CompareByLastPaid(const CDeterministicMN* _a, const CDeterministicMN* _b)
-{
-    return CompareByLastPaid(*_a, *_b);
+    int ah = CompareByLastPaid_GetHeight(*_a.pdmnState);
+    int bh = CompareByLastPaid_GetHeight(*_b.pdmnState);
+    return std::tie(ah, _a.proTxHash) <
+        std::tie(bh, _b.proTxHash);
 }
 
 CDeterministicMNCPtr CDeterministicMNList::GetMNPayee(gsl::not_null<const CBlockIndex*> pindexPrev) const
@@ -211,8 +204,19 @@ CDeterministicMNCPtr CDeterministicMNList::GetMNPayee(gsl::not_null<const CBlock
         // We can proceed with classic MN payee selection
     }
 
+    /*
+    for (const auto& p : mnMap) {
+        CDeterministicMNState state  = p.second->pdmnState;
+        if (state->IsBanned()) continue;
+        if (best == nullptr) {
+            best = *p.second;
+        } else {
+        }
+
+    }
+    */
     ForEachMNShared(true, [&](const CDeterministicMNCPtr& dmn) {
-        if (best == nullptr || CompareByLastPaid(dmn.get(), best.get())) {
+        if (best == nullptr || CompareByLastPaid(*dmn, *best)) {
             best = dmn;
         }
     });
@@ -266,7 +270,7 @@ std::vector<CDeterministicMNCPtr> CDeterministicMNList::GetProjectedMNPayees(gsl
     }
 
     std::sort(result.begin() + remaining_evo_payments, result.end(), [&](const CDeterministicMNCPtr& a, const CDeterministicMNCPtr& b) {
-        return CompareByLastPaid(a.get(), b.get());
+        return CompareByLastPaid(*a, *b);
     });
 
     result.resize(nCount);
