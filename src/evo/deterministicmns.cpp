@@ -645,19 +645,20 @@ bool CDeterministicMNManager::ProcessBlock(const CBlock& block, gsl::not_null<co
 
         LOCK(cs);
 
-        oldList = *GetListForBlockInternal(pindex->pprev);
+        oldList = GetListForBlockInternal(pindex->pprev);
         diff = oldList.BuildDiff(newList);
 
         m_evoDb.Write(std::make_pair(DB_LIST_DIFF, newList.GetBlockHash()), diff);
         if ((nHeight % DISK_SNAPSHOT_PERIOD) == 0 || pindex->pprev == m_initial_snapshot_index) {
             m_evoDb.Write(std::make_pair(DB_LIST_SNAPSHOT, newList.GetBlockHash()), newList);
+            mnListsCache.emplace(newList.GetBlockHash(), newList);
             LogPrintf("CDeterministicMNManager::%s -- Wrote snapshot. nHeight=%d, mapCurMNs.allMNsCount=%d\n",
                 __func__, nHeight, newList.GetAllMNsCount());
         }
 
         diff.nHeight = pindex->nHeight;
         mnListDiffsCache.emplace(pindex->GetBlockHash(), diff);
-        mnListsCache.emplace(newList.GetBlockHash(), std::make_shared<const CDeterministicMNList>(newList));
+        mnListsCache.emplace(newList.GetBlockHash(), newList);
     } catch (const std::exception& e) {
         LogPrintf("CDeterministicMNManager::%s -- internal error: %s\n", __func__, e.what());
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "failed-dmn-block");
@@ -704,7 +705,7 @@ bool CDeterministicMNManager::UndoBlock(gsl::not_null<const CBlockIndex*> pindex
 
         if (diff.HasChanges()) {
             // need to call this before erasing
-            prevList = *GetListForBlockInternal(pindex->pprev);
+            prevList = GetListForBlockInternal(pindex->pprev);
         }
 
         mnListsCache.erase(blockHash);
@@ -1058,17 +1059,18 @@ void CDeterministicMNManager::HandleQuorumCommitment(const llmq::CFinalCommitmen
     }
 }
 
-std::shared_ptr<const CDeterministicMNList> CDeterministicMNManager::GetListForBlockInternal(gsl::not_null<const CBlockIndex*> pindex)
+CDeterministicMNList CDeterministicMNManager::GetListForBlockInternal(gsl::not_null<const CBlockIndex*> pindex)
 {
+    CDeterministicMNList snapshot;
+
     if (!DeploymentActiveAt(*pindex, Params().GetConsensus(), Consensus::DEPLOYMENT_DIP0003)) {
-        return std::make_shared<const CDeterministicMNList>();
+        return snapshot;
     }
 
     AssertLockHeld(cs);
 
     std::list<const CBlockIndex*> listDiffIndexes;
 
-    std::shared_ptr<const CDeterministicMNList> snapshot;
     while (true) {
         // try using cache before reading from disk
         auto itLists = mnListsCache.find(pindex->GetBlockHash());
@@ -1077,8 +1079,7 @@ std::shared_ptr<const CDeterministicMNList> CDeterministicMNManager::GetListForB
             break;
         }
 
-        CDeterministicMNList tmp; // ---doens't work here
-        if (m_evoDb.Read(std::make_pair(DB_LIST_SNAPSHOT, pindex->GetBlockHash()), tmp)) {
+        if (m_evoDb.Read(std::make_pair(DB_LIST_SNAPSHOT, pindex->GetBlockHash()), snapshot)) {
             mnListsCache.emplace(pindex->GetBlockHash(), snapshot);
             break;
         }
@@ -1095,10 +1096,10 @@ std::shared_ptr<const CDeterministicMNList> CDeterministicMNManager::GetListForB
         if (!m_evoDb.Read(std::make_pair(DB_LIST_DIFF, pindex->GetBlockHash()), diff)) {
             // no snapshot and no diff on disk means that it's the initial snapshot
             m_initial_snapshot_index = pindex;
-            snapshot = std::make_shared<const CDeterministicMNList>(pindex->GetBlockHash(), pindex->nHeight, 0);
+            snapshot = CDeterministicMNList(pindex->GetBlockHash(), pindex->nHeight, 0);
             mnListsCache.emplace(pindex->GetBlockHash(), snapshot);
             LogPrintf("CDeterministicMNManager::%s -- initial snapshot. blockHash=%s nHeight=%d\n",
-                    __func__, snapshot->GetBlockHash().ToString(), snapshot->GetHeight());
+                    __func__, snapshot.GetBlockHash().ToString(), snapshot.GetHeight());
             break;
         }
 
@@ -1108,37 +1109,33 @@ std::shared_ptr<const CDeterministicMNList> CDeterministicMNManager::GetListForB
         pindex = pindex->pprev;
     }
 
-    if (!listDiffIndexes.empty()) {
-        CDeterministicMNList iter{*snapshot};
-        for (const auto& diffIndex : listDiffIndexes) {
-            const auto& diff = mnListDiffsCache.at(diffIndex->GetBlockHash());
-            iter.ApplyDiff(diffIndex, diff);
-        }
-        snapshot = std::make_shared<const CDeterministicMNList>(iter);
+    for (const auto& diffIndex : listDiffIndexes) {
+        const auto& diff = mnListDiffsCache.at(diffIndex->GetBlockHash());
+        snapshot.ApplyDiff(diffIndex, diff);
     }
 
     if (tipIndex) {
         // always keep a snapshot for the tip
-        if (snapshot->GetBlockHash() == tipIndex->GetBlockHash()) {
-            auto hash = snapshot->GetBlockHash();
+        if (snapshot.GetBlockHash() == tipIndex->GetBlockHash()) {
+            auto hash = snapshot.GetBlockHash();
             if (mnListsCache.find(hash) == mnListsCache.end()) {
-                mnListsCache.emplace(snapshot->GetBlockHash(), snapshot);
+                mnListsCache.emplace(snapshot.GetBlockHash(), snapshot);
             }
         } else {
             // keep snapshots for yet alive quorums
             if (ranges::any_of(Params().GetConsensus().llmqs,
                                [&snapshot, this](const auto& params) EXCLUSIVE_LOCKS_REQUIRED(cs) {
                                    AssertLockHeld(cs);
-                                   return (snapshot->GetHeight() % params.dkgInterval == 0) &&
-                                          (snapshot->GetHeight() + params.dkgInterval * (params.keepOldConnections + 1) >=
+                                   return (snapshot.GetHeight() % params.dkgInterval == 0) &&
+                                          (snapshot.GetHeight() + params.dkgInterval * (params.keepOldConnections + 1) >=
                                            tipIndex->nHeight);
                                })) {
-                mnListsCache.emplace(snapshot->GetBlockHash(), snapshot);
+                mnListsCache.emplace(snapshot.GetBlockHash(), snapshot);
             }
         }
     }
 
-    assert(snapshot->GetHeight() != -1);
+    assert(snapshot.GetHeight() != -1);
     return snapshot;
 }
 
@@ -1148,7 +1145,7 @@ CDeterministicMNList CDeterministicMNManager::GetListAtChainTip()
     if (!tipIndex) {
         return {};
     }
-    return *GetListForBlockInternal(tipIndex);
+    return GetListForBlockInternal(tipIndex);
 }
 
 bool CDeterministicMNManager::IsProTxWithCollateral(const CTransactionRef& tx, uint32_t n)
@@ -1183,7 +1180,7 @@ void CDeterministicMNManager::CleanupCache(int nHeight)
     std::vector<uint256> toDeleteLists;
     std::vector<uint256> toDeleteDiffs;
     for (const auto& p : mnListsCache) {
-        if (p.second->GetHeight() + LIST_DIFFS_CACHE_SIZE < nHeight) {
+        if (p.second.GetHeight() + LIST_DIFFS_CACHE_SIZE < nHeight) {
             // too old, drop it
             toDeleteLists.emplace_back(p.first);
             continue;
@@ -1193,8 +1190,8 @@ void CDeterministicMNManager::CleanupCache(int nHeight)
             continue;
         }
         bool fQuorumCache = ranges::any_of(Params().GetConsensus().llmqs, [&nHeight, &p](const auto& params){
-            return (p.second->GetHeight() % params.dkgInterval == 0) &&
-                   (p.second->GetHeight() + params.dkgInterval * (params.keepOldConnections + 1) >= nHeight);
+            return (p.second.GetHeight() % params.dkgInterval == 0) &&
+                   (p.second.GetHeight() + params.dkgInterval * (params.keepOldConnections + 1) >= nHeight);
         });
         if (fQuorumCache) {
             // at least one quorum could be using it, keep it
@@ -1214,6 +1211,7 @@ void CDeterministicMNManager::CleanupCache(int nHeight)
     for (const auto& h : toDeleteDiffs) {
         mnListDiffsCache.erase(h);
     }
+
 }
 
 template <typename ProTx>
