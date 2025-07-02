@@ -4,11 +4,9 @@
 #ifndef BITCOIN_MASTERNODE_SYNC_H
 #define BITCOIN_MASTERNODE_SYNC_H
 
-#include <stdint.h>
 #include <atomic>
 #include <memory>
 #include <string>
-#include <string_view>
 
 class CConnman;
 class CBlockIndex;

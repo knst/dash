@@ -9,17 +9,15 @@
 #include <sync.h>
 #include <threadsafety.h>
 #include <uint256.h>
-#include <stdint.h>
+
 #include <atomic>
 #include <map>
 #include <memory>
 #include <vector>
-#include <algorithm>
-#include <string>
-#include <utility>
 
 class CConnman;
 class UniValue;
+
 template<typename T>
 class CFlatDB;
 

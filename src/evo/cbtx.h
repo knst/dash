@@ -8,15 +8,8 @@
 #include <bls/bls.h>
 #include <primitives/transaction.h>
 #include <univalue.h>
-#include <stdint.h>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
 
-#include "consensus/amount.h"
-#include "serialize.h"
-#include "uint256.h"
+#include <optional>
 
 class BlockValidationState;
 class CBlock;

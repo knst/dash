@@ -14,29 +14,16 @@
 #include <threadsafety.h>
 #include <unordered_lru_cache.h>
 #include <util/irange.h>
-#include <stddef.h>
-#include <optional>
-#include <algorithm>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "uint256.h"
+#include <optional>
 
 class CBlockIndex;
 class CEvoDB;
 class UniValue;
-class CDeterministicMNManager;
-class ChainstateManager;
-namespace Consensus {
-enum class LLMQType : uint8_t;
-}  // namespace Consensus
-template <typename C> class Span;
 
 namespace llmq {
 class CQuorumBlockProcessor;
 class CQuorumManager;
-class CQuorumSnapshotManager;
 
 //TODO use enum class (probably)
 enum SnapshotSkipMode : int {

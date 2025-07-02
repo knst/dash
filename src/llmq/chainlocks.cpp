@@ -5,6 +5,8 @@
 #include <llmq/chainlocks.h>
 #include <llmq/quorums.h>
 #include <llmq/instantsend.h>
+#include <llmq/signing_shares.h>
+
 #include <chain.h>
 #include <chainparams.h>
 #include <consensus/validation.h>
@@ -21,23 +23,6 @@
 #include <util/underlying.h>
 #include <validation.h>
 #include <validationinterface.h>
-#include <assert.h>
-#include <bits/chrono.h>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include "consensus/params.h"
-#include "gsl/pointers.h"
-#include "hash.h"
-#include "llmq/clsig.h"
-#include "llmq/signing.h"
-#include "logging.h"
-#include "net.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "saltedhasher.h"
-#include "sync.h"
 
 using node::ReadBlockFromDisk;
 

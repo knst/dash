@@ -6,23 +6,15 @@
 #define BITCOIN_LLMQ_BLOCKPROCESSOR_H
 
 #include <unordered_lru_cache.h>
+
 #include <llmq/params.h>
 #include <protocol.h>
 #include <saltedhasher.h>
 #include <sync.h>
-#include <gsl/pointers.h>
-#include <stddef.h>
-#include <optional>
-#include <map>
-#include <memory>
-#include <string_view>
-#include <utility>
-#include <vector>
 
-#include "llmq/commitment.h"
-#include "primitives/transaction.h"
-#include "threadsafety.h"
-#include "uint256.h"
+#include <gsl/pointers.h>
+
+#include <optional>
 
 class BlockValidationState;
 class CBlock;
@@ -33,7 +25,6 @@ class CDataStream;
 class CDeterministicMNManager;
 class CEvoDB;
 class CNode;
-struct StaticSaltedHasher;
 
 extern RecursiveMutex cs_main;
 

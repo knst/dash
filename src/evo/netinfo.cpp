@@ -3,19 +3,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <evo/netinfo.h>
+
 #include <chainparams.h>
 #include <netbase.h>
 #include <span.h>
 #include <util/check.h>
 #include <util/system.h>
-#include <algorithm>
-#include <memory>
-#include <mutex>
-
-#include "chainparamsbase.h"
-#include "netaddress.h"
-#include "tinyformat.h"
-#include "util/strencodings.h"
 
 namespace {
 static std::unique_ptr<const CChainParams> g_main_params{nullptr};

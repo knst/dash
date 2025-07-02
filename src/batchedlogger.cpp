@@ -4,8 +4,6 @@
 
 #include <batchedlogger.h>
 
-#include "logging.h"
-
 CBatchedLogger::CBatchedLogger(BCLog::LogFlags category, BCLog::Level level, const std::string& logging_function,
                                const std::string& source_file, int source_line) :
     m_accept{LogAcceptCategory(category, level)},

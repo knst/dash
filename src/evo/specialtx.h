@@ -10,12 +10,9 @@
 #include <streams.h>
 #include <uint256.h>
 #include <version.h>
+
 #include <optional>
 #include <vector>
-#include <algorithm>
-#include <exception>
-
-#include "span.h"
 
 template <typename T>
 std::optional<T> GetTxPayload(const std::vector<unsigned char>& payload)

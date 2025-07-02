@@ -2,20 +2,12 @@
 // Distributed under the MIT software license, see the accompanying
 
 #include <wallet/hdchain.h>
+
 #include <wallet/bip39.h>
 #include <chainparams.h>
+#include <key_io.h>
 #include <tinyformat.h>
 #include <util/system.h>
-#include <assert.h>
-#include <algorithm>
-#include <stdexcept>
-
-#include "bitcoin-config.h"
-#include "hash.h"
-#include "key.h"
-#include "script/keyorigin.h"
-#include "span.h"
-#include "sync.h"
 
 namespace wallet {
 bool CHDChain::SetNull()

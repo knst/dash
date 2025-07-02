@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <governance/object.h>
+
 #include <bls/bls.h>
 #include <chainparams.h>
 #include <core_io.h>
@@ -13,39 +14,14 @@
 #include <masternode/meta.h>
 #include <masternode/node.h>
 #include <masternode/sync.h>
+#include <messagesigner.h>
 #include <net_processing.h>
 #include <timedata.h>
 #include <util/time.h>
 #include <validation.h>
 #include <validationinterface.h>
-#include <assert.h>
-#include <bits/chrono.h>
-#include <string>
-#include <algorithm>
-#include <exception>
-#include <memory>
-#include <vector>
 
-#include "chain.h"
-#include "consensus/params.h"
-#include "evo/dmn_types.h"
-#include "evo/dmnstate.h"
-#include "governance/common.h"
-#include "governance/exceptions.h"
-#include "governance/vote.h"
-#include "governance/votedb.h"
-#include "hash.h"
-#include "logging.h"
-#include "node/blockstorage.h"
-#include "prevector.h"
-#include "protocol.h"
-#include "script/script.h"
-#include "span.h"
-#include "sync.h"
-#include "tinyformat.h"
-#include "univalue.h"
-#include "util/underlying.h"
-#include "version.h"
+#include <string>
 
 CGovernanceObject::CGovernanceObject()
 {

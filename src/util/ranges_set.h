@@ -8,8 +8,7 @@
 #include <hash.h>
 #include <saltedhasher.h>
 #include <serialize.h>
-#include <stddef.h>
-#include <stdint.h>
+
 #include <set>
 
 /**

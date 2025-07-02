@@ -6,12 +6,8 @@
 #define BITCOIN_LLMQ_EHF_SIGNALS_H
 
 #include <llmq/signing.h>
-#include <set>
 
-#include "protocol.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "uint256.h"
+#include <set>
 
 class CBlockIndex;
 class ChainstateManager;

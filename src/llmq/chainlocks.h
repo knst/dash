@@ -6,6 +6,7 @@
 #define BITCOIN_LLMQ_CHAINLOCKS_H
 
 #include <llmq/clsig.h>
+
 #include <crypto/common.h> // For ReadLE64
 #include <llmq/signing.h>
 #include <net.h> // For NodeId
@@ -13,19 +14,12 @@
 #include <primitives/transaction.h>
 #include <saltedhasher.h>
 #include <sync.h>
+
 #include <gsl/pointers.h>
-#include <stddef.h>
-#include <stdint.h>
+
 #include <atomic>
 #include <map>
 #include <unordered_map>
-#include <memory>
-#include <thread>
-#include <unordered_set>
-
-#include "protocol.h"
-#include "threadsafety.h"
-#include "uint256.h"
 
 class CBlock;
 class CBlockIndex;
@@ -41,7 +35,6 @@ class CInstantSendManager;
 class CSigningManager;
 class CSigSharesManager;
 enum class VerifyRecSigStatus;
-class CQuorumManager;
 
 class CChainLocksHandler : public CRecoveredSigsListener
 {

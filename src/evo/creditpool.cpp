@@ -3,10 +3,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <evo/creditpool.h>
+
 #include <evo/assetlocktx.h>
 #include <evo/cbtx.h>
 #include <evo/evodb.h>
 #include <evo/specialtx.h>
+
 #include <chain.h>
 #include <chainparams.h>
 #include <consensus/validation.h>
@@ -14,29 +16,11 @@
 #include <logging.h>
 #include <node/blockstorage.h>
 #include <validation.h>
-#include <assert.h>
+
 #include <algorithm>
 #include <exception>
 #include <memory>
 #include <stack>
-#include <map>
-#include <stdexcept>
-#include <utility>
-#include <vector>
-
-#include "consensus/amount.h"
-#include "consensus/params.h"
-#include "gsl/pointers.h"
-#include "prevector.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "saltedhasher.h"
-#include "script/script.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "tinyformat.h"
-#include "unordered_lru_cache.h"
-#include "util/ranges_set.h"
 
 using node::BlockManager;
 using node::ReadBlockFromDisk;

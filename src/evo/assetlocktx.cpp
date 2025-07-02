@@ -4,9 +4,11 @@
 
 #include <evo/assetlocktx.h>
 #include <evo/specialtx.h>
+
 #include <llmq/commitment.h>
 #include <llmq/signing.h>
 #include <llmq/quorums.h>
+
 #include <chainparams.h>
 #include <consensus/params.h>
 #include <consensus/validation.h>
@@ -15,21 +17,8 @@
 #include <node/blockstorage.h>
 #include <tinyformat.h>
 #include <util/ranges_set.h>
-#include <assert.h>
-#include <algorithm>
-#include <memory>
-#include <utility>
 
-#include "bls/bls.h"
-#include "chain.h"
-#include "consensus/amount.h"
-#include "gsl/pointers.h"
-#include "hash.h"
-#include "llmq/params.h"
-#include "prevector.h"
-#include "primitives/transaction.h"
-#include "script/script.h"
-#include "sync.h"
+#include <algorithm>
 
 using node::BlockManager;
 

@@ -3,57 +3,17 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <test/util/setup_common.h>
+
 #include <chainparams.h>
+#include <consensus/validation.h>
 #include <deploymentstatus.h>
 #include <node/miner.h>
+#include <script/interpreter.h>
+#include <spork.h>
 #include <validation.h>
 #include <versionbits.h>
-#include <stdint.h>
-#include <boost/preprocessor/arithmetic/limits/dec_256.hpp>
-#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
-#include <boost/preprocessor/control/expr_iif.hpp>
-#include <boost/preprocessor/control/iif.hpp>
-#include <boost/preprocessor/detail/limits/auto_rec_256.hpp>
-#include <boost/preprocessor/logical/compl.hpp>
-#include <boost/preprocessor/logical/limits/bool_256.hpp>
-#include <boost/preprocessor/repetition/detail/limits/for_256.hpp>
-#include <boost/preprocessor/repetition/for.hpp>
-#include <boost/preprocessor/seq/limits/elem_256.hpp>
-#include <boost/preprocessor/seq/limits/size_256.hpp>
-#include <boost/preprocessor/tuple/elem.hpp>
-#include <boost/preprocessor/variadic/limits/elem_64.hpp>
-#include <boost/test/tools/old/interface.hpp>
-#include <boost/test/unit_test_suite.hpp>
-#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
-#include <boost/test/utils/lazy_ostream.hpp>
-#include <memory>
-#include <vector>
 
-#include "chain.h"
-#include "chainparamsbase.h"
-#include "consensus/params.h"
-#include "key.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "script/script.h"
-#include "sync.h"
-#include "txmempool.h"
-#include "util/system.h"
-
-namespace dynamic_activation_thresholds_tests {
-struct activate_at_10_level;
-struct activate_at_11_level;
-struct activate_at_12_level;
-struct activate_at_1_level;
-struct activate_at_2_level;
-struct activate_at_3_level;
-struct activate_at_4_level;
-struct activate_at_5_level;
-struct activate_at_6_level;
-struct activate_at_7_level;
-struct activate_at_8_level;
-struct activate_at_9_level;
-}  // namespace dynamic_activation_thresholds_tests
+#include <boost/test/unit_test.hpp>
 
 using node::BlockAssembler;
 

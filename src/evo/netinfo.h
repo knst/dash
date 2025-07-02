@@ -8,16 +8,8 @@
 #include <netaddress.h>
 #include <serialize.h>
 #include <streams.h>
-#include <assert.h>
-#include <stdint.h>
+
 #include <variant>
-#include <functional>
-#include <ios>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <type_traits>
-#include <vector>
 
 class CService;
 

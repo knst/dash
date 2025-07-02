@@ -6,6 +6,7 @@
 #define BITCOIN_LLMQ_SIGNING_SHARES_H
 
 #include <llmq/signing.h>
+
 #include <bls/bls.h>
 #include <random.h>
 #include <saltedhasher.h>
@@ -13,9 +14,7 @@
 #include <sync.h>
 #include <threadinterrupt.h>
 #include <uint256.h>
-#include <assert.h>
-#include <stddef.h>
-#include <stdint.h>
+
 #include <atomic>
 #include <limits>
 #include <memory>
@@ -25,22 +24,12 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <algorithm>
-
-#include "llmq/params.h"
-#include "protocol.h"
-#include "threadsafety.h"
 
 class CNode;
 class CConnman;
 class CDeterministicMN;
 class CSporkManager;
 class PeerManager;
-class CActiveMasternodeManager;
-class CDataStream;
-namespace llmq {
-class CQuorumManager;
-}  // namespace llmq
 
 using CDeterministicMNCPtr = std::shared_ptr<const CDeterministicMN>;
 

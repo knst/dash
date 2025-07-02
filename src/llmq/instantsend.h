@@ -6,35 +6,19 @@
 #define BITCOIN_LLMQ_INSTANTSEND_H
 
 #include <llmq/signing.h>
+
 #include <consensus/params.h>
 #include <net_types.h>
 #include <primitives/transaction.h>
 #include <threadinterrupt.h>
 #include <txmempool.h>
 #include <unordered_lru_cache.h>
+
 #include <gsl/pointers.h>
-#include <stddef.h>
-#include <stdint.h>
+
 #include <atomic>
 #include <unordered_map>
 #include <unordered_set>
-#include <algorithm>
-#include <memory>
-#include <string_view>
-#include <thread>
-#include <utility>
-#include <vector>
-
-#include "bls/bls.h"
-#include "dbwrapper.h"
-#include "primitives/block.h"
-#include "protocol.h"
-#include "saltedhasher.h"
-#include "serialize.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "uint256.h"
-#include "util/hasher.h"
 
 class CBlockIndex;
 class CChainState;
@@ -43,14 +27,6 @@ class CDBWrapper;
 class CMasternodeSync;
 class CSporkManager;
 class PeerManager;
-class CDataStream;
-class CNode;
-class CTxMemPool;
-namespace Consensus {
-enum class LLMQType : uint8_t;
-struct LLMQParams;
-struct Params;
-}  // namespace Consensus
 
 namespace llmq
 {

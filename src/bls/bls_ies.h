@@ -7,14 +7,6 @@
 
 #include <bls/bls.h>
 #include <streams.h>
-#include <stddef.h>
-#include <algorithm>
-#include <exception>
-#include <vector>
-
-#include "serialize.h"
-#include "span.h"
-#include "uint256.h"
 
 /**
  * All objects in this module working from assumption that basic scheme is

@@ -9,17 +9,8 @@
 #include <evo/netinfo.h>
 #include <evo/providertx.h>
 #include <llmq/commitment.h>
-#include <univalue.h>
-#include <vector>
 
-#include "bls/bls.h"
-#include "evo/dmn_types.h"
-#include "key_io.h"
-#include "netaddress.h"
-#include "primitives/transaction.h"
-#include "script/standard.h"
-#include "uint256.h"
-#include "util/underlying.h"
+#include <univalue.h>
 
 [[nodiscard]] UniValue CAssetLockPayload::ToJson() const
 {

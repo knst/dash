@@ -3,31 +3,19 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <llmq/snapshot.h>
+
 #include <evo/evodb.h>
 #include <evo/simplifiedmns.h>
+#include <evo/specialtx.h>
+
 #include <llmq/blockprocessor.h>
 #include <llmq/commitment.h>
+
+#include <base58.h>
 #include <chainparams.h>
+#include <serialize.h>
 #include <univalue.h>
 #include <validation.h>
-#include <assert.h>
-#include <memory>
-#include <set>
-
-#include "chain.h"
-#include "consensus/params.h"
-#include "dbwrapper.h"
-#include "hash.h"
-#include "llmq/params.h"
-#include "node/blockstorage.h"
-#include "primitives/block.h"
-#include "saltedhasher.h"
-#include "span.h"
-#include "sync.h"
-#include "tinyformat.h"
-#include "unordered_lru_cache.h"
-
-class CDeterministicMNManager;
 
 namespace llmq {
 

@@ -10,9 +10,6 @@
 #include <uint256.h>
 #include <util/strencodings.h>
 #include <util/ranges.h>
-#include <stdint.h>
-#include <string.h>
-#include <dashbls/util.hpp>
 
 // bls-dash uses relic, which may define DEBUG and ERROR, which leads to many warnings in some build setups
 #undef ERROR
@@ -22,23 +19,14 @@
 #include <dashbls/elements.hpp>
 #include <dashbls/schemes.hpp>
 #include <dashbls/threshold.hpp>
-
 #undef DOUBLE
 #undef SEED
 
-#include <unistd.h>
 #include <array>
 #include <mutex>
-#include <atomic>
-#include <algorithm>
-#include <ios>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
+#include <unistd.h>
 
-#include "span.h"
-#include "version.h"
+#include <atomic>
 
 namespace bls {
     extern std::atomic<bool> bls_legacy_scheme;

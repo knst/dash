@@ -4,18 +4,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <stats/rawsender.h>
+
 #include <logging.h>
 #include <netaddress.h>
 #include <netbase.h>
 #include <util/sock.h>
 #include <util/thread.h>
-#include <assert.h>
-#include <bits/chrono.h>
-
-#include "compat/compat.h"
-#include "sync.h"
-#include "threadinterrupt.h"
-#include "tinyformat.h"
 
 RawSender::RawSender(const std::string& host, uint16_t port, std::pair<uint64_t, uint8_t> batching_opts,
                      uint64_t interval_ms, std::optional<std::string>& error) :

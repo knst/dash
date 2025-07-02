@@ -3,12 +3,16 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <llmq/dkgsession.h>
+
 #include <llmq/commitment.h>
 #include <llmq/debug.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/options.h>
 #include <llmq/utils.h>
+
 #include <evo/deterministicmns.h>
+#include <evo/specialtx.h>
+
 #include <batchedlogger.h>
 #include <chainparams.h>
 #include <cxxtimer.hpp>
@@ -16,33 +20,13 @@
 #include <logging.h>
 #include <masternode/meta.h>
 #include <masternode/node.h>
+#include <netmessagemaker.h>
 #include <util/irange.h>
 #include <util/underlying.h>
-#include <assert.h>
+
+#include <univalue.h>
 #include <atomic>
 #include <memory>
-#include <array>
-#include <functional>
-#include <future>
-#include <list>
-#include <sstream>
-#include <unordered_map>
-
-#include "bls/bls.h"
-#include "bls/bls_ies.h"
-#include "bls/bls_worker.h"
-#include "chain.h"
-#include "consensus/params.h"
-#include "evo/dmnstate.h"
-#include "llmq/dkgsessionhandler.h"
-#include "net.h"
-#include "protocol.h"
-#include "random.h"
-#include "saltedhasher.h"
-#include "span.h"
-#include "sync.h"
-#include "tinyformat.h"
-#include "version.h"
 
 namespace llmq
 {

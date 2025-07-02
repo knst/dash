@@ -3,13 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <governance/votedb.h>
-#include <iterator>
-#include <utility>
-
-#include "governance/vote.h"
-#include "primitives/transaction.h"
-#include "streams.h"
-#include "uint256.h"
 
 CGovernanceObjectVoteFile::CGovernanceObjectVoteFile() :
     nMemoryVotes(0),

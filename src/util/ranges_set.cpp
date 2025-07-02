@@ -3,8 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <util/ranges_set.h>
-#include <assert.h>
-#include <utility>
 
 CRangesSet::Range::Range() : CRangesSet::Range::Range(0, 0) {}
 

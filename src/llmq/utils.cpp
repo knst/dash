@@ -3,59 +3,28 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <llmq/utils.h>
+
 #include <llmq/options.h>
 #include <llmq/snapshot.h>
+
 #include <chainparams.h>
 #include <deploymentstatus.h>
 #include <evo/deterministicmns.h>
+#include <evo/evodb.h>
 #include <masternode/meta.h>
 #include <net.h>
 #include <random.h>
 #include <util/irange.h>
+#include <util/ranges.h>
 #include <util/time.h>
 #include <util/underlying.h>
-#include <assert.h>
-#include <bits/chrono.h>
-#include <stdint.h>
+
 #include <atomic>
 #include <optional>
-#include <algorithm>
-#include <functional>
-#include <iterator>
-#include <map>
-#include <ranges>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <tuple>
-#include <utility>
 
-#include "arith_uint256.h"
-#include "bls/bls.h"
-#include "chain.h"
-#include "chainparamsbase.h"
-#include "consensus/params.h"
-#include "crypto/sha256.h"
-#include "evo/dmn_types.h"
-#include "evo/dmnstate.h"
-#include "evo/netinfo.h"
-#include "gsl/pointers.h"
-#include "hash.h"
-#include "llmq/params.h"
-#include "logging.h"
-#include "netaddress.h"
-#include "primitives/transaction.h"
-#include "saltedhasher.h"
-#include "span.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "tinyformat.h"
-#include "uint256.h"
-#include "unordered_lru_cache.h"
-
+class CBLSSignature;
 namespace llmq {
 class CQuorum;
-
 using CQuorumPtr = std::shared_ptr<CQuorum>;
 using CQuorumCPtr = std::shared_ptr<const CQuorum>;
 } // namespace llmq

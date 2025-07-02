@@ -3,9 +3,13 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <test/util/setup_common.h>
+
 #include <bls/bls.h>
 #include <chainparams.h>
+#include <consensus/validation.h>
 #include <deploymentstatus.h>
+#include <messagesigner.h>
+#include <netbase.h>
 #include <node/miner.h>
 #include <node/transaction.h>
 #include <script/interpreter.h>
@@ -13,53 +17,18 @@
 #include <script/signingprovider.h>
 #include <script/standard.h>
 #include <validation.h>
+
 #include <evo/deterministicmns.h>
 #include <evo/providertx.h>
 #include <evo/specialtx.h>
 #include <masternode/payments.h>
 #include <util/enumerate.h>
 #include <util/irange.h>
-#include <stddef.h>
-#include <boost/preprocessor/arithmetic/limits/dec_256.hpp>
-#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
-#include <boost/preprocessor/control/expr_iif.hpp>
-#include <boost/preprocessor/control/iif.hpp>
-#include <boost/preprocessor/detail/limits/auto_rec_256.hpp>
-#include <boost/preprocessor/logical/compl.hpp>
-#include <boost/preprocessor/logical/limits/bool_256.hpp>
-#include <boost/preprocessor/repetition/detail/limits/for_256.hpp>
-#include <boost/preprocessor/repetition/for.hpp>
-#include <boost/preprocessor/seq/limits/elem_256.hpp>
-#include <boost/preprocessor/seq/limits/size_256.hpp>
-#include <boost/preprocessor/tuple/elem.hpp>
-#include <boost/preprocessor/variadic/limits/elem_64.hpp>
-#include <boost/test/tools/old/interface.hpp>
-#include <boost/test/unit_test_suite.hpp>
-#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
-#include <boost/test/utils/lazy_ostream.hpp>
+
+#include <boost/test/unit_test.hpp>
+
 #include <map>
 #include <vector>
-#include <algorithm>
-#include <atomic>
-#include <memory>
-#include <utility>
-
-#include "chain.h"
-#include "chainparamsbase.h"
-#include "consensus/amount.h"
-#include "consensus/params.h"
-#include "evo/dmn_types.h"
-#include "evo/netinfo.h"
-#include "key.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "pubkey.h"
-#include "script/script.h"
-#include "sync.h"
-#include "tinyformat.h"
-#include "txmempool.h"
-#include "uint256.h"
-#include "util/check.h"
 
 using node::BlockAssembler;
 using node::GetTransaction;

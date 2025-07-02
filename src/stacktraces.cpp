@@ -12,19 +12,11 @@
 #include <streams.h>
 #include <threadsafety.h>
 #include <util/strencodings.h>
-#include <cxxabi.h>
-#include <stdint.h>
-#include <stdio.h>
+
 #include <map>
 #include <vector>
 #include <memory>
 #include <atomic>
-#include <algorithm>
-#include <cstdlib>
-#include <iostream>
-#include <optional>
-#include <typeinfo>
-#include <utility>
 
 #if defined(WIN32)
 #include <windows.h>
@@ -39,6 +31,7 @@
 #endif
 
 #if !defined(WIN32)
+#include <dlfcn.h>
 #if !defined(__APPLE__)
 #include <link.h>
 #endif
@@ -56,12 +49,6 @@
 #endif
 
 #include <cstring>
-
-#include "serialize.h"
-#include "span.h"
-#include "tinyformat.h"
-
-struct backtrace_state;
 
 std::string DemangleSymbol(const std::string& name)
 {

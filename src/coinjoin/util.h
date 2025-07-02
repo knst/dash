@@ -6,17 +6,6 @@
 #define BITCOIN_COINJOIN_UTIL_H
 
 #include <wallet/wallet.h>
-#include <stddef.h>
-#include <memory>
-#include <string>
-#include <vector>
-
-#include "consensus/amount.h"
-#include "script/script.h"
-#include "script/standard.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "wallet/coincontrol.h"
 
 class CTransactionBuilder;
 struct bilingual_str;

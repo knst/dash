@@ -10,29 +10,13 @@
 #include <qt/bitcoinunits.h>
 #include <sync.h>
 #include <util/system.h>
-#include <QtCore/qglobal.h>
-#include <qabstractitemmodel.h>
-#include <qdatetime.h>
-#include <qlist.h>
-#include <qnamespace.h>
-#include <qobject.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
-#include <qvariant.h>
-#include <qwidget.h>
+
 #include <QAbstractTableModel>
 #include <QDateTime>
 #include <QMenu>
 #include <QSortFilterProxyModel>
 #include <QTimer>
 #include <QWidget>
-#include <memory>
-
-class QMenu;
-class QPoint;
-class QSortFilterProxyModel;
-class QTimer;
-template <typename C> class Span;
 
 inline constexpr int GOVERNANCELIST_UPDATE_SECONDS = 10;
 

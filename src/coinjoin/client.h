@@ -7,28 +7,15 @@
 
 #include <coinjoin/util.h>
 #include <coinjoin/coinjoin.h>
+
 #include <protocol.h>
 #include <util/ranges.h>
 #include <util/translation.h>
-#include <stdint.h>
+
 #include <atomic>
 #include <deque>
 #include <memory>
 #include <utility>
-#include <algorithm>
-#include <limits>
-#include <map>
-#include <string>
-#include <string_view>
-#include <vector>
-
-#include "consensus/amount.h"
-#include "primitives/transaction.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "uint256.h"
-#include "util/time.h"
-#include "wallet/wallet.h"
 
 class CCoinJoinClientManager;
 class CCoinJoinClientQueueManager;
@@ -42,14 +29,8 @@ class CNode;
 class CoinJoinWalletManager;
 class CTxMemPool;
 class PeerManager;
+
 class UniValue;
-class CBlockIndex;
-class CChainState;
-class CDataStream;
-class CTxDSIn;
-namespace llmq {
-class CInstantSendManager;
-}  // namespace llmq
 
 using CDeterministicMNCPtr = std::shared_ptr<const CDeterministicMN>;
 

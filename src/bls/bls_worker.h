@@ -6,16 +6,12 @@
 #define DASH_CRYPTO_BLS_WORKER_H
 
 #include <bls/bls.h>
+
 #include <ctpl_stl.h>
+
 #include <future>
 #include <mutex>
 #include <utility>
-#include <functional>
-#include <map>
-#include <vector>
-
-#include "span.h"
-#include "uint256.h"
 
 // Low level BLS/DKG stuff. All very compute intensive and optimized for parallelization
 // The worker tries to parallelize as much as possible and utilizes a few properties of BLS aggregation to speed up things

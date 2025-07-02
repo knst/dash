@@ -9,9 +9,6 @@
 #endif // ENABLE_WALLET
 #include <coinjoin/server.h>
 
-#include "bitcoin-config.h"
-#include "coinjoin/coinjoin.h"
-
 CJContext::CJContext(ChainstateManager& chainman, CConnman& connman, CDeterministicMNManager& dmnman,
                      CMasternodeMetaMan& mn_metaman, CTxMemPool& mempool,
                      const CActiveMasternodeManager* const mn_activeman, const CMasternodeSync& mn_sync,

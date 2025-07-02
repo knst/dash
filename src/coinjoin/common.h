@@ -7,14 +7,10 @@
 
 #include <consensus/amount.h>
 #include <primitives/transaction.h>
-#include <util/ranges.h>
-#include <stddef.h>
+
 #include <array>
 #include <string>
-#include <optional>
-#include <utility>
-
-#include "script/script.h"
+#include <util/ranges.h>
 
 /** Holds a mixing input
  */

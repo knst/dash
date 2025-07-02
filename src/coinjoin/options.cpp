@@ -3,13 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <coinjoin/options.h>
+
 #include <util/system.h>
 #include <univalue.h>
-#include <cassert>
-#include <algorithm>
-#include <memory>
 
-#include "consensus/amount.h"
+#include <cassert>
 
 CCoinJoinClientOptions* CCoinJoinClientOptions::_instance{nullptr};
 std::once_flag CCoinJoinClientOptions::onceFlag;

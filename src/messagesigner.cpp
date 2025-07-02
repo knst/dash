@@ -9,12 +9,6 @@
 #include <tinyformat.h>
 #include <util/strencodings.h>
 
-#include "key.h"
-#include "pubkey.h"
-#include "serialize.h"
-#include "span.h"
-#include "uint256.h"
-
 bool CMessageSigner::GetKeysFromSecret(const std::string& strSecret, CKey& keyRet, CPubKey& pubkeyRet)
 {
     keyRet = DecodeSecret(strSecret);

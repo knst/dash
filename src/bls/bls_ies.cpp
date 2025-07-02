@@ -3,14 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bls/bls_ies.h>
+
 #include <hash.h>
 #include <random.h>
-#include <crypto/aes.h>
-#include <assert.h>
-#include <stdint.h>
 
-#include "bls/bls.h"
-#include "streams.h"
+#include <crypto/aes.h>
 
 static bool EncryptBlob(const void* in, size_t inSize, std::vector<unsigned char>& out, const void* symKey, const void* iv)
 {

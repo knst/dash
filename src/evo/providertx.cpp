@@ -4,21 +4,13 @@
 
 #include <evo/dmn_types.h>
 #include <evo/providertx.h>
+
+#include <chainparams.h>
 #include <consensus/validation.h>
 #include <hash.h>
 #include <script/standard.h>
 #include <tinyformat.h>
 #include <util/underlying.h>
-#include <functional>
-#include <variant>
-
-#include "bls/bls.h"
-#include "evo/netinfo.h"
-#include "key_io.h"
-#include "primitives/transaction.h"
-#include "pubkey.h"
-#include "span.h"
-#include "util/strencodings.h"
 
 bool CProRegTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState& state) const
 {

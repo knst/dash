@@ -6,6 +6,7 @@
 #define BITCOIN_EVO_DETERMINISTICMNS_H
 
 #include <evo/dmnstate.h>
+
 #include <arith_uint256.h>
 #include <clientversion.h>
 #include <consensus/params.h>
@@ -16,47 +17,20 @@
 #include <saltedhasher.h>
 #include <scheduler.h>
 #include <sync.h>
+
 #include <immer/map.hpp>
-#include <assert.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <immer/detail/hamts/champ_iterator.hpp>
-#include <immer/detail/iterator_facade.hpp>
+
 #include <atomic>
 #include <limits>
 #include <numeric>
 #include <unordered_map>
 #include <utility>
-#include <algorithm>
-#include <array>
-#include <functional>
-#include <ios>
-#include <memory>
-#include <optional>
-#include <set>
-#include <string>
-#include <type_traits>
-#include <vector>
-
-#include "hash.h"
-#include "llmq/params.h"
-#include "primitives/transaction.h"
-#include "serialize.h"
-#include "threadsafety.h"
-#include "uint256.h"
-#include "univalue.h"
-#include "version.h"
 
 class CBlock;
 class CBlockIndex;
 class CCoinsViewCache;
 class CEvoDB;
 class TxValidationState;
-class BlockValidationState;
-class CBLSPublicKey;
-class CService;
-class MnNetInfo;
-class NetInfoEntry;
 
 extern RecursiveMutex cs_main;
 

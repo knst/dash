@@ -6,19 +6,6 @@
 #include <bls/bls_worker.h>
 #include <random.h>
 #include <util/irange.h>
-#include <assert.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <algorithm>
-#include <memory>
-#include <set>
-#include <vector>
-
-#include "bls/bls.h"
-#include "crypto/common.h"
-#include "nanobench.h"
-#include "span.h"
-#include "uint256.h"
 
 struct Member {
     CBLSId id;

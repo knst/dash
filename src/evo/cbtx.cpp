@@ -12,33 +12,11 @@
 #include <llmq/options.h>
 #include <llmq/quorums.h>
 #include <node/blockstorage.h>
+
 #include <chain.h>
 #include <chainparams.h>
 #include <consensus/merkle.h>
 #include <deploymentstatus.h>
-#include <assert.h>
-#include <stddef.h>
-#include <algorithm>
-#include <atomic>
-#include <exception>
-#include <functional>
-#include <iterator>
-#include <map>
-#include <memory>
-#include <vector>
-
-#include "bls/bls.h"
-#include "consensus/params.h"
-#include "hash.h"
-#include "llmq/clsig.h"
-#include "llmq/params.h"
-#include "logging.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "tinyformat.h"
-#include "util/time.h"
 
 using node::ReadBlockFromDisk;
 

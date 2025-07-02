@@ -6,13 +6,6 @@
 #define BITCOIN_MESSAGESIGNER_H
 
 #include <key.h>
-#include <string>
-#include <vector>
-
-class CKey;
-class CKeyID;
-class CPubKey;
-class uint256;
 
 /** Helper class for signing messages and checking their signatures
  */

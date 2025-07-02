@@ -3,9 +3,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <llmq/instantsend.h>
+
 #include <llmq/chainlocks.h>
 #include <llmq/commitment.h>
 #include <llmq/quorums.h>
+#include <llmq/signing_shares.h>
+
 #include <bls/bls_batchverifier.h>
 #include <chainparams.h>
 #include <consensus/validation.h>
@@ -19,38 +22,11 @@
 #include <stats/client.h>
 #include <txmempool.h>
 #include <util/irange.h>
+#include <util/ranges.h>
 #include <util/thread.h>
 #include <validation.h>
-#include <cxxtimer.hpp>
-#include <assert.h>
-#include <bits/chrono.h>
-#include <functional>
-#include <limits>
-#include <optional>
-#include <set>
-#include <string>
-#include <tuple>
 
-#include "chain.h"
-#include "compat/endian.h"
-#include "consensus/params.h"
-#include "fs.h"
-#include "gsl/pointers.h"
-#include "hash.h"
-#include "indirectmap.h"
-#include "llmq/params.h"
-#include "llmq/signing.h"
-#include "logging.h"
-#include "net.h"
-#include "primitives/transaction.h"
-#include "streams.h"
-#include "threadinterrupt.h"
-#include "unordered_lru_cache.h"
-#include "util/expected.h"
-#include "util/system.h"
-#include "util/time.h"
-#include "validationinterface.h"
-#include "version.h"
+#include <cxxtimer.hpp>
 
 using node::fImporting;
 using node::fReindex;

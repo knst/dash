@@ -6,6 +6,7 @@
 #define BITCOIN_LLMQ_DKGSESSION_H
 
 #include <llmq/commitment.h>
+
 #include <batchedlogger.h>
 #include <bls/bls.h>
 #include <bls/bls_ies.h>
@@ -13,24 +14,9 @@
 #include <saltedhasher.h>
 #include <sync.h>
 #include <util/underlying.h>
-#include <stddef.h>
-#include <stdint.h>
+
 #include <optional>
 #include <unordered_set>
-#include <algorithm>
-#include <map>
-#include <memory>
-#include <set>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-
-#include "hash.h"
-#include "llmq/params.h"
-#include "serialize.h"
-#include "threadsafety.h"
-#include "uint256.h"
 
 class CActiveMasternodeManager;
 class CInv;
@@ -39,9 +25,6 @@ class CDeterministicMN;
 class CMasternodeMetaMan;
 class CSporkManager;
 class PeerManager;
-class CBlockIndex;
-class CDeterministicMNManager;
-struct StaticSaltedHasher;
 
 using CDeterministicMNCPtr = std::shared_ptr<const CDeterministicMN>;
 

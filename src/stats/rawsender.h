@@ -9,18 +9,12 @@
 #include <compat/compat.h>
 #include <sync.h>
 #include <threadinterrupt.h>
-#include <stdint.h>
+
 #include <deque>
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
-#include <algorithm>
-#include <thread>
-#include <utility>
-
-#include "threadsafety.h"
-#include "util/sock.h"
 
 class Sock;
 

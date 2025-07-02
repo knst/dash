@@ -3,6 +3,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <masternode/node.h>
+
+#include <bls/bls_ies.h>
 #include <chainparams.h>
 #include <deploymentstatus.h>
 #include <evo/deterministicmns.h>
@@ -10,21 +12,8 @@
 #include <netbase.h>
 #include <protocol.h>
 #include <util/check.h>
-#include <assert.h>
-#include <map>
-#include <optional>
-#include <utility>
-
-#include "bls/bls.h"
-#include "chain.h"
-#include "compat/compat.h"
-#include "evo/dmnstate.h"
-#include "evo/netinfo.h"
-#include "gsl/pointers.h"
-#include "logging.h"
-#include "netaddress.h"
-#include "primitives/transaction.h"
-#include "util/sock.h"
+#include <validation.h>
+#include <warnings.h>
 
 namespace {
 bool GetLocal(CService& addr, const CNetAddr* paddrPeer)

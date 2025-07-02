@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <evo/specialtxman.h>
+
 #include <chainparams.h>
 #include <consensus/amount.h>
 #include <consensus/validation.h>
@@ -12,33 +13,13 @@
 #include <evo/creditpool.h>
 #include <evo/deterministicmns.h>
 #include <evo/mnhftx.h>
+#include <evo/providertx.h>
 #include <evo/simplifiedmns.h>
+#include <hash.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/commitment.h>
 #include <primitives/block.h>
 #include <validation.h>
-#include <assert.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <atomic>
-#include <exception>
-#include <memory>
-#include <utility>
-#include <vector>
-
-#include "bls/bls.h"
-#include "chain.h"
-#include "consensus/params.h"
-#include "evo/specialtx.h"
-#include "logging.h"
-#include "primitives/transaction.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "tinyformat.h"
-#include "uint256.h"
-#include "util/ranges_set.h"
-#include "util/system.h"
-#include "util/time.h"
 
 static bool CheckSpecialTxInner(CDeterministicMNManager& dmnman, llmq::CQuorumSnapshotManager& qsnapman,
                                 const ChainstateManager& chainman, const llmq::CQuorumManager& qman,

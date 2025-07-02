@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <base58.h>
 #include <bls/bls.h>
 #include <chainparams.h>
 #include <consensus/validation.h>
@@ -15,68 +16,22 @@
 #include <evo/specialtx.h>
 #include <evo/specialtxman.h>
 #include <index/txindex.h>
+#include <llmq/blockprocessor.h>
 #include <llmq/context.h>
 #include <masternode/meta.h>
+#include <messagesigner.h>
+#include <netbase.h>
 #include <node/context.h>
+#include <rpc/blockchain.h>
 #include <rpc/server.h>
 #include <rpc/server_util.h>
 #include <rpc/util.h>
 #include <util/check.h>
+#include <util/moneystr.h>
 #include <util/translation.h>
 #include <validation.h>
 #include <wallet/rpc/util.h>
 #include <walletinitinterface.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <algorithm>
-#include <limits>
-#include <map>
-#include <memory>
-#include <optional>
-#include <set>
-#include <stdexcept>
-#include <string>
-#include <unordered_map>
-#include <utility>
-#include <variant>
-#include <vector>
-
-#include "bitcoin-config.h"
-#include "chain.h"
-#include "coins.h"
-#include "consensus/amount.h"
-#include "consensus/params.h"
-#include "evo/dmnstate.h"
-#include "evo/netinfo.h"
-#include "hash.h"
-#include "interfaces/chain.h"
-#include "key_io.h"
-#include "node/blockstorage.h"
-#include "node/transaction.h"
-#include "policy/fees.h"
-#include "prevector.h"
-#include "primitives/transaction.h"
-#include "pubkey.h"
-#include "rpc/protocol.h"
-#include "rpc/request.h"
-#include "script/script.h"
-#include "script/standard.h"
-#include "serialize.h"
-#include "span.h"
-#include "streams.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "tinyformat.h"
-#include "uint256.h"
-#include "univalue.h"
-#include "util/message.h"
-#include "util/strencodings.h"
-#include "util/system.h"
-#include "version.h"
-#include "wallet/coinselection.h"
-#include "wallet/ismine.h"
-
-class SigningProvider;
 
 #ifdef ENABLE_WALLET
 #include <wallet/coincontrol.h>

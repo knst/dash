@@ -5,10 +5,6 @@
 #include <llmq/clsig.h>
 #include <tinyformat.h>
 
-#include "uint256.h"
-
-class CBLSSignature;
-
 namespace llmq {
     const std::string CLSIG_REQUESTID_PREFIX = "clsig";
 

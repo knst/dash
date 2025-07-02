@@ -13,23 +13,18 @@
 #include <tinyformat.h>
 #include <unordered_lru_cache.h>
 #include <util/ranges_set.h>
+
 #include <evo/assetlocktx.h>
+
 #include <gsl/pointers.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <optional>
 #include <unordered_set>
-#include <string>
-
-#include "uint256.h"
 
 class CBlock;
 class CBlockIndex;
 class BlockValidationState;
 class CEvoDB;
 class TxValidationState;
-class CTransaction;
-
 namespace Consensus {
 struct Params;
 } // namespace Consensus

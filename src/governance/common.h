@@ -7,11 +7,11 @@
 
 #include <primitives/transaction.h>
 #include <uint256.h>
+
 #include <serialize.h>
-#include <stdint.h>
+
 #include <string>
 #include <vector>
-#include <type_traits>
 
 /**
  * This module is a public interface of governance module that can be used

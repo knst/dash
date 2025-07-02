@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <chainparams.h>
 #include <coinjoin/coinjoin.h>
-#include <assert.h>
 #ifdef ENABLE_WALLET
 #include <coinjoin/client.h>
 #endif // ENABLE_WALLET
@@ -11,25 +11,18 @@
 #include <dsnotificationinterface.h>
 #include <governance/governance.h>
 #include <masternode/sync.h>
+#include <net_processing.h>
 #include <validation.h>
+
 #include <evo/deterministicmns.h>
 #include <evo/mnauth.h>
+
 #include <llmq/chainlocks.h>
 #include <llmq/context.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/ehf_signals.h>
 #include <llmq/instantsend.h>
 #include <llmq/quorums.h>
-
-#include "bitcoin-config.h"
-#include "chain.h"
-#include "sync.h"
-
-class CBlock;
-enum class MemPoolRemovalReason;
-namespace llmq {
-class CChainLockSig;
-}  // namespace llmq
 
 CDSNotificationInterface::CDSNotificationInterface(CConnman& connman,
                                                    CMasternodeSync& mn_sync,

@@ -5,9 +5,9 @@
 #ifndef BITCOIN_GOVERNANCE_VALIDATORS_H
 #define BITCOIN_GOVERNANCE_VALIDATORS_H
 
-#include <univalue.h>
-#include <stdint.h>
 #include <string>
+
+#include <univalue.h>
 
 class CProposalValidator
 {

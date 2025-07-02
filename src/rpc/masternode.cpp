@@ -6,6 +6,7 @@
 #include <evo/assetlocktx.h>
 #include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
+#include <governance/classes.h>
 #include <index/txindex.h>
 #include <node/blockstorage.h>
 #include <node/context.h>
@@ -14,6 +15,7 @@
 #include <masternode/payments.h>
 #include <net.h>
 #include <netbase.h>
+#include <rpc/blockchain.h>
 #include <rpc/server.h>
 #include <rpc/server_util.h>
 #include <rpc/util.h>
@@ -23,50 +25,14 @@
 #include <validation.h>
 #include <wallet/coincontrol.h>
 #include <wallet/rpc/util.h>
-#include <bits/std_abs.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <algorithm>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <string>
-#include <vector>
-
-#include "bitcoin-config.h"
-#include "chain.h"
-#include "coins.h"
-#include "consensus/amount.h"
-#include "consensus/params.h"
-#include "evo/dmn_types.h"
-#include "evo/dmnstate.h"
-#include "evo/netinfo.h"
-#include "evo/specialtx.h"
-#include "interfaces/chain.h"
-#include "key_io.h"
-#include "netaddress.h"
-#include "node/transaction.h"
-#include "prevector.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "protocol.h"
-#include "rpc/protocol.h"
-#include "rpc/request.h"
-#include "script/script.h"
-#include "script/standard.h"
-#include "span.h"
-#include "sync.h"
-#include "tinyformat.h"
-#include "uint256.h"
-#include "util/string.h"
-#include "wallet/coinselection.h"
-
-class CTxMemPool;
 
 #ifdef ENABLE_WALLET
 #include <wallet/spend.h>
 #include <wallet/wallet.h>
 #endif // ENABLE_WALLET
+
+#include <fstream>
+#include <iomanip>
 
 using node::GetTransaction;
 using node::NodeContext;

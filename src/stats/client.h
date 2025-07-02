@@ -9,12 +9,9 @@
 
 #include <random.h>
 #include <sync.h>
-#include <stdint.h>
+
 #include <memory>
 #include <string>
-
-#include "stats/rawsender.h"
-#include "threadsafety.h"
 
 class ArgsManager;
 class RawSender;
