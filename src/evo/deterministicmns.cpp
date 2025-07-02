@@ -85,28 +85,28 @@ UniValue CDeterministicMN::ToJson() const
 bool CDeterministicMNList::IsMNValid(const uint256& proTxHash) const
 {
     auto p = mnMap.find(proTxHash);
-    if (p == mnMap.end()) {
+    if (p == nullptr) {
         return false;
     }
-    return !p->second->pdmnState->IsBanned();
+    return !(*p)->pdmnState->IsBanned();
 }
 
 bool CDeterministicMNList::IsMNPoSeBanned(const uint256& proTxHash) const
 {
     auto p = mnMap.find(proTxHash);
-    if (p == mnMap.end()) {
+    if (p == nullptr) {
         return false;
     }
-    return p->second->pdmnState->IsBanned();
+    return (*p)->pdmnState->IsBanned();
 }
 
 CDeterministicMNCPtr CDeterministicMNList::GetMN(const uint256& proTxHash) const
 {
     auto p = mnMap.find(proTxHash);
-    if (p == mnMap.end()) {
+    if (p == nullptr) {
         return nullptr;
     }
-    return p->second;
+    return *p;
 }
 
 CDeterministicMNCPtr CDeterministicMNList::GetValidMN(const uint256& proTxHash) const
@@ -184,7 +184,7 @@ static bool CompareByLastPaid(const CDeterministicMN* _a, const CDeterministicMN
 
 CDeterministicMNCPtr CDeterministicMNList::GetMNPayee(gsl::not_null<const CBlockIndex*> pindexPrev) const
 {
-    if (mnMap.empty()) {
+    if (mnMap.size() == 0) {
         return nullptr;
     }
 
@@ -423,7 +423,7 @@ void CDeterministicMNList::AddMN(const CDeterministicMNCPtr& dmn, bool fBumpTota
 {
     assert(dmn != nullptr);
 
-    if (mnMap.find(dmn->proTxHash) != mnMap.end()) {
+    if (mnMap.find(dmn->proTxHash)) {
         throw(std::runtime_error(strprintf("%s: Can't add a masternode with a duplicate proTxHash=%s", __func__, dmn->proTxHash.ToString())));
     }
     if (mnInternalIdMap.find(dmn->GetInternalId())) {
@@ -472,8 +472,7 @@ void CDeterministicMNList::AddMN(const CDeterministicMNCPtr& dmn, bool fBumpTota
         }
     }
 
-    mnMap.emplace(dmn->proTxHash, dmn);
-
+    mnMap = mnMap.set(dmn->proTxHash, dmn);
     mnInternalIdMap = mnInternalIdMap.set(dmn->GetInternalId(), dmn->proTxHash);
     m_cached_sml = nullptr;
     if (fBumpTotalCount) {
@@ -545,7 +544,7 @@ void CDeterministicMNList::UpdateMN(const CDeterministicMN& oldDmn, const std::s
     }
 
     dmn->pdmnState = pdmnState;
-    mnMap[oldDmn.proTxHash] = dmn;
+    mnMap = mnMap.set(oldDmn.proTxHash, dmn);
     if (m_cached_sml && oldDmn.to_sml_entry() != dmn->to_sml_entry()) {
         m_cached_sml = nullptr;
     }
@@ -554,10 +553,10 @@ void CDeterministicMNList::UpdateMN(const CDeterministicMN& oldDmn, const std::s
 void CDeterministicMNList::UpdateMN(const uint256& proTxHash, const std::shared_ptr<const CDeterministicMNState>& pdmnState)
 {
     auto oldDmn = mnMap.find(proTxHash);
-    if (oldDmn == mnMap.end()) {
+    if (!oldDmn) {
         throw(std::runtime_error(strprintf("%s: Can't find a masternode with proTxHash=%s", __func__, proTxHash.ToString())));
     }
-    UpdateMN(*oldDmn->second, pdmnState);
+    UpdateMN(**oldDmn, pdmnState);
 }
 
 void CDeterministicMNList::UpdateMN(const CDeterministicMN& oldDmn, const CDeterministicMNStateDiff& stateDiff)
@@ -618,7 +617,7 @@ void CDeterministicMNList::RemoveMN(const uint256& proTxHash)
         }
     }
 
-    mnMap.erase(proTxHash);
+    mnMap = mnMap.erase(proTxHash);
     mnInternalIdMap = mnInternalIdMap.erase(dmn->GetInternalId());
     m_cached_sml = nullptr;
 }
