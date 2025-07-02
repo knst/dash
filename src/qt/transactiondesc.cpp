@@ -2,29 +2,30 @@
 // Copyright (c) 2014-2024 The Dash Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#ifdef HAVE_CONFIG_H
+#include <config/bitcoin-config.h>
+#endif
+
 #include <qt/transactiondesc.h>
+
 #include <qt/bitcoinunits.h>
 #include <qt/guiutil.h>
+#include <qt/paymentserver.h>
 #include <qt/transactionrecord.h>
+
 #include <consensus/consensus.h>
 #include <key_io.h>
 #include <interfaces/node.h>
 #include <interfaces/wallet.h>
+#include <util/system.h>
+#include <validation.h>
 #include <wallet/ismine.h>
-#include <stdint.h>
-#include <qglobal.h>
-#include <qstringbuilder.h>
-#include <string>
-#include <map>
-#include <memory>
-#include <utility>
-#include <vector>
 
-#include "coins.h"
-#include "consensus/amount.h"
-#include "logging.h"
-#include "primitives/transaction.h"
-#include "script/standard.h"
+#include <stdint.h>
+#include <string>
+
+#include <QLatin1String>
 
 using wallet::ISMINE_ALL;
 using wallet::ISMINE_SPENDABLE;

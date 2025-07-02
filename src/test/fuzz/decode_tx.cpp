@@ -6,10 +6,11 @@
 #include <primitives/transaction.h>
 #include <test/fuzz/fuzz.h>
 #include <util/strencodings.h>
-#include <cassert>
-#include <string>
 
-#include "span.h"
+#include <cassert>
+#include <cstdint>
+#include <string>
+#include <vector>
 
 FUZZ_TARGET(decode_tx)
 {

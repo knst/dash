@@ -4,8 +4,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/load.h>
+
+#include <coinjoin/client.h>
 #include <coinjoin/options.h>
 #include <fs.h>
+#include <net.h>
 #include <interfaces/chain.h>
 #include <scheduler.h>
 #include <util/check.h>
@@ -13,25 +16,13 @@
 #include <util/system.h>
 #include <util/translation.h>
 #include <wallet/context.h>
+#include <wallet/spend.h>
 #include <wallet/wallet.h>
 #include <wallet/walletdb.h>
-#include <univalue.h>
-#include <bits/chrono.h>
-#include <system_error>
-#include <memory>
-#include <optional>
-#include <set>
-#include <stdexcept>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "interfaces/coinjoin.h"
-#include "logging.h"
-#include "tinyformat.h"
-#include "util/settings.h"
-#include "wallet/db.h"
-#include "wallet/walletutil.h"
+#include <univalue.h>
+
+#include <system_error>
 
 namespace wallet {
 bool VerifyWallets(WalletContext& context)

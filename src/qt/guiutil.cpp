@@ -4,12 +4,15 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/guiutil.h>
+
 #include <qt/appearancewidget.h>
 #include <qt/bitcoinaddressvalidator.h>
 #include <qt/bitcoingui.h>
 #include <qt/bitcoinunits.h>
+#include <qt/optionsdialog.h>
 #include <qt/qvalidatedlineedit.h>
 #include <qt/sendcoinsrecipient.h>
+
 #include <base58.h>
 #include <chainparams.h>
 #include <fs.h>
@@ -22,67 +25,8 @@
 #include <script/standard.h>
 #include <util/system.h>
 #include <util/time.h>
-#include <QtCore/qobjectdefs.h>
-#include <qabstractbutton.h>
-#include <qabstractitemview.h>
-#include <qboxlayout.h>
-#include <qbuttongroup.h>
-#include <qbytearray.h>
-#include <qclipboard.h>
-#include <qconfig.h>
-#include <qcoreevent.h>
-#include <qdatetime.h>
-#include <qdebug.h>
-#include <qdesktopservices.h>
-#include <qdialog.h>
-#include <qdialogbuttonbox.h>
-#include <qdir.h>
-#include <qevent.h>
-#include <qfile.h>
-#include <qfiledialog.h>
-#include <qfileinfo.h>
-#include <qfontdatabase.h>
-#include <qfontmetrics.h>
-#include <qframe.h>
-#include <qguiapplication.h>
-#include <qitemselectionmodel.h>
-#include <qjsonobject.h>
-#include <qjsonvalue.h>
-#include <qkeysequence.h>
-#include <qlocale.h>
-#include <qmenu.h>
-#include <qpair.h>
-#include <qpixmap.h>
-#include <qplugin.h>
-#include <qpluginloader.h>
-#include <qpoint.h>
-#include <qpointer.h>
-#include <qprogressdialog.h>
-#include <qregularexpression.h>
-#include <qrgb.h>
-#include <qscreen.h>
-#include <qsettings.h>
-#include <qshortcut.h>
-#include <qstandardpaths.h>
-#include <qstringbuilder.h>
-#include <qstringliteral.h>
-#include <qstyle.h>
-#include <qtextdocument.h>
-#include <qthread.h>
-#include <qurl.h>
-#include <qurlquery.h>
-#include <qvariant.h>
-#include <qvector.h>
-#include <qwidget.h>
-#include <stdlib.h>
+
 #include <cmath>
-#include <algorithm>
-#include <compare>
-#include <map>
-#include <memory>
-#include <ratio>
-#include <stdexcept>
-#include <tuple>
 
 #ifdef WIN32
 #include <shellapi.h>
@@ -90,23 +34,52 @@
 #include <shlwapi.h>
 #endif
 
+#include <QAbstractButton>
+#include <QAbstractItemView>
+#include <QApplication>
+#include <QButtonGroup>
+#include <QClipboard>
+#include <QDateTime>
+#include <QDebug>
+#include <QDesktopServices>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QDoubleValidator>
+#include <QFileDialog>
+#include <QFont>
+#include <QFontDatabase>
+#include <QFontMetrics>
+#include <QGuiApplication>
+#include <QJsonObject>
+#include <QKeyEvent>
+#include <QKeySequence>
+#include <QLatin1String>
+#include <QLineEdit>
+#include <QList>
+#include <QLocale>
+#include <QMenu>
+#include <QMouseEvent>
+#include <QPluginLoader>
+#include <QPointer>
+#include <QProgressDialog>
+#include <QRegularExpression>
+#include <QScreen>
+#include <QSettings>
+#include <QShortcut>
+#include <QSize>
+#include <QString>
+#include <QTextDocument> // for Qt::mightBeRichText
+#include <QThread>
+#include <QTimer>
+#include <QUrlQuery>
+#include <QVBoxLayout>
+#include <QtGlobal>
+
+#include <chrono>
 #include <exception>
 #include <fstream>
 #include <string>
 #include <vector>
-
-#include "bitcoin-config.h"
-#include "chainparamsbase.h"
-#include "compat/compat.h"
-#include "consensus/amount.h"
-#include "logging.h"
-#include "netaddress.h"
-#include "node/connection_types.h"
-#include "policy/feerate.h"
-#include "qt/guiconstants.h"
-#include "span.h"
-#include "sync.h"
-#include "tinyformat.h"
 
 #if defined(Q_OS_MAC)
 

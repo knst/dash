@@ -5,13 +5,10 @@
 #include <compat/compat.h>
 #include <netaddress.h>
 #include <test/fuzz/FuzzedDataProvider.h>
-#include <assert.h>
-#include <string.h>
+#include <util/strencodings.h>
+
 #include <cstdint>
 #include <vector>
-#include <algorithm>
-
-#include "span.h"
 
 CNetAddr ConsumeNetAddr(FuzzedDataProvider& fuzzed_data_provider) noexcept
 {

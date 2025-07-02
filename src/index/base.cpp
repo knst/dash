@@ -12,20 +12,6 @@
 #include <util/translation.h>
 #include <validation.h>
 #include <warnings.h>
-#include <assert.h>
-#include <bits/chrono.h>
-#include <stdint.h>
-#include <compare>
-#include <vector>
-
-#include "dbwrapper.h"
-#include "logging.h"
-#include "primitives/block.h"
-#include "sync.h"
-#include "threadinterrupt.h"
-#include "uint256.h"
-#include "util/system.h"
-#include "validationinterface.h"
 
 using node::PruneLockInfo;
 using node::ReadBlockFromDisk;

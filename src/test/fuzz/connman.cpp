@@ -2,6 +2,9 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <addrman.h>
+#include <chainparams.h>
+#include <chainparamsbase.h>
 #include <net.h>
 #include <netaddress.h>
 #include <protocol.h>
@@ -10,20 +13,11 @@
 #include <test/fuzz/util.h>
 #include <test/fuzz/util/net.h>
 #include <test/util/setup_common.h>
-#include <assert.h>
-#include <stddef.h>
+#include <util/system.h>
+#include <util/translation.h>
+
 #include <cstdint>
 #include <vector>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <string>
-#include <utility>
-
-#include "netbase.h"
-#include "node/eviction.h"
-#include "test/util/net.h"
-#include "util/time.h"
 
 namespace {
 const TestingSetup* g_setup;

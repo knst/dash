@@ -16,12 +16,6 @@
 #include <hash_x11.h>
 #include <random.h>
 #include <uint256.h>
-#include <stdint.h>
-#include <algorithm>
-#include <vector>
-
-#include "nanobench.h"
-#include "span.h"
 
 /* Number of bytes to hash per iteration */
 static const uint64_t BUFFER_SIZE = 1000*1000;

@@ -5,11 +5,8 @@
 
 #include <qt/bitcoinaddressvalidator.h>
 #include <qt/guiutil.h>
-#include <key_io.h>
-#include <qchar.h>
-#include <qglobal.h>
 
-class QObject;
+#include <key_io.h>
 
 /* Base58 characters are:
      "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"

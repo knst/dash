@@ -13,16 +13,10 @@
 #include <uint256.h>
 #include <util/expected.h>
 #include <util/time.h>
-#include <assert.h>
-#include <bits/chrono.h>
-#include <stddef.h>
+
 #include <cstdint>
 #include <limits>
 #include <string>
-#include <ios>
-#include <optional>
-#include <utility>
-#include <vector>
 
 /** Message header.
  * (4) message start.

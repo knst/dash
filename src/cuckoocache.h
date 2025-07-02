@@ -6,7 +6,7 @@
 #define BITCOIN_CUCKOOCACHE_H
 
 #include <util/fastrange.h>
-#include <stdint.h>
+
 #include <array>
 #include <algorithm> // std::find
 #include <atomic>

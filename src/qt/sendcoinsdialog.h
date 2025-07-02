@@ -6,29 +6,12 @@
 #define BITCOIN_QT_SENDCOINSDIALOG_H
 
 #include <qt/walletmodel.h>
-#include <qdialog.h>
-#include <qglobal.h>
-#include <qmessagebox.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
-#include <qtimer.h>
+
 #include <QDialog>
 #include <QMessageBox>
 #include <QShowEvent>
 #include <QString>
 #include <QTimer>
-#include <memory>
-
-class QAbstractButton;
-class QDateTime;
-class QObject;
-class QWidget;
-class WalletModelTransaction;
-class uint256;
-namespace interfaces {
-struct WalletBalances;
-}  // namespace interfaces
-template <class T> class QList;
 
 static const int MAX_SEND_POPUP_ENTRIES = 10;
 
@@ -36,7 +19,6 @@ class ClientModel;
 class SendCoinsEntry;
 class SendCoinsRecipient;
 enum class SynchronizationState;
-
 namespace wallet {
 class CCoinControl;
 } // namespace wallet
@@ -47,7 +29,6 @@ namespace Ui {
 
 QT_BEGIN_NAMESPACE
 class QUrl;
-
 QT_END_NAMESPACE
 
 /** Dialog for sending bitcoins */

@@ -5,16 +5,16 @@
 
 #include <span.h>
 #include <util/strencodings.h>
+
 #include <algorithm>
 #include <array>
 #include <cassert>
 #include <cstring>
 #include <limits>
 #include <optional>
+#include <ostream>
 #include <string>
 #include <vector>
-#include <compare>
-#include <sstream>
 
 static const std::string CHARS_ALPHA_NUM = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 

@@ -3,25 +3,12 @@
 // file COPYING or https://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/bench.h>
+#include <node/context.h>
 #include <random.h>
 #include <test/util/setup_common.h>
 #include <util/translation.h>
 #include <wallet/context.h>
 #include <wallet/wallet.h>
-#include <assert.h>
-#include <memory>
-#include <optional>
-#include <vector>
-
-#include "bitcoin-config.h"
-#include "fs.h"
-#include "interfaces/chain.h"
-#include "nanobench.h"
-#include "support/allocators/secure.h"
-#include "tinyformat.h"
-#include "uint256.h"
-#include "wallet/db.h"
-#include "wallet/walletutil.h"
 
 namespace wallet {
 static void WalletCreate(benchmark::Bench& bench, bool encrypted)

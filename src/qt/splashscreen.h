@@ -5,23 +5,11 @@
 #ifndef BITCOIN_QT_SPLASHSCREEN_H
 #define BITCOIN_QT_SPLASHSCREEN_H
 
-#include <qcolor.h>
-#include <qobjectdefs.h>
-#include <qpixmap.h>
-#include <qstring.h>
-#include <qwidget.h>
 #include <QWidget>
-#include <memory>
-#include <list>
 
-#include "interfaces/handler.h"
-#include "interfaces/wallet.h"
+#include <memory>
 
 class NetworkStyle;
-class QCloseEvent;
-class QEvent;
-class QObject;
-class QPaintEvent;
 
 namespace interfaces {
 class Handler;

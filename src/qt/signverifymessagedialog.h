@@ -5,21 +5,12 @@
 #ifndef BITCOIN_QT_SIGNVERIFYMESSAGEDIALOG_H
 #define BITCOIN_QT_SIGNVERIFYMESSAGEDIALOG_H
 
-#include <qdialog.h>
-#include <qglobal.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
 #include <QDialog>
 
 class WalletModel;
-class QEvent;
-class QObject;
-class QShowEvent;
-class QWidget;
 
 QT_BEGIN_NAMESPACE
 class QButtonGroup;
-
 QT_END_NAMESPACE
 
 namespace Ui {

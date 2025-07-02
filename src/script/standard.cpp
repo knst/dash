@@ -4,19 +4,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <script/standard.h>
+
 #include <pubkey.h>
 #include <script/script.h>
-#include <assert.h>
-#include <string>
-#include <algorithm>
-#include <utility>
 
-#include "hash.h"
-#include "prevector.h"
-#include "script/interpreter.h"
-#include "span.h"
-#include "uint256.h"
-#include "util/hash_type.h"
+#include <string>
 
 typedef std::vector<unsigned char> valtype;
 

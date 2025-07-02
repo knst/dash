@@ -5,7 +5,6 @@
 #ifndef BITCOIN_TEST_UTIL_MINING_H
 #define BITCOIN_TEST_UTIL_MINING_H
 
-#include <stddef.h>
 #include <memory>
 #include <string>
 #include <vector>
@@ -14,7 +13,6 @@ class CBlock;
 class CChainParams;
 class CScript;
 class CTxIn;
-
 namespace node {
 struct NodeContext;
 } // namespace node

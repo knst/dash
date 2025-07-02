@@ -3,12 +3,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/walletutil.h>
-#include <util/system.h>
-#include <array>
-#include <type_traits>
-#include <vector>
 
-#include "fs.h"
+#include <logging.h>
+#include <util/system.h>
 
 namespace wallet {
 fs::path GetWalletDir()

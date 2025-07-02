@@ -8,11 +8,14 @@
 #endif
 
 #include <qt/bitcoin.h>
+
 #include <chainparams.h>
 #include <fs.h>
 #include <init.h>
+#include <interfaces/handler.h>
 #include <interfaces/init.h>
 #include <interfaces/node.h>
+#include <net.h>
 #include <node/context.h>
 #include <node/interface_ui.h>
 #include <noui.h>
@@ -26,40 +29,14 @@
 #include <qt/optionsmodel.h>
 #include <qt/splashscreen.h>
 #include <qt/utilitydialog.h>
+#include <qt/winshutdownmonitor.h>
 #include <stacktraces.h>
+#include <uint256.h>
 #include <util/string.h>
 #include <util/system.h>
 #include <util/threadnames.h>
 #include <util/translation.h>
-#include <QtCore/qglobal.h>
-#include <QtCore/qobjectdefs.h>
-#include <bits/chrono.h>
-#include <qconfig.h>
-#include <qcoreapplication.h>
-#include <qcoreevent.h>
-#include <qdebug.h>
-#include <qfont.h>
-#include <qglobal.h>
-#include <qguiapplication.h>
-#include <qlibraryinfo.h>
-#include <qlist.h>
-#include <qlocale.h>
-#include <qmessagebox.h>
-#include <qmetatype.h>
-#include <qnamespace.h>
-#include <qobject.h>
-#include <qplugin.h>
-#include <qscopedpointer.h>
-#include <qsettings.h>
-#include <qstringbuilder.h>
-#include <qstringliteral.h>
-#include <qthread.h>
-#include <qtimer.h>
-#include <qtranslator.h>
-#include <qvariant.h>
-#include <qwidget.h>
-#include <qwindow.h>
-#include <stdlib.h>
+#include <validation.h>
 
 #ifdef ENABLE_WALLET
 #include <qt/paymentserver.h>
@@ -68,23 +45,23 @@
 #endif // ENABLE_WALLET
 
 #include <boost/signals2/connection.hpp>
+#include <chrono>
 #include <memory>
-#include <algorithm>
-#include <exception>
-#include <functional>
-#include <iostream>
-#include <string>
-#include <vector>
 
-#include "consensus/amount.h"
-#include "logging.h"
-#include "qt/bitcoinunits.h"
-#include "tinyformat.h"
-
-class uint256;
-enum class SynchronizationState;
+#include <QApplication>
+#include <QDebug>
+#include <QLatin1String>
+#include <QLibraryInfo>
+#include <QLocale>
+#include <QMessageBox>
+#include <QSettings>
+#include <QThread>
+#include <QTimer>
+#include <QTranslator>
+#include <QWindow>
 
 #if defined(QT_STATIC)
+#include <QtPlugin>
 #if defined(QT_QPA_PLATFORM_XCB)
 Q_IMPORT_PLUGIN(QXcbIntegrationPlugin);
 #elif defined(QT_QPA_PLATFORM_WINDOWS)

@@ -6,7 +6,6 @@
 #define BITCOIN_ZMQ_ZMQABSTRACTNOTIFIER_H
 
 
-#include <stdint.h>
 #include <memory>
 #include <string>
 

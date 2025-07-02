@@ -6,8 +6,10 @@
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util/net.h>
+
 #include <cassert>
 #include <cstdint>
+#include <vector>
 
 FUZZ_TARGET(netaddress)
 {

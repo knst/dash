@@ -9,22 +9,8 @@
 #include <wallet/ismine.h>
 #include <wallet/transaction.h>
 #include <wallet/wallet.h>
-#include <list>
-#include <map>
-#include <set>
-
-#include "script/standard.h"
-#include "threadsafety.h"
-
-class CScript;
-class CTransaction;
-class CTxIn;
-class CTxOut;
-class uint256;
 
 namespace wallet {
-class CWalletTx;
-
 isminetype InputIsMine(const CWallet& wallet, const CTxIn& txin) EXCLUSIVE_LOCKS_REQUIRED(wallet.cs_wallet);
 
 /** Returns whether all of the inputs match the filter */

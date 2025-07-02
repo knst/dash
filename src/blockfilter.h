@@ -6,21 +6,17 @@
 #define BITCOIN_BLOCKFILTER_H
 
 #include <stdint.h>
+#include <string>
+#include <set>
+#include <unordered_set>
+#include <vector>
+
 #include <attributes.h>
 #include <primitives/block.h>
 #include <serialize.h>
 #include <uint256.h>
 #include <undo.h>
 #include <util/bytevectorhash.h>
-#include <stddef.h>
-#include <string>
-#include <set>
-#include <unordered_set>
-#include <vector>
-#include <ios>
-#include <utility>
-
-class CBlockUndo;
 
 /**
  * This implements a Golomb-coded set as defined in BIP 158. It is a

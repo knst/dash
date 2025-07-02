@@ -4,19 +4,15 @@
 
 #include <qt/receiverequestdialog.h>
 #include <qt/forms/ui_receiverequestdialog.h>
+
 #include <qt/bitcoinunits.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/qrimagewidget.h>
 #include <qt/walletmodel.h>
-#include <QtCore/qglobal.h>
-#include <QtCore/qobjectdefs.h>
-#include <qlabel.h>
-#include <qpushbutton.h>
 
-#include "qt/sendcoinsrecipient.h"
-
-class QWidget;
+#include <QDialog>
+#include <QString>
 
 #if defined(HAVE_CONFIG_H)
 #include <config/bitcoin-config.h> /* for USE_QRCODE */

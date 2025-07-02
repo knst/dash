@@ -8,12 +8,9 @@
 
 #include <primitives/transaction.h> // CTransaction(Ref)
 #include <sync.h>
-#include <stddef.h>
-#include <stdint.h>
+
 #include <functional>
 #include <memory>
-
-#include "threadsafety.h"
 
 extern RecursiveMutex cs_main;
 class BlockValidationState;
@@ -207,7 +204,6 @@ protected:
 };
 
 struct MainSignalsInstance;
-
 class CMainSignals {
 private:
     std::unique_ptr<MainSignalsInstance> m_internals;

@@ -10,13 +10,8 @@
 #include <primitives/transaction.h>
 #include <util/error.h>
 
-#include "consensus/amount.h"
-
 class CBlockIndex;
 class CTxMemPool;
-class uint256;
-struct bilingual_str;
-
 namespace Consensus {
 struct Params;
 }

@@ -5,13 +5,6 @@
 #include <coins.h>
 #include <script/signingprovider.h>
 #include <test/util/transaction_utils.h>
-#include <algorithm>
-
-#include "key.h"
-#include "primitives/transaction.h"
-#include "script/script.h"
-#include "script/standard.h"
-#include "uint256.h"
 
 CMutableTransaction BuildCreditingTransaction(const CScript& scriptPubKey, int nValue)
 {

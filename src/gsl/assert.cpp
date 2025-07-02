@@ -17,13 +17,8 @@
 
 #include <gsl/assert.h>
 #include <logging.h>
+
 #include <sstream>
-#include <exception>
-#include <iostream>
-#include <string>
-
-#include "source_location.h"
-
 namespace gsl
 {
 namespace details

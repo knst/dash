@@ -12,18 +12,8 @@
 #include <primitives/block.h>
 #include <sync.h>
 #include <uint256.h>
-#include <assert.h>
-#include <stdint.h>
+
 #include <vector>
-#include <algorithm>
-#include <string>
-
-#include "serialize.h"
-#include "threadsafety.h"
-
-namespace Consensus {
-struct Params;
-}  // namespace Consensus
 
 /**
  * Maximum amount of time that a block timestamp is allowed to exceed the

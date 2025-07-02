@@ -8,20 +8,15 @@
 #include <primitives/block.h>
 #include <util/system.h>
 #include <versionbits.h>
+
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
-#include <assert.h>
-#include <stddef.h>
+#include <test/fuzz/util.h>
+
 #include <cstdint>
 #include <limits>
 #include <memory>
 #include <vector>
-#include <algorithm>
-#include <functional>
-#include <utility>
-
-#include "chainparamsbase.h"
-#include "llmq/params.h"
 
 namespace {
 class TestConditionChecker : public AbstractThresholdConditionChecker

@@ -9,6 +9,7 @@
 
 #include <qt/sendcoinsdialog.h>
 #include <qt/forms/ui_sendcoinsdialog.h>
+
 #include <qt/addresstablemodel.h>
 #include <qt/bitcoinunits.h>
 #include <qt/clientmodel.h>
@@ -16,40 +17,18 @@
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/sendcoinsentry.h>
+
 #include <chainparams.h>
+#include <interfaces/node.h>
 #include <key_io.h>
 #include <node/interface_ui.h>
 #include <policy/fees.h>
+#include <txmempool.h>
 #include <validation.h>
 #include <wallet/coincontrol.h>
+#include <wallet/fees.h>
 #include <wallet/wallet.h>
-#include <QtCore/qglobal.h>
-#include <QtCore/qobjectdefs.h>
-#include <assert.h>
-#include <bits/chrono.h>
-#include <qabstractbutton.h>
-#include <qaction.h>
-#include <qboxlayout.h>
-#include <qbuttongroup.h>
-#include <qbytearray.h>
-#include <qcheckbox.h>
-#include <qcombobox.h>
-#include <qframe.h>
-#include <qlabel.h>
-#include <qlayoutitem.h>
-#include <qlist.h>
-#include <qnamespace.h>
-#include <qobject.h>
-#include <qpair.h>
-#include <qpushbutton.h>
-#include <qradiobutton.h>
-#include <qscrollarea.h>
-#include <qscrollbar.h>
-#include <qsettings.h>
-#include <qstringbuilder.h>
-#include <qstringlist.h>
-#include <qvariant.h>
-#include <qwidget.h>
+#include <chrono>
 
 using wallet::CCoinControl;
 using wallet::DEFAULT_PAY_TX_FEE;
@@ -57,33 +36,11 @@ using wallet::DEFAULT_PAY_TX_FEE;
 #include <array>
 #include <fstream>
 #include <memory>
-#include <algorithm>
-#include <optional>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "consensus/amount.h"
-#include "consensus/params.h"
-#include "interfaces/wallet.h"
-#include "policy/feerate.h"
-#include "primitives/transaction.h"
-#include "psbt.h"
-#include "qt/bitcoinamountfield.h"
-#include "qt/qvalidatedlineedit.h"
-#include "qt/sendcoinsrecipient.h"
-#include "qt/walletmodel.h"
-#include "qt/walletmodeltransaction.h"
-#include "script/interpreter.h"
-#include "script/standard.h"
-#include "serialize.h"
-#include "streams.h"
-#include "util/error.h"
-#include "util/strencodings.h"
-#include "util/system.h"
-#include "version.h"
-
-class QDateTime;
+#include <QFontMetrics>
+#include <QScrollBar>
+#include <QSettings>
+#include <QTextDocument>
 
 #define SEND_CONFIRM_DELAY   3
 

@@ -5,13 +5,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <rpc/client.h>
-#include <stddef.h>
-#include <set>
-#include <stdexcept>
-#include <utility>
+#include <util/system.h>
 
-#include "bitcoin-config.h"
-#include "univalue.h"
+#include <set>
 
 class CRPCConvertParam
 {

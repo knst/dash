@@ -3,23 +3,17 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <dbwrapper.h>
+
+#include <memory>
 #include <random.h>
+
 #include <leveldb/cache.h>
 #include <leveldb/env.h>
 #include <leveldb/filter_policy.h>
 #include <leveldb/helpers/memenv/memenv.h>
 #include <stdint.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <memory>
 #include <algorithm>
 #include <optional>
-
-#include "fs.h"
-#include "leveldb/db.h"
-#include "span.h"
-#include "util/strencodings.h"
-#include "util/system.h"
 
 class CBitcoinLevelDBLogger : public leveldb::Logger {
 public:

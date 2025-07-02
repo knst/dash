@@ -6,12 +6,7 @@
 #define BITCOIN_QT_COINCONTROLDIALOG_H
 
 #include <consensus/amount.h>
-#include <qdialog.h>
-#include <qnamespace.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
-#include <qstringbuilder.h>
-#include <qtreewidget.h>
+
 #include <QAbstractButton>
 #include <QAction>
 #include <QDialog>
@@ -22,13 +17,6 @@
 #include <QTreeWidgetItem>
 
 class WalletModel;
-class QAbstractButton;
-class QAction;
-class QMenu;
-class QObject;
-class QPoint;
-class QWidget;
-template <typename T> class QList;
 
 namespace wallet {
 class CCoinControl;

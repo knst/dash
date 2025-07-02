@@ -5,6 +5,8 @@
 #include <addrdb.h>
 #include <addrman.h>
 #include <addrman_impl.h>
+#include <chainparams.h>
+#include <merkleblock.h>
 #include <random.h>
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
@@ -14,35 +16,12 @@
 #include <time.h>
 #include <util/asmap.h>
 #include <util/system.h>
-#include <bits/chrono.h>
-#include <netinet/in.h>
+
 #include <cassert>
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <vector>
-#include <algorithm>
-#include <exception>
-#include <functional>
-#include <ios>
-#include <map>
-#include <memory>
-#include <tuple>
-#include <unordered_map>
-#include <unordered_set>
-
-#include "chainparamsbase.h"
-#include "crypto/siphash.h"
-#include "netaddress.h"
-#include "netgroup.h"
-#include "protocol.h"
-#include "serialize.h"
-#include "span.h"
-#include "streams.h"
-#include "sync.h"
-#include "test/util/net.h"
-#include "threadsafety.h"
-#include "util/time.h"
-#include "version.h"
 
 namespace {
 const BasicTestingSetup* g_setup;

@@ -5,8 +5,10 @@
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
-#include <assert.h>
+
 #include <cstdint>
+#include <string>
+#include <vector>
 
 namespace {
 template <typename T>

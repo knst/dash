@@ -7,7 +7,7 @@
 
 #include <net.h>
 #include <sync.h>
-#include <stdint.h>
+
 #include <memory>
 #include <tuple>
 
@@ -54,7 +54,6 @@ class TxReconciliationTracker
 {
 private:
     class Impl;
-
     const std::unique_ptr<Impl> m_impl;
 
 public:

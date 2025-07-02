@@ -1,7 +1,13 @@
 // Copyright (c) 2015-2021 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#if defined(HAVE_CONFIG_H)
+#include <config/bitcoin-config.h>
+#endif
+
 #include <httpserver.h>
+
 #include <chainparamsbase.h>
 #include <netbase.h>
 #include <node/interface_ui.h>
@@ -12,35 +18,23 @@
 #include <util/system.h>
 #include <util/threadnames.h>
 #include <util/translation.h>
+
+#include <cstdio>
+#include <deque>
+#include <string>
+
+#include <sys/types.h>
+
 #include <event2/thread.h>
 #include <event2/buffer.h>
 #include <event2/bufferevent.h>
 #include <event2/util.h>
+#include <event2/keyvalq_struct.h>
+
 #include <support/events.h>
-#include <assert.h>
-#include <event2/event.h>
-#include <event2/http.h>
-#include <stdint.h>
-#include <cstdio>
-#include <deque>
-#include <string>
+
 #include <thread>
 #include <condition_variable>
-#include <algorithm>
-#include <memory>
-#include <optional>
-#include <vector>
-
-#include "logging.h"
-#include "netaddress.h"
-#include "serialize.h"
-#include "threadsafety.h"
-#include "tinyformat.h"
-#include "util/string.h"
-
-struct bufferevent;
-struct evhttp_bound_socket;
-struct evhttp_connection;
 
 /** Maximum size of http request (request line + headers) */
 static const size_t MAX_HEADERS_SIZE = 8192;

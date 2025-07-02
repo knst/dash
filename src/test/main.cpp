@@ -7,13 +7,12 @@
  */
 #define BOOST_TEST_MODULE Dash Core Test Suite
 
-#include <boost/test/impl/framework.ipp>
-#include <boost/test/tree/test_unit.hpp>
+#include <boost/test/included/unit_test.hpp>
+
+#include <test/util/setup_common.h>
+
 #include <functional>
 #include <iostream>
-#include <algorithm>
-#include <string>
-#include <vector>
 
 /** Redirect debug log to unit_test.log files */
 const std::function<void(const std::string&)> G_TEST_LOG_FUN = [](const std::string& s) {

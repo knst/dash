@@ -3,21 +3,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <coins.h>
+
 #include <consensus/consensus.h>
 #include <logging.h>
+#include <random.h>
 #include <util/trace.h>
 #include <version.h>
-#include <cstdlib>
-#include <iterator>
-#include <new>
-#include <tuple>
-
-#include "memusage.h"
-#include "primitives/transaction.h"
-#include "serialize.h"
-#include "sys/sdt.h"
-#include "uint256.h"
-#include "util/hasher.h"
 
 bool CCoinsView::GetCoin(const COutPoint &outpoint, Coin &coin) const { return false; }
 uint256 CCoinsView::GetBestBlock() const { return uint256(); }

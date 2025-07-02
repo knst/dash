@@ -10,19 +10,6 @@
 #include <interfaces/wallet.h>
 #include <node/context.h>
 #include <test/util/setup_common.h>
-#include <map>
-#include <memory>
-#include <string>
-
-#include "chainparamsbase.h"
-#include "fs.h"
-
-namespace interfaces {
-class WalletLoader;
-namespace CoinJoin {
-class Loader;
-}  // namespace CoinJoin
-}  // namespace interfaces
 
 namespace wallet {
 struct InitWalletDirTestingSetup: public BasicTestingSetup {

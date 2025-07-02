@@ -13,17 +13,11 @@
 #include <primitives/block.h>
 #include <protocol.h>
 #include <util/hash_type.h>
-#include <stdint.h>
+
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
-#include <map>
-#include <utility>
-
-#include "uint256.h"
-
-class ArgsManager;
 
 typedef std::map<int, uint256> MapCheckpoints;
 

@@ -12,18 +12,9 @@
 #include <streams.h>
 #include <txmempool.h>
 #include <validation.h>
-#include <assert.h>
-#include <boost/multi_index/detail/hash_index_iterator.hpp>
-#include <boost/multi_index/detail/safe_mode.hpp>
-#include <boost/multi_index/ordered_index.hpp>
-#include <boost/operators.hpp>
-#include <unordered_map>
-#include <algorithm>
+#include <util/system.h>
 
-#include "logging.h"
-#include "primitives/block.h"
-#include "sync.h"
-#include "version.h"
+#include <unordered_map>
 
 #define MIN_TRANSACTION_SIZE (::GetSerializeSize(CMutableTransaction(), PROTOCOL_VERSION))
 

@@ -5,15 +5,16 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/walletdb.h>
+
 #include <key_io.h>
 #include <fs.h>
 #include <governance/common.h>
+#include <protocol.h>
 #include <serialize.h>
 #include <sync.h>
 #include <util/system.h>
 #include <util/time.h>
 #include <util/translation.h>
-#include <assert.h>
 #ifdef USE_BDB
 #include <wallet/bdb.h>
 #endif
@@ -22,39 +23,11 @@
 #endif
 #include <wallet/hdchain.h>
 #include <wallet/wallet.h>
+#include <validation.h>
+
 #include <atomic>
 #include <optional>
 #include <string>
-#include <algorithm>
-#include <compare>
-#include <exception>
-#include <ios>
-#include <map>
-#include <unordered_map>
-#include <utility>
-#include <variant>
-
-#include "bitcoin-config.h"
-#include "clientversion.h"
-#include "hash.h"
-#include "key.h"
-#include "logging.h"
-#include "outputtype.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "pubkey.h"
-#include "script/descriptor.h"
-#include "script/script.h"
-#include "script/standard.h"
-#include "streams.h"
-#include "threadsafety.h"
-#include "tinyformat.h"
-#include "uint256.h"
-#include "wallet/crypter.h"
-#include "wallet/db.h"
-#include "wallet/scriptpubkeyman.h"
-#include "wallet/transaction.h"
-#include "wallet/walletutil.h"
 
 namespace wallet {
 namespace DBKeys {

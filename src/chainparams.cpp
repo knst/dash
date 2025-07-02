@@ -5,35 +5,19 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <chainparams.h>
+
 #include <chainparamsseeds.h>
 #include <consensus/merkle.h>
 #include <deploymentinfo.h>
 #include <llmq/params.h>
+#include <util/ranges.h>
 #include <util/system.h>
 #include <util/underlying.h>
 #include <versionbits.h>
-#include <arith_uint256.h>
-#include <assert.h>
-#include <string.h>
-#include <algorithm>
-#include <array>
-#include <functional>
-#include <iterator>
-#include <limits>
-#include <ranges>
-#include <stdexcept>
-#include <string_view>
 
-#include "chainparamsbase.h"
-#include "consensus/amount.h"
-#include "consensus/params.h"
-#include "logging.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "script/script.h"
-#include "tinyformat.h"
-#include "util/strencodings.h"
-#include "util/string.h"
+#include <arith_uint256.h>
+
+#include <assert.h>
 
 static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesisOutputScript, uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
 {

@@ -2,14 +2,15 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <consensus/validation.h>
 #include <core_memusage.h>
+#include <policy/policy.h>
 #include <primitives/transaction.h>
 #include <streams.h>
 #include <test/fuzz/fuzz.h>
 #include <version.h>
-#include <ios>
 
-#include "serialize.h"
+#include <cassert>
 
 FUZZ_TARGET(tx_in)
 {

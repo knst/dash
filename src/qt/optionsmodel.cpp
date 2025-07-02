@@ -8,34 +8,28 @@
 #endif
 
 #include <qt/optionsmodel.h>
+
 #include <qt/bitcoinunits.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
+
 #include <interfaces/node.h>
 #include <mapport.h>
 #include <net.h>
+#include <netbase.h>
 #include <txdb.h>       // for -dbcache defaults
 #include <validation.h> // For DEFAULT_SCRIPTCHECK_THREADS
 #include <util/string.h>
-#include <QtCore/qglobal.h>
-#include <qchar.h>
-#include <qdebug.h>
-#include <qfont.h>
-#include <qglobal.h>
-#include <qsettings.h>
-#include <qstringbuilder.h>
-#include <qstringlist.h>
-#include <vector>
-
-#include "clientversion.h"
-#include "fs.h"
-#include "util/system.h"
-
-class QObject;
 
 #ifdef ENABLE_WALLET
 #include <coinjoin/options.h>
 #endif
+
+#include <QDebug>
+#include <QLatin1Char>
+#include <QSettings>
+#include <QStringList>
+#include <QVariant>
 
 const char *DEFAULT_GUI_PROXY_HOST = "127.0.0.1";
 

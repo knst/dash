@@ -3,8 +3,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/transactionoverviewwidget.h>
+
 #include <qt/transactiontablemodel.h>
-#include <qsizepolicy.h>
+
+#include <QListView>
+#include <QSize>
+#include <QSizePolicy>
 
 TransactionOverviewWidget::TransactionOverviewWidget(QWidget* parent)
     : QListView(parent) {}

@@ -4,14 +4,8 @@
 
 #include <test/util/setup_common.h>
 #include <test/util/xoroshiro128plusplus.h>
-#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
-#include <boost/preprocessor/control/iif.hpp>
-#include <boost/preprocessor/logical/compl.hpp>
-#include <boost/test/tools/assertion.hpp>
-#include <boost/test/tools/interface.hpp>
-#include <boost/test/unit_test_suite.hpp>
-#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
-#include <boost/test/utils/lazy_ostream.hpp>
+
+#include <boost/test/unit_test.hpp>
 
 BOOST_FIXTURE_TEST_SUITE(xoroshiro128plusplus_tests, BasicTestingSetup)
 

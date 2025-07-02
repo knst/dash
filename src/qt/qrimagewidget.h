@@ -5,18 +5,8 @@
 #ifndef BITCOIN_QT_QRIMAGEWIDGET_H
 #define BITCOIN_QT_QRIMAGEWIDGET_H
 
-#include <qglobal.h>
-#include <qimage.h>
-#include <qlabel.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
 #include <QImage>
 #include <QLabel>
-
-class QContextMenuEvent;
-class QMouseEvent;
-class QObject;
-class QWidget;
 
 /* Maximum allowed URI length */
 static const int MAX_URI_LENGTH = 255;
@@ -27,7 +17,6 @@ static constexpr int QR_IMAGE_MARGIN = 20;
 
 QT_BEGIN_NAMESPACE
 class QMenu;
-
 QT_END_NAMESPACE
 
 /* Label widget for QR code. This image can be dragged, dropped, copied and saved

@@ -3,16 +3,14 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/bench.h>
+
 #include <key.h>
 #include <pubkey.h>
 #include <random.h>
 #include <span.h>
+
 #include <array>
 #include <cstddef>
-#include <algorithm>
-#include <memory>
-
-#include "nanobench.h"
 
 static void BIP324_ECDH(benchmark::Bench& bench)
 {

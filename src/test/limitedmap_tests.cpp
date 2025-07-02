@@ -3,17 +3,10 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <limitedmap.h>
+
 #include <test/util/setup_common.h>
-#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
-#include <boost/preprocessor/control/iif.hpp>
-#include <boost/preprocessor/logical/compl.hpp>
-#include <boost/preprocessor/logical/limits/bool_256.hpp>
-#include <boost/test/tools/old/interface.hpp>
-#include <boost/test/unit_test_suite.hpp>
-#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
-#include <boost/test/utils/lazy_ostream.hpp>
-#include <unordered_map>
-#include <utility>
+
+#include <boost/test/unit_test.hpp>
 
 BOOST_FIXTURE_TEST_SUITE(limitedmap_tests, BasicTestingSetup)
 

@@ -9,14 +9,10 @@
 #include <test/fuzz/util.h>
 #include <test/util/poolresourcetester.h>
 #include <test/util/xoroshiro128plusplus.h>
-#include <assert.h>
+
 #include <cstdint>
+#include <tuple>
 #include <vector>
-#include <algorithm>
-#include <cstddef>
-#include <cstring>
-#include <list>
-#include <utility>
 
 namespace {
 

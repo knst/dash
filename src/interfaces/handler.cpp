@@ -3,6 +3,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <interfaces/handler.h>
+
+#include <util/system.h>
+
 #include <boost/signals2/connection.hpp>
 #include <memory>
 #include <utility>

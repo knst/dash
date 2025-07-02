@@ -5,12 +5,6 @@
 #ifndef BITCOIN_QT_WALLETFRAME_H
 #define BITCOIN_QT_WALLETFRAME_H
 
-#include <qframe.h>
-#include <qglobal.h>
-#include <qmap.h>
-#include <qobjectdefs.h>
-#include <qsize.h>
-#include <qstring.h>
 #include <QFrame>
 #include <QGroupBox>
 #include <QMap>
@@ -21,13 +15,9 @@ class WalletModel;
 class WalletView;
 class MasternodeList;
 class GovernanceList;
-class QGroupBox;
-class QObject;
-class QWidget;
 
 QT_BEGIN_NAMESPACE
 class QStackedWidget;
-
 QT_END_NAMESPACE
 
 /**

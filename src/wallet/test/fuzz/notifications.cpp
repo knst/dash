@@ -10,28 +10,13 @@
 #include <wallet/context.h>
 #include <wallet/receive.h>
 #include <wallet/wallet.h>
+#include <wallet/walletdb.h>
 #include <wallet/walletutil.h>
+
 #include <cassert>
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <algorithm>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <set>
-#include <tuple>
-#include <utility>
-
-#include "consensus/amount.h"
-#include "fs.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "script/script.h"
-#include "script/standard.h"
-#include "uint256.h"
-#include "util/system.h"
-#include "wallet/db.h"
 
 namespace wallet {
 namespace {

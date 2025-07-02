@@ -4,8 +4,10 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <txmempool.h>
+
 #include <chain.h>
 #include <coins.h>
+#include <consensus/consensus.h>
 #include <consensus/tx_verify.h>
 #include <consensus/validation.h>
 #include <hash.h>
@@ -15,38 +17,19 @@
 #include <util/check.h>
 #include <util/moneystr.h>
 #include <util/overflow.h>
+#include <util/system.h>
 #include <util/time.h>
 #include <validationinterface.h>
+
 #include <evo/specialtx.h>
 #include <evo/assetlocktx.h>
 #include <evo/providertx.h>
 #include <evo/deterministicmns.h>
 #include <llmq/instantsend.h>
-#include <boost/multi_index/detail/ord_index_impl.hpp>
+
 #include <cmath>
 #include <optional>
 #include <ranges>
-#include <algorithm>
-#include <limits>
-
-#include "addressindex.h"
-#include "bls/bls.h"
-#include "consensus/amount.h"
-#include "evo/dmnstate.h"
-#include "evo/netinfo.h"
-#include "gsl/pointers.h"
-#include "indirectmap.h"
-#include "logging.h"
-#include "policy/feerate.h"
-#include "policy/packages.h"
-#include "primitives/transaction.h"
-#include "pubkey.h"
-#include "random.h"
-#include "spentindex.h"
-#include "sync.h"
-#include "tinyformat.h"
-#include "util/epochguard.h"
-#include "util/hasher.h"
 
 bool TestLockPointValidity(CChain& active_chain, const LockPoints& lp)
 {

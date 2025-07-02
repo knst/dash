@@ -7,6 +7,7 @@
 #define BITCOIN_INIT_H
 
 #include <context.h>
+
 #include <memory>
 #include <string>
 
@@ -16,7 +17,6 @@ static constexpr bool DEFAULT_DAEMON = false;
 static constexpr bool DEFAULT_DAEMONWAIT = false;
 
 class ArgsManager;
-
 namespace interfaces {
 struct BlockAndHeaderTipInfo;
 } // namespace interfaces

@@ -8,20 +8,12 @@
 #include <dbwrapper.h>
 #include <threadinterrupt.h>
 #include <validationinterface.h>
-#include <stddef.h>
-#include <atomic>
-#include <memory>
-#include <string>
-#include <thread>
 
-#include "chain.h"
-#include "fs.h"
-#include "threadsafety.h"
+#include <atomic>
 
 class CBlock;
 class CBlockIndex;
 class CChainState;
-struct CBlockLocator;
 
 struct IndexSummary {
     std::string name;

@@ -6,22 +6,15 @@
 #define BITCOIN_QT_TRAFFICGRAPHWIDGET_H
 
 #include <qt/trafficgraphdata.h>
-#include <qglobal.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
-#include <qwidget.h>
+
 #include <QWidget>
 #include <QQueue>
-#include <functional>
 
 class ClientModel;
-class QObject;
-class QPainterPath;
 
 QT_BEGIN_NAMESPACE
 class QPaintEvent;
 class QTimer;
-
 QT_END_NAMESPACE
 
 class TrafficGraphWidget : public QWidget

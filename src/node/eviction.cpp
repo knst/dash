@@ -3,18 +3,14 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <node/eviction.h>
-#include <assert.h>
-#include <stddef.h>
+
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <map>
 #include <vector>
-#include <compare>
-#include <utility>
-
-#include "node/connection_types.h"
 
 
 static bool ReverseCompareNodeMinPingTime(const NodeEvictionCandidate &a, const NodeEvictionCandidate &b)

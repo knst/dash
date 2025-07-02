@@ -3,19 +3,20 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/bench.h>
+
+#include <clientversion.h>
 #include <crypto/sha256.h>
 #include <fs.h>
+#include <stacktraces.h>
+#include <util/strencodings.h>
 #include <util/system.h>
-#include <bits/chrono.h>
-#include <stdlib.h>
+
+#include <bls/bls.h>
+#include <chrono>
 #include <cstdint>
 #include <iostream>
 #include <sstream>
 #include <vector>
-#include <algorithm>
-#include <string>
-
-#include "tinyformat.h"
 
 static const char* DEFAULT_BENCH_FILTER = ".*";
 static constexpr int64_t DEFAULT_MIN_TIME_MS{10};

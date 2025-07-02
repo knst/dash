@@ -12,14 +12,9 @@
 #include <serialize.h>
 #include <uint256.h>
 #include <util/underlying.h>
-#include <bits/chrono.h>
-#include <stddef.h>
-#include <stdint.h>
+
 #include <chrono>
 #include <tuple>
-#include <compare>
-#include <type_traits>
-#include <utility>
 
 class CScript;
 struct CAddressIndexKey;

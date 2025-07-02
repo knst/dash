@@ -30,15 +30,7 @@
 #include <wallet/transaction.h>
 #include <wallet/walletdb.h>
 #include <wallet/walletutil.h>
-#include <stdint.h>
-#include <boost/signals2/signal.hpp>
-#include <assert.h>
-#include <stddef.h>
-#include <boost/function/function_template.hpp>
-#include <boost/signals2/detail/lwm_pthreads.hpp>
-#include <boost/signals2/detail/signal_template.hpp>
-#include <boost/signals2/optional_last_value.hpp>
-#include <boost/smart_ptr/make_shared_object.hpp>
+
 #include <algorithm>
 #include <atomic>
 #include <map>
@@ -46,27 +38,13 @@
 #include <optional>
 #include <set>
 #include <stdexcept>
+#include <stdint.h>
 #include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include <functional>
 
-#include "interfaces/wallet.h"
-#include "logging.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "script/script.h"
-#include "script/signingprovider.h"
-#include "script/standard.h"
-#include "support/allocators/secure.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "uint256.h"
-#include "util/error.h"
-#include "util/time.h"
-#include "wallet/db.h"
-#include "wallet/ismine.h"
+#include <boost/signals2/signal.hpp>
 
 class CKey;
 class CScript;
@@ -74,27 +52,6 @@ class CTxDSIn;
 enum class FeeEstimateMode;
 struct FeeCalculation;
 struct bilingual_str;
-class ArgsManager;
-class CBlockIndex;
-class CKeyID;
-class CPubKey;
-class Coin;
-enum class MemPoolRemovalReason;
-namespace interfaces {
-namespace CoinJoin {
-class Loader;
-}  // namespace CoinJoin
-}  // namespace interfaces
-namespace llmq {
-class CChainLockSig;
-struct CInstantSendLock;
-}  // namespace llmq
-namespace wallet {
-class CWallet;
-}  // namespace wallet
-struct KeyOriginInfo;
-struct PartiallySignedTransaction;
-struct SignatureData;
 
 using LoadWalletFn = std::function<void(std::unique_ptr<interfaces::Wallet> wallet)>;
 
@@ -291,7 +248,6 @@ struct WalletTxHasher
 };
 
 class WalletRescanReserver; //forward declarations for ScanForWalletTransactions/RescanFromTime
-
 /**
  * A CWallet maintains a set of transactions and balances, and provides the ability to create new transactions.
  */

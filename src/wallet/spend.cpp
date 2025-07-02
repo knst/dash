@@ -3,11 +3,14 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <coinjoin/common.h>
+#include <coinjoin/options.h>
+#include <consensus/validation.h>
 #include <evo/dmn_types.h>
 #include <interfaces/chain.h>
 #include <policy/policy.h>
 #include <util/check.h>
 #include <util/fees.h>
+#include <util/moneystr.h>
 #include <util/trace.h>
 #include <util/translation.h>
 #include <wallet/coincontrol.h>
@@ -16,36 +19,8 @@
 #include <wallet/spend.h>
 #include <wallet/transaction.h>
 #include <wallet/wallet.h>
-#include <assert.h>
-#include <stddef.h>
-#include <sys/sdt.h>
-#include <cmath>
-#include <algorithm>
-#include <iterator>
-#include <limits>
-#include <memory>
-#include <unordered_set>
-#include <utility>
-#include <variant>
 
-#include "policy/feerate.h"
-#include "policy/fees.h"
-#include "prevector.h"
-#include "random.h"
-#include "script/script.h"
-#include "script/sign.h"
-#include "script/signingprovider.h"
-#include "serialize.h"
-#include "sync.h"
-#include "tinyformat.h"
-#include "uint256.h"
-#include "util/error.h"
-#include "util/system.h"
-#include "util/time.h"
-#include "version.h"
-#include "wallet/coinselection.h"
-#include "wallet/ismine.h"
-#include "wallet/walletutil.h"
+#include <cmath>
 
 using interfaces::FoundBlock;
 

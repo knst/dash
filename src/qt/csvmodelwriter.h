@@ -5,19 +5,11 @@
 #ifndef BITCOIN_QT_CSVMODELWRITER_H
 #define BITCOIN_QT_CSVMODELWRITER_H
 
-#include <QtCore/qglobal.h>
-#include <qglobal.h>
-#include <qlist.h>
-#include <qnamespace.h>
-#include <qobject.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
 #include <QList>
 #include <QObject>
 
 QT_BEGIN_NAMESPACE
 class QAbstractItemModel;
-
 QT_END_NAMESPACE
 
 /** Export a Qt table model to a CSV file. This is useful for analyzing or post-processing the data in

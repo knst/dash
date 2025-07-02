@@ -5,7 +5,7 @@
 #include <test/fuzz/fuzz.h>
 #include <util/moneystr.h>
 #include <util/strencodings.h>
-#include <stdint.h>
+
 #include <string>
 
 FUZZ_TARGET(parse_numbers)

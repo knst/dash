@@ -4,11 +4,6 @@
 
 #include <qt/coincontroltreewidget.h>
 #include <qt/coincontroldialog.h>
-#include <qdialog.h>
-#include <qevent.h>
-#include <qnamespace.h>
-
-class QWidget;
 
 CoinControlTreeWidget::CoinControlTreeWidget(QWidget *parent) :
     QTreeWidget(parent)

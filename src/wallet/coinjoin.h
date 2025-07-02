@@ -10,8 +10,6 @@
 #include <threadsafety.h>
 #include <wallet/wallet.h>
 
-#include "logging.h"
-
 // Use a macro instead of a function for conditional logging to prevent
 // evaluating arguments when logging for the category is not enabled.
 #define WalletCJLogPrint(wallet, ...)               \

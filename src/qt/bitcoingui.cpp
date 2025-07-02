@@ -4,8 +4,10 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/bitcoingui.h>
+
 #include <qt/bitcoinunits.h>
 #include <qt/clientmodel.h>
+#include <qt/createwalletdialog.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/modaloverlay.h>
@@ -16,55 +18,6 @@
 #include <qt/optionsmodel.h>
 #include <qt/rpcconsole.h>
 #include <qt/utilitydialog.h>
-#include <QtCore/qglobal.h>
-#include <QtCore/qobjectdefs.h>
-#include <assert.h>
-#include <qabstractbutton.h>
-#include <qaction.h>
-#include <qapplication.h>
-#include <qboxlayout.h>
-#include <qbuttongroup.h>
-#include <qchar.h>
-#include <qcombobox.h>
-#include <qcoreevent.h>
-#include <qcursor.h>
-#include <qdatetime.h>
-#include <qevent.h>
-#include <qfont.h>
-#include <qfontmetrics.h>
-#include <qframe.h>
-#include <qguiapplication.h>
-#include <qicon.h>
-#include <qinputdialog.h>
-#include <qkeysequence.h>
-#include <qlineedit.h>
-#include <qlist.h>
-#include <qmargins.h>
-#include <qmenubar.h>
-#include <qmessagebox.h>
-#include <qmetatype.h>
-#include <qmimedata.h>
-#include <qnamespace.h>
-#include <qobject.h>
-#include <qpixmap.h>
-#include <qpoint.h>
-#include <qprogressdialog.h>
-#include <qrect.h>
-#include <qscreen.h>
-#include <qsettings.h>
-#include <qsizepolicy.h>
-#include <qstatusbar.h>
-#include <qstringbuilder.h>
-#include <qstyle.h>
-#include <qsystemtrayicon.h>
-#include <qtimer.h>
-#include <qtoolbar.h>
-#include <qtoolbutton.h>
-#include <qurl.h>
-#include <qvariant.h>
-#include <qwidget.h>
-#include <qwindow.h>
-#include <stdint.h>
 
 #ifdef ENABLE_WALLET
 #include <qt/walletcontroller.h>
@@ -77,27 +30,47 @@
 #include <qt/macdockiconhandler.h>
 #endif
 
+#include <functional>
 #include <chain.h>
 #include <chainparams.h>
+#include <interfaces/coinjoin.h>
 #include <interfaces/handler.h>
 #include <interfaces/node.h>
 #include <node/interface_ui.h>
+#include <qt/governancelist.h>
+#include <qt/masternodelist.h>
 #include <util/system.h>
 #include <util/translation.h>
 #include <validation.h>
-#include <functional>
-#include <algorithm>
-#include <map>
-#include <utility>
-#include <vector>
 
-#include "bitcoin-config.h"
-#include "consensus/amount.h"
-#include "consensus/params.h"
-#include "fs.h"
-#include "interfaces/wallet.h"
-#include "uint256.h"
-#include "util/time.h"
+#include <QAction>
+#include <QApplication>
+#include <QButtonGroup>
+#include <QComboBox>
+#include <QCursor>
+#include <QDateTime>
+#include <QDragEnterEvent>
+#include <QInputDialog>
+#include <QKeySequence>
+#include <QListWidget>
+#include <QMenu>
+#include <QMenuBar>
+#include <QMessageBox>
+#include <QMimeData>
+#include <QProgressDialog>
+#include <QScreen>
+#include <QSettings>
+#include <QShortcut>
+#include <QStackedWidget>
+#include <QStatusBar>
+#include <QStyle>
+#include <QSystemTrayIcon>
+#include <QTimer>
+#include <QToolBar>
+#include <QToolButton>
+#include <QUrlQuery>
+#include <QVBoxLayout>
+#include <QWindow>
 
 
 const std::string BitcoinGUI::DEFAULT_UIPLATFORM =

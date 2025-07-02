@@ -3,44 +3,31 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/transactiontablemodel.h>
+
 #include <qt/bitcoinunits.h>
+#include <qt/clientmodel.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/transactiondesc.h>
 #include <qt/transactionrecord.h>
 #include <qt/walletmodel.h>
+
 #include <core_io.h>
 #include <interfaces/handler.h>
 #include <uint256.h>
 #include <util/system.h>
-#include <QtCore/qglobal.h>
-#include <QtCore/qobjectdefs.h>
-#include <assert.h>
-#include <qchar.h>
-#include <qcolor.h>
-#include <qdatetime.h>
-#include <qdebug.h>
-#include <qglobal.h>
-#include <qicon.h>
-#include <qlist.h>
-#include <qmessagebox.h>
-#include <qstringbuilder.h>
-#include <stdint.h>
+
 #include <algorithm>
 #include <functional>
-#include <exception>
-#include <vector>
 
-#include "bitcoin-config.h"
-#include "interfaces/wallet.h"
-#include "key_io.h"
-#include "script/standard.h"
-#include "util/ui_change_type.h"
-
-class QObject;
-namespace interfaces {
-class Node;
-}  // namespace interfaces
+#include <QColor>
+#include <QDateTime>
+#include <QDebug>
+#include <QIcon>
+#include <QLatin1Char>
+#include <QLatin1String>
+#include <QList>
+#include <QMessageBox>
 
 
 // Amount column is right-aligned it contains numbers

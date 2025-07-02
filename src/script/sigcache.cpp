@@ -4,21 +4,17 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <script/sigcache.h>
+
 #include <pubkey.h>
 #include <random.h>
 #include <uint256.h>
 #include <util/system.h>
+
 #include <cuckoocache.h>
-#include <stddef.h>
+
 #include <mutex>
 #include <shared_mutex>
 #include <vector>
-#include <algorithm>
-
-#include "crypto/sha256.h"
-#include "logging.h"
-#include "script/interpreter.h"
-#include "util/hasher.h"
 
 namespace {
 /**

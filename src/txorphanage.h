@@ -9,15 +9,6 @@
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <sync.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <map>
-#include <set>
-#include <utility>
-#include <vector>
-
-#include "threadsafety.h"
-#include "uint256.h"
 
 /** Guards orphan transactions and extra txs for compact blocks */
 extern RecursiveMutex g_cs_orphans;

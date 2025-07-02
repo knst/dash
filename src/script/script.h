@@ -10,15 +10,15 @@
 #include <crypto/common.h>
 #include <prevector.h>
 #include <serialize.h>
+
 #include <assert.h>
-#include <stdint.h>
-#include <string.h>
 #include <climits>
 #include <limits>
 #include <stdexcept>
+#include <stdint.h>
+#include <string.h>
 #include <string>
 #include <vector>
-#include <algorithm>
 
 // Maximum number of bytes pushable to the stack
 static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520;

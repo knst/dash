@@ -8,8 +8,6 @@
 #include <blockfilter.h>
 
 class CBlockIndex;
-class BlockFilter;
-enum class BlockFilterType : uint8_t;
 
 bool ComputeFilter(BlockFilterType filter_type, const CBlockIndex* block_index, BlockFilter& filter);
 

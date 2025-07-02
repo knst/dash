@@ -6,14 +6,13 @@
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
-#include <stdio.h>
+
 #include <array>
 #include <cstdint>
 #include <iostream>
 #include <optional>
-#include <cstddef>
-
-#include "span.h"
+#include <string>
+#include <vector>
 
 FUZZ_TARGET(buffered_file)
 {

@@ -4,9 +4,6 @@
 
 #include <wallet/transaction.h>
 
-#include "primitives/transaction.h"
-#include "script/script.h"
-
 namespace wallet {
 bool CWalletTx::IsEquivalentTo(const CWalletTx& _tx) const
 {

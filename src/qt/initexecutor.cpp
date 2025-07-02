@@ -3,20 +3,20 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/initexecutor.h>
+
 #include <interfaces/node.h>
 #include <util/system.h>
 #include <util/threadnames.h>
-#include <QtCore/qglobal.h>
-#include <qapplication.h>
-#include <qcoreapplication.h>
-#include <qdebug.h>
-#include <qprocess.h>
-#include <exception>
-#include <memory>
-#include <utility>
 
-#include "net.h"
-#include "util/translation.h"
+#include <exception>
+
+#include <QApplication>
+#include <QDebug>
+#include <QMetaObject>
+#include <QObject>
+#include <QProcess>
+#include <QString>
+#include <QThread>
 
 InitExecutor::InitExecutor(interfaces::Node& node)
     : QObject(), m_node(node)

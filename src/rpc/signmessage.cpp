@@ -11,7 +11,9 @@
 #include <rpc/util.h>
 #include <univalue.h>
 #include <util/message.h>
+
 #include <string>
+#include <vector>
 
 static RPCHelpMan verifymessage()
 {

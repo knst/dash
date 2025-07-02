@@ -2,16 +2,15 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <netaddress.h>
 #include <test/fuzz/fuzz.h>
 #include <util/asmap.h>
-#include <assert.h>
-#include <stdint.h>
+
 #include <cstddef>
 #include <optional>
 #include <vector>
-#include <algorithm>
 
-#include "span.h"
+#include <assert.h>
 
 FUZZ_TARGET(asmap_direct)
 {

@@ -6,18 +6,11 @@
 #define BITCOIN_QT_TRANSACTIONTABLEMODEL_H
 
 #include <qt/bitcoinunits.h>
-#include <qabstractitemmodel.h>
-#include <qnamespace.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
-#include <qstringlist.h>
-#include <qvariant.h>
+
 #include <QAbstractTableModel>
 #include <QStringList>
-#include <memory>
-#include <string>
 
-class QObject;
+#include <memory>
 
 namespace interfaces {
 class Handler;

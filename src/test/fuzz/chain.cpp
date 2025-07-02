@@ -6,12 +6,10 @@
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
-#include <optional>
 
-#include "primitives/block.h"
-#include "sync.h"
-#include "txmempool.h"
-#include "uint256.h"
+#include <cstdint>
+#include <optional>
+#include <vector>
 
 FUZZ_TARGET(chain)
 {

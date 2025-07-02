@@ -5,20 +5,12 @@
 #ifndef BITCOIN_QT_TRANSACTIONOVERVIEWWIDGET_H
 #define BITCOIN_QT_TRANSACTIONOVERVIEWWIDGET_H
 
-#include <qglobal.h>
-#include <qlistview.h>
-#include <qobjectdefs.h>
-#include <qsize.h>
-#include <qstring.h>
 #include <QListView>
 #include <QSize>
-
-class QObject;
 
 QT_BEGIN_NAMESPACE
 class QShowEvent;
 class QWidget;
-
 QT_END_NAMESPACE
 
 class TransactionOverviewWidget : public QListView

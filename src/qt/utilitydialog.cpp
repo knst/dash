@@ -8,35 +8,26 @@
 #endif
 
 #include <qt/utilitydialog.h>
+
 #include <qt/forms/ui_helpmessagedialog.h>
+
 #include <qt/guiutil.h>
+
 #include <clientversion.h>
 #include <init.h>
 #include <util/system.h>
 #include <util/strencodings.h>
-#include <assert.h>
-#include <qboxlayout.h>
-#include <qbytearray.h>
-#include <qevent.h>
-#include <qfont.h>
-#include <qlabel.h>
-#include <qmainwindow.h>
-#include <qpoint.h>
-#include <qrect.h>
-#include <qregularexpression.h>
-#include <qscrollarea.h>
-#include <qstringbuilder.h>
-#include <qstringlist.h>
-#include <qstringliteral.h>
-#include <qtextcursor.h>
-#include <qtextedit.h>
-#include <qtextformat.h>
-#include <qtexttable.h>
-#include <qvector.h>
-#include <iostream>
-#include <string>
 
-#include "tinyformat.h"
+#include <cstdio>
+
+#include <QCloseEvent>
+#include <QLabel>
+#include <QMainWindow>
+#include <QRegularExpression>
+#include <QString>
+#include <QTextCursor>
+#include <QTextTable>
+#include <QVBoxLayout>
 
 /** "Help message" or "About" dialog box */
 HelpMessageDialog::HelpMessageDialog(QWidget *parent, HelpMode helpMode) :

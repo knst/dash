@@ -3,10 +3,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <clientversion.h>
-#include <tinyformat.h>
-#include <sstream>
 
-#include "bitcoin-config.h"
+#include <tinyformat.h>
 
 
 /**

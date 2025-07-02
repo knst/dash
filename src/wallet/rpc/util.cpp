@@ -3,19 +3,14 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/rpc/util.h>
+
+#include <rpc/util.h>
 #include <util/translation.h>
 #include <util/url.h>
 #include <wallet/context.h>
 #include <wallet/wallet.h>
-#include <univalue.h>
-#include <vector>
 
-#include "context.h"
-#include "rpc/protocol.h"
-#include "rpc/request.h"
-#include "util/check.h"
-#include "wallet/db.h"
-#include "wallet/walletutil.h"
+#include <univalue.h>
 
 namespace wallet {
 static const std::string WALLET_ENDPOINT_BASE = "/wallet/";

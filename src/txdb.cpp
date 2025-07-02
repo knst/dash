@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <txdb.h>
+
 #include <chain.h>
 #include <node/interface_ui.h>
 #include <pow.h>
@@ -13,25 +14,8 @@
 #include <util/system.h>
 #include <util/translation.h>
 #include <util/vector.h>
+
 #include <stdint.h>
-#include <assert.h>
-#include <stdlib.h>
-#include <algorithm>
-#include <iterator>
-#include <unordered_map>
-
-#include "coins.h"
-#include "consensus/amount.h"
-#include "dbwrapper.h"
-#include "logging.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "script/script.h"
-#include "serialize.h"
-#include "spentindex.h"
-#include "timestampindex.h"
-
-struct TxOutCompression;
 
 static constexpr uint8_t DB_COIN{'C'};
 static constexpr uint8_t DB_COINS{'c'};

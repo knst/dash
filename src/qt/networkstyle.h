@@ -6,16 +6,9 @@
 #ifndef BITCOIN_QT_NETWORKSTYLE_H
 #define BITCOIN_QT_NETWORKSTYLE_H
 
-#include <qcolor.h>
-#include <qicon.h>
-#include <qpixmap.h>
-#include <qstring.h>
 #include <QIcon>
 #include <QPixmap>
 #include <QString>
-#include <string>
-
-class QImage;
 
 /* Coin network-specific GUI style information */
 class NetworkStyle

@@ -10,7 +10,7 @@
 #include <threadsafety.h>
 #include <tinyformat.h>
 #include <util/string.h>
-#include <stdio.h>
+
 #include <atomic>
 #include <cstdint>
 #include <functional>
@@ -19,9 +19,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <iostream>
-#include <stdexcept>
-#include <utility>
 
 static const bool DEFAULT_LOGTIMEMICROS  = false;
 static const bool DEFAULT_LOGIPS         = false;

@@ -11,6 +11,7 @@
 #include <script/script.h>
 #include <serialize.h>
 #include <uint256.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <ios>
@@ -20,8 +21,6 @@
 #include <tuple>
 #include <utility>
 #include <vector>
-#include <algorithm>
-#include <iterator>
 
 /** Transaction types */
 enum {

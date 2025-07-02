@@ -6,20 +6,13 @@
 #include <fs.h>
 #include <logging.h>
 #include <util/string.h>
+#include <util/system.h>
 #include <util/threadnames.h>
 #include <util/time.h>
-#include <assert.h>
-#include <bits/chrono.h>
-#include <fcntl.h>
+
 #include <algorithm>
 #include <array>
 #include <optional>
-#include <compare>
-#include <iterator>
-#include <ratio>
-
-#include "threadsafety.h"
-#include "tinyformat.h"
 
 const char * const DEFAULT_DEBUGLOGFILE = "debug.log";
 constexpr auto MAX_USER_SETABLE_SEVERITY_LEVEL{BCLog::Level::Info};

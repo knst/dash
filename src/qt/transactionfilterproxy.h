@@ -6,17 +6,11 @@
 #define BITCOIN_QT_TRANSACTIONFILTERPROXY_H
 
 #include <consensus/amount.h>
-#include <qabstractitemmodel.h>
-#include <qdatetime.h>
-#include <qglobal.h>
-#include <qobjectdefs.h>
-#include <qsortfilterproxymodel.h>
-#include <qstring.h>
+
 #include <QDateTime>
 #include <QSortFilterProxyModel>
-#include <optional>
 
-class QObject;
+#include <optional>
 
 /** Filter the transaction list according to pre-specified rules. */
 class TransactionFilterProxy : public QSortFilterProxyModel

@@ -7,15 +7,11 @@
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
+#include <test/util/setup_common.h>
 #include <wallet/coinselection.h>
 #include <wallet/wallet.h>
-#include <assert.h>
-#include <vector>
-#include <algorithm>
-#include <optional>
 
-#include "consensus/amount.h"
-#include "random.h"
+#include <vector>
 
 namespace wallet {
 

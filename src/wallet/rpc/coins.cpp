@@ -5,45 +5,14 @@
 #include <core_io.h>
 #include <key_io.h>
 #include <rpc/util.h>
+#include <util/moneystr.h>
 #include <wallet/coincontrol.h>
 #include <wallet/receive.h>
 #include <wallet/rpc/util.h>
 #include <wallet/spend.h>
 #include <wallet/wallet.h>
-#include <univalue.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <algorithm>
-#include <map>
-#include <memory>
-#include <optional>
-#include <set>
-#include <string>
-#include <utility>
-#include <variant>
-#include <vector>
 
-#include "consensus/amount.h"
-#include "interfaces/chain.h"
-#include "policy/feerate.h"
-#include "primitives/transaction.h"
-#include "rpc/protocol.h"
-#include "rpc/request.h"
-#include "script/descriptor.h"
-#include "script/script.h"
-#include "script/signingprovider.h"
-#include "script/standard.h"
-#include "span.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "tinyformat.h"
-#include "uint256.h"
-#include "util/strencodings.h"
-#include "wallet/coinselection.h"
-#include "wallet/scriptpubkeyman.h"
-#include "wallet/transaction.h"
-#include "wallet/walletdb.h"
-#include "wallet/walletutil.h"
+#include <univalue.h>
 
 namespace wallet {
 static CAmount GetReceived(const CWallet& wallet, const UniValue& params, bool by_label) EXCLUSIVE_LOCKS_REQUIRED(wallet.cs_wallet)

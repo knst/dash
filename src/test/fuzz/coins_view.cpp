@@ -2,33 +2,30 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <chainparams.h>
+#include <chainparamsbase.h>
 #include <coins.h>
 #include <consensus/amount.h>
 #include <consensus/tx_check.h>
 #include <consensus/tx_verify.h>
 #include <consensus/validation.h>
+#include <key.h>
 #include <node/coinstats.h>
 #include <policy/policy.h>
 #include <primitives/transaction.h>
+#include <pubkey.h>
+#include <sync.h>
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
 #include <test/util/setup_common.h>
 #include <validation.h>
-#include <assert.h>
+
 #include <cstdint>
 #include <limits>
 #include <optional>
 #include <string>
 #include <vector>
-#include <functional>
-#include <memory>
-#include <stdexcept>
-#include <utility>
-
-#include "script/interpreter.h"
-#include "support/allocators/pool.h"
-#include "util/hasher.h"
 
 using node::CCoinsStats;
 using node::CoinStatsHashType;

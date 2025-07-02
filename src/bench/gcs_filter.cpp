@@ -4,12 +4,6 @@
 
 #include <bench/bench.h>
 #include <blockfilter.h>
-#include <stdint.h>
-#include <algorithm>
-#include <utility>
-#include <vector>
-
-#include "nanobench.h"
 
 static const GCSFilter::ElementSet GenerateGCSTestElements()
 {

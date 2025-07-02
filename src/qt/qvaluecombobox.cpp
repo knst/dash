@@ -3,11 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/qvaluecombobox.h>
-#include <QtCore/qobjectdefs.h>
-#include <qglobal.h>
-#include <qnamespace.h>
-
-class QWidget;
 
 QValueComboBox::QValueComboBox(QWidget *parent) :
         QComboBox(parent), role(Qt::UserRole)

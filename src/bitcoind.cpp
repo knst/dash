@@ -12,6 +12,7 @@
 #include <clientversion.h>
 #include <compat/compat.h>
 #include <init.h>
+#include <interfaces/chain.h>
 #include <interfaces/init.h>
 #include <node/context.h>
 #include <node/interface_ui.h>
@@ -26,17 +27,9 @@
 #include <util/translation.h>
 #include <stacktraces.h>
 #include <util/url.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <functional>
-#include <exception>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
 
-#include "context.h"
-#include "tinyformat.h"
+#include <cstdio>
+#include <functional>
 
 using node::NodeContext;
 

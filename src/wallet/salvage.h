@@ -8,7 +8,6 @@
 
 #include <fs.h>
 #include <streams.h>
-#include <vector>
 
 class ArgsManager;
 struct bilingual_str;

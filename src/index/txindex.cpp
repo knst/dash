@@ -3,27 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <index/txindex.h>
+
 #include <index/disktxpos.h>
 #include <node/blockstorage.h>
 #include <util/system.h>
 #include <validation.h>
-#include <fcntl.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <algorithm>
-#include <exception>
-#include <utility>
-#include <vector>
-
-#include "chain.h"
-#include "clientversion.h"
-#include "dbwrapper.h"
-#include "fs.h"
-#include "index/base.h"
-#include "serialize.h"
-#include "streams.h"
-#include "sync.h"
-#include "uint256.h"
 
 using node::OpenBlockFile;
 

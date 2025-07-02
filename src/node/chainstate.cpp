@@ -3,29 +3,19 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <node/chainstate.h>
+
 #include <chainparamsbase.h>
 #include <consensus/params.h>
 #include <deploymentstatus.h>
 #include <node/blockstorage.h>
 #include <validation.h>
+
 #include <evo/chainhelper.h>
 #include <evo/creditpool.h>
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
 #include <evo/mnhftx.h>
 #include <llmq/context.h>
-#include <assert.h>
-#include <atomic>
-#include <vector>
-
-#include "bls/bls.h"
-#include "chain.h"
-#include "coins.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "txdb.h"
-#include "txmempool.h"
-#include "uint256.h"
 
 namespace node {
 std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,

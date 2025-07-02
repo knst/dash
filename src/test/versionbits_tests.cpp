@@ -7,36 +7,10 @@
 #include <consensus/params.h>
 #include <deploymentstatus.h>
 #include <test/util/setup_common.h>
+#include <validation.h>
 #include <versionbits.h>
-#include <stdint.h>
-#include <boost/preprocessor/arithmetic/limits/dec_256.hpp>
-#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
-#include <boost/preprocessor/control/expr_iif.hpp>
-#include <boost/preprocessor/control/iif.hpp>
-#include <boost/preprocessor/detail/limits/auto_rec_256.hpp>
-#include <boost/preprocessor/logical/compl.hpp>
-#include <boost/preprocessor/logical/limits/bool_256.hpp>
-#include <boost/preprocessor/repetition/detail/limits/for_256.hpp>
-#include <boost/preprocessor/repetition/for.hpp>
-#include <boost/preprocessor/seq/limits/elem_256.hpp>
-#include <boost/preprocessor/seq/limits/size_256.hpp>
-#include <boost/preprocessor/tuple/elem.hpp>
-#include <boost/preprocessor/variadic/limits/elem_64.hpp>
-#include <boost/test/tools/old/interface.hpp>
-#include <boost/test/unit_test_suite.hpp>
-#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
-#include <boost/test/utils/lazy_ostream.hpp>
-#include <algorithm>
-#include <initializer_list>
-#include <limits>
-#include <map>
-#include <memory>
-#include <string>
-#include <vector>
 
-#include "chainparamsbase.h"
-#include "tinyformat.h"
-#include "util/system.h"
+#include <boost/test/unit_test.hpp>
 
 /* Define a virtual block time, one block per 10 minutes after Nov 14 2014, 0:55:36am */
 static int32_t TestTime(int nHeight) { return 1415926536 + 600 * nHeight; }

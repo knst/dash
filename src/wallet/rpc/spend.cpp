@@ -4,48 +4,18 @@
 
 #include <core_io.h>
 #include <key_io.h>
+#include <policy/policy.h>
 #include <rpc/rawtransaction_util.h>
 #include <rpc/util.h>
 #include <util/fees.h>
 #include <util/translation.h>
+#include <util/vector.h>
 #include <wallet/coincontrol.h>
 #include <wallet/rpc/util.h>
 #include <wallet/spend.h>
 #include <wallet/wallet.h>
-#include <univalue.h>
-#include <algorithm>
-#include <list>
-#include <map>
-#include <memory>
-#include <optional>
-#include <set>
-#include <string>
-#include <utility>
-#include <variant>
-#include <vector>
 
-#include "coins.h"
-#include "consensus/amount.h"
-#include "interfaces/chain.h"
-#include "policy/feerate.h"
-#include "policy/fees.h"
-#include "primitives/transaction.h"
-#include "psbt.h"
-#include "rpc/protocol.h"
-#include "rpc/request.h"
-#include "script/interpreter.h"
-#include "script/script.h"
-#include "script/standard.h"
-#include "serialize.h"
-#include "streams.h"
-#include "sync.h"
-#include "tinyformat.h"
-#include "uint256.h"
-#include "util/error.h"
-#include "util/strencodings.h"
-#include "version.h"
-#include "wallet/transaction.h"
-#include "wallet/walletutil.h"
+#include <univalue.h>
 
 namespace wallet {
 static void ParseRecipients(const UniValue& address_amounts, const UniValue& subtract_fee_outputs, std::vector<CRecipient> &recipients) {

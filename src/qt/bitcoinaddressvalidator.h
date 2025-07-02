@@ -5,12 +5,7 @@
 #ifndef BITCOIN_QT_BITCOINADDRESSVALIDATOR_H
 #define BITCOIN_QT_BITCOINADDRESSVALIDATOR_H
 
-#include <qobjectdefs.h>
-#include <qstring.h>
-#include <qvalidator.h>
 #include <QValidator>
-
-class QObject;
 
 /** Base58 entry widget validator, checks for valid characters and
  * removes some whitespace.

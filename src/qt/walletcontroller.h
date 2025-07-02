@@ -9,15 +9,12 @@
 #include <support/allocators/secure.h>
 #include <sync.h>
 #include <util/translation.h>
-#include <qbytearray.h>
-#include <qmutex.h>
-#include <qobject.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
+
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
+
 #include <QMessageBox>
 #include <QMutex>
 #include <QProgressDialog>
@@ -29,9 +26,6 @@ class ClientModel;
 class OptionsModel;
 class PlatformStyle;
 class WalletModel;
-class QThread;
-class QWidget;
-class SendCoinsRecipient;
 
 namespace interfaces {
 class Handler;

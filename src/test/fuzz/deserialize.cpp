@@ -2,43 +2,38 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <addrdb.h>
 #include <addrman.h>
 #include <addrman_impl.h>
 #include <blockencodings.h>
+#include <blockfilter.h>
 #include <chain.h>
 #include <coins.h>
 #include <compressor.h>
 #include <consensus/merkle.h>
+#include <key.h>
 #include <merkleblock.h>
+#include <net.h>
+#include <netbase.h>
 #include <netgroup.h>
 #include <node/utxo_snapshot.h>
 #include <primitives/block.h>
 #include <protocol.h>
 #include <psbt.h>
+#include <script/sign.h>
 #include <streams.h>
 #include <test/util/setup_common.h>
 #include <undo.h>
 #include <util/system.h>
 #include <version.h>
-#include <test/fuzz/fuzz.h>
-#include <assert.h>
+
 #include <exception>
 #include <optional>
-#include <functional>
-#include <ios>
-#include <memory>
-#include <vector>
+#include <stdexcept>
+#include <stdint.h>
+#include <unistd.h>
 
-#include "common/bloom.h"
-#include "netaddress.h"
-#include "policy/feerate.h"
-#include "primitives/transaction.h"
-#include "pubkey.h"
-#include "script/script.h"
-#include "serialize.h"
-#include "uint256.h"
-
-namespace { struct invalid_fuzzing_input_exception; }
+#include <test/fuzz/fuzz.h>
 
 using node::SnapshotMetadata;
 

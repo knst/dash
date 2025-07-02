@@ -3,20 +3,14 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <key_io.h>
+
 #include <base58.h>
+#include <bech32.h>
 #include <chainparams.h>
+
+#include <algorithm>
 #include <assert.h>
 #include <string.h>
-#include <algorithm>
-#include <variant>
-#include <vector>
-
-#include "key.h"
-#include "pubkey.h"
-#include "script/standard.h"
-#include "span.h"
-#include "support/cleanse.h"
-#include "uint256.h"
 
 namespace {
 class DestinationEncoder

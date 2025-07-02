@@ -12,51 +12,11 @@
 #include <uint256.h>
 #include <undo.h>
 #include <util/strencodings.h>
-#include <assert.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <boost/preprocessor/arithmetic/limits/dec_256.hpp>
-#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
-#include <boost/preprocessor/control/expr_iif.hpp>
-#include <boost/preprocessor/control/iif.hpp>
-#include <boost/preprocessor/detail/limits/auto_rec_256.hpp>
-#include <boost/preprocessor/logical/compl.hpp>
-#include <boost/preprocessor/logical/limits/bool_256.hpp>
-#include <boost/preprocessor/repetition/detail/limits/for_256.hpp>
-#include <boost/preprocessor/repetition/for.hpp>
-#include <boost/preprocessor/seq/limits/elem_256.hpp>
-#include <boost/preprocessor/seq/limits/size_256.hpp>
-#include <boost/preprocessor/tuple/elem.hpp>
-#include <boost/preprocessor/variadic/limits/elem_64.hpp>
-#include <boost/test/tools/assertion.hpp>
-#include <boost/test/tools/interface.hpp>
-#include <boost/test/tools/old/interface.hpp>
-#include <boost/test/unit_test_suite.hpp>
-#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
-#include <boost/test/utils/lazy_ostream.hpp>
+
 #include <map>
 #include <vector>
-#include <algorithm>
-#include <functional>
-#include <initializer_list>
-#include <ios>
-#include <iterator>
-#include <list>
-#include <memory>
-#include <set>
-#include <stdexcept>
-#include <tuple>
-#include <unordered_map>
-#include <utility>
 
-#include "consensus/amount.h"
-#include "fs.h"
-#include "memusage.h"
-#include "primitives/transaction.h"
-#include "script/script.h"
-#include "serialize.h"
-#include "span.h"
-#include "util/hasher.h"
+#include <boost/test/unit_test.hpp>
 
 int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out);
 void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, CTxUndo &txundo, int nHeight);

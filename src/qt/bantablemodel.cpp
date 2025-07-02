@@ -3,19 +3,17 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/bantablemodel.h>
+
 #include <interfaces/node.h>
 #include <net_types.h> // For banmap_t
-#include <QtCore/qglobal.h>
-#include <assert.h>
-#include <qdatetime.h>
-#include <qglobal.h>
-#include <qlist.h>
-#include <qlocale.h>
-#include <utility>
-#include <algorithm>
-#include <map>
 
-class QObject;
+#include <utility>
+
+#include <QDateTime>
+#include <QList>
+#include <QLocale>
+#include <QModelIndex>
+#include <QVariant>
 
 bool BannedNodeLessThan::operator()(const CCombinedBan& left, const CCombinedBan& right) const
 {

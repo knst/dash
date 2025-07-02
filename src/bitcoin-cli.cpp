@@ -22,16 +22,11 @@
 #include <univalue.h>
 #include <util/strencodings.h>
 #include <util/system.h>
+#include <util/translation.h>
 #include <util/url.h>
-#include <event2/buffer.h>
-#include <support/events.h>
-#include <assert.h>
-#include <bits/chrono.h>
-#include <event2/event.h>
-#include <event2/http.h>
-#include <stdint.h>
-#include <stdlib.h>
+
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <functional>
@@ -39,19 +34,14 @@
 #include <optional>
 #include <string>
 #include <tuple>
-#include <array>
-#include <compare>
-#include <exception>
-#include <iostream>
-#include <map>
-#include <ratio>
-#include <stdexcept>
-#include <utility>
-#include <vector>
 
-#include "fs.h"
-#include "util/string.h"
-#include "util/time.h"
+#ifndef WIN32
+#include <unistd.h>
+#endif
+
+#include <event2/buffer.h>
+#include <event2/keyvalq_struct.h>
+#include <support/events.h>
 
 // The server returns time values from a mockable system clock, but it is not
 // trivial to get the mocked time from the server, nor is it needed for now, so

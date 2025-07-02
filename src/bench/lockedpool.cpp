@@ -3,13 +3,10 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/bench.h>
-#include <support/lockedpool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <vector>
-#include <algorithm>
 
-#include "nanobench.h"
+#include <support/lockedpool.h>
+
+#include <vector>
 
 #define ASIZE 2048
 #define MSIZE 2048

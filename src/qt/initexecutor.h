@@ -6,24 +6,14 @@
 #define BITCOIN_QT_INITEXECUTOR_H
 
 #include <interfaces/node.h>
-#include <qglobal.h>
-#include <qobject.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
-#include <qstringlist.h>
-#include <qthread.h>
+
 #include <exception>
+
 #include <QObject>
 #include <QThread>
 
-namespace interfaces {
-class Node;
-struct BlockAndHeaderTipInfo;
-}  // namespace interfaces
-
 QT_BEGIN_NAMESPACE
 class QString;
-
 QT_END_NAMESPACE
 
 /** Class encapsulating Bitcoin Core startup and shutdown.

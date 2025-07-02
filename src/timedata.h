@@ -6,6 +6,7 @@
 #define BITCOIN_TIMEDATA_H
 
 #include <util/time.h>
+
 #include <algorithm>
 #include <cassert>
 #include <chrono>

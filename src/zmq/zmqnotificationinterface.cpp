@@ -3,31 +3,14 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <zmq/zmqnotificationinterface.h>
+
 #include <netbase.h>
 #include <primitives/block.h>
 #include <util/system.h>
 #include <zmq/zmqpublishnotifier.h>
 #include <zmq/zmqutil.h>
+
 #include <zmq.h>
-#include <assert.h>
-#include <map>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include "logging.h"
-
-class CDeterministicMNList;
-class CGovernanceVote;
-enum class MemPoolRemovalReason;
-namespace Governance {
-class Object;
-}  // namespace Governance
-namespace llmq {
-class CChainLockSig;
-class CRecoveredSig;
-struct CInstantSendLock;
-}  // namespace llmq
 
 CZMQNotificationInterface::CZMQNotificationInterface() : pcontext(nullptr)
 {

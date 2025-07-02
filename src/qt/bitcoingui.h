@@ -11,14 +11,9 @@
 
 #include <qt/bitcoinunits.h>
 #include <qt/optionsdialog.h>
+
 #include <consensus/amount.h>
-#include <qglobal.h>
-#include <qlabel.h>
-#include <qmainwindow.h>
-#include <qmenu.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
-#include <qstringlist.h>
+
 #include <QLabel>
 #include <QMainWindow>
 #include <QMap>
@@ -26,24 +21,8 @@
 #include <QPoint>
 #include <QPushButton>
 #include <QSystemTrayIcon>
-#include <memory>
-#include <list>
-#include <string>
 
-class QAbstractButton;
-class QCloseEvent;
-class QDragEnterEvent;
-class QDropEvent;
-class QEvent;
-class QMenuBar;
-class QMouseEvent;
-class QObject;
-class QPoint;
-class QShowEvent;
-class QSystemTrayIcon;
-class QTimer;
-class QToolBar;
-class QWidget;
+#include <memory>
 
 #ifdef Q_OS_MAC
 #include <qt/macos_appnap.h>
@@ -77,7 +56,6 @@ class QDateTime;
 class QProgressBar;
 class QProgressDialog;
 class QToolButton;
-
 QT_END_NAMESPACE
 
 namespace GUIUtil {

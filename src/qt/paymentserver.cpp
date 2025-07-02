@@ -2,30 +2,40 @@
 // Copyright (c) 2014-2024 The Dash Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#if defined(HAVE_CONFIG_H)
+#include <config/bitcoin-config.h>
+#endif
+
 #include <qt/paymentserver.h>
+
+#include <qt/bitcoinunits.h>
 #include <qt/guiutil.h>
+#include <qt/optionsmodel.h>
+
+#include <chainparams.h>
+#include <clientversion.h>
+#include <interfaces/node.h>
 #include <key_io.h>
 #include <node/interface_ui.h>
+#include <policy/policy.h>
 #include <util/system.h>
-#include <QtCore/qobjectdefs.h>
-#include <qbytearray.h>
-#include <qcoreevent.h>
-#include <qdatastream.h>
-#include <qevent.h>
-#include <qfile.h>
-#include <qhashfunctions.h>
-#include <qiodevice.h>
-#include <qlocalserver.h>
-#include <qlocalsocket.h>
-#include <qmessagebox.h>
-#include <qnamespace.h>
-#include <qset.h>
-#include <qurl.h>
-#include <qurlquery.h>
-#include <string>
 
-#include "qt/sendcoinsrecipient.h"
-#include "script/standard.h"
+#include <cstdlib>
+#include <memory>
+
+#include <QApplication>
+#include <QByteArray>
+#include <QDataStream>
+#include <QDebug>
+#include <QFile>
+#include <QFileOpenEvent>
+#include <QHash>
+#include <QList>
+#include <QLocalServer>
+#include <QLocalSocket>
+#include <QStringList>
+#include <QUrlQuery>
 
 const int BITCOIN_IPC_CONNECT_TIMEOUT = 1000; // milliseconds
 const QString BITCOIN_IPC_PREFIX("dash:");

@@ -4,14 +4,8 @@
 
 #include <bench/bench.h>
 #include <support/allocators/pool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <unordered_map>
-#include <functional>
-#include <memory>
-#include <utility>
 
-#include "nanobench.h"
+#include <unordered_map>
 
 template <typename Map>
 void BenchFillClearMap(benchmark::Bench& bench, Map& map)

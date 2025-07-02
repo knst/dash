@@ -2,18 +2,17 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <net.h>
+#include <protocol.h>
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
-#include <bits/chrono.h>
+#include <test/fuzz/util.h>
+
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <optional>
 #include <vector>
-#include <utility>
-
-#include "node/eviction.h"
-#include "test/util/net.h"
 
 FUZZ_TARGET(node_eviction)
 {

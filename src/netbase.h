@@ -13,18 +13,14 @@
 #include <netaddress.h>
 #include <serialize.h>
 #include <util/sock.h>
-#include <stdint.h>
-#include <sys/un.h>
+
 #include <functional>
 #include <memory>
+#include <stdint.h>
 #include <string>
 #include <type_traits>
 #include <unordered_set>
 #include <vector>
-#include <optional>
-
-#include "sync.h"
-#include "threadsafety.h"
 
 extern int nConnectTimeout;
 extern bool fNameLookup;

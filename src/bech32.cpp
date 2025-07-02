@@ -4,8 +4,8 @@
 
 #include <bech32.h>
 #include <util/vector.h>
+
 #include <assert.h>
-#include <stddef.h>
 
 namespace bech32
 {

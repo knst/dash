@@ -8,7 +8,7 @@
 #include <attributes.h>
 #include <sync.h>
 #include <threadsafety.h>
-#include <bits/chrono.h>
+
 #include <chrono>
 #include <condition_variable>
 #include <cstddef>

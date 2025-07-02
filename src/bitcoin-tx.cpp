@@ -24,32 +24,14 @@
 #include <util/strencodings.h>
 #include <util/string.h>
 #include <util/system.h>
-#include <stacktraces.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include <util/translation.h>
+
 #include <cstdio>
 #include <functional>
 #include <memory>
 #include <optional>
-#include <algorithm>
-#include <exception>
-#include <iostream>
-#include <map>
-#include <stdexcept>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "chainparamsbase.h"
-#include "consensus/amount.h"
-#include "key.h"
-#include "prevector.h"
-#include "pubkey.h"
-#include "script/interpreter.h"
-#include "script/standard.h"
-#include "span.h"
-#include "tinyformat.h"
-#include "uint256.h"
+#include <stacktraces.h>
 
 static bool fCreateBlank;
 static std::map<std::string,UniValue> registers;

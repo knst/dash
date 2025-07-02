@@ -6,6 +6,7 @@
 #define BITCOIN_UTIL_STRING_H
 
 #include <util/spanparsing.h>
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -15,8 +16,6 @@
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include "span.h"
 
 void ReplaceAll(std::string& in_out, const std::string& search, const std::string& substitute);
 

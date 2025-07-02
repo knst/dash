@@ -9,10 +9,6 @@
 #include <streams.h>
 #include <test/fuzz/fuzz.h>
 #include <version.h>
-#include <assert.h>
-#include <ios>
-
-#include "serialize.h"
 
 FUZZ_TARGET(tx_out)
 {

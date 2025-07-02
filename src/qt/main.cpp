@@ -3,10 +3,13 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/bitcoin.h>
+
 #include <compat/compat.h>
+#include <util/translation.h>
 #include <util/url.h>
-#include <qcoreapplication.h>
-#include <qstring.h>
+
+#include <QCoreApplication>
+
 #include <functional>
 #include <string>
 

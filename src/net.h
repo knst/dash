@@ -36,8 +36,7 @@
 #include <util/system.h>
 #include <util/wpipe.h>
 #include <consensus/params.h>
-#include <assert.h>
-#include <bits/chrono.h>
+
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
@@ -51,17 +50,6 @@
 #include <thread>
 #include <unordered_set>
 #include <vector>
-#include <algorithm>
-#include <array>
-#include <cstddef>
-#include <set>
-#include <string>
-#include <tuple>
-#include <unordered_map>
-#include <utility>
-
-#include "threadsafety.h"
-#include "version.h"
 
 class AddrMan;
 class BanMan;
@@ -73,12 +61,6 @@ class CMasternodeSync;
 class CNode;
 class CScheduler;
 struct bilingual_str;
-class CKey;
-class NetGroupManager;
-enum class ConnectionDirection;
-namespace Consensus {
-enum class LLMQType : uint8_t;
-}  // namespace Consensus
 
 /** Default for -whitelistrelay. */
 static const bool DEFAULT_WHITELISTRELAY = true;

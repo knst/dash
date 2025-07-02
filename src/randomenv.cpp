@@ -8,21 +8,24 @@
 #endif
 
 #include <randomenv.h>
+
 #include <clientversion.h>
 #include <compat/cpuid.h>
 #include <crypto/sha512.h>
-#include <bits/chrono.h>
-#include <bits/types/struct_rusage.h>
-#include <elf.h>
-#include <errno.h>
-#include <net/if.h>
-#include <stdlib.h>
-#include <time.h>
+#include <span.h>
+#include <support/cleanse.h>
+#include <util/time.h>
+
+#include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <cstring>
+#include <chrono>
 #include <climits>
 #include <thread>
-#include <type_traits>
+#include <vector>
+
+#include <sys/types.h> // must go before a number of other headers
 
 #ifdef WIN32
 #include <windows.h>

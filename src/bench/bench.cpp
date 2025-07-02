@@ -3,8 +3,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/bench.h>
+
 #include <fs.h>
+#include <test/util/setup_common.h>
+
 #include <algorithm>
+#include <chrono>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -12,11 +16,6 @@
 #include <regex>
 #include <string>
 #include <vector>
-#include <compare>
-#include <ratio>
-#include <utility>
-
-#include "nanobench.h"
 
 using namespace std::chrono_literals;
 

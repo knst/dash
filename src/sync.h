@@ -13,14 +13,12 @@
 
 #include <threadsafety.h>
 #include <util/macros.h>
+
 #include <condition_variable>
 #include <mutex>
 #include <shared_mutex>
 #include <string>
 #include <thread>
-#include <type_traits>
-
-#include "tinyformat.h"
 
 /////////////////////////////////////////////////
 //                                             //

@@ -3,7 +3,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <core_io.h>
+
 #include <consensus/amount.h>
+#include <consensus/validation.h>
 #include <key_io.h>
 #include <primitives/transaction.h>
 #include <script/descriptor.h>
@@ -15,30 +17,21 @@
 #include <univalue.h>
 #include <util/check.h>
 #include <util/strencodings.h>
+#include <util/system.h>
+
 #include <addressindex.h>
 #include <spentindex.h>
+
 #include <evo/assetlocktx.h>
 #include <evo/cbtx.h>
 #include <evo/mnhftx.h>
 #include <evo/providertx.h>
 #include <evo/specialtx.h>
 #include <llmq/commitment.h>
-#include <stdint.h>
+
 #include <map>
 #include <string>
 #include <vector>
-#include <memory>
-#include <optional>
-#include <utility>
-
-#include "coins.h"
-#include "prevector.h"
-#include "script/interpreter.h"
-#include "script/signingprovider.h"
-#include "span.h"
-#include "tinyformat.h"
-#include "uint256.h"
-#include "version.h"
 
 UniValue ValueFromAmount(const CAmount amount)
 {

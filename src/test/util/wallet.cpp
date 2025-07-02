@@ -7,9 +7,10 @@
 #endif
 
 #include <test/util/wallet.h>
+
 #include <key_io.h>
+#include <outputtype.h>
 #include <script/standard.h>
-#include <assert.h>
 #ifdef ENABLE_WALLET
 #include <util/translation.h>
 #include <wallet/wallet.h>

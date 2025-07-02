@@ -5,6 +5,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <rpc/server.h>
+
 #include <rpc/util.h>
 #include <shutdown.h>
 #include <sync.h>
@@ -12,34 +13,15 @@
 #include <util/string.h>
 #include <util/system.h>
 #include <util/time.h>
-#include <bits/chrono.h>
-#include <stddef.h>
-#include <boost/function/function_template.hpp>
-#include <boost/iterator/iterator_facade.hpp>
-#include <boost/signals2/detail/lwm_pthreads.hpp>
-#include <boost/signals2/detail/signal_template.hpp>
-#include <boost/signals2/optional_last_value.hpp>
-#include <boost/smart_ptr/detail/operator_bool.hpp>
-#include <boost/smart_ptr/make_shared_object.hpp>
+
+#include <boost/signals2/signal.hpp>
+
 #include <atomic>
 #include <cassert>
+#include <chrono>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
-#include <algorithm>
-#include <exception>
-#include <list>
-#include <set>
-
-#include "bitcoin-config.h"
-#include "fs.h"
-#include "logging.h"
-#include "rpc/protocol.h"
-#include "rpc/request.h"
-#include "threadsafety.h"
-#include "tinyformat.h"
-#include "univalue.h"
-#include "util/check.h"
 
 static Mutex g_rpc_warmup_mutex;
 static std::atomic<bool> g_rpc_running{false};

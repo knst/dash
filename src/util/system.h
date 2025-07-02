@@ -24,20 +24,15 @@
 #include <sync.h>
 #include <util/settings.h>
 #include <util/time.h>
-#include <stdint.h>
-#include <stdio.h>
+
 #include <exception>
 #include <map>
 #include <optional>
 #include <set>
+#include <stdint.h>
 #include <string>
 #include <utility>
 #include <vector>
-#include <iosfwd>
-#include <limits>
-#include <list>
-
-#include "threadsafety.h"
 
 //Dash only features
 

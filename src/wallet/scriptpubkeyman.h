@@ -18,48 +18,13 @@
 #include <wallet/ismine.h>
 #include <wallet/walletdb.h>
 #include <wallet/walletutil.h>
+
 #include <boost/signals2/signal.hpp>
-#include <stddef.h>
-#include <stdint.h>
-#include <boost/function/function_template.hpp>
-#include <boost/signals2/detail/lwm_pthreads.hpp>
-#include <boost/signals2/detail/signal_template.hpp>
-#include <boost/signals2/optional_last_value.hpp>
-#include <boost/smart_ptr/make_shared_object.hpp>
+
 #include <functional>
 #include <optional>
-#include <algorithm>
-#include <ios>
-#include <map>
-#include <memory>
-#include <set>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include "key.h"
-#include "logging.h"
-#include "pubkey.h"
-#include "script/script.h"
-#include "serialize.h"
-#include "support/allocators/secure.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "uint256.h"
-
-class COutPoint;
-class Coin;
-class DescriptorCache;
-struct CMutableTransaction;
-struct KeyOriginInfo;
-struct PartiallySignedTransaction;
-struct PrecomputedTransactionData;
-struct SignatureData;
-struct bilingual_str;
 
 namespace wallet {
-class WalletDatabase;
-
 // Wallet storage things that ScriptPubKeyMans need in order to be able to store things to the wallet database.
 // It provides access to things that are part of the entire wallet and not specific to a ScriptPubKeyMan such as
 // wallet flags, wallet version, encryption keys, encryption status, and the database itself. This allows a

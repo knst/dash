@@ -11,26 +11,7 @@
 #include <net.h>
 #include <netaddress.h>
 #include <util/check.h>
-#include <QtCore/qglobal.h>
-#include <bits/chrono.h>
-#include <qabstractitemmodel.h>
-#include <qapplication.h>
-#include <qcolor.h>
-#include <qfont.h>
-#include <qglobal.h>
-#include <qicon.h>
-#include <qimage.h>
-#include <qitemdelegate.h>
-#include <qlabel.h>
-#include <qlist.h>
-#include <qnamespace.h>
-#include <qobject.h>
-#include <qobjectdefs.h>
-#include <qprogressbar.h>
-#include <qsize.h>
-#include <qstring.h>
-#include <qstringlist.h>
-#include <stdint.h>
+
 #include <QApplication>
 #include <QEvent>
 #include <QHeaderView>
@@ -42,21 +23,14 @@
 #include <QProgressBar>
 #include <QString>
 #include <QTableView>
+
 #include <cassert>
 #include <chrono>
 #include <utility>
-#include <exception>
-#include <string>
-#include <vector>
 
 class QValidatedLineEdit;
 class OptionsModel;
 class SendCoinsRecipient;
-class QDate;
-class QEvent;
-class QFontMetrics;
-class QMouseEvent;
-enum class ConnectionType;
 
 namespace interfaces
 {
@@ -78,7 +52,6 @@ class QPoint;
 class QProgressDialog;
 class QUrl;
 class QWidget;
-
 QT_END_NAMESPACE
 
 /** Utility functions used by the Dash Qt UI.

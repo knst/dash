@@ -12,33 +12,11 @@
 #include <streams.h>
 #include <util/strencodings.h>
 #include <util/system.h>
+
+#include <typeindex>
+
 #include <leveldb/db.h>
 #include <leveldb/write_batch.h>
-#include <assert.h>
-#include <stdint.h>
-#include <sys/types.h>
-#include <typeindex>
-#include <algorithm>
-#include <cstddef>
-#include <exception>
-#include <map>
-#include <memory>
-#include <set>
-#include <stdexcept>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <vector>
-
-#include "leveldb/iterator.h"
-#include "leveldb/options.h"
-#include "leveldb/slice.h"
-#include "leveldb/status.h"
-#include "logging.h"
-
-namespace leveldb {
-class Env;
-}  // namespace leveldb
 
 static const size_t DBWRAPPER_PREALLOC_KEY_SIZE = 64;
 static const size_t DBWRAPPER_PREALLOC_VALUE_SIZE = 1024;

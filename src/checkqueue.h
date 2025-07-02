@@ -8,13 +8,9 @@
 #include <sync.h>
 #include <tinyformat.h>
 #include <util/threadnames.h>
-#include <assert.h>
+
 #include <algorithm>
 #include <vector>
-#include <condition_variable>
-#include <thread>
-
-#include "threadsafety.h"
 
 template <typename T>
 class CCheckQueueControl;

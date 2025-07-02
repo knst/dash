@@ -7,11 +7,8 @@
 
 #include <netaddress.h>
 #include <uint256.h>
-#include <stdint.h>
-#include <vector>
-#include <utility>
 
-class CNetAddr;
+#include <vector>
 
 /**
  * Netgroup manager

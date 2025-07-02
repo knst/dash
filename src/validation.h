@@ -29,26 +29,17 @@
 #include <util/check.h>
 #include <util/hasher.h>
 #include <util/translation.h>
-#include <stdint.h>
-#include <assert.h>
-#include <stdio.h>
+
 #include <atomic>
 #include <map>
 #include <memory>
 #include <optional>
 #include <set>
+#include <stdint.h>
 #include <string>
 #include <thread>
 #include <utility>
 #include <vector>
-#include <condition_variable>
-#include <functional>
-
-#include "coins.h"
-#include "consensus/validation.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "threadsafety.h"
 
 class CChainState;
 class CBlockTreeDB;
@@ -64,13 +55,6 @@ struct ChainTxData;
 struct DisconnectedBlockTransactions;
 struct LockPoints;
 struct AssumeutxoData;
-class ArgsManager;
-class CAutoFile;
-namespace Consensus {
-struct Params;
-}  // namespace Consensus
-struct FlatFilePos;
-
 namespace node {
 class SnapshotMetadata;
 } // namespace node

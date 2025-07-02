@@ -10,11 +10,8 @@
 #include <policy/fees.h>
 #include <primitives/transaction.h>
 #include <script/standard.h>
-#include <stdint.h>
+
 #include <optional>
-#include <algorithm>
-#include <set>
-#include <vector>
 
 namespace wallet {
 enum class CoinType : uint8_t

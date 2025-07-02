@@ -5,14 +5,21 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/wallet.h>
+
 #include <chain.h>
+#include <chainparams.h>
 #include <consensus/amount.h>
 #include <consensus/consensus.h>
+#include <consensus/validation.h>
+#include <crypto/common.h>
 #include <fs.h>
 #include <interfaces/chain.h>
 #include <interfaces/wallet.h>
 #include <key.h>
 #include <key_io.h>
+#include <policy/fees.h>
+#include <policy/policy.h>
+#include <policy/settings.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <script/descriptor.h>
@@ -21,65 +28,31 @@
 #include <script/signingprovider.h>
 #include <support/cleanse.h>
 #include <txmempool.h>
+#include <util/bip32.h>
 #include <util/check.h>
 #include <util/error.h>
+#include <util/fees.h>
 #include <util/moneystr.h>
 #include <util/string.h>
 #include <util/translation.h>
-#include <bits/chrono.h>
-#include <boost/iterator/iterator_facade.hpp>
-#include <boost/smart_ptr/detail/operator_bool.hpp>
 #ifdef USE_BDB
 #include <wallet/bdb.h>
 #endif
+#include <wallet/coincontrol.h>
+#include <wallet/coinselection.h>
 #include <wallet/context.h>
+#include <wallet/fees.h>
 #include <warnings.h>
+
+#include <coinjoin/common.h>
+#include <coinjoin/options.h>
+#include <evo/providertx.h>
+
 #include <univalue.h>
+
 #include <algorithm>
 #include <cassert>
 #include <ranges>
-#include <chrono>
-#include <compare>
-#include <condition_variable>
-#include <initializer_list>
-#include <iterator>
-#include <limits>
-#include <list>
-#include <stdexcept>
-#include <thread>
-#include <tuple>
-#include <variant>
-
-#include "bitcoin-config.h"
-#include "coins.h"
-#include "governance/common.h"
-#include "interfaces/coinjoin.h"
-#include "interfaces/handler.h"
-#include "outputtype.h"
-#include "policy/feerate.h"
-#include "psbt.h"
-#include "pubkey.h"
-#include "random.h"
-#include "script/interpreter.h"
-#include "span.h"
-#include "tinyformat.h"
-#include "util/message.h"
-#include "util/settings.h"
-#include "util/strencodings.h"
-#include "util/system.h"
-#include "util/ui_change_type.h"
-#include "wallet/crypter.h"
-#include "wallet/hdchain.h"
-#include "wallet/scriptpubkeyman.h"
-#include "wallet/transaction.h"
-#include "wallet/walletdb.h"
-#include "wallet/walletutil.h"
-
-namespace llmq {
-class CChainLockSig;
-struct CInstantSendLock;
-}  // namespace llmq
-struct KeyOriginInfo;
 
 using interfaces::FoundBlock;
 

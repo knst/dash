@@ -4,28 +4,13 @@
 
 #include <qt/modaloverlay.h>
 #include <qt/forms/ui_modaloverlay.h>
+
 #include <chainparams.h>
 #include <qt/guiutil.h>
-#include <QtCore/qglobal.h>
-#include <QtCore/qobjectdefs.h>
-#include <qabstractanimation.h>
-#include <qcoreevent.h>
-#include <qeasingcurve.h>
-#include <qevent.h>
-#include <qicon.h>
-#include <qlabel.h>
-#include <qnamespace.h>
-#include <qobject.h>
-#include <qpair.h>
-#include <qpoint.h>
-#include <qpushbutton.h>
-#include <qstringbuilder.h>
-#include <qvariant.h>
-#include <algorithm>
-#include <vector>
 
-#include "bitcoin-config.h"
-#include "consensus/params.h"
+#include <QEasingCurve>
+#include <QPropertyAnimation>
+#include <QResizeEvent>
 
 ModalOverlay::ModalOverlay(bool enable_wallet, QWidget *parent) :
 QWidget(parent),

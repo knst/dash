@@ -31,9 +31,7 @@
 #include <uint256.h>
 #include <util/overflow.h>
 #include <version.h>
-#include <assert.h>
-#include <bits/chrono.h>
-#include <errno.h>
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -41,22 +39,8 @@
 #include <optional>
 #include <string>
 #include <vector>
-#include <ios>
-#include <limits>
-#include <memory>
-#include <tuple>
-#include <type_traits>
-
-#include "node/connection_types.h"
-#include "node/eviction.h"
-#include "protocol.h"
-#include "span.h"
-#include "threadsafety.h"
-#include "util/sock.h"
 
 class PeerManager;
-class CCoinsViewCache;
-enum class NetPermissionFlags : uint32_t;
 
 class FuzzedSock : public Sock
 {

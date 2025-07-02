@@ -7,14 +7,10 @@
 #include <test/fuzz/util.h>
 #include <test/util/setup_common.h>
 #include <util/system.h>
-#include <stddef.h>
+
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <algorithm>
-#include <functional>
-#include <optional>
-#include <stdexcept>
 
 namespace {
 void initialize_system()

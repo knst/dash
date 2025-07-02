@@ -7,10 +7,9 @@
 #include <streams.h>
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
+
 #include <ranges>
 #include <vector>
-#include <algorithm>
-
 namespace {
 
 template <unsigned int N, typename T>

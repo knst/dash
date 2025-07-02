@@ -3,15 +3,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <netgroup.h>
+
 #include <hash.h>
 #include <util/asmap.h>
-#include <assert.h>
-#include <stddef.h>
-#include <algorithm>
-#include <array>
-
-#include "netaddress.h"
-#include "uint256.h"
 
 uint256 NetGroupManager::GetAsmapChecksum() const
 {

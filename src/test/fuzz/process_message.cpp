@@ -19,9 +19,18 @@
 #include <test/util/net.h>
 #include <test/util/setup_common.h>
 #include <test/util/validation.h>
+#include <txorphanage.h>
 #include <validationinterface.h>
 #include <version.h>
-#include <bits/chrono.h>
+
+#include <llmq/blockprocessor.h>
+#include <llmq/chainlocks.h>
+#include <llmq/dkgsessionmgr.h>
+#include <llmq/instantsend.h>
+#include <llmq/quorums.h>
+#include <llmq/signing.h>
+#include <llmq/signing_shares.h>
+
 #include <atomic>
 #include <cstdlib>
 #include <iostream>
@@ -29,13 +38,6 @@
 #include <string>
 #include <string_view>
 #include <vector>
-#include <algorithm>
-#include <functional>
-
-#include "chainparamsbase.h"
-#include "util/check.h"
-#include "util/time.h"
-#include "validation.h"
 
 namespace {
 const TestingSetup* g_setup;

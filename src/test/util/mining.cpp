@@ -3,26 +3,20 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <test/util/mining.h>
+
 #include <chainparams.h>
 #include <consensus/merkle.h>
+#include <evo/evodb.h>
 #include <key_io.h>
 #include <node/context.h>
 #include <node/miner.h>
 #include <pow.h>
 #include <script/standard.h>
+#include <spork.h>
 #include <test/util/script.h>
 #include <util/check.h>
 #include <validation.h>
 #include <versionbits.h>
-#include <assert.h>
-#include <algorithm>
-#include <utility>
-
-#include "chain.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "script/script.h"
-#include "uint256.h"
 
 using node::BlockAssembler;
 using node::NodeContext;

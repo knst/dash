@@ -15,17 +15,10 @@
 #include <streams.h>
 #include <test/fuzz/fuzz.h>
 #include <univalue.h>
+#include <validation.h>
 #include <version.h>
-#include <cassert>
-#include <functional>
-#include <ios>
-#include <stdexcept>
-#include <string>
 
-#include "chainparamsbase.h"
-#include "serialize.h"
-#include "uint256.h"
-#include "util/check.h"
+#include <cassert>
 
 void initialize_transaction()
 {

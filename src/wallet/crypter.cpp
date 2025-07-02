@@ -3,17 +3,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/crypter.h>
+
 #include <crypto/aes.h>
 #include <crypto/sha512.h>
-#include <string.h>
+#include <util/system.h>
+
 #include <vector>
-
-#include "key.h"
-#include "logging.h"
-#include "pubkey.h"
-#include "support/allocators/secure.h"
-
-class uint256;
 
 namespace wallet {
 int CCrypter::BytesToKeySHA512AES(const std::vector<unsigned char>& chSalt, const SecureString& strKeyData, int count, unsigned char *key,unsigned char *iv) const

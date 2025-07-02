@@ -3,20 +3,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <node/txreconciliation.h>
+
 #include <util/check.h>
+#include <util/system.h>
+
 #include <unordered_map>
 #include <variant>
-#include <algorithm>
-#include <string>
-#include <utility>
-
-#include "hash.h"
-#include "logging.h"
-#include "net.h"
-#include "random.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "uint256.h"
 
 
 namespace {

@@ -5,13 +5,8 @@
 #include <net_permissions.h>
 #include <netbase.h>
 #include <util/error.h>
+#include <util/system.h>
 #include <util/translation.h>
-#include <stddef.h>
-#include <algorithm>
-#include <optional>
-
-#include "netaddress.h"
-#include "tinyformat.h"
 
 const std::vector<std::string> NET_PERMISSIONS_DOC{
     "bloomfilter (allow requesting BIP37 filtered blocks and transactions)",

@@ -7,10 +7,7 @@
 
 #include <interfaces/wallet.h>
 #include <qt/bitcoinunits.h>
-#include <qglobal.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
-#include <qwidget.h>
+
 #include <QWidget>
 #include <memory>
 
@@ -18,8 +15,6 @@ class ClientModel;
 class TransactionFilterProxy;
 class TxViewDelegate;
 class WalletModel;
-class QObject;
-class QTimer;
 
 namespace Ui {
     class OverviewPage;
@@ -27,7 +22,6 @@ namespace Ui {
 
 QT_BEGIN_NAMESPACE
 class QModelIndex;
-
 QT_END_NAMESPACE
 
 /** Overview ("home") page widget */

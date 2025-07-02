@@ -3,9 +3,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <util/check.h>
+
 #include <tinyformat.h>
-#include <stdio.h>
-#include <cstdlib>
 
 void assertion_fail(const char* file, int line, const char* func, const char* assertion)
 {

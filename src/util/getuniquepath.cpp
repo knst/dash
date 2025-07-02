@@ -6,8 +6,6 @@
 #include <fs.h>
 #include <util/strencodings.h>
 
-#include "span.h"
-
 fs::path GetUniquePath(const fs::path& base)
 {
     FastRandomContext rnd;

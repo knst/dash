@@ -7,23 +7,8 @@
 #include <test/util/setup_common.h>
 #include <txmempool.h>
 #include <validation.h>
-#include <stddef.h>
-#include <stdint.h>
+
 #include <vector>
-#include <algorithm>
-#include <memory>
-
-#include "chainparamsbase.h"
-#include "consensus/amount.h"
-#include "nanobench.h"
-#include "primitives/transaction.h"
-#include "random.h"
-#include "script/script.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "uint256.h"
-
-class CCoinsViewCache;
 
 static void AddTx(const CTransactionRef& tx, CTxMemPool& pool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, pool.cs)
 {

@@ -8,16 +8,16 @@
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
 #include <util/strencodings.h>
+
 #include <event2/buffer.h>
+#include <event2/event.h>
 #include <event2/http.h>
 #include <event2/http_struct.h>
+
 #include <cassert>
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <optional>
-
-struct evbuffer;
 
 // workaround for libevent versions before 2.1.1,
 // when internal functions didn't have underscores at the end

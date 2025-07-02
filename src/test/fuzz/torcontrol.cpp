@@ -7,9 +7,10 @@
 #include <test/fuzz/util.h>
 #include <test/util/setup_common.h>
 #include <torcontrol.h>
+
+#include <cstdint>
 #include <string>
 #include <vector>
-#include <functional>
 
 class DummyTorControlConnection : public TorControlConnection
 {

@@ -5,6 +5,7 @@
 
 #include <consensus/validation.h>
 #include <index/txindex.h>
+#include <net.h>
 #include <net_processing.h>
 #include <node/blockstorage.h>
 #include <txmempool.h>
@@ -13,22 +14,8 @@
 #include <node/context.h>
 #include <node/transaction.h>
 #include <util/translation.h>
-#include <assert.h>
-#include <stddef.h>
-#include <future>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <string>
-#include <vector>
 
-#include "chain.h"
-#include "coins.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "sync.h"
-#include "uint256.h"
-#include "util/error.h"
+#include <future>
 
 namespace node {
 static TransactionError HandleATMPError(const TxValidationState& state, std::string& err_string_out) {

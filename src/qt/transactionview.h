@@ -6,21 +6,14 @@
 #define BITCOIN_QT_TRANSACTIONVIEW_H
 
 #include <qt/guiutil.h>
+
 #include <uint256.h>
-#include <qglobal.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
-#include <qwidget.h>
+
 #include <QWidget>
 #include <QKeyEvent>
 
 class TransactionFilterProxy;
 class WalletModel;
-class QAction;
-class QEvent;
-class QObject;
-class QPoint;
-class uint256;
 
 QT_BEGIN_NAMESPACE
 class QComboBox;
@@ -31,7 +24,6 @@ class QLineEdit;
 class QMenu;
 class QModelIndex;
 class QTableView;
-
 QT_END_NAMESPACE
 
 /** Widget showing the transaction list for a wallet, including a filter row.

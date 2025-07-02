@@ -3,10 +3,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <node/minisketchwrapper.h>
+
 #include <logging.h>
 #include <util/time.h>
+
 #include <minisketch.h>
-#include <assert.h>
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>

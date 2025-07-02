@@ -3,22 +3,16 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/coinselection.h>
+
 #include <policy/feerate.h>
 #include <util/check.h>
 #include <util/system.h>
 #include <util/moneystr.h>
+
 #include <coinjoin/common.h>
-#include <assert.h>
+
 #include <numeric>
 #include <optional>
-#include <array>
-
-#include "consensus/amount.h"
-#include "logging.h"
-#include "primitives/transaction.h"
-#include "random.h"
-#include "tinyformat.h"
-#include "uint256.h"
 
 namespace wallet {
 // Descending order comparator

@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <chainparamsbase.h>
 #include <consensus/amount.h>
 #include <key_io.h>
 #include <outputtype.h>
@@ -11,25 +12,10 @@
 #include <script/signingprovider.h>
 #include <tinyformat.h>
 #include <util/check.h>
+#include <util/system.h>
 #include <util/strencodings.h>
 #include <util/string.h>
 #include <util/translation.h>
-#include <algorithm>
-#include <iterator>
-#include <memory>
-#include <set>
-#include <stdexcept>
-#include <tuple>
-#include <type_traits>
-
-#include "protocol.h"
-#include "rpc/protocol.h"
-#include "rpc/request.h"
-#include "script/script.h"
-#include "script/standard.h"
-#include "span.h"
-#include "univalue.h"
-#include "util/error.h"
 
 const std::string UNIX_EPOCH_TIME = "UNIX epoch time";
 const std::string EXAMPLE_ADDRESS[2] = {"XunLY9Tf7Zsef8gMGL2fhWA9ZmMjt4KPw0", "XwQQkwA4FYkq2XERzMY2CiAZhJTEDAbtc0"};

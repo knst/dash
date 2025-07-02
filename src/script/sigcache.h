@@ -8,13 +8,8 @@
 
 #include <script/interpreter.h>
 #include <util/hasher.h>
-#include <stdint.h>
+
 #include <vector>
-
-#include "consensus/amount.h"
-
-class CTransaction;
-class uint256;
 
 // DoS prevention: limit cache size to 32MB (over 1000000 entries on 64-bit
 // systems). Due to how we count cache size, actual memory usage is slightly

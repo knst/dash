@@ -6,14 +6,11 @@
 #include <checkqueue.h>
 #include <key.h>
 #include <prevector.h>
+#include <pubkey.h>
 #include <random.h>
 #include <util/system.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <vector>
-#include <algorithm>
 
-#include "nanobench.h"
+#include <vector>
 
 static const size_t BATCHES = 101;
 static const size_t BATCH_SIZE = 30;

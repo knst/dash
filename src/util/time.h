@@ -7,13 +7,10 @@
 #define BITCOIN_UTIL_TIME_H
 
 #include <compat/compat.h>
-#include <bits/chrono.h>
-#include <sys/time.h>
+
 #include <chrono>
 #include <cstdint>
 #include <string>
-#include <ctime>
-#include <ratio>
 
 using namespace std::chrono_literals;
 

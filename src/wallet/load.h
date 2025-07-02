@@ -15,7 +15,6 @@ class CScheduler;
 
 namespace interfaces {
 class Chain;
-
 namespace CoinJoin {
 class Loader;
 } // namespace CoinJoin

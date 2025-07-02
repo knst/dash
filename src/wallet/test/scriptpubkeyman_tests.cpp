@@ -7,23 +7,8 @@
 #include <test/util/setup_common.h>
 #include <wallet/scriptpubkeyman.h>
 #include <wallet/wallet.h>
-#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
-#include <boost/preprocessor/control/iif.hpp>
-#include <boost/preprocessor/logical/compl.hpp>
-#include <boost/preprocessor/logical/limits/bool_256.hpp>
-#include <boost/test/tools/old/interface.hpp>
-#include <boost/test/unit_test_suite.hpp>
-#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
-#include <boost/test/utils/lazy_ostream.hpp>
-#include <algorithm>
-#include <memory>
-#include <vector>
 
-#include "interfaces/chain.h"
-#include "pubkey.h"
-#include "script/script.h"
-#include "script/sign.h"
-#include "wallet/walletdb.h"
+#include <boost/test/unit_test.hpp>
 
 using node::NodeContext;
 

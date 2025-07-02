@@ -6,12 +6,15 @@
 #include <util/syserror.h>
 
 #ifndef WIN32
+#include <cstring>
 #include <fcntl.h>
+#include <sys/file.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 #else
-#include <windows.h>
 #include <codecvt>
 #include <limits>
+#include <windows.h>
 #endif
 
 #include <cassert>

@@ -3,14 +3,18 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <base58.h>
+#include <core_io.h>
 #include <key.h>
 #include <key_io.h>
+#include <node/context.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <psbt.h>
+#include <rpc/blockchain.h>
 #include <rpc/client.h>
 #include <rpc/request.h>
 #include <rpc/server.h>
+#include <rpc/util.h>
 #include <span.h>
 #include <streams.h>
 #include <test/fuzz/FuzzedDataProvider.h>
@@ -22,7 +26,7 @@
 #include <util/strencodings.h>
 #include <util/string.h>
 #include <util/time.h>
-#include <assert.h>
+
 #include <cstdint>
 #include <iostream>
 #include <memory>
@@ -30,14 +34,6 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <algorithm>
-#include <cstdlib>
-#include <exception>
-#include <functional>
-
-#include "serialize.h"
-#include "uint256.h"
-#include "version.h"
 
 namespace {
 struct RPCFuzzTestingSetup : public TestingSetup {

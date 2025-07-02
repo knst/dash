@@ -5,6 +5,7 @@
 
 #include <qt/overviewpage.h>
 #include <qt/forms/ui_overviewpage.h>
+
 #include <qt/bitcoinunits.h>
 #include <qt/clientmodel.h>
 #include <qt/guiutil.h>
@@ -12,48 +13,23 @@
 #include <qt/transactionfilterproxy.h>
 #include <qt/transactionoverviewwidget.h>
 #include <qt/transactiontablemodel.h>
+#include <qt/utilitydialog.h>
 #include <qt/walletmodel.h>
+
 #include <coinjoin/options.h>
 #include <interfaces/coinjoin.h>
-#include <QtCore/qglobal.h>
-#include <QtCore/qobjectdefs.h>
-#include <qabstractitemdelegate.h>
-#include <qabstractitemmodel.h>
-#include <qapplication.h>
-#include <qcolor.h>
-#include <qevent.h>
-#include <qfont.h>
-#include <qframe.h>
-#include <qicon.h>
-#include <qlabel.h>
-#include <qmessagebox.h>
-#include <qmetatype.h>
-#include <qnamespace.h>
-#include <qpainter.h>
-#include <qprogressbar.h>
-#include <qpushbutton.h>
-#include <qrect.h>
-#include <qsettings.h>
-#include <qsize.h>
-#include <qstringbuilder.h>
-#include <qstyleoption.h>
-#include <qtimer.h>
-#include <qvariant.h>
-#include <stdint.h>
+
 #include <algorithm>
 #include <map>
 #include <cmath>
-#include <utility>
-#include <vector>
 
-#include "consensus/amount.h"
-#include "interfaces/node.h"
-#include "interfaces/wallet.h"
-#include "logging.h"
-#include "util/system.h"
-#include "util/time.h"
-
-class QObject;
+#include <QAbstractItemDelegate>
+#include <QApplication>
+#include <QDateTime>
+#include <QPainter>
+#include <QSettings>
+#include <QStatusTipEvent>
+#include <QTimer>
 
 #define ITEM_HEIGHT 54
 #define NUM_ITEMS_DISABLED 5

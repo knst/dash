@@ -8,8 +8,6 @@
 
 #include <crypto/sha512.h>
 
-class CSHA512;
-
 /** Gather non-cryptographic environment data that changes over time. */
 void RandAddDynamicEnv(CSHA512& hasher);
 

@@ -4,28 +4,29 @@
 
 #include <chainparams.h>
 #include <compressor.h>
+#include <core_io.h>
 #include <core_memusage.h>
+#include <key.h>
 #include <policy/policy.h>
+#include <pubkey.h>
 #include <script/descriptor.h>
 #include <script/interpreter.h>
 #include <script/script.h>
 #include <script/script_error.h>
 #include <script/sign.h>
 #include <script/standard.h>
+#include <streams.h>
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
+#include <univalue.h>
+
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <vector>
-#include <functional>
-#include <variant>
-
-#include "chainparamsbase.h"
-#include "prevector.h"
-#include "script/signingprovider.h"
-#include "uint256.h"
 
 void initialize_script()
 {

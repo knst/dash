@@ -3,16 +3,14 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <fs.h>
+#include <univalue.h>
 #include <util/check.h>
 #include <util/system.h>
-#include <wallet/test/init_test_fixture.h>
+
 #include <fstream>
 #include <string>
 
-#include "interfaces/chain.h"
-#include "interfaces/coinjoin.h"
-#include "interfaces/wallet.h"
-#include "test/util/setup_common.h"
+#include <wallet/test/init_test_fixture.h>
 
 namespace wallet {
 InitWalletDirTestingSetup::InitWalletDirTestingSetup(const std::string& chainName) : BasicTestingSetup(chainName)

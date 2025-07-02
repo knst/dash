@@ -6,13 +6,6 @@
 #include <bench/bench.h>
 #include <crypto/chacha20.h>
 #include <crypto/chacha20poly1305.h>
-#include <stdint.h>
-#include <algorithm>
-#include <cstddef>
-#include <vector>
-
-#include "nanobench.h"
-#include "span.h"
 
 /* Number of bytes to process per iteration */
 static const uint64_t BUFFER_SIZE_TINY  = 64;

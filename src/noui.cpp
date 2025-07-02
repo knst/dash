@@ -5,15 +5,14 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <noui.h>
+
 #include <logging.h>
 #include <node/interface_ui.h>
 #include <util/translation.h>
-#include <boost/signals2/connection.hpp>
-#include <string>
-#include <functional>
-#include <iostream>
 
-#include "tinyformat.h"
+#include <string>
+
+#include <boost/signals2/connection.hpp>
 
 /** Store connections so we can disconnect them when suppressing output */
 boost::signals2::connection noui_ThreadSafeMessageBoxConn;

@@ -8,12 +8,9 @@
 
 #include <script/script_error.h>
 #include <primitives/transaction.h>
-#include <stdint.h>
-#include <vector>
 
-#include "consensus/amount.h"
-#include "script/script.h"
-#include "uint256.h"
+#include <vector>
+#include <stdint.h>
 
 class CPubKey;
 class CScript;

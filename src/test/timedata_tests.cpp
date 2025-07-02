@@ -4,31 +4,17 @@
 //
 
 #include <netaddress.h>
+#include <noui.h>
 #include <test/util/logging.h>
 #include <test/util/setup_common.h>
 #include <timedata.h>
 #include <util/string.h>
 #include <util/translation.h>
 #include <warnings.h>
-#include <stdint.h>
-#include <boost/preprocessor/arithmetic/limits/dec_256.hpp>
-#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
-#include <boost/preprocessor/control/expr_iif.hpp>
-#include <boost/preprocessor/control/iif.hpp>
-#include <boost/preprocessor/detail/limits/auto_rec_256.hpp>
-#include <boost/preprocessor/logical/compl.hpp>
-#include <boost/preprocessor/logical/limits/bool_256.hpp>
-#include <boost/preprocessor/repetition/detail/limits/for_256.hpp>
-#include <boost/preprocessor/repetition/for.hpp>
-#include <boost/preprocessor/seq/limits/elem_256.hpp>
-#include <boost/preprocessor/seq/limits/size_256.hpp>
-#include <boost/preprocessor/tuple/elem.hpp>
-#include <boost/preprocessor/variadic/limits/elem_64.hpp>
-#include <boost/test/tools/old/interface.hpp>
-#include <boost/test/unit_test_suite.hpp>
-#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
-#include <boost/test/utils/lazy_ostream.hpp>
+
 #include <string>
+
+#include <boost/test/unit_test.hpp>
 
 BOOST_FIXTURE_TEST_SUITE(timedata_tests, BasicTestingSetup)
 

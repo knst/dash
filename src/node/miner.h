@@ -8,26 +8,16 @@
 
 #include <primitives/block.h>
 #include <txmempool.h>
+
+#include <memory>
+#include <optional>
 #include <stdint.h>
+
 #include <boost/multi_index/identity.hpp>
 #include <boost/multi_index/indexed_by.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/tag.hpp>
 #include <boost/multi_index_container.hpp>
-#include <stddef.h>
-#include <boost/multi_index/detail/hash_index_iterator.hpp>
-#include <boost/multi_index/detail/iter_adaptor.hpp>
-#include <boost/multi_index/detail/ord_index_impl.hpp>
-#include <boost/operators.hpp>
-#include <memory>
-#include <optional>
-#include <vector>
-
-#include "consensus/amount.h"
-#include "policy/feerate.h"
-#include "primitives/transaction.h"
-#include "threadsafety.h"
-#include "uint256.h"
 
 class CBlockIndex;
 class CChainParams;
@@ -39,11 +29,8 @@ class CEvoDB;
 class CMNHFManager;
 class CScript;
 struct LLMQContext;
-namespace Consensus {
-struct Params;
-}  // namespace Consensus
-class CChainState;
 
+namespace Consensus { struct Params; };
 namespace llmq {
 class CChainLocksHandler;
 class CInstantSendManager;

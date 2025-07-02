@@ -12,12 +12,6 @@
 #include <script/script.h>
 #include <script/standard.h>
 #include <sync.h>
-#include <map>
-#include <set>
-#include <utility>
-
-#include "threadsafety.h"
-#include "uint256.h"
 
 /** An interface to be implemented by keystores that support signing. */
 class SigningProvider

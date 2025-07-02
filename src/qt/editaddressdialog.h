@@ -5,15 +5,9 @@
 #ifndef BITCOIN_QT_EDITADDRESSDIALOG_H
 #define BITCOIN_QT_EDITADDRESSDIALOG_H
 
-#include <qdialog.h>
-#include <qglobal.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
 #include <QDialog>
 
 class AddressTableModel;
-class QObject;
-class QWidget;
 
 namespace Ui {
     class EditAddressDialog;
@@ -21,7 +15,6 @@ namespace Ui {
 
 QT_BEGIN_NAMESPACE
 class QDataWidgetMapper;
-
 QT_END_NAMESPACE
 
 /** Dialog for editing an address and associated information.

@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <test/util/net.h>
+
 #include <net.h>
 #include <net_processing.h>
 #include <netaddress.h>
@@ -13,14 +14,8 @@
 #include <random.h>
 #include <serialize.h>
 #include <span.h>
-#include <vector>
-#include <atomic>
-#include <deque>
-#include <type_traits>
-#include <utility>
 
-#include "sync.h"
-#include "version.h"
+#include <vector>
 
 void ConnmanTestMsg::Handshake(CNode& node,
                                bool successfully_connected,

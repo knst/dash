@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <random.h>
+
 #include <compat/cpuid.h>
 #include <crypto/chacha20.h>
 #include <crypto/sha256.h>
@@ -15,20 +16,11 @@
 #include <support/cleanse.h>
 #include <sync.h>
 #include <util/time.h>
-#include <cpuid.h>
-#include <errno.h>
-#include <string.h>
-#include <unistd.h>
+
 #include <array>
 #include <cmath>
 #include <cstdlib>
 #include <thread>
-#include <ratio>
-#include <utility>
-
-#include "bitcoin-config.h"
-#include "threadsafety.h"
-#include "uint256.h"
 
 #ifdef WIN32
 #include <windows.h>
@@ -39,6 +31,7 @@
 
 #ifdef HAVE_SYS_GETRANDOM
 #include <sys/syscall.h>
+#include <linux/random.h>
 #endif
 #if defined(HAVE_GETENTROPY_RAND) && defined(MAC_OSX)
 #include <unistd.h>

@@ -4,16 +4,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <merkleblock.h>
+
 #include <hash.h>
 #include <consensus/consensus.h>
-#include <assert.h>
-#include <algorithm>
-#include <memory>
-
-#include "common/bloom.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "uint256.h"
 
 
 std::vector<unsigned char> BitsToBytes(const std::vector<bool>& bits)

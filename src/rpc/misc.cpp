@@ -7,10 +7,12 @@
 #include <addressindex.h>
 #include <chainparams.h>
 #include <consensus/consensus.h>
+#include <evo/mnauth.h>
 #include <httpserver.h>
 #include <index/blockfilterindex.h>
 #include <index/coinstatsindex.h>
 #include <index/txindex.h>
+#include <init.h>
 #include <interfaces/chain.h>
 #include <interfaces/echo.h>
 #include <interfaces/init.h>
@@ -24,57 +26,17 @@
 #include <rpc/util.h>
 #include <scheduler.h>
 #include <script/descriptor.h>
+#include <txmempool.h>
 #include <univalue.h>
 #include <util/check.h>
 #include <util/strencodings.h>
+#include <util/system.h>
 #include <validation.h>
+
 #include <masternode/sync.h>
 #include <spork.h>
+
 #include <stdint.h>
-#include <bits/chrono.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <algorithm>
-#include <array>
-#include <functional>
-#include <list>
-#include <map>
-#include <memory>
-#include <set>
-#include <stdexcept>
-#include <string>
-#include <tuple>
-#include <utility>
-#include <variant>
-#include <vector>
-
-#include "bitcoin-config.h"
-#include "bls/bls.h"
-#include "chain.h"
-#include "consensus/amount.h"
-#include "context.h"
-#include "index/base.h"
-#include "key.h"
-#include "logging.h"
-#include "node/blockstorage.h"
-#include "pubkey.h"
-#include "rpc/protocol.h"
-#include "rpc/request.h"
-#include "script/script.h"
-#include "script/signingprovider.h"
-#include "script/standard.h"
-#include "span.h"
-#include "spentindex.h"
-#include "support/lockedpool.h"
-#include "sync.h"
-#include "tinyformat.h"
-#include "txdb.h"
-#include "uint256.h"
-#include "util/string.h"
-#include "util/time.h"
-
-class CTxMemPool;
-class PeerManager;
 #ifdef HAVE_MALLOC_INFO
 #include <malloc.h>
 #endif

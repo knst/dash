@@ -3,13 +3,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/qvalidatedlineedit.h>
-#include <qt/guiutil.h>
-#include <QtCore/qobjectdefs.h>
-#include <qstringbuilder.h>
-#include <qvalidator.h>
 
-class QFocusEvent;
-class QWidget;
+#include <qt/guiutil.h>
 
 QValidatedLineEdit::QValidatedLineEdit(QWidget *parent) :
     QLineEdit(parent),

@@ -4,20 +4,14 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <key.h>
+
 #include <crypto/common.h>
 #include <crypto/hmac_sha512.h>
 #include <random.h>
+
 #include <secp256k1.h>
 #include <secp256k1_ellswift.h>
 #include <secp256k1_recovery.h>
-#include <assert.h>
-#include <string>
-
-#include "hash.h"
-#include "pubkey.h"
-#include "span.h"
-#include "support/allocators/secure.h"
-#include "uint256.h"
 
 static secp256k1_context* secp256k1_context_sign = nullptr;
 

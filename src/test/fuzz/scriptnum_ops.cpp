@@ -6,9 +6,11 @@
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
+
 #include <cassert>
 #include <cstdint>
 #include <limits>
+#include <vector>
 
 namespace {
 bool IsValidAddition(const CScriptNum& lhs, const CScriptNum& rhs)

@@ -4,22 +4,16 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/transactionrecord.h>
+
+#include <chain.h>
 #include <interfaces/wallet.h>
 #include <interfaces/node.h>
-#include <wallet/ismine.h>
-#include <stdint.h>
-#include <QtCore/qglobal.h>
-#include <assert.h>
-#include <map>
-#include <memory>
-#include <variant>
-#include <vector>
 
-#include "consensus/amount.h"
-#include "key_io.h"
-#include "primitives/transaction.h"
-#include "tinyformat.h"
-#include "uint256.h"
+#include <wallet/ismine.h>
+
+#include <stdint.h>
+
+#include <QDateTime>
 
 using wallet::ISMINE_ALL;
 using wallet::ISMINE_SPENDABLE;

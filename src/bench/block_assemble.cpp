@@ -4,22 +4,17 @@
 
 #include <bench/bench.h>
 #include <consensus/consensus.h>
+#include <consensus/validation.h>
 #include <script/standard.h>
 #include <test/util/mining.h>
+#include <test/util/script.h>
 #include <test/util/setup_common.h>
+#include <test/util/wallet.h>
+#include <txmempool.h>
 #include <validation.h>
-#include <assert.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <vector>
-#include <algorithm>
-#include <array>
-#include <memory>
 
-#include "nanobench.h"
-#include "primitives/transaction.h"
-#include "script/script.h"
-#include "sync.h"
+
+#include <vector>
 
 static void AssembleBlock(benchmark::Bench& bench)
 {

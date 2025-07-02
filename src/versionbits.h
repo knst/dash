@@ -8,12 +8,8 @@
 #include <chain.h>
 #include <gsl/pointers.h>
 #include <sync.h>
-#include <stdint.h>
-#include <map>
-#include <unordered_map>
 
-#include "consensus/params.h"
-#include "threadsafety.h"
+#include <map>
 
 /** What block version to use for new blocks (pre versionbits) */
 static const int32_t VERSIONBITS_LAST_OLD_BLOCK_VERSION = 4;

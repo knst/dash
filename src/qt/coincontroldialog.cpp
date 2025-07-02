@@ -2,57 +2,34 @@
 // Copyright (c) 2014-2025 The Dash Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#if defined(HAVE_CONFIG_H)
+#include <config/bitcoin-config.h>
+#endif
+
 #include <qt/coincontroldialog.h>
 #include <qt/forms/ui_coincontroldialog.h>
+
 #include <qt/addresstablemodel.h>
 #include <qt/bitcoinunits.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/walletmodel.h>
+
 #include <wallet/coincontrol.h>
 #include <interfaces/node.h>
 #include <key_io.h>
 #include <policy/policy.h>
-#include <QtCore/qglobal.h>
-#include <QtCore/qobjectdefs.h>
-#include <qaction.h>
-#include <qcursor.h>
-#include <qdialogbuttonbox.h>
-#include <qglobal.h>
-#include <qheaderview.h>
-#include <qicon.h>
-#include <qlabel.h>
-#include <qlist.h>
-#include <qmenu.h>
-#include <qmessagebox.h>
-#include <qmetatype.h>
-#include <qpushbutton.h>
-#include <qradiobutton.h>
-#include <qsettings.h>
-#include <qvariant.h>
-#include <qwidget.h>
-#include <stddef.h>
-#include <algorithm>
-#include <map>
-#include <tuple>
-#include <utility>
-#include <variant>
-#include <vector>
+#include <wallet/wallet.h>
 
-#include "consensus/amount.h"
-#include "interfaces/wallet.h"
-#include "logging.h"
-#include "policy/feerate.h"
-#include "primitives/transaction.h"
-#include "pubkey.h"
-#include "qt/coincontroltreewidget.h"
-#include "script/script.h"
-#include "script/standard.h"
-#include "uint256.h"
-#include "util/system.h"
-
-class QAbstractButton;
-class QPoint;
+#include <QApplication>
+#include <QCheckBox>
+#include <QCursor>
+#include <QDialogButtonBox>
+#include <QFlags>
+#include <QIcon>
+#include <QSettings>
+#include <QTreeWidget>
 
 using wallet::CCoinControl;
 

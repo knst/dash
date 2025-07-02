@@ -7,6 +7,7 @@
 #endif
 
 #include <string>
+#include <thread>
 #include <utility>
 
 #if (defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__))

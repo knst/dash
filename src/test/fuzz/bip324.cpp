@@ -9,14 +9,9 @@
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
 #include <test/util/xoroshiro128plusplus.h>
-#include <assert.h>
+
 #include <cstdint>
 #include <vector>
-#include <algorithm>
-#include <functional>
-
-#include "chainparamsbase.h"
-#include "key.h"
 
 void initialize_bip324()
 {

@@ -6,17 +6,7 @@
 #define BITCOIN_BLOCKENCODINGS_H
 
 #include <primitives/block.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <ios>
-#include <limits>
-#include <memory>
-#include <utility>
-#include <vector>
 
-#include "primitives/transaction.h"
-#include "serialize.h"
-#include "uint256.h"
 
 class CTxMemPool;
 

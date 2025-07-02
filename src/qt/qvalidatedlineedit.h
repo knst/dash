@@ -5,15 +5,7 @@
 #ifndef BITCOIN_QT_QVALIDATEDLINEEDIT_H
 #define BITCOIN_QT_QVALIDATEDLINEEDIT_H
 
-#include <qlineedit.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
 #include <QLineEdit>
-
-class QFocusEvent;
-class QObject;
-class QValidator;
-class QWidget;
 
 /** Line edit that can be marked as "invalid" to show input validation feedback. When marked as invalid,
    it will get a red background until it is focused.

@@ -11,23 +11,6 @@
 #include <flatfile.h>
 #include <index/base.h>
 #include <util/hasher.h>
-#include <stddef.h>
-#include <functional>
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <vector>
-
-#include "primitives/block.h"
-#include "sync.h"
-#include "threadsafety.h"
-
-class BlockFilter;
-class CBlockIndex;
-class CDBBatch;
-class uint256;
-enum class BlockFilterType : uint8_t;
-struct FilterHeaderHasher;
 
 /** Interval between compact filter checkpoints. See BIP 157. */
 static constexpr int CFCHECKPT_INTERVAL = 1000;

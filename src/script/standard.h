@@ -9,11 +9,9 @@
 #include <script/interpreter.h>
 #include <uint256.h>
 #include <util/hash_type.h>
+
 #include <variant>
 #include <string>
-#include <vector>
-
-class CPubKey;
 
 
 static const bool DEFAULT_ACCEPT_DATACARRIER = true;

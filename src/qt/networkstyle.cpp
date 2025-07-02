@@ -4,15 +4,17 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/networkstyle.h>
+
 #include <qt/guiconstants.h>
+#include <qt/guiutil.h>
+
+#include <chainparams.h>
 #include <tinyformat.h>
 #include <util/system.h>
+
 #include <chainparamsbase.h>
-#include <qapplication.h>
-#include <qimage.h>
-#include <qrgb.h>
-#include <qsize.h>
-#include <algorithm>
+
+#include <QApplication>
 
 static const struct {
     const char *networkId;

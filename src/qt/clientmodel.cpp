@@ -4,13 +4,17 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/clientmodel.h>
+
 #include <qt/bantablemodel.h>
 #include <qt/guiconstants.h>
 #include <qt/guiutil.h>
 #include <qt/peertablemodel.h>
 #include <qt/peertablesortproxy.h>
+
 #include <evo/deterministicmns.h>
+
 #include <clientversion.h>
+#include <governance/object.h>
 #include <interfaces/handler.h>
 #include <interfaces/node.h>
 #include <net.h>
@@ -19,20 +23,13 @@
 #include <util/threadnames.h>
 #include <util/time.h>
 #include <validation.h>
-#include <stdint.h>
-#include <QtCore/qglobal.h>
-#include <QtCore/qobjectdefs.h>
-#include <qdatetime.h>
-#include <qdebug.h>
-#include <qthread.h>
-#include <qtimer.h>
-#include <algorithm>
 
-#include "bitcoin-config.h"
-#include "netaddress.h"
-#include "sync.h"
-#include "uint256.h"
-#include "util/translation.h"
+#include <stdint.h>
+
+#include <QDebug>
+#include <QMetaObject>
+#include <QThread>
+#include <QTimer>
 
 static int64_t nLastHeaderTipUpdateNotification = 0;
 static int64_t nLastBlockTipUpdateNotification = 0;

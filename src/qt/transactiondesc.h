@@ -6,9 +6,7 @@
 #define BITCOIN_QT_TRANSACTIONDESC_H
 
 #include <qt/bitcoinunits.h>
-#include <qobject.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
+
 #include <QObject>
 #include <QString>
 

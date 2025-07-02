@@ -6,27 +6,11 @@
 #include <chainparams.h>
 #include <consensus/merkle.h>
 #include <consensus/validation.h>
+#include <policy/policy.h>
 #include <pow.h>
 #include <test/util/setup_common.h>
+#include <txmempool.h>
 #include <validation.h>
-#include <assert.h>
-#include <stdint.h>
-#include <algorithm>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include "chain.h"
-#include "consensus/consensus.h"
-#include "nanobench.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "random.h"
-#include "script/script.h"
-#include "serialize.h"
-#include "uint256.h"
-#include "version.h"
 
 
 static void DuplicateInputs(benchmark::Bench& bench)

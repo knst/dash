@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <rpc/server.h>
+
 #include <addrman.h>
 #include <banman.h>
 #include <chainparams.h>
@@ -15,6 +16,7 @@
 #include <netbase.h>
 #include <node/context.h>
 #include <policy/settings.h>
+#include <rpc/blockchain.h>
 #include <rpc/protocol.h>
 #include <rpc/server_util.h>
 #include <rpc/util.h>
@@ -27,32 +29,8 @@
 #include <validation.h>
 #include <version.h>
 #include <warnings.h>
-#include <univalue.h>
-#include <bits/chrono.h>
-#include <stdint.h>
-#include <compare>
-#include <list>
-#include <map>
-#include <memory>
-#include <optional>
-#include <ratio>
-#include <stdexcept>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
 
-#include "chainparamsbase.h"
-#include "net.h"
-#include "netaddress.h"
-#include "node/connection_types.h"
-#include "policy/feerate.h"
-#include "protocol.h"
-#include "rpc/request.h"
-#include "tinyformat.h"
-#include "uint256.h"
-#include "util/check.h"
-#include "util/sock.h"
+#include <univalue.h>
 
 using node::NodeContext;
 

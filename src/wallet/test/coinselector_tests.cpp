@@ -3,54 +3,22 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <test/util/setup_common.h>
+
 #include <consensus/amount.h>
+#include <node/context.h>
 #include <primitives/transaction.h>
 #include <random.h>
 #include <util/translation.h>
+#include <validation.h>
 #include <wallet/coincontrol.h>
 #include <wallet/coinselection.h>
 #include <wallet/spend.h>
 #include <wallet/test/wallet_test_fixture.h>
 #include <wallet/wallet.h>
-#include <assert.h>
-#include <stdint.h>
-#include <boost/preprocessor/arithmetic/limits/dec_256.hpp>
-#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
-#include <boost/preprocessor/control/expr_iif.hpp>
-#include <boost/preprocessor/control/iif.hpp>
-#include <boost/preprocessor/detail/limits/auto_rec_256.hpp>
-#include <boost/preprocessor/logical/compl.hpp>
-#include <boost/preprocessor/logical/limits/bool_256.hpp>
-#include <boost/preprocessor/repetition/detail/limits/for_256.hpp>
-#include <boost/preprocessor/repetition/for.hpp>
-#include <boost/preprocessor/seq/limits/elem_256.hpp>
-#include <boost/preprocessor/seq/limits/size_256.hpp>
-#include <boost/preprocessor/tuple/elem.hpp>
-#include <boost/preprocessor/variadic/limits/elem_64.hpp>
-#include <boost/test/tools/old/interface.hpp>
-#include <boost/test/unit_test_suite.hpp>
-#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
-#include <boost/test/utils/lazy_ostream.hpp>
-#include <algorithm>
-#include <random>
-#include <cmath>
-#include <map>
-#include <memory>
-#include <optional>
-#include <set>
-#include <tuple>
-#include <utility>
-#include <vector>
 
-#include "interfaces/chain.h"
-#include "policy/feerate.h"
-#include "script/script.h"
-#include "script/standard.h"
-#include "sync.h"
-#include "uint256.h"
-#include "wallet/transaction.h"
-#include "wallet/walletdb.h"
-#include "wallet/walletutil.h"
+#include <algorithm>
+#include <boost/test/unit_test.hpp>
+#include <random>
 
 namespace wallet {
 BOOST_FIXTURE_TEST_SUITE(coinselector_tests, WalletTestingSetup)

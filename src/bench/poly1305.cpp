@@ -2,14 +2,12 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <vector>
+
 #include <bench/bench.h>
 #include <crypto/poly1305.h>
-#include <span.h>
-#include <stdint.h>
-#include <vector>
-#include <cstddef>
 
-#include "nanobench.h"
+#include <span.h>
 
 /* Number of bytes to process per iteration */
 static constexpr uint64_t BUFFER_SIZE_TINY  = 64;

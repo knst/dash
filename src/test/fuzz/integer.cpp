@@ -8,13 +8,17 @@
 #include <consensus/amount.h>
 #include <consensus/merkle.h>
 #include <core_io.h>
+#include <crypto/common.h>
 #include <crypto/siphash.h>
 #include <key_io.h>
 #include <memusage.h>
+#include <netbase.h>
 #include <policy/settings.h>
 #include <pow.h>
 #include <protocol.h>
+#include <pubkey.h>
 #include <rpc/util.h>
+#include <script/sign.h>
 #include <script/standard.h>
 #include <serialize.h>
 #include <streams.h>
@@ -30,26 +34,13 @@
 #include <util/string.h>
 #include <util/system.h>
 #include <version.h>
-#include <bits/chrono.h>
-#include <stddef.h>
-#include <stdint.h>
+
 #include <cassert>
+#include <chrono>
+#include <limits>
 #include <optional>
 #include <set>
 #include <vector>
-#include <functional>
-#include <ios>
-#include <variant>
-
-#include "chainparamsbase.h"
-#include "policy/policy.h"
-#include "script/script.h"
-#include "span.h"
-#include "util/time.h"
-
-namespace Consensus {
-struct Params;
-}  // namespace Consensus
 
 void initialize_integer()
 {

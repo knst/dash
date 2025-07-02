@@ -6,14 +6,19 @@
 // NOTE: This file is intended to be customised by the end user, and includes only local node policy logic
 
 #include <policy/policy.h>
+
 #include <coins.h>
 #include <consensus/amount.h>
+#include <consensus/consensus.h>
+#include <consensus/validation.h>
 #include <policy/feerate.h>
 #include <primitives/transaction.h>
 #include <script/interpreter.h>
 #include <script/script.h>
 #include <script/standard.h>
 #include <serialize.h>
+#include <span.h>
+
 #include <algorithm>
 #include <cstddef>
 #include <vector>

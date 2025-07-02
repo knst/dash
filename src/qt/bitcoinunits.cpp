@@ -5,16 +5,13 @@
 
 #include <qt/bitcoinunits.h>
 #include <chainparams.h>
-#include <consensus/amount.h>
-#include <qdatastream.h>
-#include <qobject.h>
-#include <qsettings.h>
-#include <qstringbuilder.h>
-#include <qstringlist.h>
-#include <cassert>
-#include <string>
 
-#include "chainparamsbase.h"
+#include <consensus/amount.h>
+
+#include <QSettings>
+#include <QStringList>
+
+#include <cassert>
 
 static constexpr auto MAX_DIGITS_BTC = 16;
 

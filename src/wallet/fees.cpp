@@ -4,15 +4,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/fees.h>
+
 #include <wallet/coincontrol.h>
 #include <wallet/wallet.h>
-#include <algorithm>
-#include <optional>
-
-#include "consensus/amount.h"
-#include "interfaces/chain.h"
-#include "policy/feerate.h"
-#include "policy/fees.h"
 
 namespace wallet {
 CAmount GetRequiredFee(const CWallet& wallet, unsigned int nTxBytes)

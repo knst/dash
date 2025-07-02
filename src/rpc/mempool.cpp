@@ -3,6 +3,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <rpc/blockchain.h>
+
 #include <core_io.h>
 #include <fs.h>
 #include <policy/settings.h>
@@ -13,35 +15,9 @@
 #include <txmempool.h>
 #include <univalue.h>
 #include <validation.h>
+
 #include <llmq/context.h>
 #include <llmq/instantsend.h>
-#include <stdint.h>
-#include <boost/multi_index/detail/hash_index_iterator.hpp>
-#include <boost/multi_index/detail/iter_adaptor.hpp>
-#include <boost/multi_index/detail/safe_mode.hpp>
-#include <boost/multi_index/ordered_index.hpp>
-#include <boost/operators.hpp>
-#include <algorithm>
-#include <functional>
-#include <limits>
-#include <memory>
-#include <set>
-#include <string>
-#include <vector>
-
-#include "policy/feerate.h"
-#include "policy/policy.h"
-#include "rpc/protocol.h"
-#include "rpc/request.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "uint256.h"
-#include "util/system.h"
-#include "util/time.h"
-
-namespace node {
-struct NodeContext;
-}  // namespace node
 
 using node::NodeContext;
 

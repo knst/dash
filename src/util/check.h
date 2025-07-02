@@ -11,9 +11,8 @@
 
 #include <attributes.h>
 #include <tinyformat.h>
+
 #include <stdexcept>
-#include <string>
-#include <utility>
 
 class NonFatalCheckError : public std::runtime_error
 {

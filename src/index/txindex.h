@@ -6,14 +6,6 @@
 #define BITCOIN_INDEX_TXINDEX_H
 
 #include <index/base.h>
-#include <stddef.h>
-#include <memory>
-
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-
-class CBlockIndex;
-class uint256;
 
 /**
  * TxIndex is used to look up transactions included in the blockchain by hash.

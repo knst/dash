@@ -3,35 +3,16 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <consensus/validation.h>
+#include <key_io.h>
+#include <policy/packages.h>
+#include <policy/policy.h>
 #include <primitives/transaction.h>
 #include <script/script.h>
+#include <script/standard.h>
 #include <test/util/setup_common.h>
 #include <validation.h>
-#include <boost/preprocessor/arithmetic/limits/dec_256.hpp>
-#include <boost/preprocessor/comparison/limits/not_equal_256.hpp>
-#include <boost/preprocessor/control/expr_iif.hpp>
-#include <boost/preprocessor/control/iif.hpp>
-#include <boost/preprocessor/detail/limits/auto_rec_256.hpp>
-#include <boost/preprocessor/logical/compl.hpp>
-#include <boost/preprocessor/logical/limits/bool_256.hpp>
-#include <boost/preprocessor/repetition/detail/limits/for_256.hpp>
-#include <boost/preprocessor/repetition/for.hpp>
-#include <boost/preprocessor/seq/limits/elem_256.hpp>
-#include <boost/preprocessor/seq/limits/size_256.hpp>
-#include <boost/preprocessor/tuple/elem.hpp>
-#include <boost/preprocessor/variadic/limits/elem_64.hpp>
-#include <boost/test/tools/old/interface.hpp>
-#include <boost/test/unit_test_suite.hpp>
-#include <boost/test/utils/basic_cstring/basic_cstring.hpp>
-#include <boost/test/utils/lazy_ostream.hpp>
-#include <algorithm>
-#include <memory>
-#include <vector>
 
-#include "chainparamsbase.h"
-#include "key.h"
-#include "sync.h"
-#include "txmempool.h"
+#include <boost/test/unit_test.hpp>
 
 
 struct TestChain100NoDIP0001Setup : public TestChain100Setup {

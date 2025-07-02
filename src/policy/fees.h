@@ -11,6 +11,7 @@
 #include <sync.h>
 #include <threadsafety.h>
 #include <uint256.h>
+
 #include <array>
 #include <map>
 #include <memory>

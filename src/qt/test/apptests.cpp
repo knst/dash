@@ -3,35 +3,33 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/test/apptests.h>
+
 #include <chainparams.h>
+#include <key.h>
 #include <qt/bitcoin.h>
 #include <qt/bitcoingui.h>
 #include <qt/networkstyle.h>
 #include <qt/rpcconsole.h>
 #include <shutdown.h>
 #include <test/util/setup_common.h>
-#include <QtCore/qglobal.h>
-#include <QtCore/qobjectdefs.h>
-#include <assert.h>
-#include <qaction.h>
-#include <qlineedit.h>
-#include <qmetatype.h>
-#include <qnamespace.h>
-#include <qregularexpression.h>
-#include <qscopedpointer.h>
-#include <qsettings.h>
-#include <qsignalspy.h>
-#include <qstringliteral.h>
-#include <qtestcase.h>
-#include <qtestkeyboard.h>
-#include <qtextedit.h>
+#include <validation.h>
 
-#include "chainparamsbase.h"
-#include "fs.h"
-#include "interfaces/node.h"
-#include "logging.h"
-#include "qt/guiutil.h"
-#include "util/system.h"
+#if defined(HAVE_CONFIG_H)
+#include <config/bitcoin-config.h>
+#endif
+
+#include <QAction>
+#include <QLineEdit>
+#include <QRegularExpression>
+#include <QScopedPointer>
+#include <QSettings>
+#include <QSignalSpy>
+#include <QString>
+#include <QTest>
+#include <QTextEdit>
+#include <QtGlobal>
+#include <QtTest/QtTestWidgets>
+#include <QtTest/QtTestGui>
 
 namespace {
 //! Regex find a string group inside of the console output

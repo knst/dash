@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <torcontrol.h>
+
 #include <chainparams.h>
 #include <chainparamsbase.h>
 #include <compat/compat.h>
@@ -20,12 +21,7 @@
 #include <util/system.h>
 #include <util/thread.h>
 #include <util/time.h>
-#include <event2/buffer.h>
-#include <event2/bufferevent.h>
-#include <event2/event.h>
-#include <event2/thread.h>
-#include <event2/util.h>
-#include <sys/time.h>
+
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
@@ -38,9 +34,11 @@
 #include <utility>
 #include <vector>
 
-#include "fs.h"
-#include "logging.h"
-#include "span.h"
+#include <event2/buffer.h>
+#include <event2/bufferevent.h>
+#include <event2/event.h>
+#include <event2/thread.h>
+#include <event2/util.h>
 
 /** Default control port */
 const std::string DEFAULT_TOR_CONTROL = "127.0.0.1:9051";

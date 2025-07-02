@@ -3,13 +3,13 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <scheduler.h>
+
 #include <sync.h>
+#include <util/time.h>
+
 #include <cassert>
 #include <functional>
 #include <utility>
-#include <compare>
-#include <iterator>
-#include <ratio>
 
 CScheduler::CScheduler()
 {

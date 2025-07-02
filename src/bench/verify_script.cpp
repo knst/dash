@@ -4,13 +4,9 @@
 
 #include <bench/bench.h>
 #include <script/script.h>
-#include <assert.h>
-#include <algorithm>
-#include <vector>
+#include <script/standard.h>
 
-#include "nanobench.h"
-#include "script/interpreter.h"
-#include "script/script_error.h"
+#include <array>
 
 
 static void VerifyNestedIfScript(benchmark::Bench& bench) {

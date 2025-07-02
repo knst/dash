@@ -10,10 +10,10 @@
 #include <test/fuzz/util.h>
 #include <util/error.h>
 #include <util/translation.h>
-#include <assert.h>
+
+#include <array>
 #include <cstdint>
 #include <vector>
-#include <algorithm>
 
 namespace {
 constexpr TransactionError ALL_TRANSACTION_ERROR[] = {

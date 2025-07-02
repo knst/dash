@@ -7,19 +7,14 @@
 
 #include <fs.h>
 #include <util/macros.h>
-#include <bench/nanobench.h>
-#include <bits/chrono.h>
+
 #include <chrono>
 #include <functional>
 #include <map>
 #include <string>
 #include <vector>
 
-namespace ankerl {
-namespace nanobench {
-class Bench;
-}  // namespace nanobench
-}  // namespace ankerl
+#include <bench/nanobench.h>
 
 /*
  * Usage:

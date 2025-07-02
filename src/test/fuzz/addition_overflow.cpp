@@ -4,11 +4,12 @@
 
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
+#include <test/fuzz/util.h>
 #include <util/overflow.h>
-#include <assert.h>
+
 #include <cstdint>
-#include <limits>
-#include <optional>
+#include <string>
+#include <vector>
 
 namespace {
 template <typename T>

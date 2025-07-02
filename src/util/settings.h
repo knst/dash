@@ -6,12 +6,10 @@
 #define BITCOIN_UTIL_SETTINGS_H
 
 #include <fs.h>
-#include <stddef.h>
+
 #include <map>
 #include <string>
 #include <vector>
-
-#include "univalue.h"
 
 class UniValue;
 

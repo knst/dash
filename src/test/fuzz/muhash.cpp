@@ -6,12 +6,8 @@
 #include <test/fuzz/FuzzedDataProvider.h>
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
-#include <assert.h>
-#include <vector>
-#include <string>
 
-#include "span.h"
-#include "uint256.h"
+#include <vector>
 
 FUZZ_TARGET(muhash)
 {

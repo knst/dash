@@ -3,18 +3,16 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <base58.h>
+
 #include <hash.h>
 #include <uint256.h>
 #include <util/strencodings.h>
 #include <util/string.h>
+
 #include <assert.h>
 #include <stdint.h>
-#include <string.h>
-#include <limits>
-#include <algorithm>
-#include <iterator>
 
-#include "span.h"
+#include <limits>
 
 /** All alphanumeric characters except for "0", "I", "O", and "l" */
 static const char* pszBase58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";

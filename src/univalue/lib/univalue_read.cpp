@@ -3,11 +3,8 @@
 // file COPYING or https://opensource.org/licenses/mit-license.php.
 
 #include <string.h>
-#include <stdio.h>
-#include <stdint.h>
 #include <vector>
-#include <string>
-
+#include <stdio.h>
 #include "univalue.h"
 #include "univalue_utffilter.h"
 

@@ -11,13 +11,6 @@
 #include <pubkey.h>
 #include <script/interpreter.h>
 #include <script/keyorigin.h>
-#include <map>
-#include <utility>
-#include <vector>
-
-#include "consensus/amount.h"
-#include "script/script.h"
-#include "uint256.h"
 
 class CKey;
 class CKeyID;
@@ -25,12 +18,9 @@ class CScript;
 class CScriptID;
 class CTransaction;
 class SigningProvider;
+
 struct bilingual_str;
 struct CMutableTransaction;
-class COutPoint;
-class CTxIn;
-class CTxOut;
-class Coin;
 
 /** Interface for signature creators. */
 class BaseSignatureCreator {

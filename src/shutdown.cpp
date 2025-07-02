@@ -4,15 +4,19 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <shutdown.h>
+
+#if defined(HAVE_CONFIG_H)
+#include <config/bitcoin-config.h>
+#endif
+
 #include <logging.h>
 #include <util/tokenpipe.h>
+
 #include <node/interface_ui.h>
 #include <warnings.h>
+
 #include <assert.h>
 #include <atomic>
-#include <optional>
-
-#include "util/translation.h"
 #ifdef WIN32
 #include <condition_variable>
 #endif

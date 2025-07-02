@@ -3,16 +3,10 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <node/coin.h>
+
 #include <node/context.h>
 #include <txmempool.h>
 #include <validation.h>
-#include <assert.h>
-#include <memory>
-#include <utility>
-
-#include "coins.h"
-#include "primitives/transaction.h"
-#include "sync.h"
 
 namespace node {
 void FindCoins(const NodeContext& node, std::map<COutPoint, Coin>& coins)

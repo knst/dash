@@ -4,41 +4,19 @@
 
 #include <qt/receivecoinsdialog.h>
 #include <qt/forms/ui_receivecoinsdialog.h>
+
 #include <qt/addresstablemodel.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/receiverequestdialog.h>
 #include <qt/recentrequeststablemodel.h>
 #include <qt/walletmodel.h>
-#include <QtCore/qglobal.h>
-#include <QtCore/qobjectdefs.h>
-#include <assert.h>
-#include <qabstractitemmodel.h>
-#include <qabstractitemview.h>
-#include <qaction.h>
-#include <qcursor.h>
-#include <qheaderview.h>
-#include <qitemselectionmodel.h>
-#include <qlabel.h>
-#include <qlineedit.h>
-#include <qlist.h>
-#include <qmenu.h>
-#include <qmessagebox.h>
-#include <qmetatype.h>
-#include <qnamespace.h>
-#include <qpushbutton.h>
-#include <qtableview.h>
-#include <qvariant.h>
-#include <qwidget.h>
-#include <algorithm>
-#include <utility>
-#include <vector>
 
-#include "interfaces/wallet.h"
-#include "qt/bitcoinamountfield.h"
-#include "qt/sendcoinsrecipient.h"
-
-class QPoint;
+#include <QAction>
+#include <QCursor>
+#include <QMessageBox>
+#include <QScrollBar>
+#include <QTextDocument>
 
 ReceiveCoinsDialog::ReceiveCoinsDialog(QWidget* parent) :
     QDialog(parent, GUIUtil::dialog_flags),

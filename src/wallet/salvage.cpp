@@ -3,31 +3,13 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <fs.h>
 #include <streams.h>
 #include <util/translation.h>
 #include <wallet/bdb.h>
 #include <wallet/salvage.h>
 #include <wallet/wallet.h>
 #include <wallet/walletdb.h>
-#include <db.h>
-#include <db_cxx.h>
-#include <stdint.h>
-#include <algorithm>
-#include <memory>
-#include <optional>
-#include <sstream>
-#include <string>
-#include <utility>
-
-#include "clientversion.h"
-#include "serialize.h"
-#include "span.h"
-#include "sync.h"
-#include "tinyformat.h"
-#include "util/strencodings.h"
-#include "util/system.h"
-#include "util/time.h"
-#include "wallet/db.h"
 
 namespace wallet {
 /* End of headers, beginning of key/value data */

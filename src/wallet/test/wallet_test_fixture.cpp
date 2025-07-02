@@ -3,16 +3,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <wallet/test/wallet_test_fixture.h>
-#include <scheduler.h>
 
-#include "interfaces/chain.h"
-#include "interfaces/coinjoin.h"
-#include "interfaces/handler.h"
-#include "interfaces/wallet.h"
-#include "test/util/setup_common.h"
-#include "util/check.h"
-#include "wallet/wallet.h"
-#include "wallet/walletdb.h"
+#include <scheduler.h>
 
 namespace wallet {
 WalletTestingSetup::WalletTestingSetup(const std::string& chainName)

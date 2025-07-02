@@ -10,15 +10,10 @@
 #include <hash.h>
 #include <serialize.h>
 #include <uint256.h>
-#include <stdint.h>
+
 #include <array>
 #include <cstring>
 #include <vector>
-#include <algorithm>
-#include <cstddef>
-#include <stdexcept>
-
-#include "span.h"
 
 const unsigned int BIP32_EXTKEY_SIZE = 74;
 const unsigned int BIP32_EXTKEY_WITH_VERSION_SIZE = 78;

@@ -5,16 +5,11 @@
 #ifndef BITCOIN_QT_ASKPASSPHRASEDIALOG_H
 #define BITCOIN_QT_ASKPASSPHRASEDIALOG_H
 
-#include <support/allocators/secure.h>
-#include <qdialog.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
 #include <QDialog>
 
+#include <support/allocators/secure.h>
+
 class WalletModel;
-class QEvent;
-class QObject;
-class QWidget;
 
 namespace Ui {
     class AskPassphraseDialog;

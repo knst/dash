@@ -7,15 +7,11 @@
 #include <rpc/util.h>
 #include <script/standard.h>
 #include <test/fuzz/fuzz.h>
-#include <cassert>
-#include <string>
-#include <functional>
 
-#include "chainparamsbase.h"
-#include "key.h"
-#include "pubkey.h"
-#include "script/script.h"
-#include "script/signingprovider.h"
+#include <cassert>
+#include <cstdint>
+#include <string>
+#include <vector>
 
 void initialize_key_io()
 {

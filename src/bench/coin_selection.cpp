@@ -8,23 +8,8 @@
 #include <wallet/coinselection.h>
 #include <wallet/spend.h>
 #include <wallet/wallet.h>
-#include <assert.h>
-#include <set>
-#include <algorithm>
-#include <memory>
-#include <optional>
-#include <utility>
-#include <vector>
 
-#include "consensus/amount.h"
-#include "nanobench.h"
-#include "policy/feerate.h"
-#include "primitives/transaction.h"
-#include "random.h"
-#include "sync.h"
-#include "util/system.h"
-#include "wallet/transaction.h"
-#include "wallet/walletdb.h"
+#include <set>
 
 using node::NodeContext;
 using wallet::CHANGE_LOWER;

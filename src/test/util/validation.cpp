@@ -3,13 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <test/util/validation.h>
-#include <util/check.h>
-#include <validationinterface.h>
-#include <assert.h>
-#include <atomic>
 
-class CBlock;
-class CBlockIndex;
+#include <util/check.h>
+#include <util/time.h>
+#include <validation.h>
+#include <validationinterface.h>
 
 void TestChainState::ResetIbd()
 {

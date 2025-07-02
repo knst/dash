@@ -6,19 +6,12 @@
 #define BITCOIN_QT_ADDRESSTABLEMODEL_H
 
 #include <script/standard.h>
-#include <qabstractitemmodel.h>
-#include <qnamespace.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
-#include <qstringlist.h>
-#include <qvariant.h>
+
 #include <QAbstractTableModel>
 #include <QStringList>
-#include <string>
 
 class AddressTablePriv;
 class WalletModel;
-class QObject;
 
 namespace interfaces {
 class Wallet;

@@ -5,21 +5,11 @@
 #ifndef BITCOIN_QT_UTILITYDIALOG_H
 #define BITCOIN_QT_UTILITYDIALOG_H
 
-#include <qdialog.h>
-#include <qglobal.h>
-#include <qnamespace.h>
-#include <qobjectdefs.h>
-#include <qstring.h>
-#include <qwidget.h>
 #include <QDialog>
 #include <QWidget>
 
-class QCloseEvent;
-class QObject;
-
 QT_BEGIN_NAMESPACE
 class QMainWindow;
-
 QT_END_NAMESPACE
 
 namespace Ui {

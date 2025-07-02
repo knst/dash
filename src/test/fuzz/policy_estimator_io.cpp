@@ -7,9 +7,9 @@
 #include <test/fuzz/fuzz.h>
 #include <test/fuzz/util.h>
 #include <test/util/setup_common.h>
-#include <functional>
 
-#include "streams.h"
+#include <cstdint>
+#include <vector>
 
 void initialize_policy_estimator_io()
 {

@@ -3,35 +3,17 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <compat/compat.h>
 #include <fs.h>
 #include <wallet/bdb.h>
 #include <wallet/db.h>
+
 #include <util/strencodings.h>
 #include <util/translation.h>
-#include <stdint.h>
-#include <sys/stat.h>
-#include <bits/chrono.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <algorithm>
-#include <atomic>
-#include <cstddef>
-#include <mutex>
-#include <stdexcept>
-#include <vector>
 
-#include "clientversion.h"
-#include "logging.h"
-#include "serialize.h"
-#include "span.h"
-#include "streams.h"
-#include "support/cleanse.h"
-#include "sync.h"
-#include "threadsafety.h"
-#include "tinyformat.h"
-#include "util/system.h"
-#include "util/time.h"
+#include <stdint.h>
+
+#include <sys/stat.h>
 
 // Windows may not define S_IRUSR or S_IWUSR. We define both
 // here, with the same values as glibc (see stat.h).

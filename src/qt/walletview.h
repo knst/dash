@@ -9,10 +9,7 @@
 #include <qt/bitcoinunits.h>
 #include <qt/governancelist.h>
 #include <qt/masternodelist.h>
-#include <qglobal.h>
-#include <qobjectdefs.h>
-#include <qstackedwidget.h>
-#include <qstring.h>
+
 #include <QStackedWidget>
 
 class ClientModel;
@@ -23,16 +20,11 @@ class SendCoinsRecipient;
 class TransactionView;
 class WalletModel;
 class AddressBookPage;
-class GovernanceList;
-class MasternodeList;
-class QObject;
-class QWidget;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
 class QModelIndex;
 class QProgressDialog;
-
 QT_END_NAMESPACE
 
 /*

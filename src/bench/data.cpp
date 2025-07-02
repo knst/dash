@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bench/data.h>
-#include <iterator>
 
 namespace benchmark {
 namespace data {

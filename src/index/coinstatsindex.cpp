@@ -8,28 +8,10 @@
 #include <index/coinstatsindex.h>
 #include <node/blockstorage.h>
 #include <serialize.h>
+#include <txdb.h>
 #include <undo.h>
 #include <validation.h>
 #include <util/check.h>
-#include <assert.h>
-#include <ios>
-#include <optional>
-#include <utility>
-#include <vector>
-
-#include "chain.h"
-#include "dbwrapper.h"
-#include "fs.h"
-#include "index/base.h"
-#include "logging.h"
-#include "node/coinstats.h"
-#include "primitives/transaction.h"
-#include "script/script.h"
-#include "span.h"
-#include "streams.h"
-#include "sync.h"
-#include "uint256.h"
-#include "util/system.h"
 
 using node::CCoinsStats;
 using node::GetBogoSize;

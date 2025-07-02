@@ -3,25 +3,18 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <qt/bitcoinamountfield.h>
+
 #include <qt/bitcoinunits.h>
 #include <qt/guiutil.h>
-#include <QtCore/qglobal.h>
-#include <QtCore/qobjectdefs.h>
-#include <qboxlayout.h>
-#include <qcoreevent.h>
-#include <qevent.h>
-#include <qfontmetrics.h>
-#include <qlineedit.h>
-#include <qlocale.h>
-#include <qnamespace.h>
-#include <qsize.h>
-#include <qvalidator.h>
-#include <qvariant.h>
+
+#include <QApplication>
+#include <QAbstractSpinBox>
+#include <QHBoxLayout>
+#include <QKeyEvent>
+#include <QLineEdit>
+#include <QVariant>
+
 #include <cassert>
-
-#include "consensus/amount.h"
-
-class QObject;
 
 /**
  * Parse a string into a number of base monetary units and

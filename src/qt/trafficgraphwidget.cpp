@@ -6,22 +6,13 @@
 #include <qt/trafficgraphwidget.h>
 #include <qt/clientmodel.h>
 #include <qt/guiutil.h>
-#include <QtCore/qglobal.h>
-#include <QtCore/qobjectdefs.h>
-#include <qbrush.h>
-#include <qcolor.h>
-#include <qfont.h>
-#include <qfontmetrics.h>
-#include <qnamespace.h>
-#include <qpainter.h>
-#include <qpainterpath.h>
-#include <qpen.h>
-#include <qrect.h>
-#include <qsize.h>
-#include <qtimer.h>
-#include <cmath>
 
-#include "qt/trafficgraphdata.h"
+#include <QPainter>
+#include <QPainterPath>
+#include <QColor>
+#include <QTimer>
+
+#include <cmath>
 
 #define XMARGIN                 10
 #define YMARGIN                 10

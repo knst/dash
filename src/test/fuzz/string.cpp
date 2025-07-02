@@ -4,6 +4,8 @@
 
 #include <blockfilter.h>
 #include <clientversion.h>
+#include <logging.h>
+#include <netaddress.h>
 #include <netbase.h>
 #include <rpc/client.h>
 #include <rpc/request.h>
@@ -25,18 +27,11 @@
 #include <util/translation.h>
 #include <util/url.h>
 #include <version.h>
-#include <assert.h>
-#include <errno.h>
+
 #include <cstdint>
 #include <cstdlib>
 #include <string>
 #include <vector>
-#include <algorithm>
-#include <ios>
-#include <limits>
-#include <stdexcept>
-
-enum class FeeEstimateMode;
 
 namespace {
 bool LegacyParsePrechecks(const std::string& str)
