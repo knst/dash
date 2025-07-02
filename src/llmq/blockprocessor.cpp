@@ -524,15 +524,15 @@ std::vector<const CBlockIndex*> CQuorumBlockProcessor::GetMinedCommitmentsUntilB
     return ret;
 }
 
-std::optional<const CBlockIndex*> CQuorumBlockProcessor::GetLastMinedCommitmentsByQuorumIndexUntilBlock(Consensus::LLMQType llmqType, const CBlockIndex* pindex, int active_quorum_count, size_t cycle) const
+std::optional<const CBlockIndex*> CQuorumBlockProcessor::GetLastMinedCommitmentsByQuorumIndexUntilBlock(Consensus::LLMQType llmqType, const CBlockIndex* pindex, int quorumIndex, size_t cycle) const
 {
     AssertLockNotHeld(m_evoDb.cs);
     LOCK(m_evoDb.cs);
 
     auto dbIt = m_evoDb.GetCurTransaction().NewIteratorUniquePtr();
 
-    auto firstKey = BuildInversedHeightKeyIndexed(llmqType, pindex->nHeight, active_quorum_count);
-    auto lastKey = BuildInversedHeightKeyIndexed(llmqType, 0, 0);
+    auto firstKey = BuildInversedHeightKeyIndexed(llmqType, pindex->nHeight, quorumIndex);
+    auto lastKey = BuildInversedHeightKeyIndexed(llmqType, 0, quorumIndex);
 
     size_t currentCycle = 0;
 
@@ -576,14 +576,15 @@ std::vector<const CBlockIndex*> CQuorumBlockProcessor::GetLastMinedCommitmentsPe
 {
     const auto& llmq_params_opt = Params().GetLLMQ(llmqType);
     assert(llmq_params_opt.has_value());
-
     std::vector<const CBlockIndex*> ret;
-    std::vector<std::optional<const CBlockIndex*>> commitments = GetLastMinedCommitmentsByQuorumIndexUntilBlock(llmqType, pindex, llmq_params_opt->signingActiveQuorumCount, cycle);
-    for (auto& q : commitments)
+
+    for (const auto quorumIndex : irange::range(llmq_params_opt->signingActiveQuorumCount)) {
+        std::optional<const CBlockIndex*> q = GetLastMinedCommitmentsByQuorumIndexUntilBlock(llmqType, pindex, quorumIndex, cycle);
         if (q.has_value()) {
             ret.emplace_back(q.value());
         }
     }
+
     return ret;
 }
 
