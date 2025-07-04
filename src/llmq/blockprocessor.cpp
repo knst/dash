@@ -490,46 +490,6 @@ std::pair<CFinalCommitment, uint256> CQuorumBlockProcessor::GetMinedCommitment(C
 }
 
 // The returned quorums are in reversed order, so the most recent one is at index 0
-static std::vector<const CBlockIndex*> GetMinedCommitmentsUntilBlockInternal(const auto& dbIt, Consensus::LLMQType llmqType, gsl::not_null<const CBlockIndex*> pindex, size_t maxCount)
-{
-    auto firstKey = BuildInversedHeightKey(llmqType, pindex->nHeight);
-    auto lastKey = BuildInversedHeightKey(llmqType, 0);
-
-    dbIt->Seek(firstKey);
-
-    std::vector<const CBlockIndex*> ret;
-    ret.reserve(maxCount);
-
-    while (dbIt->Valid() && ret.size() < maxCount) {
-        decltype(firstKey) curKey;
-        int quorumHeight;
-        if (!dbIt->GetKey(curKey) || curKey >= lastKey) {
-            break;
-        }
-        if (std::get<0>(curKey) != DB_MINED_COMMITMENT_BY_INVERSED_HEIGHT || std::get<1>(curKey) != llmqType) {
-            break;
-        }
-
-        if (uint32_t nMinedHeight = std::numeric_limits<uint32_t>::max() - be32toh_internal(std::get<2>(curKey));
-                nMinedHeight > static_cast<uint32_t>(pindex->nHeight)) {
-            break;
-        }
-
-        if (!dbIt->GetValue(quorumHeight)) {
-            break;
-        }
-
-        pindex = pindex->GetAncestor(quorumHeight);
-        assert(pindex);
-        ret.emplace_back(pindex);
-
-        dbIt->Next();
-    }
-
-    return ret;
-}
-
-// The returned quorums are in reversed order, so the most recent one is at index 0
 std::vector<const CBlockIndex*> CQuorumBlockProcessor::GetMinedCommitmentsUntilBlock(Consensus::LLMQType llmqType, gsl::not_null<const CBlockIndex*> pindex, size_t maxCount) const
 {
     AssertLockNotHeld(m_evoDb.cs);
@@ -670,18 +630,8 @@ std::map<Consensus::LLMQType, std::vector<const CBlockIndex*>> CQuorumBlockProce
         auto& commitments = ret[params.type];
         if (IsQuorumRotationEnabled(params, pindex)) {
             commitments = GetLastMinedCommitmentsPerQuorumIndexUntilBlock(params.type, pindex, 0);
-        }
-    }
-
-    AssertLockNotHeld(m_evoDb.cs);
-    LOCK(m_evoDb.cs);
-
-    auto dbIt = m_evoDb.GetCurTransaction().NewIteratorUniquePtr();
-    for (const auto& params : Params().GetConsensus().llmqs) {
-        auto& commitments = ret[params.type];
-
-        if (!IsQuorumRotationEnabled(params, pindex)) {
-            commitments = GetMinedCommitmentsUntilBlockInternal(dbIt, params.type, pindex, params.signingActiveQuorumCount);
+        } else {
+            commitments = GetMinedCommitmentsUntilBlock(params.type, pindex, params.signingActiveQuorumCount);
         }
     }
 

@@ -5,15 +5,15 @@
 #ifndef BITCOIN_LLMQ_BLOCKPROCESSOR_H
 #define BITCOIN_LLMQ_BLOCKPROCESSOR_H
 
-#include <dbwrapper.h>
-#include <gsl/pointers.h>
+#include <unordered_lru_cache.h>
+
 #include <llmq/params.h>
 #include <protocol.h>
 #include <saltedhasher.h>
 #include <sync.h>
-#include <unordered_lru_cache.h>
 
-#include <memory>
+#include <gsl/pointers.h>
+
 #include <optional>
 
 class BlockValidationState;
