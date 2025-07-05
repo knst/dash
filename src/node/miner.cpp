@@ -32,10 +32,10 @@
 #include <evo/mnhftx.h>
 #include <evo/simplifiedmns.h>
 #include <governance/governance.h>
+#include <instantsend/instantsend.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
 #include <llmq/context.h>
-#include <llmq/instantsend.h>
 #include <llmq/options.h>
 #include <llmq/snapshot.h>
 #include <masternode/payments.h>
