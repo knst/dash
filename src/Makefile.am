@@ -231,6 +231,7 @@ BITCOIN_CORE_H = \
   interfaces/node.h \
   interfaces/wallet.h \
   instantsend/instantsend.h \
+  instantsend/lock.h \
   key.h \
   key_io.h \
   limitedmap.h \
@@ -487,6 +488,7 @@ libbitcoin_node_a_SOURCES = \
   index/txindex.cpp \
   init.cpp \
   instantsend/instantsend.cpp \
+  instantsend/lock.cpp \
   llmq/blockprocessor.cpp \
   llmq/chainlocks.cpp \
   llmq/clsig.cpp \

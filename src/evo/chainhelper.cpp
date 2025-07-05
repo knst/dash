@@ -6,6 +6,7 @@
 
 #include <consensus/params.h>
 #include <evo/specialtxman.h>
+#include <instantsend/lock.h>
 #include <instantsend/instantsend.h>
 #include <llmq/chainlocks.h>
 #include <masternode/payments.h>
