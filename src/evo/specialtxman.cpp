@@ -17,7 +17,9 @@
 #include <evo/simplifiedmns.h>
 #include <hash.h>
 #include <llmq/blockprocessor.h>
+#include <llmq/chainlocks.h>
 #include <llmq/commitment.h>
+#include <llmq/quorums.h>
 #include <primitives/block.h>
 #include <validation.h>
 
@@ -79,6 +81,72 @@ bool CSpecialTxProcessor::CheckSpecialTx(const CTransaction& tx, const CBlockInd
     AssertLockHeld(::cs_main);
     return CheckSpecialTxInner(m_dmnman, m_qsnapman, m_chainman, m_qman, tx, pindexPrev, view, std::nullopt, check_sigs,
                                state);
+}
+
+namespace {
+    static Mutex cached_mutex;
+    static const CBlockIndex* cached_pindex GUARDED_BY(cached_mutex){nullptr};
+    static std::optional<std::pair<CBLSSignature, uint32_t>> cached_chainlock GUARDED_BY(cached_mutex){std::nullopt};
+} // anonymous namespace
+
+static bool CheckCbTxBestChainlock(const CCbTx& cbTx, const CBlockIndex* pindex,
+                            const llmq::CChainLocksHandler& chainlock_handler, BlockValidationState& state)
+{
+    if (cbTx.nVersion < CCbTx::Version::CLSIG_AND_BALANCE) {
+        return true;
+    }
+
+    auto best_clsig = chainlock_handler.GetBestChainLock();
+    if (best_clsig.getHeight() == pindex->nHeight - 1 && cbTx.bestCLHeightDiff == 0 && cbTx.bestCLSignature == best_clsig.getSig()) {
+        // matches our best clsig which still hold values for the previous block
+        LOCK(cached_mutex);
+        cached_chainlock = std::make_pair(cbTx.bestCLSignature, cbTx.bestCLHeightDiff);
+        cached_pindex = pindex;
+        return true;
+    }
+
+    std::optional<std::pair<CBLSSignature, uint32_t>> prevBlockCoinbaseChainlock{std::nullopt};
+    if (LOCK(cached_mutex); cached_pindex == pindex->pprev) {
+        prevBlockCoinbaseChainlock = cached_chainlock;
+    }
+    if (!prevBlockCoinbaseChainlock.has_value()) {
+        prevBlockCoinbaseChainlock = GetNonNullCoinbaseChainlock(pindex->pprev);
+    }
+    // If std::optional prevBlockCoinbaseChainlock is empty, then up to the previous block, coinbase Chainlock is null.
+    if (prevBlockCoinbaseChainlock.has_value()) {
+        // Previous block Coinbase has a non-null Chainlock: current block's Chainlock must be non-null and at least as new as the previous one
+        if (!cbTx.bestCLSignature.IsValid()) {
+            // IsNull() doesn't exist for CBLSSignature: we assume that a non valid BLS sig is null
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-null-clsig");
+        }
+        if (cbTx.bestCLHeightDiff > prevBlockCoinbaseChainlock.value().second + 1) {
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-older-clsig");
+        }
+    }
+
+    // IsNull() doesn't exist for CBLSSignature: we assume that a valid BLS sig is non-null
+    if (cbTx.bestCLSignature.IsValid()) {
+        int curBlockCoinbaseCLHeight = pindex->nHeight - static_cast<int>(cbTx.bestCLHeightDiff) - 1;
+        if (best_clsig.getHeight() == curBlockCoinbaseCLHeight && best_clsig.getSig() == cbTx.bestCLSignature) {
+            // matches our best (but outdated) clsig, no need to verify it again
+            LOCK(cached_mutex);
+            cached_chainlock = std::make_pair(cbTx.bestCLSignature, cbTx.bestCLHeightDiff);
+            cached_pindex = pindex;
+            return true;
+        }
+        uint256 curBlockCoinbaseCLBlockHash = pindex->GetAncestor(curBlockCoinbaseCLHeight)->GetBlockHash();
+        if (chainlock_handler.VerifyChainLock(llmq::CChainLockSig(curBlockCoinbaseCLHeight, curBlockCoinbaseCLBlockHash, cbTx.bestCLSignature)) != llmq::VerifyRecSigStatus::Valid) {
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-invalid-clsig");
+        }
+        LOCK(cached_mutex);
+        cached_chainlock = std::make_pair(cbTx.bestCLSignature, cbTx.bestCLHeightDiff);
+        cached_pindex = pindex;
+    } else if (cbTx.bestCLHeightDiff != 0) {
+        // Null bestCLSignature is allowed only with bestCLHeightDiff = 0
+        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-cldiff");
+    }
+
+    return true;
 }
 
 bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, const CCoinsViewCache& view, bool fJustCheck,
