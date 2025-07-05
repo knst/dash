@@ -18,10 +18,13 @@
 #include <hash.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
+#include <llmq/clsig.h>
 #include <llmq/commitment.h>
 #include <llmq/quorums.h>
 #include <primitives/block.h>
 #include <validation.h>
+
+#include <variant>
 
 static bool CheckSpecialTxInner(CDeterministicMNManager& dmnman, llmq::CQuorumSnapshotManager& qsnapman,
                                 const ChainstateManager& chainman, const llmq::CQuorumManager& qman,
@@ -89,7 +92,7 @@ namespace {
     static std::optional<std::pair<CBLSSignature, uint32_t>> cached_chainlock GUARDED_BY(cached_mutex){std::nullopt};
 } // anonymous namespace
 
-static bool CheckCbTxBestChainlock(const CCbTx& cbTx, const CBlockIndex* pindex,
+static std::variant<bool, llmq::CChainLockSig> CheckCbTxBestChainlock(const CCbTx& cbTx, const CBlockIndex* pindex,
                             const llmq::CChainLocksHandler& chainlock_handler, BlockValidationState& state)
 {
     if (cbTx.nVersion < CCbTx::Version::CLSIG_AND_BALANCE) {
@@ -135,12 +138,7 @@ static bool CheckCbTxBestChainlock(const CCbTx& cbTx, const CBlockIndex* pindex,
             return true;
         }
         uint256 curBlockCoinbaseCLBlockHash = pindex->GetAncestor(curBlockCoinbaseCLHeight)->GetBlockHash();
-        if (chainlock_handler.VerifyChainLock(llmq::CChainLockSig(curBlockCoinbaseCLHeight, curBlockCoinbaseCLBlockHash, cbTx.bestCLSignature)) != llmq::VerifyRecSigStatus::Valid) {
-            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-invalid-clsig");
-        }
-        LOCK(cached_mutex);
-        cached_chainlock = std::make_pair(cbTx.bestCLSignature, cbTx.bestCLHeightDiff);
-        cached_pindex = pindex;
+        return llmq::CChainLockSig{curBlockCoinbaseCLHeight, curBlockCoinbaseCLBlockHash, cbTx.bestCLSignature};
     } else if (cbTx.bestCLHeightDiff != 0) {
         // Null bestCLSignature is allowed only with bestCLHeightDiff = 0
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-cldiff");
@@ -274,9 +272,19 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(const CBlock& block, const CB
                  nTimeMerkle * 0.000001);
 
         if (opt_cbTx.has_value()) {
-            if (!CheckCbTxBestChainlock(*opt_cbTx, pindex, m_clhandler, state)) {
-                // pass the state returned by the function above
-                return false;
+            auto ret = CheckCbTxBestChainlock(*opt_cbTx, pindex, m_clhandler, state);
+            if (std::holds_alternative<llmq::CChainLockSig>(ret)) {
+                if (m_clhandler.VerifyChainLock(std::get<llmq::CChainLockSig>(ret)) != llmq::VerifyRecSigStatus::Valid) {
+                    return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-invalid-clsig");
+                }
+                LOCK(cached_mutex);
+                cached_chainlock = std::make_pair(opt_cbTx->bestCLSignature, opt_cbTx->bestCLHeightDiff);
+                cached_pindex = pindex;
+            } else {
+                if (!std::get<bool>(ret)) {
+                    // pass the state returned by the function above
+                    return false;
+                }
             }
         }
 
