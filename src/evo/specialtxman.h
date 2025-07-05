@@ -5,9 +5,10 @@
 #ifndef BITCOIN_EVO_SPECIALTXMAN_H
 #define BITCOIN_EVO_SPECIALTXMAN_H
 
+#include <checkqueue.h>
 #include <sync.h>
 #include <threadsafety.h>
-
+#include <llmq/utils.h>
 #include <optional>
 
 class BlockValidationState;
@@ -29,6 +30,9 @@ class CChainLocksHandler;
 class CQuorumBlockProcessor;
 class CQuorumManager;
 class CQuorumSnapshotManager;
+namespace utils {
+class BlsCheck;
+} //
 } // namespace llmq
 
 extern RecursiveMutex cs_main;
@@ -45,23 +49,14 @@ private:
     const Consensus::Params& m_consensus_params;
     const llmq::CChainLocksHandler& m_clhandler;
     const llmq::CQuorumManager& m_qman;
+    CCheckQueue<llmq::utils::BlsCheck> m_bls_queue{4};
 
 public:
     explicit CSpecialTxProcessor(CCreditPoolManager& cpoolman, CDeterministicMNManager& dmnman, CMNHFManager& mnhfman,
                                  llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumSnapshotManager& qsnapman,
                                  const ChainstateManager& chainman, const Consensus::Params& consensus_params,
-                                 const llmq::CChainLocksHandler& clhandler, const llmq::CQuorumManager& qman) :
-        m_cpoolman(cpoolman),
-        m_dmnman{dmnman},
-        m_mnhfman{mnhfman},
-        m_qblockman{qblockman},
-        m_qsnapman{qsnapman},
-        m_chainman(chainman),
-        m_consensus_params{consensus_params},
-        m_clhandler{clhandler},
-        m_qman{qman}
-    {
-    }
+                                 const llmq::CChainLocksHandler& clhandler, const llmq::CQuorumManager& qman);
+    ~CSpecialTxProcessor();
 
     bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, bool check_sigs, TxValidationState& state)
         EXCLUSIVE_LOCKS_REQUIRED(::cs_main);

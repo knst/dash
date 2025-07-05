@@ -6,6 +6,7 @@
 
 #include <llmq/options.h>
 #include <llmq/snapshot.h>
+#include <llmq/quorums.h>
 
 #include <chainparams.h>
 #include <deploymentstatus.h>
@@ -938,6 +939,30 @@ void AddQuorumProbeConnections(const Consensus::LLMQParams& llmqParams, CConnman
         }
         connman.AddPendingProbeConnections(probeConnections);
     }
+}
+
+bool BlsCheck::operator()()
+{
+    if (m_pubkeys.size() > 1) {
+        if (!m_sig.VerifySecureAggregated(m_pubkeys, m_msg_hash)) {
+            LogPrint(BCLog::LLMQ, "%s\n", m_id_string);
+            return false;
+        }
+    } else if (m_pubkeys.size() == 1) {
+        if (!m_sig.VerifyInsecure(m_pubkeys.back(), m_msg_hash)) {
+            LogPrint(BCLog::LLMQ, "%s\n", m_id_string);
+            return false;
+        }
+    } else if (!m_clsig.IsNull()) {
+        if (m_clhandler->VerifyChainLock(m_clsig) != llmq::VerifyRecSigStatus::Valid) {
+            LogPrint(BCLog::LLMQ, "%s\n", m_id_string);
+            return false;
+        }
+    } else {
+        // It is supposed to be at least one public key!
+        return false;
+    }
+    return true;
 }
 
 template <typename CacheType>
