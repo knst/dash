@@ -323,14 +323,16 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(const CBlock& block, const CB
                     return false;
                 }
             }
+        }
         if (!queue_control.Wait()) {
             // at least one check failed
             return false;
         } else {
-            LOCK(cached_mutex);
-            cached_chainlock = std::make_pair(opt_cbTx->bestCLSignature, opt_cbTx->bestCLHeightDiff);
-            cached_pindex = pindex;
-        }
+            if (opt_cbTx.has_value() && opt_cbTx->bestCLSignature.IsValid()) {
+                LOCK(cached_mutex);
+                cached_chainlock = std::make_pair(opt_cbTx->bestCLSignature, opt_cbTx->bestCLHeightDiff);
+                cached_pindex = pindex;
+            }
         }
         int64_t nTime8 = GetTimeMicros();
         nTimeCbTxCL += nTime8 - nTime7;
