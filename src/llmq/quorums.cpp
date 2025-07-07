@@ -1214,7 +1214,7 @@ CQuorumCPtr SelectQuorumForSigning(const Consensus::LLMQParams& llmq_params, con
 
     CBlockIndex* pindexStart;
     {
-//        LOCK(::cs_main);
+        LOCK(::cs_main);
         if (signHeight == -1) {
             signHeight = active_chain.Height();
         }

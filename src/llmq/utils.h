@@ -87,7 +87,6 @@ struct BlsCheck {
 
     void swap(BlsCheck& obj)
     {
-        std::swap(m_clhandler, obj.m_clhandler);
         std::swap(m_clsig, obj.m_clsig);
         std::swap(m_sig, obj.m_sig);
         std::swap(m_pubkeys, obj.m_pubkeys);
