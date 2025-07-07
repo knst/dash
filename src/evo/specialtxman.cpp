@@ -16,13 +16,13 @@
 #include <evo/providertx.h>
 #include <evo/simplifiedmns.h>
 #include <hash.h>
-#include <llmq/options.h>
-#include <llmq/utils.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
 #include <llmq/clsig.h>
 #include <llmq/commitment.h>
+#include <llmq/options.h>
 #include <llmq/quorums.h>
+#include <llmq/utils.h>
 #include <primitives/block.h>
 #include <validation.h>
 
@@ -81,10 +81,11 @@ static bool CheckSpecialTxInner(CDeterministicMNManager& dmnman, llmq::CQuorumSn
     return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-tx-type-check");
 }
 
-CSpecialTxProcessor::CSpecialTxProcessor(CCreditPoolManager& cpoolman, CDeterministicMNManager& dmnman, CMNHFManager& mnhfman,
-                             llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumSnapshotManager& qsnapman,
-                             const ChainstateManager& chainman, const Consensus::Params& consensus_params,
-                             const llmq::CChainLocksHandler& clhandler, const llmq::CQuorumManager& qman) :
+CSpecialTxProcessor::CSpecialTxProcessor(CCreditPoolManager& cpoolman, CDeterministicMNManager& dmnman,
+                                         CMNHFManager& mnhfman, llmq::CQuorumBlockProcessor& qblockman,
+                                         llmq::CQuorumSnapshotManager& qsnapman, const ChainstateManager& chainman,
+                                         const Consensus::Params& consensus_params,
+                                         const llmq::CChainLocksHandler& clhandler, const llmq::CQuorumManager& qman) :
     m_cpoolman(cpoolman),
     m_dmnman{dmnman},
     m_mnhfman{mnhfman},
@@ -95,7 +96,6 @@ CSpecialTxProcessor::CSpecialTxProcessor(CCreditPoolManager& cpoolman, CDetermin
     m_clhandler{clhandler},
     m_qman{qman}
 {
-
     int bls_threads = gArgs.GetIntArg("-parbls", llmq::DEFAULT_BLSCHECK_THREADS);
     if (bls_threads <= 0) {
         // -parbls=0 means autodetect (number of cores - 1 validator threads)
@@ -112,10 +112,7 @@ CSpecialTxProcessor::CSpecialTxProcessor(CCreditPoolManager& cpoolman, CDetermin
     m_bls_queue.StartWorkerThreads(bls_threads);
 }
 
-CSpecialTxProcessor::~CSpecialTxProcessor()
-{
-    m_bls_queue.StopWorkerThreads();
-}
+CSpecialTxProcessor::~CSpecialTxProcessor() { m_bls_queue.StopWorkerThreads(); }
 
 bool CSpecialTxProcessor::CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, bool check_sigs, TxValidationState& state)
 {
@@ -125,20 +122,22 @@ bool CSpecialTxProcessor::CheckSpecialTx(const CTransaction& tx, const CBlockInd
 }
 
 namespace {
-    static Mutex cached_mutex;
-    static const CBlockIndex* cached_pindex GUARDED_BY(cached_mutex){nullptr};
-    static std::optional<std::pair<CBLSSignature, uint32_t>> cached_chainlock GUARDED_BY(cached_mutex){std::nullopt};
+static Mutex cached_mutex;
+static const CBlockIndex* cached_pindex GUARDED_BY(cached_mutex){nullptr};
+static std::optional<std::pair<CBLSSignature, uint32_t>> cached_chainlock GUARDED_BY(cached_mutex){std::nullopt};
 } // anonymous namespace
 
 static std::variant<bool, llmq::CChainLockSig> CheckCbTxBestChainlock(const CCbTx& cbTx, const CBlockIndex* pindex,
-                            const llmq::CChainLocksHandler& chainlock_handler, BlockValidationState& state)
+                                                                      const llmq::CChainLocksHandler& chainlock_handler,
+                                                                      BlockValidationState& state)
 {
     if (cbTx.nVersion < CCbTx::Version::CLSIG_AND_BALANCE) {
         return true;
     }
 
     auto best_clsig = chainlock_handler.GetBestChainLock();
-    if (best_clsig.getHeight() == pindex->nHeight - 1 && cbTx.bestCLHeightDiff == 0 && cbTx.bestCLSignature == best_clsig.getSig()) {
+    if (best_clsig.getHeight() == pindex->nHeight - 1 && cbTx.bestCLHeightDiff == 0 &&
+        cbTx.bestCLSignature == best_clsig.getSig()) {
         // matches our best clsig which still hold values for the previous block
         LOCK(cached_mutex);
         cached_chainlock = std::make_pair(cbTx.bestCLSignature, cbTx.bestCLHeightDiff);
@@ -227,6 +226,43 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(const CBlock& block, const CB
         LogPrint(BCLog::BENCHMARK, "      - GetTxPayload: %.2fms [%.2fs]\n", 0.001 * (nTime2 - nTime1),
                  nTimePayload * 0.000001);
 
+        CCheckQueueControl<llmq::utils::BlsCheck> queue_control(&m_bls_queue);
+
+        if (opt_cbTx.has_value()) {
+            auto ret = CheckCbTxBestChainlock(*opt_cbTx, pindex, m_clhandler, state);
+            if (std::holds_alternative<llmq::CChainLockSig>(ret)) {
+                std::vector<llmq::utils::BlsCheck> vChecks;
+                // --------------
+                const auto llmqType = Params().GetConsensus().llmqTypeChainLocks;
+                const auto& clsig = std::get<llmq::CChainLockSig>(ret);
+                const uint256 nRequestId = ::SerializeHash(std::make_pair(llmq::CLSIG_REQUESTID_PREFIX, clsig.getHeight()));
+                // return llmq::VerifyRecoveredSig(llmqType, m_chainstate.m_chain, qman, clsig.getHeight(), nRequestId, clsig.getBlockHash(), clsig.getSig());
+                const auto& llmq_params_opt = Params().GetLLMQ(llmqType);
+                assert(llmq_params_opt.has_value());
+                auto quorum = llmq::SelectQuorumForSigning(llmq_params_opt.value(),m_chainstate.m_chain, m_qman, nRequestId,
+                                                     clsig.getHeight(), llmq::SIGN_HEIGHT_OFFSET);
+                if (!quorum) {
+                    return false;
+                    // return llmq::VerifyRecSigStatus::NoQuorum;
+                }
+
+                uint256 signHash = BuildSignHash(llmqType, quorum->qc->quorumHash, nRequestId, clsig.getBlockHash());
+                const bool ret = sig.VerifyInsecure(quorum->qc->quorumPublicKey, signHash);
+//                return ret ? llmq::VerifyRecSigStatus::Valid : llmq::VerifyRecSigStatus::Invalid;
+                if (!ret) return false;
+                // -------------
+                CBLSSignature m_sig{std::get<llmq::CChainLockSig>(ret)};
+                vChecks.emplace_back(&m_clhandler, m_sig, "bad-cbtx-invalid-clsig");
+                queue_control.Add(vChecks);
+            } else {
+                if (!std::get<bool>(ret)) {
+                    // pass the state returned by the function above
+                    return false;
+                }
+            }
+        }
+
+
         CRangesSet indexes;
         if (DeploymentActiveAt(*pindex, m_consensus_params, Consensus::DEPLOYMENT_V20)) {
             CCreditPool creditPool{m_cpoolman.GetCreditPool(pindex->pprev, m_consensus_params)};
@@ -309,21 +345,6 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(const CBlock& block, const CB
         LogPrint(BCLog::BENCHMARK, "      - CheckCbTxMerkleRoots: %.2fms [%.2fs]\n", 0.001 * (nTime7 - nTime6),
                  nTimeMerkle * 0.000001);
 
-        CCheckQueueControl<llmq::utils::BlsCheck> queue_control(&m_bls_queue);
-
-        if (opt_cbTx.has_value()) {
-            auto ret = CheckCbTxBestChainlock(*opt_cbTx, pindex, m_clhandler, state);
-            if (std::holds_alternative<llmq::CChainLockSig>(ret)) {
-                std::vector<llmq::utils::BlsCheck> vChecks;
-                vChecks.emplace_back(&m_clhandler, std::get<llmq::CChainLockSig>(ret), "bad-cbtx-invalid-clsig");
-                queue_control.Add(vChecks);
-            } else {
-                if (!std::get<bool>(ret)) {
-                    // pass the state returned by the function above
-                    return false;
-                }
-            }
-        }
         if (!queue_control.Wait()) {
             // at least one check failed
             return false;

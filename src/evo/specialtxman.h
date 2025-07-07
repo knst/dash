@@ -6,10 +6,10 @@
 #define BITCOIN_EVO_SPECIALTXMAN_H
 
 #include <checkqueue.h>
-#include <sync.h>
-#include <threadsafety.h>
 #include <llmq/utils.h>
 #include <optional>
+#include <sync.h>
+#include <threadsafety.h>
 
 class BlockValidationState;
 class CBlock;
@@ -32,7 +32,7 @@ class CQuorumManager;
 class CQuorumSnapshotManager;
 namespace utils {
 class BlsCheck;
-} //
+} // namespace utils
 } // namespace llmq
 
 extern RecursiveMutex cs_main;
