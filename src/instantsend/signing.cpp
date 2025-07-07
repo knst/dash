@@ -11,7 +11,7 @@
 #include <util/irange.h>
 #include <validation.h>
 
-#include <instantsend/db.h>
+#include <instantsend/instantsend.h>
 #include <llmq/chainlocks.h>
 #include <llmq/quorums.h>
 #include <masternode/sync.h>
@@ -46,6 +46,31 @@ CSigningManager::CSigningManager(CChainState& chainstate, llmq::CChainLocksHandl
 }
 
 CSigningManager::~CSigningManager() = default;
+
+void CSigningManager::Start()
+{
+    m_sigman.RegisterRecoveredSigsListener(this);
+}
+
+void CSigningManager::Stop()
+{
+    m_sigman.UnregisterRecoveredSigsListener(this);
+}
+
+void CSigningManager::ClearInputsFromQueue(const std::unordered_set<uint256, StaticSaltedHasher>& ids)
+{
+    LOCK(cs_inputReqests);
+    for (const auto& id : ids) {
+        inputRequestIds.erase(id);
+    }
+}
+
+void CSigningManager::ClearLockFromQueue(const llmq::CInstantSendLockPtr& islock)
+{
+    LOCK(cs_creating);
+    creatingInstantSendLocks.erase(islock->GetRequestId());
+    txToCreatingInstantSendLocks.erase(islock->txid);
+}
 
 MessageProcessingResult CSigningManager::HandleNewRecoveredSig(const llmq::CRecoveredSig& recoveredSig)
 {
@@ -100,34 +125,15 @@ void CSigningManager::HandleNewInputLockRecoveredSig(const llmq::CRecoveredSig& 
     TrySignInstantSendLock(*tx);
 }
 
-void CSigningManager::ProcessPendingRetryLockTxs()
+void CSigningManager::ProcessPendingRetryLockTxs(const std::vector<CTransactionRef>& retryTxs)
 {
-    const auto retryTxs = WITH_LOCK(m_isman.cs_pendingRetry, return m_isman.pendingRetryTxs);
-
-    if (retryTxs.empty()) {
-        return;
-    }
-
     if (!m_isman.IsInstantSendEnabled()) {
         return;
     }
 
     int retryCount = 0;
-    for (const auto& txid : retryTxs) {
-        CTransactionRef tx;
+    for (const auto& tx : retryTxs) {
         {
-            {
-                LOCK(m_isman.cs_nonLocked);
-                auto it = m_isman.nonLockedTxs.find(txid);
-                if (it == m_isman.nonLockedTxs.end()) {
-                    continue;
-                }
-                tx = it->second.tx;
-            }
-            if (!tx) {
-                continue;
-            }
-
             if (LOCK(cs_creating); txToCreatingInstantSendLocks.count(tx->GetHash())) {
                 // we're already in the middle of locking this one
                 continue;
@@ -156,8 +162,7 @@ void CSigningManager::ProcessPendingRetryLockTxs()
     }
 
     if (retryCount != 0) {
-        LogPrint(BCLog::INSTANTSEND, "instantsend::CSigningManager::%s -- retried %d TXs. nonLockedTxs.size=%d\n", __func__,
-                 retryCount, WITH_LOCK(m_isman.cs_nonLocked, return m_isman.nonLockedTxs.size()));
+        LogPrint(BCLog::INSTANTSEND, "instantsend::CSigningManager::%s -- retried %d TXs.\n", __func__, retryCount);
     }
 }
 
@@ -243,13 +248,7 @@ void CSigningManager::HandleNewInstantSendLockRecoveredSig(const llmq::CRecovere
     }
 
     islock->sig = recoveredSig.sig;
-    auto hash = ::SerializeHash(*islock);
-
-    if (WITH_LOCK(m_isman.cs_pendingLocks, return m_isman.pendingInstantSendLocks.count(hash)) || m_isman.db.KnownInstantSendLock(hash)) {
-        return;
-    }
-    LOCK(m_isman.cs_pendingLocks);
-    m_isman.pendingInstantSendLocks.emplace(hash, std::make_pair(-1, islock));
+    m_isman.TryEmplacePendingLock(/*hash=*/::SerializeHash(*islock), /*id=*/-1, islock);
 }
 
 void CSigningManager::ProcessTx(const CTransaction& tx, bool fRetroactive, const Consensus::Params& params)
