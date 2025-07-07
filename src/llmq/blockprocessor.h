@@ -62,7 +62,6 @@ public:
 
     ~CQuorumBlockProcessor();
 
-    CCheckQueue<utils::BlsCheck>& BlsQueue() { return m_bls_queue; }
     MessageProcessingResult ProcessMessage(const CNode& peer, std::string_view msg_type, CDataStream& vRecv);
 
     bool ProcessBlock(const CBlock& block, gsl::not_null<const CBlockIndex*> pindex, BlockValidationState& state, bool fJustCheck, bool fBLSChecks) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);

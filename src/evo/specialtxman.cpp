@@ -81,6 +81,42 @@ static bool CheckSpecialTxInner(CDeterministicMNManager& dmnman, llmq::CQuorumSn
     return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-tx-type-check");
 }
 
+CSpecialTxProcessor::CSpecialTxProcessor(CCreditPoolManager& cpoolman, CDeterministicMNManager& dmnman, CMNHFManager& mnhfman,
+                             llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumSnapshotManager& qsnapman,
+                             const ChainstateManager& chainman, const Consensus::Params& consensus_params,
+                             const llmq::CChainLocksHandler& clhandler, const llmq::CQuorumManager& qman) :
+    m_cpoolman(cpoolman),
+    m_dmnman{dmnman},
+    m_mnhfman{mnhfman},
+    m_qblockman{qblockman},
+    m_qsnapman{qsnapman},
+    m_chainman(chainman),
+    m_consensus_params{consensus_params},
+    m_clhandler{clhandler},
+    m_qman{qman}
+{
+
+    int bls_threads = gArgs.GetIntArg("-parbls", llmq::DEFAULT_BLSCHECK_THREADS);
+    if (bls_threads <= 0) {
+        // -parbls=0 means autodetect (number of cores - 1 validator threads)
+        // -parbls=-n means "leave n cores free" (number of cores - n - 1 validator threads)
+        bls_threads += GetNumCores();
+    }
+    // Subtract 1 because the main thread counts towards the par threads
+    bls_threads = std::max(bls_threads - 1, 0);
+
+    // Number of script-checking threads <= MAX_BLSCHECK_THREADS
+    bls_threads = std::min(bls_threads, llmq::MAX_BLSCHECK_THREADS);
+
+    LogPrintf("Bls verification uses %d additional threads\n", bls_threads);
+    m_bls_queue.StartWorkerThreads(bls_threads);
+}
+
+CSpecialTxProcessor::~CSpecialTxProcessor()
+{
+    m_bls_queue.StopWorkerThreads();
+}
+
 bool CSpecialTxProcessor::CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, bool check_sigs, TxValidationState& state)
 {
     AssertLockHeld(::cs_main);
@@ -191,7 +227,7 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(const CBlock& block, const CB
             }
         }
 
-        CCheckQueueControl<llmq::utils::BlsCheck> cl_queue_control(&m_qblockman.BlsQueue());
+        CCheckQueueControl<llmq::utils::BlsCheck> cl_queue_control(&m_bls_queue);
 
         if (opt_cbTx.has_value()) {
             auto ret = CheckCbTxBestChainlock(*opt_cbTx, pindex, m_clhandler, state);
