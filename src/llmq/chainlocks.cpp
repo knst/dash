@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <llmq/chainlocks.h>
+#include <llmq/commitment.h>
 #include <llmq/quorums.h>
 #include <llmq/instantsend.h>
 #include <llmq/signing_shares.h>
@@ -542,6 +543,23 @@ bool CChainLocksHandler::HasChainLock(int nHeight, const uint256& blockHash) con
     return InternalHasChainLock(nHeight, blockHash);
 }
 
+
+std::optional<std::tuple<CBLSSignature, CBLSPublicKey, uint256>> CChainLocksHandler::GetInternalSig(const CChainLockSig& clsig) const
+{
+    const auto llmqType = Params().GetConsensus().llmqTypeChainLocks;
+    const uint256 nRequestId = ::SerializeHash(std::make_pair(llmq::CLSIG_REQUESTID_PREFIX, clsig.getHeight()));
+
+    // return llmq::VerifyRecoveredSig(llmqType, m_chainstate.m_chain, qman, , nRequestId, clsig.getBlockHash(), clsig.getSig());
+    const auto& llmq_params_opt = Params().GetLLMQ(llmqType);
+    assert(llmq_params_opt.has_value());
+    auto quorum = SelectQuorumForSigning(llmq_params_opt.value(), m_chainstate.m_chain, qman, nRequestId, clsig.getHeight(), llmq::SIGN_HEIGHT_OFFSET);
+    if (!quorum) {
+        return std::nullopt;
+    }
+
+    uint256 signHash = BuildSignHash(llmqType, quorum->qc->quorumHash, nRequestId, clsig.getBlockHash());
+    return std::tuple{clsig.getSig(), quorum->qc->quorumPublicKey, signHash};
+}
 
 VerifyRecSigStatus CChainLocksHandler::VerifyChainLock(const CChainLockSig& clsig) const
 {
