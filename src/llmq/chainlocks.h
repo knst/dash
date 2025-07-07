@@ -23,6 +23,8 @@
 
 class CBlock;
 class CBlockIndex;
+class CBLSSignature;
+class CBLSPublicKey;
 class CChainState;
 class CMasternodeSync;
 class CScheduler;
@@ -113,6 +115,7 @@ public:
 
     bool HasChainLock(int nHeight, const uint256& blockHash) const EXCLUSIVE_LOCKS_REQUIRED(!cs);
     bool HasConflictingChainLock(int nHeight, const uint256& blockHash) const EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    std::optional<std::tuple<CBLSSignature, CBLSPublicKey, uint256>> GetInternalSig(const CChainLockSig& clsig) const;
     VerifyRecSigStatus VerifyChainLock(const CChainLockSig& clsig) const;
 
     bool IsTxSafeForMining(const uint256& txid) const EXCLUSIVE_LOCKS_REQUIRED(!cs);

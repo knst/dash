@@ -16,13 +16,13 @@
 #include <evo/providertx.h>
 #include <evo/simplifiedmns.h>
 #include <hash.h>
-#include <llmq/options.h>
-#include <llmq/utils.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
 #include <llmq/clsig.h>
 #include <llmq/commitment.h>
+#include <llmq/options.h>
 #include <llmq/quorums.h>
+#include <llmq/utils.h>
 #include <primitives/block.h>
 #include <validation.h>
 
@@ -130,7 +130,7 @@ namespace {
     static std::optional<std::pair<CBLSSignature, uint32_t>> cached_chainlock GUARDED_BY(cached_mutex){std::nullopt};
 } // anonymous namespace
 
-static std::variant<bool, llmq::CChainLockSig> CheckCbTxBestChainlock(const CCbTx& cbTx, const CBlockIndex* pindex,
+static std::variant<bool, std::tuple<CBLSSignature, CBLSPublicKey, uint256>> CheckCbTxBestChainlock(const CCbTx& cbTx, const CBlockIndex* pindex,
                             const llmq::CChainLocksHandler& chainlock_handler, BlockValidationState& state)
 {
     if (cbTx.nVersion < CCbTx::Version::CLSIG_AND_BALANCE) {
@@ -176,7 +176,12 @@ static std::variant<bool, llmq::CChainLockSig> CheckCbTxBestChainlock(const CCbT
             return true;
         }
         uint256 curBlockCoinbaseCLBlockHash = pindex->GetAncestor(curBlockCoinbaseCLHeight)->GetBlockHash();
-        return llmq::CChainLockSig{curBlockCoinbaseCLHeight, curBlockCoinbaseCLBlockHash, cbTx.bestCLSignature};
+        llmq::CChainLockSig clsig{curBlockCoinbaseCLHeight, curBlockCoinbaseCLBlockHash, cbTx.bestCLSignature};
+        auto ret = chainlock_handler.GetInternalSig(clsig);
+        if (!ret.has_value()) {
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-no-quorum");
+        }
+        return ret.value();
     } else if (cbTx.bestCLHeightDiff != 0) {
         // Null bestCLSignature is allowed only with bestCLHeightDiff = 0
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-cldiff");
@@ -313,15 +318,20 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(const CBlock& block, const CB
 
         if (opt_cbTx.has_value()) {
             auto ret = CheckCbTxBestChainlock(*opt_cbTx, pindex, m_clhandler, state);
-            if (std::holds_alternative<llmq::CChainLockSig>(ret)) {
-                std::vector<llmq::utils::BlsCheck> vChecks;
-                vChecks.emplace_back(&m_clhandler, std::get<llmq::CChainLockSig>(ret), "bad-cbtx-invalid-clsig");
-                queue_control.Add(vChecks);
-            } else {
+            if (std::holds_alternative<bool>(ret)) {
                 if (!std::get<bool>(ret)) {
                     // pass the state returned by the function above
                     return false;
                 }
+            } else {
+                auto [sig, pubkey, msg_hash] = std::get<1>(ret);
+                CBLSSignature ss = sig;
+                std::vector<CBLSPublicKey> pp = {pubkey};
+                uint256 mm = msg_hash;
+                std::vector<llmq::utils::BlsCheck> vChecks;
+                //vChecks.emplace_back(sig, {pubkey}, msg_hash, "bad-cbtx-invalid-clsig");
+                vChecks.emplace_back(ss, pp, mm, "bad-cbtx-invalid-clsig");
+                queue_control.Add(vChecks);
             }
         }
         if (!queue_control.Wait()) {
