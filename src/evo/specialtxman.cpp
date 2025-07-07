@@ -227,6 +227,27 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(const CBlock& block, const CB
             }
         }
 
+        CCheckQueueControl<llmq::utils::BlsCheck> cl_queue_control(&m_bls_queue);
+
+        if (opt_cbTx.has_value()) {
+            auto ret = CheckCbTxBestChainlock(*opt_cbTx, pindex, m_clhandler, state);
+            if (std::holds_alternative<bool>(ret)) {
+                if (!std::get<bool>(ret)) {
+                    // pass the state returned by the function above
+                    return false;
+                }
+            } else {
+                auto [sig, pubkey, msg_hash] = std::get<1>(ret);
+                CBLSSignature ss = sig;
+                std::vector<CBLSPublicKey> pp = {pubkey};
+                uint256 mm = msg_hash;
+                std::vector<llmq::utils::BlsCheck> vChecks;
+                //vChecks.emplace_back(sig, {pubkey}, msg_hash, "bad-cbtx-invalid-clsig");
+                vChecks.emplace_back(ss, pp, mm, "bad-cbtx-invalid-clsig");
+                cl_queue_control.Add(vChecks);
+            }
+        }
+
         int64_t nTime2 = GetTimeMicros();
         nTimePayload += nTime2 - nTime1;
         LogPrint(BCLog::BENCHMARK, "      - GetTxPayload: %.2fms [%.2fs]\n", 0.001 * (nTime2 - nTime1),
@@ -314,26 +335,6 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(const CBlock& block, const CB
         LogPrint(BCLog::BENCHMARK, "      - CheckCbTxMerkleRoots: %.2fms [%.2fs]\n", 0.001 * (nTime7 - nTime6),
                  nTimeMerkle * 0.000001);
 
-        CCheckQueueControl<llmq::utils::BlsCheck> cl_queue_control(&m_bls_queue);
-
-        if (opt_cbTx.has_value()) {
-            auto ret = CheckCbTxBestChainlock(*opt_cbTx, pindex, m_clhandler, state);
-            if (std::holds_alternative<bool>(ret)) {
-                if (!std::get<bool>(ret)) {
-                    // pass the state returned by the function above
-                    return false;
-                }
-            } else {
-                auto [sig, pubkey, msg_hash] = std::get<1>(ret);
-                CBLSSignature ss = sig;
-                std::vector<CBLSPublicKey> pp = {pubkey};
-                uint256 mm = msg_hash;
-                std::vector<llmq::utils::BlsCheck> vChecks;
-                //vChecks.emplace_back(sig, {pubkey}, msg_hash, "bad-cbtx-invalid-clsig");
-                vChecks.emplace_back(ss, pp, mm, "bad-cbtx-invalid-clsig");
-                cl_queue_control.Add(vChecks);
-            }
-        }
         if (!cl_queue_control.Wait()) {
             // at least one check failed
             return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-invalid-clsig");
