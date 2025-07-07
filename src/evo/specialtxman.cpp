@@ -314,7 +314,7 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(const CBlock& block, const CB
         LogPrint(BCLog::BENCHMARK, "      - CheckCbTxMerkleRoots: %.2fms [%.2fs]\n", 0.001 * (nTime7 - nTime6),
                  nTimeMerkle * 0.000001);
 
-        CCheckQueueControl<llmq::utils::BlsCheck> queue_control(&m_bls_queue);
+        CCheckQueueControl<llmq::utils::BlsCheck> cl_queue_control(&m_bls_queue);
 
         if (opt_cbTx.has_value()) {
             auto ret = CheckCbTxBestChainlock(*opt_cbTx, pindex, m_clhandler, state);
@@ -331,12 +331,12 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(const CBlock& block, const CB
                 std::vector<llmq::utils::BlsCheck> vChecks;
                 //vChecks.emplace_back(sig, {pubkey}, msg_hash, "bad-cbtx-invalid-clsig");
                 vChecks.emplace_back(ss, pp, mm, "bad-cbtx-invalid-clsig");
-                queue_control.Add(vChecks);
+                cl_queue_control.Add(vChecks);
             }
         }
-        if (!queue_control.Wait()) {
+        if (!cl_queue_control.Wait()) {
             // at least one check failed
-            return false;
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-invalid-clsig");
         } else {
             if (opt_cbTx.has_value() && opt_cbTx->bestCLSignature.IsValid()) {
                 LOCK(cached_mutex);
