@@ -116,7 +116,7 @@ private:
         EXCLUSIVE_LOCKS_REQUIRED(!cs_nonLocked, !cs_pendingRetry);
     void TruncateRecoveredSigsForInputs(const CInstantSendLock& islock);
 
-    void RemoveMempoolConflictsForLock(PeerManager& peerman, const uint256& hash, const CInstantSendLock& islock)
+    void RemoveMempoolConflictsForLock(const uint256& hash, const CInstantSendLock& islock)
         EXCLUSIVE_LOCKS_REQUIRED(!cs_nonLocked, !cs_pendingRetry);
     void ResolveBlockConflicts(const uint256& islockHash, const CInstantSendLock& islock)
         EXCLUSIVE_LOCKS_REQUIRED(!cs_nonLocked, !cs_pendingLocks, !cs_pendingRetry);
@@ -134,7 +134,7 @@ public:
 
     PeerMsgRet ProcessMessage(const CNode& pfrom, PeerManager& peerman, std::string_view msg_type, CDataStream& vRecv);
 
-    void TransactionAddedToMempool(PeerManager& peerman, const CTransactionRef& tx)
+    void TransactionAddedToMempool(const CTransactionRef& tx)
         EXCLUSIVE_LOCKS_REQUIRED(!cs_nonLocked, !cs_pendingLocks, !cs_pendingRetry);
     void TransactionRemovedFromMempool(const CTransactionRef& tx);
     void BlockConnected(const std::shared_ptr<const CBlock>& pblock, const CBlockIndex* pindex)
