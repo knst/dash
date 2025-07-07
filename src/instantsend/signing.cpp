@@ -11,7 +11,6 @@
 #include <util/irange.h>
 #include <validation.h>
 
-#include <instantsend/instantsend.h>
 #include <llmq/chainlocks.h>
 #include <llmq/quorums.h>
 #include <masternode/sync.h>
@@ -30,7 +29,7 @@ using node::fReindex;
 namespace instantsend {
 static const std::string_view INPUTLOCK_REQUESTID_PREFIX = "inlock";
 
-CSigningManager::CSigningManager(CChainState& chainstate, llmq::CChainLocksHandler& clhandler, llmq::CInstantSendManager& isman,
+CSigningManager::CSigningManager(CChainState& chainstate, llmq::CChainLocksHandler& clhandler, InstantSendStorage& isman,
                                  llmq::CSigningManager& sigman, llmq::CSigSharesManager& shareman, llmq::CQuorumManager& qman,
                                  CSporkManager& sporkman, CTxMemPool& mempool, const CMasternodeSync& mn_sync) :
     m_chainstate{chainstate},

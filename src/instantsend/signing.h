@@ -22,15 +22,29 @@ class CInstantSendManager;
 class CSigningManager;
 class CSigSharesManager;
 class CQuorumManager;
+struct CInstantSendLock;
+using CInstantSendLockPtr = std::shared_ptr<CInstantSendLock>;
 } // namespace llmq
 
 namespace instantsend {
+
+class InstantSendStorage
+{
+public:
+    virtual ~InstantSendStorage() = default;
+
+    virtual bool IsInstantSendEnabled() const = 0;
+    virtual bool IsLocked(const uint256& txHash) const = 0;
+    virtual llmq::CInstantSendLockPtr GetConflictingLock(const CTransaction& tx) const = 0;
+    virtual void TryEmplacePendingLock(const uint256& hash, const NodeId id, const llmq::CInstantSendLockPtr& islock) = 0;
+};
+
 class CSigningManager : public llmq::CRecoveredSigsListener
 {
 private:
     CChainState& m_chainstate;
     llmq::CChainLocksHandler& m_clhandler;
-    llmq::CInstantSendManager& m_isman;
+    InstantSendStorage& m_isman;
     llmq::CSigningManager& m_sigman;
     llmq::CSigSharesManager& m_shareman;
     llmq::CQuorumManager& m_qman;
@@ -58,7 +72,7 @@ private:
     std::unordered_map<uint256, llmq::CInstantSendLock*, StaticSaltedHasher> txToCreatingInstantSendLocks GUARDED_BY(cs_creating);
 
 public:
-    explicit CSigningManager(CChainState& chainstate, llmq::CChainLocksHandler& clhandler, llmq::CInstantSendManager& isman,
+    explicit CSigningManager(CChainState& chainstate, llmq::CChainLocksHandler& clhandler, InstantSendStorage& isman,
                              llmq::CSigningManager& sigman, llmq::CSigSharesManager& shareman, llmq::CQuorumManager& qman,
                              CSporkManager& sporkman, CTxMemPool& mempool, const CMasternodeSync& mn_sync);
     ~CSigningManager();

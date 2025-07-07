@@ -12,6 +12,7 @@
 #include <threadinterrupt.h>
 #include <threadsafety.h>
 
+#include <instantsend/signing.h>
 #include <instantsend/db.h>
 #include <instantsend/lock.h>
 #include <unordered_lru_cache.h>
@@ -43,7 +44,7 @@ class CQuorumManager;
 class CSigningManager;
 class CSigSharesManager;
 
-class CInstantSendManager
+class CInstantSendManager final : public instantsend::InstantSendStorage
 {
 private:
     CInstantSendDb db;
@@ -128,9 +129,9 @@ private:
         EXCLUSIVE_LOCKS_REQUIRED(!cs_nonLocked, !cs_pendingRetry);
 
 public:
-    bool IsLocked(const uint256& txHash) const;
+    bool IsLocked(const uint256& txHash) const override;
     bool IsWaitingForTx(const uint256& txHash) const EXCLUSIVE_LOCKS_REQUIRED(!cs_pendingLocks);
-    CInstantSendLockPtr GetConflictingLock(const CTransaction& tx) const;
+    CInstantSendLockPtr GetConflictingLock(const CTransaction& tx) const override;
 
     PeerMsgRet ProcessMessage(const CNode& pfrom, PeerManager& peerman, std::string_view msg_type, CDataStream& vRecv);
 
@@ -152,12 +153,12 @@ public:
         EXCLUSIVE_LOCKS_REQUIRED(!cs_nonLocked, !cs_pendingRetry);
 
     void RemoveConflictingLock(const uint256& islockHash, const CInstantSendLock& islock);
-    void TryEmplacePendingLock(const uint256& hash, const NodeId id, const CInstantSendLockPtr& islock)
+    void TryEmplacePendingLock(const uint256& hash, const NodeId id, const CInstantSendLockPtr& islock) override
         EXCLUSIVE_LOCKS_REQUIRED(!cs_pendingLocks);
 
     size_t GetInstantSendLockCount() const;
 
-    bool IsInstantSendEnabled() const;
+    bool IsInstantSendEnabled() const override;
     /**
      * If true, MN should sign all transactions, if false, MN should not sign
      * transactions in mempool, but should sign txes included in a block. This
