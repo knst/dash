@@ -108,6 +108,7 @@ CSpecialTxProcessor::CSpecialTxProcessor(CCreditPoolManager& cpoolman, CDetermin
     // Number of script-checking threads <= MAX_BLSCHECK_THREADS
     bls_threads = std::min(bls_threads, llmq::MAX_BLSCHECK_THREADS);
 
+    // TODO: cl validator doens't need own queue. Just async job is good enough!
     LogPrintf("Bls verification uses %d additional threads\n", bls_threads);
     m_bls_queue.StartWorkerThreads(bls_threads);
 }

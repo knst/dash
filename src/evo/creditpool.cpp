@@ -57,6 +57,8 @@ struct CreditPoolDataPerBlock {
 } // anonymous namespace
 
 // it throws exception if anything went wrong
+// TODO (perf) investigate what are this calls and if it's possible to add cache?
+// potentially up to 10% performance improvement
 static std::optional<CreditPoolDataPerBlock> GetCreditDataFromBlock(const gsl::not_null<const CBlockIndex*> block_index,
                                                                     const Consensus::Params& consensusParams)
 {

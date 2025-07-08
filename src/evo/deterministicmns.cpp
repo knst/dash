@@ -344,6 +344,9 @@ void CDeterministicMNList::PoSePunish(const uint256& proTxHash, int penalty, boo
     UpdateMN(proTxHash, newState);
 }
 
+// TODO (perf): instead bumping nPoSePenalty for each node for each block; write pair "last ban + sum of scores at the moment" for every time when node is pose ban.
+// instead decreasing *EACH* score, just iter all of them and reset it when is decreased to 0
+// expected improvement ~2% of total block validation time
 void CDeterministicMNList::DecreaseScores()
 {
     std::vector<CDeterministicMNCPtr> toDecrease;
