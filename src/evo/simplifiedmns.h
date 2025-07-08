@@ -39,7 +39,7 @@ public:
     CSimplifiedMNListEntry(
             const uint256& proreg_tx_hash,
             const uint256& confirmed_hash,
-            MnNetInfo net_info,
+            std::shared_ptr<NetInfoInterface> net_info,
             const CBLSLazyPublicKey& pubkey_operator,
             const CKeyID& keyid_voting,
             bool is_valid,
