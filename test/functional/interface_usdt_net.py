@@ -114,7 +114,7 @@ class NetTracepointTest(BitcoinTestFramework):
                          fn_name="trace_inbound_message")
         ctx.enable_probe(probe="net:outbound_message",
                          fn_name="trace_outbound_message")
-        bpf = BPF(text=net_tracepoints_program, usdt_contexts=[ctx], debug=0, cflags=["-Wno-error=implicit-function-declaration"])
+        bpf = BPF(text=net_tracepoints_program, usdt_contexts=[ctx], debug=0)
 
         # The handle_* function is a ctypes callback function called from C. When
         # we assert in the handle_* function, the AssertError doesn't propagate
