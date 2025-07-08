@@ -509,23 +509,19 @@ public:
 
     bool operator==(const CBLSLazyWrapper& r) const
     {
-        if (&r == this) return true;
-        {
-            std::scoped_lock lock(mutex, r.mutex);
-            // If neither bufValid or objInitialized are set, then the object is the default object.
-            const bool is_default{!bufValid && !objInitialized};
-            const bool r_is_default{!r.bufValid && !r.objInitialized};
-            // If both are default; they are equal.
-            if (is_default && r_is_default) return true;
-            // If one is default and the other isn't, we are not equal
-            if (is_default != r_is_default) return false;
+        // If neither bufValid or objInitialized are set, then the object is the default object.
+        const bool is_default{!bufValid && !objInitialized};
+        const bool r_is_default{!r.bufValid && !r.objInitialized};
+        // If both are default; they are equal.
+        if (is_default && r_is_default) return true;
+        // If one is default and the other isn't, we are not equal
+        if (is_default != r_is_default) return false;
 
-            if (bufValid && r.bufValid && bufLegacyScheme == r.bufLegacyScheme) {
-                return vecBytes == r.vecBytes;
-            }
-            if (objInitialized && r.objInitialized) {
-                return obj == r.obj;
-            }
+        if (bufValid && r.bufValid && bufLegacyScheme == r.bufLegacyScheme) {
+            return vecBytes == r.vecBytes;
+        }
+        if (objInitialized && r.objInitialized) {
+            return obj == r.obj;
         }
         return Get() == r.Get();
     }
