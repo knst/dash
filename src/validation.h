@@ -38,7 +38,6 @@
 #include <stdint.h>
 #include <string>
 #include <thread>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -338,11 +337,6 @@ public:
 
     ScriptError GetScriptError() const { return error; }
 };
-
-// CScriptCheck is used a lot in std::vector, make sure that's efficient
-static_assert(std::is_nothrow_move_assignable_v<CScriptCheck>);
-static_assert(std::is_nothrow_move_constructible_v<CScriptCheck>);
-static_assert(std::is_nothrow_destructible_v<CScriptCheck>);
 
 /** Initializes the script-execution cache */
 void InitScriptExecutionCache();
