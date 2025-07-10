@@ -1960,13 +1960,9 @@ class DashTestFramework(BitcoinTestFramework):
             return all(node.spork('show') == sporks for node in self.nodes[1:])
         self.wait_until(check_sporks_same, timeout=timeout, sleep=1)
 
-    def wait_for_quorum_connections(self, quorum_hash, expected_connections, mninfos, llmq_type_name="llmq_test", timeout = 60, wait_proc=None):
+    def wait_for_quorum_connections(self, quorum_hash, expected_connections, mninfos, llmq_type_name="llmq_test", timeout = 60):
+        #  self.bump_mocktime(30)
         def check_quorum_connections():
-            def ret():
-                if wait_proc is not None:
-                    wait_proc()
-                return False
-
             for mn in mninfos:
                 s = mn.get_node(self).quorum("dkgstatus")
                 for qs in s["session"]:
@@ -1988,16 +1984,16 @@ class DashTestFramework(BitcoinTestFramework):
                             if c["connected"]:
                                 cnt += 1
                         if cnt < expected_connections:
-                            return ret()
+                            return False
                         return True
                     # a session with no matching connections - not ok
-                    return ret()
+                    return False
                 # a node with no sessions - ok
                 pass
             # no sessions at all - not ok
-            return ret()
+            return False
 
-        self.wait_until(check_quorum_connections, timeout=timeout, sleep=1)
+        self.wait_until(check_quorum_connections, timeout=timeout)
 
     def wait_for_masternode_probes(self, quorum_hash, mninfos, timeout = 30, wait_proc=None, llmq_type_name="llmq_test"):
         def check_probes():
