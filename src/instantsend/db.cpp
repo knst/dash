@@ -51,33 +51,28 @@ void CInstantSendDb::Upgrade(bool unitTests)
     }
 }
 
-void CInstantSendDb::WriteNewInstantSendLock(const uint256& hash, const InstantSendLock& islock)
+void CInstantSendDb::WriteNewInstantSendLock(const uint256& hash, const InstantSendLockPtr& islock)
 {
     LOCK(cs_db);
     CDBBatch batch(*db);
-    batch.Write(std::make_tuple(DB_ISLOCK_BY_HASH, hash), islock);
-    batch.Write(std::make_tuple(DB_HASH_BY_TXID, islock.txid), hash);
-    for (const auto& in : islock.inputs) {
+    batch.Write(std::make_tuple(DB_ISLOCK_BY_HASH, hash), *islock);
+    batch.Write(std::make_tuple(DB_HASH_BY_TXID, islock->txid), hash);
+    for (const auto& in : islock->inputs) {
         batch.Write(std::make_tuple(DB_HASH_BY_OUTPOINT, in), hash);
     }
     db->WriteBatch(batch);
 
-    islockCache.insert(hash, std::make_shared<InstantSendLock>(islock));
-    txidCache.insert(islock.txid, hash);
-    for (const auto& in : islock.inputs) {
+    islockCache.insert(hash, islock);
+    txidCache.insert(islock->txid, hash);
+    for (const auto& in : islock->inputs) {
         outpointCache.insert(in, hash);
     }
 }
 
-void CInstantSendDb::RemoveInstantSendLock(CDBBatch& batch, const uint256& hash, InstantSendLockPtr islock, bool keep_cache)
+void CInstantSendDb::RemoveInstantSendLock(CDBBatch& batch, const uint256& hash, const InstantSendLockPtr& islock,
+                                           bool keep_cache)
 {
     AssertLockHeld(cs_db);
-    if (!islock) {
-        islock = GetInstantSendLockByHashInternal(hash, false);
-        if (!islock) {
-            return;
-        }
-    }
 
     batch.Erase(std::make_tuple(DB_ISLOCK_BY_HASH, hash));
     batch.Erase(std::make_tuple(DB_HASH_BY_TXID, islock->txid));
@@ -388,7 +383,9 @@ std::vector<uint256> CInstantSendDb::RemoveChainedInstantSendLocks(const uint256
         }
     }
 
-    RemoveInstantSendLock(batch, islockHash, nullptr, false);
+    if (auto islock = GetInstantSendLockByHashInternal(islockHash, /*use_cache=*/false)) {
+        RemoveInstantSendLock(batch, islockHash, islock, false);
+    }
     WriteInstantSendLockArchived(batch, islockHash, nHeight);
     result.emplace_back(islockHash);
 
