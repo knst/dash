@@ -51,7 +51,7 @@ private:
      * @param islock The InstantSend Lock object itself
      * @param keep_cache Should we still keep corresponding entries in the cache or not
      */
-    void RemoveInstantSendLock(CDBBatch& batch, const uint256& hash, const InstantSendLockPtr& islock,
+    void RemoveInstantSendLock(CDBBatch& batch, const uint256& hash, const InstantSendLock& islock,
                                bool keep_cache = true) EXCLUSIVE_LOCKS_REQUIRED(cs_db);
     /**
      * Marks an InstantSend Lock as archived.
