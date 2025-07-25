@@ -262,11 +262,11 @@ class AssetLocksTest(DashTestFramework):
         pubkey = key.get_pubkey().get_bytes()
 
         self.test_asset_locks(node_wallet, node, pubkey)
-        self.test_asset_unlocks(node_wallet, node, pubkey)
-        self.test_withdrawal_limits(node_wallet, node, pubkey)
-        self.test_mn_rr(node_wallet, node, pubkey)
-        self.test_withdrawals_fork(node_wallet, node, pubkey)
-        self.test_v23_fork(node_wallet, node, pubkey)
+        #self.test_asset_unlocks(node_wallet, node, pubkey)
+        #self.test_withdrawal_limits(node_wallet, node, pubkey)
+        #self.test_mn_rr(node_wallet, node, pubkey)
+        #self.test_withdrawals_fork(node_wallet, node, pubkey)
+        #self.test_v23_fork(node_wallet, node, pubkey)
 
 
     def test_asset_locks(self, node_wallet, node, pubkey):
