@@ -129,7 +129,7 @@ class LLMQSimplePoSeTest(DashTestFramework):
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 5 (commit)")
-        self.wait_for_quorum_phase(q, 5, expected_good_nodes, "receivedPrematureCommitments", expected_good_nodes, mninfos_online, sleep=0.05)
+        self.wait_for_quorum_phase(q, 5, expected_good_nodes, "receivedPrematureCommitments", expected_good_nodes, mninfos_online)
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 6 (mining)")
