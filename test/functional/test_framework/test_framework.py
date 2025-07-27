@@ -2060,6 +2060,7 @@ class DashTestFramework(BitcoinTestFramework):
         self.wait_until(check_dkg_session, timeout=timeout, sleep=sleep)
 
     def wait_for_quorum_commitment(self, quorum_hash, nodes, llmq_type=100, timeout=15):
+        self.log.info(f"nodes: {nodes}")
         def check_dkg_comitments():
             for node in nodes:
                 s = node.quorum("dkgstatus")
@@ -2072,7 +2073,10 @@ class DashTestFramework(BitcoinTestFramework):
                         continue
                     if c["quorumHash"] != quorum_hash:
                         continue
+                    if c["quorumPublicKey"] == '000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000':
+                        continue
                     c_ok = True
+                    self.log.info(f"node: {node.index} c={c}")
                     break
                 if not c_ok:
                     return False
@@ -2118,7 +2122,7 @@ class DashTestFramework(BitcoinTestFramework):
                       "expected_commitments=%d" % (llmq_type_name, llmq_type, expected_members, expected_connections, expected_contributions, expected_complaints,
                                                    expected_justifications, expected_commitments))
 
-        nodes = [self.nodes[0]] + [mn.get_node(self) for mn in mninfos_online]
+        nodes = [self.nodes[1]] + [self.nodes[0]] + [mn.get_node(self) for mn in mninfos_online]
 
         # move forward to next DKG
         skip_count = 24 - (self.nodes[0].getblockcount() % 24)
