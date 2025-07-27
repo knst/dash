@@ -654,6 +654,7 @@ std::optional<CInv> CQuorumBlockProcessor::AddMineableCommitment(const CFinalCom
 
         auto k = std::make_pair(fqc.llmqType, fqc.quorumHash);
         auto [itInserted, successfullyInserted] = minableCommitmentsByQuorum.try_emplace(k, commitmentHash);
+        LogPrintf("knst add-mineable: %d %s\n", int(fqc.llmqType), fqc.quorumHash.ToString());
         if (successfullyInserted) {
             minableCommitments.try_emplace(commitmentHash, fqc);
             return true;
@@ -665,6 +666,8 @@ std::optional<CInv> CQuorumBlockProcessor::AddMineableCommitment(const CFinalCom
                 insertedQuorumHash = commitmentHash;
                 minableCommitments.erase(insertedQuorumHash);
                 minableCommitments.try_emplace(commitmentHash, fqc);
+                minableCommitmentsByQuorum.erase(k);
+                minableCommitmentsByQuorum.try_emplace(k, commitmentHash);
                 return true;
             }
         }
@@ -725,6 +728,7 @@ std::optional<std::vector<CFinalCommitment>> CQuorumBlockProcessor::GetMineableC
             cf = CFinalCommitment(llmqParams, quorumHash);
             cf.quorumIndex = static_cast<int16_t>(quorumIndex);
             cf.nVersion = CFinalCommitment::GetVersion(rotation_enabled, basic_bls_enabled);
+            // BUG IS CLOSE - we return null commitment even if we received proper one
             ss << "{ created nversion[" << cf.nVersion << "] quorumIndex[" << cf.quorumIndex << "] }";
         } else {
             cf = minableCommitments.at(it->second);
