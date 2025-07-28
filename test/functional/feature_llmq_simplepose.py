@@ -113,7 +113,7 @@ class LLMQSimplePoSeTest(DashTestFramework):
         q = self.nodes[0].getbestblockhash()
         self.log.info("Expected quorum_hash: "+str(q))
         self.log.info("Waiting for phase 1 (init)")
-        self.wait_for_quorum_phase(q, 1, expected_good_nodes, None, 0, mninfos_online)
+        self.wait_for_quorum_phase(q, 1, expected_good_nodes, None, 0, mninfos_online, sleep=0.05)
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 2 (contribute)")
