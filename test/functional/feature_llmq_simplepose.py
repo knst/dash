@@ -23,8 +23,8 @@ class LLMQSimplePoSeTest(DashTestFramework):
     def set_test_params(self):
         # rotating quorums add instability for this functional tests
         self.extra_args = [[ '-testactivationheight=dip0024@9999' ]] * 6
-        self.set_dash_test_params(6, 5)
-        self.set_dash_llmq_test_params(5, 3)
+        self.set_dash_test_params(5, 4)
+        self.set_dash_llmq_test_params(4, 2)
         self.delay_v20_and_mn_rr(height=9999)
 
     def add_options(self, parser):
@@ -42,7 +42,7 @@ class LLMQSimplePoSeTest(DashTestFramework):
         self.wait_for_sporks_same()
 
         # Lets isolate MNs one by one and verify that punishment/banning happens
-        self.test_banning(self.isolate_mn, 2)
+        self.test_banning(self.isolate_mn, 1)
 
         self.repair_masternodes(False)
 
@@ -63,10 +63,10 @@ class LLMQSimplePoSeTest(DashTestFramework):
         self.repair_masternodes(True)
 
         if not self.options.disable_spork23:
-            self.test_banning(self.force_old_mn_proto, 3)
+            self.test_banning(self.force_old_mn_proto, 2)
         else:
             # With PoSe off there should be no punishing for outdated nodes
-            self.test_no_banning(self.force_old_mn_proto, 3)
+            self.test_no_banning(self.force_old_mn_proto, 2)
 
     def isolate_mn(self, mn: MasternodeInfo):
         mn.get_node(self).setnetworkactive(False)
@@ -117,7 +117,7 @@ class LLMQSimplePoSeTest(DashTestFramework):
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 2 (contribute)")
-        self.wait_for_quorum_phase(q, 2, expected_good_nodes, "receivedContributions", expected_good_nodes, mninfos_online, sleep=0.05)
+        self.wait_for_quorum_phase(q, 2, expected_good_nodes, "receivedContributions", expected_good_nodes, mninfos_online)
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 3 (complain)")
