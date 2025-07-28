@@ -92,7 +92,7 @@ class LLMQSimplePoSeTest(DashTestFramework):
         self.reset_probe_timeouts()
         return False, True
 
-    def test_no_banning(self, invalidate_proc, expected_connections=None):
+    def test_no_banning(self, invalidate_proc, expected_connections):
         invalidate_proc(self.mninfo[0])
         for i in range(3):
             self.log.info(f"Testing no PoSe banning in normal conditions {i + 1}/3")
