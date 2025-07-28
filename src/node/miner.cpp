@@ -225,6 +225,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     if (fDIP0003Active_context) {
         for (const Consensus::LLMQParams& params : llmq::GetEnabledQuorumParams(pindexPrev)) {
             std::vector<CTransactionRef> vqcTx;
+            LogPrintf("get mineable commitments: %d %d : %d\n", (int)params.type, nHeight, vqcTx.size());
             if (m_quorum_block_processor.GetMineableCommitmentsTx(params,
                                                                   nHeight,
                                                                   vqcTx)) {

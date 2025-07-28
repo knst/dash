@@ -65,6 +65,7 @@ MessageProcessingResult CQuorumBlockProcessor::ProcessMessage(const CNode& peer,
     vRecv >> qc;
 
     MessageProcessingResult ret;
+    LogPrintf("knst received QFCOMMITMENT -- %s\n", ::SerializeHash(qc).ToString());
     ret.m_to_erase = CInv{MSG_QUORUM_FINAL_COMMITMENT, ::SerializeHash(qc)};
 
     if (qc.IsNull()) {
