@@ -18,9 +18,9 @@ GOVERNANCE_UPDATE_MIN = 60 * 60 # src/governance/object.h
 
 class DashGovernanceTest (DashTestFramework):
     def set_test_params(self):
-        self.set_dash_test_params(6, 5, [[
+        self.set_dash_test_params(5, 4, [[
             "-budgetparams=10:10:10",
-        ]] * 6)
+        ]] * 5)
         self.delay_v20_and_mn_rr(height=160)
 
     def check_superblockbudget(self, v20_active):
@@ -92,15 +92,13 @@ class DashGovernanceTest (DashTestFramework):
         assert_equal(len(self.nodes[0].gobject("list-prepared")), 0)
 
         self.log.info("Check 1st superblock before v20")
-        self.bump_mocktime(3)
-        self.generate(self.nodes[0], 3, sync_fun=self.sync_blocks())
-        assert_equal(self.nodes[0].getblockcount(), 137)
+        assert_equal(self.nodes[0].getblockcount(), 123)
         assert_equal(self.nodes[0].getblockchaininfo()["softforks"]["v20"]["active"], False)
         self.check_superblockbudget(False)
 
         self.log.info("Check 2nd superblock before v20")
-        self.bump_mocktime(3)
-        self.generate(self.nodes[0], 3, sync_fun=self.sync_blocks())
+        self.bump_mocktime(17)
+        self.generate(self.nodes[0], 17, sync_fun=self.sync_blocks())
         assert_equal(self.nodes[0].getblockcount(), 140)
         assert_equal(self.nodes[0].getblockchaininfo()["softforks"]["v20"]["active"], False)
         self.check_superblockbudget(False)
@@ -166,8 +164,8 @@ class DashGovernanceTest (DashTestFramework):
         self.wait_until(lambda: self.nodes[1].gobject("get", self.p2_hash)["FundingResult"]["NoCount"] == 2, timeout = 5)
 
         assert_equal(len(self.nodes[0].gobject("list", "valid", "triggers")), 0)
-        assert_equal(self.nodes[0].gobject("count")["votes"], 15)
-        assert_equal(self.nodes[1].gobject("count")["votes"], 15)
+        assert_equal(self.nodes[0].gobject("count")["votes"], 12)
+        assert_equal(self.nodes[1].gobject("count")["votes"], 12)
 
         block_count = self.nodes[0].getblockcount()
 
@@ -211,8 +209,8 @@ class DashGovernanceTest (DashTestFramework):
         self.wait_until(lambda: list(isolated.gobject("list", "valid", "triggers").values())[0]['YesCount'] == 1, timeout=5)
         more_votes = self.wait_until(lambda: list(isolated.gobject("list", "valid", "triggers").values())[0]['YesCount'] > 1, timeout=5, do_assert=False)
         assert_equal(more_votes, False)
-        assert_equal(self.nodes[0].gobject("count")["votes"], 15)
-        assert_equal(isolated.gobject("count")["votes"], 16)
+        assert_equal(self.nodes[0].gobject("count")["votes"], 12)
+        assert_equal(isolated.gobject("count")["votes"], 13)
 
         self.log.info("Move 1 block enabling the Superblock maturity window on non-isolated nodes")
         self.bump_mocktime(1)
@@ -235,8 +233,8 @@ class DashGovernanceTest (DashTestFramework):
         self.wait_until(lambda: list(self.nodes[0].gobject("list", "valid", "triggers").values())[0]['YesCount'] == 1, timeout=5)
         more_votes = self.wait_until(lambda: list(self.nodes[0].gobject("list", "valid", "triggers").values())[0]['YesCount'] > 1, timeout=5, do_assert=False)
         assert_equal(more_votes, False)
-        assert_equal(self.nodes[0].gobject("count")["votes"], 16)
-        assert_equal(isolated.gobject("count")["votes"], 16)
+        assert_equal(self.nodes[0].gobject("count")["votes"], 13)
+        assert_equal(isolated.gobject("count")["votes"], 13)
 
         self.log.info("Make sure amounts aren't trimmed")
         payment_amounts_expected = [str(satoshi_round(str(self.p0_amount))), str(satoshi_round(str(self.p1_amount))), str(satoshi_round(str(self.p2_amount)))]
@@ -253,8 +251,8 @@ class DashGovernanceTest (DashTestFramework):
         self.wait_until(lambda: list(self.nodes[0].gobject("list", "valid", "triggers").values())[0]['YesCount'] == self.mn_count - 1, timeout=5)
         more_triggers = self.wait_until(lambda: len(self.nodes[0].gobject("list", "valid", "triggers")) > 1, timeout=5, do_assert=False)
         assert_equal(more_triggers, False)
-        assert_equal(self.nodes[0].gobject("count")["votes"], 19)
-        assert_equal(isolated.gobject("count")["votes"], 16)
+        assert_equal(self.nodes[0].gobject("count")["votes"], 15)
+        assert_equal(isolated.gobject("count")["votes"], 13)
 
         self.reconnect_isolated_node(payee_idx, 0)
         # self.connect_nodes(0, payee_idx)
@@ -294,9 +292,9 @@ class DashGovernanceTest (DashTestFramework):
             self.wait_until(lambda: node.gobject("list", "valid", "triggers")[isolated_trigger_hash]['YesCount'] == 1, timeout=5)
             self.wait_until(lambda: node.gobject("list", "valid", "triggers")[isolated_trigger_hash]['NoCount'] == self.mn_count - 1, timeout=5)
 
-        self.log.info("Should have 25 votes on all nodes")
+        self.log.info("Should have 20 votes on all nodes")
         for node in self.nodes:
-            assert_equal(node.gobject("count")["votes"], 25)
+            assert_equal(node.gobject("count")["votes"], 20)
 
         self.log.info("Remember vote count")
         before = self.nodes[1].gobject("count")["votes"]
