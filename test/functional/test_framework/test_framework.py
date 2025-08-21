@@ -1599,39 +1599,50 @@ class DashTestFramework(BitcoinTestFramework):
             self.connect_nodes(i, idx)
 
     def dynamically_add_masternode(self, evo=False, rnd=None, should_be_rejected=False) -> Optional[MasternodeInfo]:
+        self.log.info("add 1 mn evo={evo}")
         mn_idx = len(self.nodes)
 
         node_p2p_port = p2p_port(mn_idx)
         node_rpc_port = rpc_port(mn_idx)
 
         protx_success = False
+        self.log.info("add 2 mn evo={evo}")
         try:
             created_mn_info = self.dynamically_prepare_masternode(mn_idx, node_p2p_port, evo, rnd)
             protx_success = True
         except:
             self.log.info("dynamically_prepare_masternode failed")
 
+        self.log.info("add 3 mn evo={evo}")
         assert_equal(protx_success, not should_be_rejected)
 
         if should_be_rejected:
             # nothing to do
             return None
 
+        self.log.info("add 4 mn evo={evo}")
         self.dynamically_initialize_datadir(node_p2p_port, node_rpc_port)
+        self.log.info("add 5 mn evo={evo}")
         node_info = self.add_dynamically_node(self.extra_args[0])
 
         args = ['-masternodeblsprivkey=%s' % created_mn_info.keyOperator] + node_info.extra_args
         self.start_node(mn_idx, args)
 
+        self.log.info("add 6 mn evo={evo}")
         for mn_info in self.mninfo: # type: MasternodeInfo
             if mn_info.proTxHash == created_mn_info.proTxHash:
                 mn_info.set_node(mn_idx)
 
+        self.log.info("add 7 mn evo={evo}")
         self.connect_nodes(mn_idx, 0)
 
+        self.log.info("add 8 mn evo={evo}")
         self.wait_for_sporks_same()
+        self.log.info("add 9 mn evo={evo}")
         self.sync_blocks()
+        self.log.info("add 10 mn evo={evo}")
         force_finish_mnsync(self.nodes[mn_idx])
+        self.log.info("add 11 mn evo={evo}")
 
         self.log.info("Successfully started and synced proTx:"+str(created_mn_info.proTxHash))
         return created_mn_info
@@ -1963,7 +1974,7 @@ class DashTestFramework(BitcoinTestFramework):
 
     def wait_for_sporks_same(self, timeout=30):
         def check_sporks_same():
-            self.bump_mocktime(1)
+            self.bump_mocktime(10)
             sporks = self.nodes[0].spork('show')
             return all(node.spork('show') == sporks for node in self.nodes[1:])
         self.wait_until(check_sporks_same, timeout=timeout, sleep=1)
