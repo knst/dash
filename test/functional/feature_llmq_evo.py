@@ -49,6 +49,7 @@ class TestP2PConn(P2PInterface):
 
 class LLMQEvoNodesTest(DashTestFramework):
     def set_test_params(self):
+        # we just need a couple of regular nodes to be ensured that they are not included in platform quorum, 2 is enough
         self.set_dash_test_params(3, 2, evo_count=4)
         self.mn_rr_height = 360
 
@@ -66,7 +67,7 @@ class LLMQEvoNodesTest(DashTestFramework):
         b_0 = self.nodes[0].getbestblockhash()
         self.test_getmnlistdiff(null_hash, b_0, {}, [], expectedUpdated)
 
-        self.test_masternode_count(expected_mns_count=3, expected_evo_count=0)
+        self.test_masternode_count(expected_mns_count=2, expected_evo_count=0)
         evo_protxhash_list = list()
         for i in range(self.evo_count):
             evo_info: MasternodeInfo = self.dynamically_add_masternode(evo=True)
@@ -77,7 +78,7 @@ class LLMQEvoNodesTest(DashTestFramework):
             b_i = self.nodes[0].getbestblockhash()
             self.test_getmnlistdiff(null_hash, b_i, {}, [], expectedUpdated)
 
-            self.test_masternode_count(expected_mns_count=3, expected_evo_count=i+1)
+            self.test_masternode_count(expected_mns_count=2, expected_evo_count=i+1)
             self.dynamically_evo_update_service(evo_info)
 
         self.log.info("Test llmq_platform are formed only with EvoNodes")
@@ -92,8 +93,9 @@ class LLMQEvoNodesTest(DashTestFramework):
         self.test_evo_payments(window_analysis=48, mnrr_active=False)
         self.test_masternode_winners()
 
+        self.log.info(f"blocks: {self.self.nodes[0].getblockcount()}")
         self.activate_mn_rr()
-        self.log.info("Activated MN RewardReallocation, current height:" + str(self.nodes[0].getblockcount()))
+        self.log.info(f"Activated MN RewardReallocation, current height: {self.nodes[0].getblockcount()}")
 
         # Generate a few blocks to make EvoNode/MN analysis on a pure MN RewardReallocation window
         self.bump_mocktime(1)
