@@ -28,6 +28,7 @@ namespace Ui {
 class GovernanceList;
 }
 
+class CBlockIndex;
 class CDeterministicMNList;
 class ClientModel;
 class ProposalModel;
@@ -49,6 +50,10 @@ private:
     ClientModel* clientModel{nullptr};
     WalletModel* walletModel{nullptr};
 
+    Mutex cs_masternodelist;
+    std::atomic<bool> m_masternodelist_pending{false};
+    const CBlockIndex* m_cached_tip GUARDED_BY(cs_masternodelist) {nullptr};
+
     std::unique_ptr<Ui::GovernanceList> ui;
     ProposalModel* proposalModel;
     QSortFilterProxyModel* proposalModelProxy;
@@ -59,6 +64,7 @@ private:
     // Voting-related members
     std::map<uint256, CKeyID> votableMasternodes; // proTxHash -> voting keyID
 
+    void requestHandleMasternodeListChanged();
     void updateVotingCapability();
     bool canVote() const { return !votableMasternodes.empty(); }
     void voteForProposal(vote_outcome_enum_t outcome);

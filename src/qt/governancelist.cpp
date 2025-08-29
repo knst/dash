@@ -7,6 +7,7 @@
 #include <qt/governancelist.h>
 #include <qt/proposalwizard.h>
 
+#include <chain.h>
 #include <chainparams.h>
 #include <chainparamsbase.h>
 #include <evo/deterministicmns.h>
@@ -368,7 +369,7 @@ void GovernanceList::setClientModel(ClientModel* model)
         if (walletModel) {
             updateVotingCapability();
             // Update voting capability when masternode list changes
-            connect(clientModel, &ClientModel::masternodeListChanged, this, &GovernanceList::updateVotingCapability);
+            connect(clientModel, &ClientModel::masternodeListChanged, this, &GovernanceList::requestHandleMasternodeListChanged);
         }
     }
 }
@@ -485,24 +486,46 @@ void GovernanceList::showAdditionalInfo(const QModelIndex& index)
     QMessageBox::information(this, windowTitle, json);
 }
 
+void GovernanceList::requestHandleMasternodeListChanged()
+{
+    bool expected = false;
+    m_masternodelist_pending.compare_exchange_strong(expected, true);
+    if (expected) {
+        QTimer::singleShot(0, this, &GovernanceList::updateVotingCapability);
+    }
+}
+
 void GovernanceList::updateVotingCapability()
 {
     if (!walletModel || !clientModel) return;
 
-    votableMasternodes.clear();
-    auto [mnList, pindex] = clientModel->getMasternodeList();
-    if (!pindex) return;
+    bool expected = true;
+    if (m_masternodelist_pending.compare_exchange_strong(expected, false)) {
+        CDeterministicMNList mn_list;
 
-    mnList.ForEachMN(true, [&](const auto& dmn) {
-        // Check if wallet owns the voting key using the same logic as RPC
-        const CScript script = GetScriptForDestination(PKHash(dmn.pdmnState->keyIDVoting));
-        if (walletModel->wallet().isSpendable(script)) {
-            votableMasternodes[dmn.proTxHash] = dmn.pdmnState->keyIDVoting;
-        }
-    });
+        {
+            LOCK(cs_masternodelist);
+            auto [mn_list, pindex] = clientModel->getMasternodeList();
 
-    // Update masternode count display
-    updateMasternodeCount();
+            if (!pindex) return;
+            if (pindex == m_cached_tip) return;
+
+            m_cached_tip = pindex;
+            LogPrintf("knst update voting capability h=%d block=%s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
+        };
+
+        votableMasternodes.clear();
+        mn_list.ForEachMN(true, [&](const auto& dmn) {
+            // Check if wallet owns the voting key using the same logic as RPC
+            const CScript script = GetScriptForDestination(PKHash(dmn.pdmnState->keyIDVoting));
+            if (walletModel->wallet().isSpendable(script)) {
+                votableMasternodes[dmn.proTxHash] = dmn.pdmnState->keyIDVoting;
+            }
+        });
+
+        // Update masternode count display
+        updateMasternodeCount();
+    }
 }
 
 void GovernanceList::updateMasternodeCount() const
