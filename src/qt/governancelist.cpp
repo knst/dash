@@ -361,16 +361,10 @@ GovernanceList::~GovernanceList() = default;
 void GovernanceList::setClientModel(ClientModel* model)
 {
     this->clientModel = model;
-    updateProposalList();
     if (model != nullptr) {
         connect(model->getOptionsModel(), &OptionsModel::displayUnitChanged, this, &GovernanceList::updateDisplayUnit);
 
-        // Update voting capability if we now have both client and wallet models
-        if (walletModel) {
-            updateVotingCapability();
-            // Update voting capability when masternode list changes
-            connect(clientModel, &ClientModel::masternodeListChanged, this, &GovernanceList::requestHandleMasternodeListChanged);
-        }
+        updateProposalList();
     }
 }
 
@@ -411,6 +405,11 @@ void GovernanceList::updateProposalList()
             newProposals.emplace_back(new Proposal(this->clientModel, govObj, proposalModel));
         }
         proposalModel->reconcile(newProposals);
+        // Update voting capability if we now have both client and wallet models
+
+        if (walletModel) {
+            updateVotingCapability();
+        }
     }
 
     // Schedule next update.
@@ -486,6 +485,7 @@ void GovernanceList::showAdditionalInfo(const QModelIndex& index)
     QMessageBox::information(this, windowTitle, json);
 }
 
+/*
 void GovernanceList::requestHandleMasternodeListChanged()
 {
     bool expected = false;
@@ -494,38 +494,35 @@ void GovernanceList::requestHandleMasternodeListChanged()
         QTimer::singleShot(0, this, &GovernanceList::updateVotingCapability);
     }
 }
+*/
 
 void GovernanceList::updateVotingCapability()
 {
     if (!walletModel || !clientModel) return;
 
-    bool expected = true;
-    if (m_masternodelist_pending.compare_exchange_strong(expected, false)) {
-        CDeterministicMNList mn_list;
+    CDeterministicMNList mn_list;
 
-        {
-            LOCK(cs_masternodelist);
-            auto [mn_list, pindex] = clientModel->getMasternodeList();
+    {
+        auto [mn_list, pindex] = clientModel->getMasternodeList();
 
-            if (!pindex) return;
-            if (pindex == m_cached_tip) return;
+        if (!pindex) return;
+//        if (pindex == m_cached_tip) return;
 
-            m_cached_tip = pindex;
-            LogPrintf("knst update voting capability h=%d block=%s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
-        };
+ //       m_cached_tip = pindex; // maybe return m_cached_tip eventually?
+        LogPrintf("knst update voting capability h=%d block=%s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
+    };
 
-        votableMasternodes.clear();
-        mn_list.ForEachMN(true, [&](const auto& dmn) {
-            // Check if wallet owns the voting key using the same logic as RPC
-            const CScript script = GetScriptForDestination(PKHash(dmn.pdmnState->keyIDVoting));
-            if (walletModel->wallet().isSpendable(script)) {
-                votableMasternodes[dmn.proTxHash] = dmn.pdmnState->keyIDVoting;
-            }
-        });
+    votableMasternodes.clear();
+    mn_list.ForEachMN(true, [&](const auto& dmn) {
+        // Check if wallet owns the voting key using the same logic as RPC
+        const CScript script = GetScriptForDestination(PKHash(dmn.pdmnState->keyIDVoting));
+        if (walletModel->wallet().isSpendable(script)) {
+            votableMasternodes[dmn.proTxHash] = dmn.pdmnState->keyIDVoting;
+        }
+    });
 
-        // Update masternode count display
-        updateMasternodeCount();
-    }
+    // Update masternode count display
+    updateMasternodeCount();
 }
 
 void GovernanceList::updateMasternodeCount() const
