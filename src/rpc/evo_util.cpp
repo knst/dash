@@ -12,6 +12,23 @@
 
 namespace {
 bool IsNumeric(std::string_view input) { return input.find_first_not_of("0123456789") == std::string::npos; }
+
+template <typename TemplateProTx>
+void parse_entry(TemplateProTx& ptx, const UniValue& input, int index, bool optional)
+{
+    const std::string& entry = input.get_str();
+    if (entry.empty()) {
+        if (!optional) {
+            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Empty param for coreP2PAddrs[%d] not allowed", index));
+        }
+        return; // Nothing to do
+    }
+    if (auto entryRet = ptx.netInfo->AddEntry(NetInfoPurpose::CORE_P2P, entry); entryRet != NetInfoStatus::Success) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER,
+                           strprintf("Error setting coreP2PAddrs[%d] to '%s' (%s)", index, entry, NISToString(entryRet)));
+    }
+}
+
 } // anonymous namespace
 
 template <typename T1>
@@ -20,49 +37,19 @@ void ProcessNetInfoCore(T1& ptx, const UniValue& input, const bool optional)
     CHECK_NONFATAL(ptx.netInfo);
 
     if (input.isStr()) {
-        const std::string& entry = input.get_str();
-        if (entry.empty()) {
-            if (!optional) {
-                throw JSONRPCError(RPC_INVALID_PARAMETER, "Empty param for coreP2PAddrs not allowed");
-            }
-            return; // Nothing to do
-        }
-        if (auto entryRet = ptx.netInfo->AddEntry(NetInfoPurpose::CORE_P2P, entry); entryRet != NetInfoStatus::Success) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER,
-                               strprintf("Error setting coreP2PAddrs[0] to '%s' (%s)", entry, NISToString(entryRet)));
-        }
-        return; // Parsing complete
-    }
-
-    if (input.isArray()) {
+        parse_entry(ptx, input, -1, optional);
+    } else if (input.isArray()) {
         const UniValue& entries = input.get_array();
-        if (entries.empty()) {
-            if (!optional) {
-                throw JSONRPCError(RPC_INVALID_PARAMETER, "Empty params for coreP2PAddrs not allowed");
-            }
-            return; // Nothing to do
+        if (!optional && entries.empty()) {
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Empty params for coreP2PAddrs[] not allowed");
         }
         for (size_t idx{0}; idx < entries.size(); idx++) {
-            const UniValue& entry_uv{entries[idx]};
-            if (!entry_uv.isStr()) {
-                throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                   strprintf("Invalid param for coreP2PAddrs[%d], must be string", idx));
-            }
-            const std::string& entry = entry_uv.get_str();
-            if (entry.empty()) {
-                throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                   strprintf("Invalid param for coreP2PAddrs[%d], cannot be empty string", idx));
-            }
-            if (auto entryRet = ptx.netInfo->AddEntry(NetInfoPurpose::CORE_P2P, entry); entryRet != NetInfoStatus::Success) {
-                throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Error setting coreP2PAddrs[%d] to '%s' (%s)", idx,
-                                                                    entry, NISToString(entryRet)));
-            }
+            parse_entry(ptx, entries[idx], idx, false);
         }
-        return; // Parsing complete
+    } else {
+        // Invalid input
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid param for coreP2PAddrs, must be string or array");
     }
-
-    // Invalid input
-    throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid param for coreP2PAddrs, must be string or array");
 }
 template void ProcessNetInfoCore(CProRegTx& ptx, const UniValue& input, const bool optional);
 template void ProcessNetInfoCore(CProUpServTx& ptx, const UniValue& input, const bool optional);
