@@ -263,17 +263,18 @@ class NetInfoTest(BitcoinTestFramework):
 
         # coreP2PAddrs cannot be empty when registering a masternode without specifying platform fields
         self.node_evo.register_mn(self, False, "", "", "",
-                                  -8, "ProTx version disallows storing blank values in platformP2PAddrs (must specify port number)")
+                                  -8, "platformP2PAddrs must be a valid port [1-65535]")
+#                                  -8, "ProTx version disallows storing blank values in platformP2PAddrs (must specify port number)")
         self.node_evo.register_mn(self, False, "", "", DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "ProTx version disallows storing blank values in platformP2PAddrs (must specify port number)")
+                                  -8, "platformP2PAddrs must be a valid port [1-65535]")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", "", "",
-                                  -8, "ProTx version disallows storing blank values in platformP2PAddrs (must specify port number)")
+                                  -8, "platformP2PAddrs must be a valid port [1-65535]")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", "", DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "ProTx version disallows storing blank values in platformP2PAddrs (must specify port number)")
+                                  -8, "platformP2PAddrs must be a valid port [1-65535]")
         self.node_evo.register_mn(self, False, "", DEFAULT_PORT_PLATFORM_P2P, "",
-                                  -8, "ProTx version disallows storing blank values in platformHTTPSAddrs (must specify port number)")
+                                  -8, "platformHTTPSAddrs must be a valid port [1-65535]")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, "",
-                                  -8, "ProTx version disallows storing blank values in platformHTTPSAddrs (must specify port number)")
+                                  -8, "platformHTTPSAddrs must be a valid port [1-65535]")
 
         # ...but it can empty if platform fields are specified
         assert self.node_evo.node.testmempoolaccept([
