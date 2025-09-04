@@ -100,39 +100,28 @@ void ProcessNetInfoPlatform(T1& ptx, const UniValue& input_p2p, const UniValue& 
             }
 
             if (input.isArray()) {
-            const UniValue& entries = input.get_array();
-            for (size_t idx{0}; idx < entries.size(); idx++) {
-                const UniValue& entry{entries[idx]};
-                if (!entry.isStr() || IsNumeric(entry.get_str())) {
-                    throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                       strprintf("Invalid param for %s[%d], must be string", field_name, idx));
-                }
-                if (auto entryRet = ptx.netInfo->AddEntry(purpose, entry.get_str()); entryRet != NetInfoStatus::Success) {
-                    throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                       strprintf("Error setting %s[%d] to '%s' (%s)", field_name, idx, entry.get_str(),
-                                                 NISToString(entryRet)));
-                }
-            }
-            } else { // !is not numeric str
-//                const auto& input_str{input.getValStr()};
-//                if (!IsNumeric(input_str)) {
-                    if (auto entryRet = ptx.netInfo->AddEntry(purpose, input.get_str()); entryRet != NetInfoStatus::Success) {
+                const UniValue& entries = input.get_array();
+                for (size_t idx{0}; idx < entries.size(); idx++) {
+                    const UniValue& entry{entries[idx]};
+                    if (!entry.isStr() || IsNumeric(entry.get_str())) {
                         throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                           strprintf("Error setting %s[0] to '%s' (%s)", field_name, input.get_str(),
+                                           strprintf("Invalid param for %s[%d], must be string", field_name, idx));
+                    }
+                    if (auto entryRet = ptx.netInfo->AddEntry(purpose, entry.get_str()); entryRet != NetInfoStatus::Success) {
+                        throw JSONRPCError(RPC_INVALID_PARAMETER,
+                                           strprintf("Error setting %s[%d] to '%s' (%s)", field_name, idx, entry.get_str(),
                                                      NISToString(entryRet)));
                     }
- //               }
-            }
-        } else {
-            const auto& input_str{input.getValStr()};
-/*
-             if (!IsNumeric(input_str)) {
+                }
+            } else { // !is not numeric str
                 if (auto entryRet = ptx.netInfo->AddEntry(purpose, input.get_str()); entryRet != NetInfoStatus::Success) {
                     throw JSONRPCError(RPC_INVALID_PARAMETER,
                                        strprintf("Error setting %s[0] to '%s' (%s)", field_name, input.get_str(),
                                                  NISToString(entryRet)));
                 }
-            } else */
+            }
+        } else { // numeric str
+            const auto& input_str{input.getValStr()};
             if (int32_t port{0}; ParseInt32(input_str, &port) && port >= 1 && port <= std::numeric_limits<uint16_t>::max()) {
                 // Valid port
                 if (!ptx.netInfo->CanStorePlatform()) {
