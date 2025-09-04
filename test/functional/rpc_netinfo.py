@@ -207,15 +207,15 @@ class NetInfoTest(BitcoinTestFramework):
                                   DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
                                   -8, "Invalid param for core_p2p[1], must be string")
 
-        # platform_p2p and platformHTTPSAddrs must be within acceptable range (i.e. a valid port number)
+        # platform_p2p and platform_https must be within acceptable range (i.e. a valid port number)
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", "0", DEFAULT_PORT_PLATFORM_HTTP,
                                   -8, "platform_p2p must be a valid port [1-65535]")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", "65536", DEFAULT_PORT_PLATFORM_HTTP,
                                   -8, "platform_p2p must be a valid port [1-65535]")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, "0",
-                                  -8, "platformHTTPSAddrs must be a valid port [1-65535]")
+                                  -8, "platform_https must be a valid port [1-65535]")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, "65536",
-                                  -8, "platformHTTPSAddrs must be a valid port [1-65535]")
+                                  -8, "platform_https must be a valid port [1-65535]")
 
         # core_p2p must be populated when updating a masternode
         self.node_two.update_mn(self, False, "", DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
@@ -241,15 +241,15 @@ class NetInfoTest(BitcoinTestFramework):
                                   DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
                                   -8, f"Failed to set core_p2p[1] to '127.0.0.2:{self.node_evo.mn.nodePort}' (too many entries)")
 
-        # platform_p2p and platformHTTPSAddrs don't accept non-numeric inputs
+        # platform_p2p and platform_https don't accept non-numeric inputs
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", f"127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}", DEFAULT_PORT_PLATFORM_HTTP,
                                   -8, "ProTx version disallows storing addresses in platform_p2p (must specify port number only)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", [f"127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}"], DEFAULT_PORT_PLATFORM_HTTP,
                                   -8, "ProTx version disallows storing addresses in platform_p2p (must specify port number only)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, f"127.0.0.1:{DEFAULT_PORT_PLATFORM_HTTP}",
-                                  -8, "ProTx version disallows storing addresses in platformHTTPSAddrs (must specify port number only)")
+                                  -8, "ProTx version disallows storing addresses in platform_https (must specify port number only)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, [f"127.0.0.1:{DEFAULT_PORT_PLATFORM_HTTP}"],
-                                  -8, "ProTx version disallows storing addresses in platformHTTPSAddrs (must specify port number only)")
+                                  -8, "ProTx version disallows storing addresses in platform_https (must specify port number only)")
 
         # Port numbers may not be wrapped in arrays, either as integers or strings
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", [DEFAULT_PORT_PLATFORM_P2P], DEFAULT_PORT_PLATFORM_HTTP,
@@ -257,9 +257,9 @@ class NetInfoTest(BitcoinTestFramework):
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", [f"{DEFAULT_PORT_PLATFORM_P2P}"], DEFAULT_PORT_PLATFORM_HTTP,
                                   -8, "ProTx version disallows storing addresses in platform_p2p (must specify port number only)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, [DEFAULT_PORT_PLATFORM_HTTP],
-                                  -8, "ProTx version disallows storing addresses in platformHTTPSAddrs (must specify port number only)")
+                                  -8, "ProTx version disallows storing addresses in platform_https (must specify port number only)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, [f"{DEFAULT_PORT_PLATFORM_HTTP}"],
-                                  -8, "ProTx version disallows storing addresses in platformHTTPSAddrs (must specify port number only)")
+                                  -8, "ProTx version disallows storing addresses in platform_https (must specify port number only)")
 
         # core_p2p cannot be empty when registering a masternode without specifying platform fields
         self.node_evo.register_mn(self, False, "", "", "",
@@ -271,9 +271,9 @@ class NetInfoTest(BitcoinTestFramework):
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", "", DEFAULT_PORT_PLATFORM_HTTP,
                                   -8, "ProTx version disallows storing blank values in platform_p2p (must specify port number)")
         self.node_evo.register_mn(self, False, "", DEFAULT_PORT_PLATFORM_P2P, "",
-                                  -8, "ProTx version disallows storing blank values in platformHTTPSAddrs (must specify port number)")
+                                  -8, "ProTx version disallows storing blank values in platform_https (must specify port number)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, "",
-                                  -8, "ProTx version disallows storing blank values in platformHTTPSAddrs (must specify port number)")
+                                  -8, "ProTx version disallows storing blank values in platform_https (must specify port number)")
 
         # ...but it can empty if platform fields are specified
         assert self.node_evo.node.testmempoolaccept([
@@ -315,7 +315,7 @@ class NetInfoTest(BitcoinTestFramework):
                                   [f"127.0.0.1:{DEFAULT_PORT_PLATFORM_HTTP}", f"127.0.0.2:{DEFAULT_PORT_PLATFORM_HTTP}"],
                                   -8, f"Failed to set platform_p2p[1] to '127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}' (duplicate)")
 
-        # platform_p2p and platformHTTPSAddrs accept non-numeric inputs
+        # platform_p2p and platform_https accept non-numeric inputs
         assert self.node_evo.node.testmempoolaccept([
             self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", f"127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}",
                                       DEFAULT_PORT_PLATFORM_HTTP)])[0]['allowed']
@@ -335,9 +335,9 @@ class NetInfoTest(BitcoinTestFramework):
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", [f"{DEFAULT_PORT_PLATFORM_P2P}"], DEFAULT_PORT_PLATFORM_HTTP,
                                   -8, "Invalid param for platform_p2p[0], must be string")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, [DEFAULT_PORT_PLATFORM_HTTP],
-                                  -8, "Invalid param for platformHTTPSAddrs[0], must be string")
+                                  -8, "Invalid param for platform_https[0], must be string")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, [f"{DEFAULT_PORT_PLATFORM_HTTP}"],
-                                  -8, "Invalid param for platformHTTPSAddrs[0], must be string")
+                                  -8, "Invalid param for platform_https[0], must be string")
 
         # core_p2p can be empty when registering a masternode if platform fields are not specified
         assert self.node_evo.node.testmempoolaccept([
@@ -347,7 +347,7 @@ class NetInfoTest(BitcoinTestFramework):
         self.node_evo.register_mn(self, False, "", DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
                                   -8, "Must specify core_p2p in order to set platform_p2p")
         self.node_evo.register_mn(self, False, "", "", DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "Must specify core_p2p in order to set platformHTTPSAddrs")
+                                  -8, "Must specify core_p2p in order to set platform_https")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", "", "",
                                   -8, "Cannot leave platform_p2p empty if other address fields populated")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", "", DEFAULT_PORT_PLATFORM_HTTP,
@@ -355,7 +355,7 @@ class NetInfoTest(BitcoinTestFramework):
         self.node_evo.register_mn(self, False, "", DEFAULT_PORT_PLATFORM_P2P, "",
                                   -8, "Must specify core_p2p in order to set platform_p2p")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, "",
-                                  -8, "Cannot leave platformHTTPSAddrs empty if other address fields populated")
+                                  -8, "Cannot leave platform_https empty if other address fields populated")
 
         # core_p2p cannot omit the port, extended addresses require explicit port specification
         self.node_evo.register_mn(self, False, "127.0.0.1", DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,

@@ -66,8 +66,8 @@ void ProcessNetInfoPlatform(T1& ptx, const UniValue& input_p2p, const UniValue& 
 {
     CHECK_NONFATAL(ptx.netInfo);
 
-    auto process_field = [&](uint16_t& maybe_target, const UniValue& input, const NetInfoPurpose purpose,
-                             const std::string& field_name) {
+    auto process_field = [&](uint16_t& maybe_target, const UniValue& input, const NetInfoPurpose purpose) {
+        const auto field_name = PurposeToString(purpose);
         if (!input.isArray() && !input.isNum() && !input.isStr()) {
             throw JSONRPCError(RPC_INVALID_PARAMETER,
                                strprintf("Invalid param for %s, must be array, number or string", field_name));
@@ -142,8 +142,8 @@ void ProcessNetInfoPlatform(T1& ptx, const UniValue& input_p2p, const UniValue& 
             }
         }
     };
-    process_field(ptx.platformP2PPort, input_p2p, NetInfoPurpose::PLATFORM_P2P, "platform_p2p");
-    process_field(ptx.platformHTTPPort, input_http, NetInfoPurpose::PLATFORM_HTTPS, "platformHTTPSAddrs");
+    process_field(ptx.platformP2PPort, input_p2p, NetInfoPurpose::PLATFORM_P2P);
+    process_field(ptx.platformHTTPPort, input_http, NetInfoPurpose::PLATFORM_HTTPS);
 }
 template void ProcessNetInfoPlatform(CProRegTx& ptx, const UniValue& input_p2p, const UniValue& input_http, const bool optional);
 template void ProcessNetInfoPlatform(CProUpServTx& ptx, const UniValue& input_p2p, const UniValue& input_http, const bool optional);
