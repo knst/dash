@@ -243,37 +243,37 @@ class NetInfoTest(BitcoinTestFramework):
 
         # platform_p2p and platform_https don't accept non-numeric inputs
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", f"127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}", DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "ProTx version disallows storing addresses in platform_p2p (must specify port number only)")
+                                  -8, "This ProTx's version allows port number only in platform_p2p")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", [f"127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}"], DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "ProTx version disallows storing addresses in platform_p2p (must specify port number only)")
+                                  -8, "This ProTx's version allows port number only in platform_p2p")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, f"127.0.0.1:{DEFAULT_PORT_PLATFORM_HTTP}",
-                                  -8, "ProTx version disallows storing addresses in platform_https (must specify port number only)")
+                                  -8, "This ProTx's version allows port number only in platform_https")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, [f"127.0.0.1:{DEFAULT_PORT_PLATFORM_HTTP}"],
-                                  -8, "ProTx version disallows storing addresses in platform_https (must specify port number only)")
+                                  -8, "This ProTx's version allows port number only in platform_https")
 
         # Port numbers may not be wrapped in arrays, either as integers or strings
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", [DEFAULT_PORT_PLATFORM_P2P], DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "ProTx version disallows storing addresses in platform_p2p (must specify port number only)")
+                                  -8, "This ProTx's version allows port number only in platform_p2p")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", [f"{DEFAULT_PORT_PLATFORM_P2P}"], DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "ProTx version disallows storing addresses in platform_p2p (must specify port number only)")
+                                  -8, "This ProTx's version allows port number only in platform_p2p")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, [DEFAULT_PORT_PLATFORM_HTTP],
-                                  -8, "ProTx version disallows storing addresses in platform_https (must specify port number only)")
+                                  -8, "This ProTx's version allows port number only in platform_https")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, [f"{DEFAULT_PORT_PLATFORM_HTTP}"],
-                                  -8, "ProTx version disallows storing addresses in platform_https (must specify port number only)")
+                                  -8, "This ProTx's version allows port number only in platform_https")
 
         # core_p2p cannot be empty when registering a masternode without specifying platform fields
         self.node_evo.register_mn(self, False, "", "", "",
-                                  -8, "ProTx version disallows storing blank values in platform_p2p (must specify port number)")
+                                  -8, "This ProTx's version allows port number only in platform_p2p")
         self.node_evo.register_mn(self, False, "", "", DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "ProTx version disallows storing blank values in platform_p2p (must specify port number)")
+                                  -8, "This ProTx's version allows port number only in platform_p2p")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", "", "",
-                                  -8, "ProTx version disallows storing blank values in platform_p2p (must specify port number)")
+                                  -8, "This ProTx's version allows port number only in platform_p2p")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", "", DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "ProTx version disallows storing blank values in platform_p2p (must specify port number)")
+                                  -8, "This ProTx's version allows port number only in platform_p2p")
         self.node_evo.register_mn(self, False, "", DEFAULT_PORT_PLATFORM_P2P, "",
-                                  -8, "ProTx version disallows storing blank values in platform_https (must specify port number)")
+                                  -8, "This ProTx's version allows port number only in platform_https")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, "",
-                                  -8, "ProTx version disallows storing blank values in platform_https (must specify port number)")
+                                  -8, "This ProTx's version allows port number only in platform_https")
 
         # ...but it can empty if platform fields are specified
         assert self.node_evo.node.testmempoolaccept([
