@@ -74,43 +74,45 @@ void ProcessNetInfoPlatform(T1& ptx, const UniValue& input_p2p, const UniValue& 
         }
 
         bool is_empty{input.isArray() ? input.get_array().empty() : input.getValStr().empty()};
-        if (is_empty) {
-            if (!optional) {
-                // Mandatory field, cannot specify blank value
-                throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Empty param for %s not allowed", field_name));
-            }
-            if (!ptx.netInfo->CanStorePlatform()) {
-                // We can tolerate blank values if netInfo can store platform fields, if it cannot, we are relying
-                // on platform{HTTP,P2P}Port, where it is mandatory even if their netInfo counterpart is optional.
-                throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                   strprintf("ProTx version disallows storing blank values in %s (must specify port number)",
-                                             field_name));
-            }
-            if (!ptx.netInfo->IsEmpty()) {
-                // Blank values are tolerable so long as no other field has been populated.
-                throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                   strprintf("Cannot leave %s empty if other address fields populated", field_name));
-            }
-        } else if (input.isArray() || (input.isStr() && !IsNumeric(input.getValStr()))) {
-            // Arrays are expected to be of address strings. If storing addresses aren't supported, bail out.
-            if (!ptx.netInfo->CanStorePlatform()) {
-                throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                   strprintf("ProTx version disallows storing addresses in %s (must specify port number only)",
-                                             field_name));
-            }
-
-            if (input.isArray()) {
-                const UniValue& entries = input.get_array();
-                for (size_t idx{0}; idx < entries.size(); idx++) {
-                    const UniValue& entry{entries[idx]};
-                    if (!entry.isStr() || IsNumeric(entry.get_str())) {
-                        throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                           strprintf("Invalid param for %s[%d], must be string", field_name, idx));
-                    }
-                    parse_entry(ptx, entry.get_str(), purpose, idx, false);
+        if (input.isArray() || (input.isStr() && !IsNumeric(input.getValStr())) || is_empty) {
+            if (is_empty) {
+                if (!optional) {
+                    // Mandatory field, cannot specify blank value
+                    throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Empty param for %s not allowed", field_name));
                 }
-            } else { // !is not numeric str
-                parse_entry(ptx, input.get_str(), purpose, -1, false);
+                if (!ptx.netInfo->CanStorePlatform()) {
+                    // We can tolerate blank values if netInfo can store platform fields, if it cannot, we are relying
+                    // on platform{HTTP,P2P}Port, where it is mandatory even if their netInfo counterpart is optional.
+                    throw JSONRPCError(RPC_INVALID_PARAMETER,
+                                       strprintf("ProTx version disallows storing blank values in %s (must specify port number)",
+                                                 field_name));
+                }
+                if (!ptx.netInfo->IsEmpty()) {
+                    // Blank values are tolerable so long as no other field has been populated.
+                    throw JSONRPCError(RPC_INVALID_PARAMETER,
+                                       strprintf("Cannot leave %s empty if other address fields populated", field_name));
+                }
+            } else {
+                // Arrays are expected to be of address strings. If storing addresses aren't supported, bail out.
+                if (!ptx.netInfo->CanStorePlatform()) {
+                    throw JSONRPCError(RPC_INVALID_PARAMETER,
+                                       strprintf("ProTx version disallows storing addresses in %s (must specify port number only)",
+                                                 field_name));
+                }
+
+                if (input.isArray()) {
+                    const UniValue& entries = input.get_array();
+                    for (size_t idx{0}; idx < entries.size(); idx++) {
+                        const UniValue& entry{entries[idx]};
+                        if (!entry.isStr() || IsNumeric(entry.get_str())) {
+                            throw JSONRPCError(RPC_INVALID_PARAMETER,
+                                               strprintf("Invalid param for %s[%d], must be string", field_name, idx));
+                        }
+                        parse_entry(ptx, entry.get_str(), purpose, idx, false);
+                    }
+                } else { // !is not numeric str
+                    parse_entry(ptx, input.get_str(), purpose, -1, false);
+                }
             }
         } else { // numeric str
             const auto& input_str{input.getValStr()};
