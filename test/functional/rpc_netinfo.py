@@ -202,7 +202,7 @@ class NetInfoTest(BitcoinTestFramework):
                                   -8, "Invalid param for coreP2PAddrs[0], must be string")
         self.node_evo.register_mn(self, False, [f"127.0.0.1:{self.node_evo.mn.nodePort}", ""],
                                   DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "Invalid param for coreP2PAddrs[1], cannot be empty string")
+                                  -8, "Empty string for coreP2PAddrs[1] not allowed")
         self.node_evo.register_mn(self, False, [f"127.0.0.1:{self.node_evo.mn.nodePort}", self.node_evo.mn.nodePort],
                                   DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
                                   -8, "Invalid param for coreP2PAddrs[1], must be string")
@@ -239,7 +239,7 @@ class NetInfoTest(BitcoinTestFramework):
         # Arrays of addresses are recognized by coreP2PAddrs (but get refused for too many entries)
         self.node_evo.register_mn(self, False, [f"127.0.0.1:{self.node_evo.mn.nodePort}", f"127.0.0.2:{self.node_evo.mn.nodePort}"],
                                   DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, f"Error setting coreP2PAddrs[1] to '127.0.0.2:{self.node_evo.mn.nodePort}' (too many entries)")
+                                  -8, f"Failed to set coreP2PAddrs[1] to '127.0.0.2:{self.node_evo.mn.nodePort}' (too many entries)")
 
         # platformP2PAddrs and platformHTTPSAddrs don't accept non-numeric inputs
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", f"127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}", DEFAULT_PORT_PLATFORM_HTTP,

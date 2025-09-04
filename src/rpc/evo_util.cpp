@@ -54,10 +54,10 @@ void ProcessNetInfoCore(T1& ptx, const UniValue& input, const bool optional)
             const std::string& entry = entry_uv.get_str();
             if (entry.empty()) {
                 throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                   strprintf("Invalid param for coreP2PAddrs[%d], cannot be empty string", idx));
+                                   strprintf("Empty string for coreP2PAddrs[%d] not allowed", idx));
             }
             if (auto entryRet = ptx.netInfo->AddEntry(NetInfoPurpose::CORE_P2P, entry); entryRet != NetInfoStatus::Success) {
-                throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Error setting coreP2PAddrs[%d] to '%s' (%s)", idx,
+                throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Failed to set coreP2PAddrs[%d] to '%s' (%s)", idx,
                                                                     entry, NISToString(entryRet)));
             }
         }
