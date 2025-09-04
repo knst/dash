@@ -87,6 +87,7 @@ constexpr bool IsValidPurpose(const NetInfoPurpose purpose)
 // Warning: Used in RPC code, altering existing values is a breaking change
 constexpr std::string_view PurposeToString(const NetInfoPurpose purpose)
 {
+    // TODO: probably it should be capitalized and maybe added "_ADDR" at the end to make errors more readable-friendly
     switch (purpose) {
     case NetInfoPurpose::CORE_P2P:
         return "core_p2p";
