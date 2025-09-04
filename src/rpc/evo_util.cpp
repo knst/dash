@@ -91,10 +91,7 @@ void ProcessNetInfoPlatform(T1& ptx, const UniValue& input_p2p, const UniValue& 
                 throw JSONRPCError(RPC_INVALID_PARAMETER,
                                    strprintf("Cannot leave %s empty if other address fields populated", field_name));
             }
-            return; // Nothing to do
-        }
-
-        if (input.isArray()) {
+        } else if (input.isArray()) {
             // Arrays are expected to be of address strings. If storing addresses aren't supported, bail out.
             if (!ptx.netInfo->CanStorePlatform()) {
                 throw JSONRPCError(RPC_INVALID_PARAMETER,
@@ -114,49 +111,44 @@ void ProcessNetInfoPlatform(T1& ptx, const UniValue& input_p2p, const UniValue& 
                                                  NISToString(entryRet)));
                 }
             }
-            return; // Parsing complete
+        } else {
+            const auto& input_str{input.getValStr()};
+            if (!IsNumeric(input_str)) {
+                // Cannot be parsed as a number (port) so must be an addr:port string
+                if (!ptx.netInfo->CanStorePlatform()) {
+                    throw JSONRPCError(RPC_INVALID_PARAMETER,
+                                       strprintf("ProTx version disallows storing addresses in %s (must specify port number only)",
+                                                 field_name));
+                }
+                if (auto entryRet = ptx.netInfo->AddEntry(purpose, input.get_str()); entryRet != NetInfoStatus::Success) {
+                    throw JSONRPCError(RPC_INVALID_PARAMETER,
+                                       strprintf("Error setting %s[0] to '%s' (%s)", field_name, input.get_str(),
+                                                 NISToString(entryRet)));
+                }
+            } else if (int32_t port{0}; ParseInt32(input_str, &port) && port >= 1 && port <= std::numeric_limits<uint16_t>::max()) {
+                // Valid port
+                if (!ptx.netInfo->CanStorePlatform()) {
+                    maybe_target = static_cast<uint16_t>(port);
+                    return; // Parsing complete
+                }
+                // We cannot store *only* a port number in netInfo so we need to associate it with the primary service of CORE_P2P manually
+                if (!ptx.netInfo->HasEntries(NetInfoPurpose::CORE_P2P)) {
+                    throw JSONRPCError(RPC_INVALID_PARAMETER,
+                                       strprintf("Must specify coreP2PAddrs in order to set %s", field_name));
+                }
+                const CService service{CNetAddr{ptx.netInfo->GetPrimary()}, static_cast<uint16_t>(port)};
+                CHECK_NONFATAL(service.IsValid());
+                if (auto entryRet = ptx.netInfo->AddEntry(purpose, service.ToStringAddrPort());
+                    entryRet != NetInfoStatus::Success) {
+                    throw JSONRPCError(RPC_INVALID_PARAMETER,
+                                       strprintf("Error setting %s[0] to '%s' (%s)", field_name, service.ToStringAddrPort(),
+                                                 NISToString(entryRet)));
+                }
+            } else {
+                // Invalid port
+                throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("%s must be a valid port [1-65535]", field_name));
+            }
         }
-
-        const auto& input_str{input.getValStr()};
-        if (!IsNumeric(input_str)) {
-            // Cannot be parsed as a number (port) so must be an addr:port string
-            if (!ptx.netInfo->CanStorePlatform()) {
-                throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                   strprintf("ProTx version disallows storing addresses in %s (must specify port number only)",
-                                             field_name));
-            }
-            if (auto entryRet = ptx.netInfo->AddEntry(purpose, input.get_str()); entryRet != NetInfoStatus::Success) {
-                throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                   strprintf("Error setting %s[0] to '%s' (%s)", field_name, input.get_str(),
-                                             NISToString(entryRet)));
-            }
-            return; // Parsing complete
-        }
-
-        if (int32_t port{0}; ParseInt32(input_str, &port) && port >= 1 && port <= std::numeric_limits<uint16_t>::max()) {
-            // Valid port
-            if (!ptx.netInfo->CanStorePlatform()) {
-                maybe_target = static_cast<uint16_t>(port);
-                return; // Parsing complete
-            }
-            // We cannot store *only* a port number in netInfo so we need to associate it with the primary service of CORE_P2P manually
-            if (!ptx.netInfo->HasEntries(NetInfoPurpose::CORE_P2P)) {
-                throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                   strprintf("Must specify coreP2PAddrs in order to set %s", field_name));
-            }
-            const CService service{CNetAddr{ptx.netInfo->GetPrimary()}, static_cast<uint16_t>(port)};
-            CHECK_NONFATAL(service.IsValid());
-            if (auto entryRet = ptx.netInfo->AddEntry(purpose, service.ToStringAddrPort());
-                entryRet != NetInfoStatus::Success) {
-                throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                   strprintf("Error setting %s[0] to '%s' (%s)", field_name, service.ToStringAddrPort(),
-                                             NISToString(entryRet)));
-            }
-            return; // Parsing complete
-        }
-
-        // Invalid port
-        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("%s must be a valid port [1-65535]", field_name));
     };
     process_field(ptx.platformP2PPort, input_p2p, NetInfoPurpose::PLATFORM_P2P, "platformP2PAddrs");
     process_field(ptx.platformHTTPPort, input_http, NetInfoPurpose::PLATFORM_HTTPS, "platformHTTPSAddrs");
