@@ -219,7 +219,7 @@ class NetInfoTest(BitcoinTestFramework):
 
         # coreP2PAddrs must be populated when updating a masternode
         self.node_two.update_mn(self, False, "", DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
-                                -8, "Empty param for coreP2PAddrs[-1] not allowed")
+                                -8, "Empty string for coreP2PAddrs[-1] not allowed")
 
         # Legacy:   Normal registration of a masternode
         # Extended: platformP2PAddrs and platformHTTPAddrs will be autopopulated with the addr from the first coreP2PAddrs entry
@@ -234,7 +234,7 @@ class NetInfoTest(BitcoinTestFramework):
         # Using mainnet P2P port gets refused
         self.node_evo.register_mn(self, False, f"127.0.0.1:{DEFAULT_PORT_MAINNET_CORE_P2P}",
                                   DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, f"Error setting coreP2PAddrs[-1] to '127.0.0.1:{DEFAULT_PORT_MAINNET_CORE_P2P}' (invalid port)")
+                                  -8, f"Failed to set coreP2PAddrs[-1] to '127.0.0.1:{DEFAULT_PORT_MAINNET_CORE_P2P}' (invalid port)")
 
         # Arrays of addresses are recognized by coreP2PAddrs (but get refused for too many entries)
         self.node_evo.register_mn(self, False, [f"127.0.0.1:{self.node_evo.mn.nodePort}", f"127.0.0.2:{self.node_evo.mn.nodePort}"],
@@ -359,7 +359,7 @@ class NetInfoTest(BitcoinTestFramework):
 
         # coreP2PAddrs cannot omit the port, extended addresses require explicit port specification
         self.node_evo.register_mn(self, False, "127.0.0.1", DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "Error setting coreP2PAddrs[-1] to '127.0.0.1' (invalid port)")
+                                  -8, "Failed to set coreP2PAddrs[-1] to '127.0.0.1' (invalid port)")
 
     def test_deprecation(self):
         # netInfo is represented with JSON in CProRegTx, CProUpServTx, CDeterministicMNState and CSimplifiedMNListEntry,
