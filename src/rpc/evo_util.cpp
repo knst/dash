@@ -14,7 +14,7 @@ namespace {
 bool IsNumeric(std::string_view input) { return input.find_first_not_of("0123456789") == std::string::npos; }
 
 template <typename TemplateProTx>
-void parse_entry(TemplateProTx& ptx, const UniValue& input, int index, bool optional)
+void parse_entry(TemplateProTx& ptx, const UniValue& input, NetInfoPurpose purpose, int index, bool optional)
 {
     const std::string& entry = input.get_str();
     if (entry.empty()) {
@@ -23,7 +23,7 @@ void parse_entry(TemplateProTx& ptx, const UniValue& input, int index, bool opti
         }
         return; // Nothing to do
     }
-    if (auto entryRet = ptx.netInfo->AddEntry(NetInfoPurpose::CORE_P2P, entry); entryRet != NetInfoStatus::Success) {
+    if (auto entryRet = ptx.netInfo->AddEntry(purpose, entry); entryRet != NetInfoStatus::Success) {
         throw JSONRPCError(RPC_INVALID_PARAMETER,
                            strprintf("Failed to set coreP2PAddrs[%d] to '%s' (%s)", index, entry, NISToString(entryRet)));
     }
@@ -37,7 +37,7 @@ void ProcessNetInfoCore(T1& ptx, const UniValue& input, const bool optional)
     CHECK_NONFATAL(ptx.netInfo);
 
     if (input.isStr()) {
-        parse_entry(ptx, input, -1, optional);
+        parse_entry(ptx, input, NetInfoPurpose::CORE_P2P, -1, optional);
     } else if (input.isArray()) {
         const UniValue& entries = input.get_array();
         if (!optional && entries.empty()) {
@@ -51,7 +51,7 @@ void ProcessNetInfoCore(T1& ptx, const UniValue& input, const bool optional)
                                    strprintf("Invalid param for coreP2PAddrs[%d], must be string", idx));
             }
 
-            parse_entry(ptx, entry_uv, idx, false);
+            parse_entry(ptx, entry_uv, NetInfoPurpose::CORE_P2P, idx, false);
         }
     } else {
         // Invalid input
@@ -114,11 +114,7 @@ void ProcessNetInfoPlatform(T1& ptx, const UniValue& input_p2p, const UniValue& 
                     }
                 }
             } else { // !is not numeric str
-                if (auto entryRet = ptx.netInfo->AddEntry(purpose, input.get_str()); entryRet != NetInfoStatus::Success) {
-                    throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                       strprintf("Error setting %s[0] to '%s' (%s)", field_name, input.get_str(),
-                                                 NISToString(entryRet)));
-                }
+                parse_entry(ptx, input.get_str(), purpose, -1, false);
             }
         } else { // numeric str
             const auto& input_str{input.getValStr()};
