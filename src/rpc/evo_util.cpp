@@ -129,8 +129,9 @@ void ProcessNetInfoPlatform(T1& ptx, const UniValue& input_p2p, const UniValue& 
                 CHECK_NONFATAL(service.IsValid());
                 if (auto entryRet = ptx.netInfo->AddEntry(purpose, service.ToStringAddrPort());
                     entryRet != NetInfoStatus::Success) {
+                    // TODO: implement functional test for this branch
                     throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                       strprintf("Error setting %s[0] to '%s' (%s)", field_name, service.ToStringAddrPort(),
+                                       strprintf("Failed to set %s[0] to '%s' (%s)", field_name, service.ToStringAddrPort(),
                                                  NISToString(entryRet)));
                 }
             } else {
