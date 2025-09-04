@@ -199,30 +199,30 @@ class NetInfoTest(BitcoinTestFramework):
         # Arrays of addresses with invalid inputs get refused
         self.node_evo.register_mn(self, False, [[f"127.0.0.1:{self.node_evo.mn.nodePort}"]],
                                   DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "Invalid param for coreP2PAddrs[0], must be string")
+                                  -8, "Invalid param for core_p2p[0], must be string")
         self.node_evo.register_mn(self, False, [f"127.0.0.1:{self.node_evo.mn.nodePort}", ""],
                                   DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "Empty string for coreP2PAddrs[1] not allowed")
+                                  -8, "Empty string for core_p2p[1] not allowed")
         self.node_evo.register_mn(self, False, [f"127.0.0.1:{self.node_evo.mn.nodePort}", self.node_evo.mn.nodePort],
                                   DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "Invalid param for coreP2PAddrs[1], must be string")
+                                  -8, "Invalid param for core_p2p[1], must be string")
 
-        # platformP2PAddrs and platformHTTPSAddrs must be within acceptable range (i.e. a valid port number)
+        # platform_p2p and platformHTTPSAddrs must be within acceptable range (i.e. a valid port number)
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", "0", DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "platformP2PAddrs must be a valid port [1-65535]")
+                                  -8, "platform_p2p must be a valid port [1-65535]")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", "65536", DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "platformP2PAddrs must be a valid port [1-65535]")
+                                  -8, "platform_p2p must be a valid port [1-65535]")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, "0",
                                   -8, "platformHTTPSAddrs must be a valid port [1-65535]")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, "65536",
                                   -8, "platformHTTPSAddrs must be a valid port [1-65535]")
 
-        # coreP2PAddrs must be populated when updating a masternode
+        # core_p2p must be populated when updating a masternode
         self.node_two.update_mn(self, False, "", DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
-                                -8, "Empty string for coreP2PAddrs[-1] not allowed")
+                                -8, "Empty string for core_p2p[-1] not allowed")
 
         # Legacy:   Normal registration of a masternode
-        # Extended: platformP2PAddrs and platformHTTPAddrs will be autopopulated with the addr from the first coreP2PAddrs entry
+        # Extended: platform_p2p and platformHTTPAddrs will be autopopulated with the addr from the first core_p2p entry
         assert self.node_evo.node.testmempoolaccept([
             self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}",
                                       DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP)])[0]['allowed']
@@ -234,18 +234,18 @@ class NetInfoTest(BitcoinTestFramework):
         # Using mainnet P2P port gets refused
         self.node_evo.register_mn(self, False, f"127.0.0.1:{DEFAULT_PORT_MAINNET_CORE_P2P}",
                                   DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, f"Failed to set coreP2PAddrs[-1] to '127.0.0.1:{DEFAULT_PORT_MAINNET_CORE_P2P}' (invalid port)")
+                                  -8, f"Failed to set core_p2p[-1] to '127.0.0.1:{DEFAULT_PORT_MAINNET_CORE_P2P}' (invalid port)")
 
-        # Arrays of addresses are recognized by coreP2PAddrs (but get refused for too many entries)
+        # Arrays of addresses are recognized by core_p2p (but get refused for too many entries)
         self.node_evo.register_mn(self, False, [f"127.0.0.1:{self.node_evo.mn.nodePort}", f"127.0.0.2:{self.node_evo.mn.nodePort}"],
                                   DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, f"Failed to set coreP2PAddrs[1] to '127.0.0.2:{self.node_evo.mn.nodePort}' (too many entries)")
+                                  -8, f"Failed to set core_p2p[1] to '127.0.0.2:{self.node_evo.mn.nodePort}' (too many entries)")
 
-        # platformP2PAddrs and platformHTTPSAddrs don't accept non-numeric inputs
+        # platform_p2p and platformHTTPSAddrs don't accept non-numeric inputs
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", f"127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}", DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "ProTx version disallows storing addresses in platformP2PAddrs (must specify port number only)")
+                                  -8, "ProTx version disallows storing addresses in platform_p2p (must specify port number only)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", [f"127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}"], DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "ProTx version disallows storing addresses in platformP2PAddrs (must specify port number only)")
+                                  -8, "ProTx version disallows storing addresses in platform_p2p (must specify port number only)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, f"127.0.0.1:{DEFAULT_PORT_PLATFORM_HTTP}",
                                   -8, "ProTx version disallows storing addresses in platformHTTPSAddrs (must specify port number only)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, [f"127.0.0.1:{DEFAULT_PORT_PLATFORM_HTTP}"],
@@ -253,23 +253,23 @@ class NetInfoTest(BitcoinTestFramework):
 
         # Port numbers may not be wrapped in arrays, either as integers or strings
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", [DEFAULT_PORT_PLATFORM_P2P], DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "ProTx version disallows storing addresses in platformP2PAddrs (must specify port number only)")
+                                  -8, "ProTx version disallows storing addresses in platform_p2p (must specify port number only)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", [f"{DEFAULT_PORT_PLATFORM_P2P}"], DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "ProTx version disallows storing addresses in platformP2PAddrs (must specify port number only)")
+                                  -8, "ProTx version disallows storing addresses in platform_p2p (must specify port number only)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, [DEFAULT_PORT_PLATFORM_HTTP],
                                   -8, "ProTx version disallows storing addresses in platformHTTPSAddrs (must specify port number only)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, [f"{DEFAULT_PORT_PLATFORM_HTTP}"],
                                   -8, "ProTx version disallows storing addresses in platformHTTPSAddrs (must specify port number only)")
 
-        # coreP2PAddrs cannot be empty when registering a masternode without specifying platform fields
+        # core_p2p cannot be empty when registering a masternode without specifying platform fields
         self.node_evo.register_mn(self, False, "", "", "",
-                                  -8, "ProTx version disallows storing blank values in platformP2PAddrs (must specify port number)")
+                                  -8, "ProTx version disallows storing blank values in platform_p2p (must specify port number)")
         self.node_evo.register_mn(self, False, "", "", DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "ProTx version disallows storing blank values in platformP2PAddrs (must specify port number)")
+                                  -8, "ProTx version disallows storing blank values in platform_p2p (must specify port number)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", "", "",
-                                  -8, "ProTx version disallows storing blank values in platformP2PAddrs (must specify port number)")
+                                  -8, "ProTx version disallows storing blank values in platform_p2p (must specify port number)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", "", DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "ProTx version disallows storing blank values in platformP2PAddrs (must specify port number)")
+                                  -8, "ProTx version disallows storing blank values in platform_p2p (must specify port number)")
         self.node_evo.register_mn(self, False, "", DEFAULT_PORT_PLATFORM_P2P, "",
                                   -8, "ProTx version disallows storing blank values in platformHTTPSAddrs (must specify port number)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, "",
@@ -279,7 +279,7 @@ class NetInfoTest(BitcoinTestFramework):
         assert self.node_evo.node.testmempoolaccept([
             self.node_evo.register_mn(self, False, "", DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP)])[0]['allowed']
 
-        # coreP2PAddrs can omit the port (supplying only addr) and it will be autopopulated with the default P2P port
+        # core_p2p can omit the port (supplying only addr) and it will be autopopulated with the default P2P port
         assert self.node_evo.node.testmempoolaccept([
             self.node_evo.register_mn(self, False, "127.0.0.1", DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP)])[0]['allowed']
 
@@ -309,13 +309,13 @@ class NetInfoTest(BitcoinTestFramework):
         self.node_evo.register_mn(self, False, [f"127.0.0.1:{self.node_evo.mn.nodePort}", f"127.0.0.2:{self.node_evo.mn.nodePort}"],
                                   [f"127.0.0.1:{self.node_evo.mn.nodePort}", f"127.0.0.2:{self.node_evo.mn.nodePort}"],
                                   [f"127.0.0.1:{DEFAULT_PORT_PLATFORM_HTTP}", f"127.0.0.2:{DEFAULT_PORT_PLATFORM_HTTP}"],
-                                  -8, f"Error setting platformP2PAddrs[0] to '127.0.0.1:{self.node_evo.mn.nodePort}' (duplicate)")
+                                  -8, f"Failed to set platform_p2p[0] to '127.0.0.1:{self.node_evo.mn.nodePort}' (duplicate)")
         self.node_evo.register_mn(self, False, [f"127.0.0.1:{self.node_evo.mn.nodePort}", f"127.0.0.2:{self.node_evo.mn.nodePort}"],
                                   [f"127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}", f"127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}"],
                                   [f"127.0.0.1:{DEFAULT_PORT_PLATFORM_HTTP}", f"127.0.0.2:{DEFAULT_PORT_PLATFORM_HTTP}"],
-                                  -8, f"Error setting platformP2PAddrs[1] to '127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}' (duplicate)")
+                                  -8, f"Failed to set platform_p2p[1] to '127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}' (duplicate)")
 
-        # platformP2PAddrs and platformHTTPSAddrs accept non-numeric inputs
+        # platform_p2p and platformHTTPSAddrs accept non-numeric inputs
         assert self.node_evo.node.testmempoolaccept([
             self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", f"127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}",
                                       DEFAULT_PORT_PLATFORM_HTTP)])[0]['allowed']
@@ -331,35 +331,35 @@ class NetInfoTest(BitcoinTestFramework):
 
         # Port numbers may not be wrapped in arrays, either as integers or strings
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", [DEFAULT_PORT_PLATFORM_P2P], DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "Invalid param for platformP2PAddrs[0], must be string")
+                                  -8, "Invalid param for platform_p2p[0], must be string")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", [f"{DEFAULT_PORT_PLATFORM_P2P}"], DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "Invalid param for platformP2PAddrs[0], must be string")
+                                  -8, "Invalid param for platform_p2p[0], must be string")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, [DEFAULT_PORT_PLATFORM_HTTP],
                                   -8, "Invalid param for platformHTTPSAddrs[0], must be string")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, [f"{DEFAULT_PORT_PLATFORM_HTTP}"],
                                   -8, "Invalid param for platformHTTPSAddrs[0], must be string")
 
-        # coreP2PAddrs can be empty when registering a masternode if platform fields are not specified
+        # core_p2p can be empty when registering a masternode if platform fields are not specified
         assert self.node_evo.node.testmempoolaccept([
             self.node_evo.register_mn(self, False, "", "", "")])[0]['allowed']
 
         # ...but it cannot empty if any address field is specified
         self.node_evo.register_mn(self, False, "", DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "Must specify coreP2PAddrs in order to set platformP2PAddrs")
+                                  -8, "Must specify core_p2p in order to set platform_p2p")
         self.node_evo.register_mn(self, False, "", "", DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "Must specify coreP2PAddrs in order to set platformHTTPSAddrs")
+                                  -8, "Must specify core_p2p in order to set platformHTTPSAddrs")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", "", "",
-                                  -8, "Cannot leave platformP2PAddrs empty if other address fields populated")
+                                  -8, "Cannot leave platform_p2p empty if other address fields populated")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", "", DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "Cannot leave platformP2PAddrs empty if other address fields populated")
+                                  -8, "Cannot leave platform_p2p empty if other address fields populated")
         self.node_evo.register_mn(self, False, "", DEFAULT_PORT_PLATFORM_P2P, "",
-                                  -8, "Must specify coreP2PAddrs in order to set platformP2PAddrs")
+                                  -8, "Must specify core_p2p in order to set platform_p2p")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.mn.nodePort}", DEFAULT_PORT_PLATFORM_P2P, "",
                                   -8, "Cannot leave platformHTTPSAddrs empty if other address fields populated")
 
-        # coreP2PAddrs cannot omit the port, extended addresses require explicit port specification
+        # core_p2p cannot omit the port, extended addresses require explicit port specification
         self.node_evo.register_mn(self, False, "127.0.0.1", DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "Failed to set coreP2PAddrs[-1] to '127.0.0.1' (invalid port)")
+                                  -8, "Failed to set core_p2p[-1] to '127.0.0.1' (invalid port)")
 
     def test_deprecation(self):
         # netInfo is represented with JSON in CProRegTx, CProUpServTx, CDeterministicMNState and CSimplifiedMNListEntry,
@@ -517,8 +517,8 @@ class NetInfoTest(BitcoinTestFramework):
                                                   [f"127.0.0.3:{DEFAULT_PORT_PLATFORM_HTTP}", f"[::3]:{DEFAULT_PORT_PLATFORM_HTTP}"])
         proregtx_rpc = self.node_evo.node.getrawtransaction(proregtx_hash, True)
 
-        # Update only a platform field (platformP2PAddrs) but with an odd twist, we only specify the port number and expect the shim
-        # to auto-fill the addr portion from coreP2PAddrs[0]
+        # Update only a platform field (platform_p2p) but with an odd twist, we only specify the port number and expect the shim
+        # to auto-fill the addr portion from core_p2p[0]
         proupservtx_hash = self.node_evo.update_mn(self, True,
                                                    [f"127.0.0.1:{self.node_evo.mn.nodePort}", f"[::1]:{self.node_evo.mn.nodePort}"],
                                                    DEFAULT_PORT_PLATFORM_P2P + 12,
@@ -526,7 +526,7 @@ class NetInfoTest(BitcoinTestFramework):
         proupservtx_rpc = self.node_evo.node.getrawtransaction(proupservtx_hash, True)
         assert_equal(proupservtx_rpc['proUpServTx']['addresses']['platform_p2p'][0], f"127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P + 12}")
 
-        # Since all fields are stored in the netInfo, even though we updated only platformP2PAddrs, the dummy address should never be visible
+        # Since all fields are stored in the netInfo, even though we updated only platform_p2p, the dummy address should never be visible
         # and *all* the addresses fields will be visible as they're now in one data structure
         proupservtx_height = proupservtx_rpc['height']
         protx_listdiff_rpc = self.node_evo.node.protx('listdiff', proupservtx_height - 1, proupservtx_height)
@@ -550,7 +550,7 @@ class NetInfoTest(BitcoinTestFramework):
         self.node_evo.set_active_state(self, False)
         self.reconnect_nodes()
 
-        # Check that 'service' correctly reports as coreP2PAddrs[0]
+        # Check that 'service' correctly reports as core_p2p[0]
         proregtx_rpc = self.node_simple.getrawtransaction(proregtx_hash, True)
         proupservtx_rpc = self.node_simple.getrawtransaction(proupservtx_hash, True)
         assert_equal(proregtx_rpc['proRegTx']['service'], f"127.0.0.1:{self.node_evo.mn.nodePort}")

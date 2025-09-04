@@ -19,13 +19,13 @@ void parse_entry(TemplateProTx& ptx, const UniValue& input, NetInfoPurpose purpo
     const std::string& entry = input.get_str();
     if (entry.empty()) {
         if (!optional) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Empty string for coreP2PAddrs[%d] not allowed", index));
+            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Empty string for core_p2p[%d] not allowed", index));
         }
         return; // Nothing to do
     }
     if (auto entryRet = ptx.netInfo->AddEntry(purpose, entry); entryRet != NetInfoStatus::Success) {
         throw JSONRPCError(RPC_INVALID_PARAMETER,
-                           strprintf("Failed to set coreP2PAddrs[%d] to '%s' (%s)", index, entry, NISToString(entryRet)));
+                           strprintf("Failed to set %s[%d] to '%s' (%s)", PurposeToString(purpose), index, entry, NISToString(entryRet)));
     }
 }
 
@@ -41,21 +41,21 @@ void ProcessNetInfoCore(T1& ptx, const UniValue& input, const bool optional)
     } else if (input.isArray()) {
         const UniValue& entries = input.get_array();
         if (!optional && entries.empty()) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "Empty array for coreP2PAddrs not allowed");
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Empty array for core_p2p not allowed");
         }
         for (size_t idx{0}; idx < entries.size(); idx++) {
             const UniValue& entry_uv{entries[idx]};
 
             if (!entry_uv.isStr()) {
                 throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                   strprintf("Invalid param for coreP2PAddrs[%d], must be string", idx));
+                                   strprintf("Invalid param for core_p2p[%d], must be string", idx));
             }
 
             parse_entry(ptx, entry_uv, NetInfoPurpose::CORE_P2P, idx, false);
         }
     } else {
         // Invalid input
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid param for coreP2PAddrs, must be string or array");
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid param for core_p2p, must be string or array");
     }
 }
 template void ProcessNetInfoCore(CProRegTx& ptx, const UniValue& input, const bool optional);
@@ -107,11 +107,7 @@ void ProcessNetInfoPlatform(T1& ptx, const UniValue& input_p2p, const UniValue& 
                         throw JSONRPCError(RPC_INVALID_PARAMETER,
                                            strprintf("Invalid param for %s[%d], must be string", field_name, idx));
                     }
-                    if (auto entryRet = ptx.netInfo->AddEntry(purpose, entry.get_str()); entryRet != NetInfoStatus::Success) {
-                        throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                           strprintf("Error setting %s[%d] to '%s' (%s)", field_name, idx, entry.get_str(),
-                                                     NISToString(entryRet)));
-                    }
+                    parse_entry(ptx, entry.get_str(), purpose, idx, false);
                 }
             } else { // !is not numeric str
                 parse_entry(ptx, input.get_str(), purpose, -1, false);
@@ -127,7 +123,7 @@ void ProcessNetInfoPlatform(T1& ptx, const UniValue& input_p2p, const UniValue& 
                 // We cannot store *only* a port number in netInfo so we need to associate it with the primary service of CORE_P2P manually
                 if (!ptx.netInfo->HasEntries(NetInfoPurpose::CORE_P2P)) {
                     throw JSONRPCError(RPC_INVALID_PARAMETER,
-                                       strprintf("Must specify coreP2PAddrs in order to set %s", field_name));
+                                       strprintf("Must specify core_p2p in order to set %s", field_name));
                 }
                 const CService service{CNetAddr{ptx.netInfo->GetPrimary()}, static_cast<uint16_t>(port)};
                 CHECK_NONFATAL(service.IsValid());
@@ -143,7 +139,7 @@ void ProcessNetInfoPlatform(T1& ptx, const UniValue& input_p2p, const UniValue& 
             }
         }
     };
-    process_field(ptx.platformP2PPort, input_p2p, NetInfoPurpose::PLATFORM_P2P, "platformP2PAddrs");
+    process_field(ptx.platformP2PPort, input_p2p, NetInfoPurpose::PLATFORM_P2P, "platform_p2p");
     process_field(ptx.platformHTTPPort, input_http, NetInfoPurpose::PLATFORM_HTTPS, "platformHTTPSAddrs");
 }
 template void ProcessNetInfoPlatform(CProRegTx& ptx, const UniValue& input_p2p, const UniValue& input_http, const bool optional);
