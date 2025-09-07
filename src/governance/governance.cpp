@@ -118,6 +118,7 @@ bool CGovernanceManager::LoadCache(bool load_cache)
 
 void CGovernanceManager::RelayObject(const CGovernanceObject& obj)
 {
+    AssertLockNotHeld(cs_relay);
     if (!m_mn_sync.IsSynced()) {
         LogPrint(BCLog::GOBJECT, "%s -- won't relay until fully synced\n", __func__);
         return;
@@ -129,6 +130,7 @@ void CGovernanceManager::RelayObject(const CGovernanceObject& obj)
 
 void CGovernanceManager::RelayVote(const CGovernanceVote& vote)
 {
+    AssertLockNotHeld(cs_relay);
     if (!m_mn_sync.IsSynced()) {
         LogPrint(BCLog::GOBJECT, "%s -- won't relay until fully synced\n", __func__);
         return;
@@ -194,6 +196,7 @@ void CGovernanceManager::AddPostponedObject(const CGovernanceObject& govobj)
 
 MessageProcessingResult CGovernanceManager::ProcessMessage(CNode& peer, CConnman& connman, std::string_view msg_type, CDataStream& vRecv)
 {
+    AssertLockNotHeld(cs_relay);
     if (!IsValid()) return {};
     if (!m_mn_sync.IsBlockchainSynced()) return {};
 
@@ -336,6 +339,7 @@ MessageProcessingResult CGovernanceManager::ProcessMessage(CNode& peer, CConnman
 
 void CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj)
 {
+    AssertLockNotHeld(cs_relay);
     uint256 nHash = govobj.GetHash();
     std::vector<vote_time_pair_t> vecVotePairs;
     cmmapOrphanVotes.GetAll(nHash, vecVotePairs);
@@ -362,6 +366,7 @@ void CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj)
 
 void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, const CNode* pfrom)
 {
+    AssertLockNotHeld(cs_relay);
     uint256 nHash = govobj.GetHash();
     std::string strHash = nHash.ToString();
 
@@ -898,6 +903,7 @@ bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bo
 
 bool CGovernanceManager::ProcessVoteAndRelay(const CGovernanceVote& vote, CGovernanceException& exception, CConnman& connman)
 {
+    AssertLockNotHeld(cs_relay);
     bool fOK = ProcessVote(/*pfrom=*/nullptr, vote, exception, connman);
     if (fOK) {
         RelayVote(vote);
@@ -960,6 +966,7 @@ bool CGovernanceManager::ProcessVote(CNode* pfrom, const CGovernanceVote& vote, 
 
 void CGovernanceManager::CheckPostponedObjects()
 {
+    AssertLockNotHeld(cs_relay);
     if (!m_mn_sync.IsSynced()) return;
 
     LOCK2(::cs_main, cs);
@@ -1309,6 +1316,7 @@ UniValue CGovernanceManager::ToJson() const
 
 void CGovernanceManager::UpdatedBlockTip(const CBlockIndex* pindex)
 {
+    AssertLockNotHeld(cs_relay);
     // Note this gets called from ActivateBestChain without cs_main being held
     // so it should be safe to lock our mutex here without risking a deadlock
     // On the other hand it should be safe for us to access pindex without holding a lock

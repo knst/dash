@@ -287,8 +287,8 @@ public:
 
     bool IsValid() const override { return is_valid; }
 
-    void RelayObject(const CGovernanceObject& obj);
-    void RelayVote(const CGovernanceVote& vote);
+    void RelayObject(const CGovernanceObject& obj) EXCLUSIVE_LOCKS_REQUIRED(!cs_relay);
+    void RelayVote(const CGovernanceVote& vote) EXCLUSIVE_LOCKS_REQUIRED(!cs_relay);
 
     /**
      * This is called by AlreadyHave in net_processing.cpp as part of the inventory
@@ -300,7 +300,8 @@ public:
     [[nodiscard]] MessageProcessingResult SyncSingleObjVotes(CNode& peer, const uint256& nProp, const CBloomFilter& filter, CConnman& connman);
     [[nodiscard]] MessageProcessingResult SyncObjects(CNode& peer, CConnman& connman) const;
 
-    [[nodiscard]] MessageProcessingResult ProcessMessage(CNode& peer, CConnman& connman, std::string_view msg_type, CDataStream& vRecv);
+    [[nodiscard]] MessageProcessingResult ProcessMessage(CNode& peer, CConnman& connman, std::string_view msg_type, CDataStream& vRecv)
+        EXCLUSIVE_LOCKS_REQUIRED(!cs_relay);
 
     void DoMaintenance(CConnman& connman);
 
@@ -313,13 +314,14 @@ public:
     std::vector<CGovernanceVote> GetCurrentVotes(const uint256& nParentHash, const COutPoint& mnCollateralOutpointFilter) const;
     void GetAllNewerThan(std::vector<CGovernanceObject>& objs, int64_t nMoreThanTime) const;
 
-    void AddGovernanceObject(CGovernanceObject& govobj, const CNode* pfrom = nullptr) override;
+    void AddGovernanceObject(CGovernanceObject& govobj, const CNode* pfrom = nullptr) override
+        EXCLUSIVE_LOCKS_REQUIRED(!cs_relay);
 
     void CheckAndRemove();
 
     UniValue ToJson() const;
 
-    void UpdatedBlockTip(const CBlockIndex* pindex);
+    void UpdatedBlockTip(const CBlockIndex* pindex) EXCLUSIVE_LOCKS_REQUIRED(!cs_relay);
     int64_t GetLastDiffTime() const { return nTimeLastDiff; }
     void UpdateLastDiffTime(int64_t nTimeIn) { nTimeLastDiff = nTimeIn; }
 
@@ -344,9 +346,10 @@ public:
 
     bool MasternodeRateCheck(const CGovernanceObject& govobj, bool fUpdateFailStatus, bool fForce, bool& fRateCheckBypassed);
 
-    bool ProcessVoteAndRelay(const CGovernanceVote& vote, CGovernanceException& exception, CConnman& connman) override;
+    bool ProcessVoteAndRelay(const CGovernanceVote& vote, CGovernanceException& exception, CConnman& connman) override
+        EXCLUSIVE_LOCKS_REQUIRED(!cs_relay);
 
-    void CheckPostponedObjects();
+    void CheckPostponedObjects() EXCLUSIVE_LOCKS_REQUIRED(!cs_relay);
 
     bool AreRateChecksEnabled() const
     {
@@ -413,7 +416,7 @@ private:
     /// Called to indicate a requested object or vote has been received
     bool AcceptMessage(const uint256& nHash);
 
-    void CheckOrphanVotes(CGovernanceObject& govobj);
+    void CheckOrphanVotes(CGovernanceObject& govobj) EXCLUSIVE_LOCKS_REQUIRED(!cs_relay);
 
     void RebuildIndexes();
 
