@@ -31,9 +31,6 @@ static const int LLMQ_DATA_MESSAGES_VERSION = 70219;
 //! introduction of instant send deterministic lock (ISDLOCK)
 static const int ISDLOCK_PROTO_VERSION = 70220;
 
-//! GOVSCRIPT was activated in this version
-static const int GOVSCRIPT_PROTO_VERSION = 70221;
-
 //! ADDRV2 was introduced in this version
 static const int ADDRV2_PROTO_VERSION = 70223;
 
