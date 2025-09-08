@@ -17,8 +17,9 @@ namespace interfaces {
 class Chain;
 class Handler;
 }
-
+namespace wallet {
 Span<const CRPCCommand> GetSignerRPCCommands();
+} // namespace
 
 #endif // ENABLE_EXTERNAL_SIGNER
 

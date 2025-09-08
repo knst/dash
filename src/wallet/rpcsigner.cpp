@@ -5,14 +5,15 @@
 #include <chainparamsbase.h>
 #include <key_io.h>
 #include <rpc/server.h>
-#include <rpc/util.h>
 #include <util/strencodings.h>
 #include <wallet/rpcsigner.h>
-#include <wallet/rpcwallet.h>
+#include <wallet/rpc/wallet.h>
+#include <wallet/rpc/util.h>
 #include <wallet/wallet.h>
 
 #ifdef ENABLE_EXTERNAL_SIGNER
 
+namespace wallet {
 static RPCHelpMan enumeratesigners()
 {
     return RPCHelpMan{
@@ -104,8 +105,9 @@ static const CRPCCommand commands[] =
   { "signer",              &signerdisplayaddress,  },
 };
 // clang-format on
-    return MakeSpan(commands);
+    return commands;
 }
+} // namespace wallet
 
 
 #endif // ENABLE_EXTERNAL_SIGNER

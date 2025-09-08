@@ -679,6 +679,7 @@ static RPCHelpMan createwallet()
 #else
         throw JSONRPCError(RPC_WALLET_ERROR, "Configure with --enable-external-signer to use this");
 #endif
+    }
 
 #ifndef USE_BDB
     if (!(flags & WALLET_FLAG_DESCRIPTORS)) {
