@@ -89,9 +89,22 @@ CGovernanceManager::~CGovernanceManager()
     m_db->Store(*this);
 }
 
-void CGovernanceManager::Schedule(CScheduler& scheduler, PeerManager& peerman)
+void CGovernanceManager::Schedule(CScheduler& scheduler, CConnman& connman, PeerManager& peerman)
 {
     assert(IsValid());
+
+    scheduler.scheduleEvery(
+        [this, &connman]() -> void {
+            if (!m_mn_sync.IsSynced()) return;
+
+            // CHECK OBJECTS WE'VE ASKED FOR, REMOVE OLD ENTRIES
+            CleanOrphanObjects();
+            RequestOrphanObjects(connman);
+
+            // CHECK AND REMOVE - REPROCESS GOVERNANCE OBJECTS
+            CheckAndRemove();
+        },
+        std::chrono::minutes{5});
 
     scheduler.scheduleEvery(
         [this, &peerman]() -> void {
@@ -652,20 +665,6 @@ struct sortProposalsByVotes {
         return (UintToArith256(left.first->GetCollateralHash()) > UintToArith256(right.first->GetCollateralHash()));
     }
 };
-
-void CGovernanceManager::DoMaintenance(CConnman& connman)
-{
-    if (!IsValid()) return;
-    if (!m_mn_sync.IsSynced()) return;
-    if (ShutdownRequested()) return;
-
-    // CHECK OBJECTS WE'VE ASKED FOR, REMOVE OLD ENTRIES
-    CleanOrphanObjects();
-    RequestOrphanObjects(connman);
-
-    // CHECK AND REMOVE - REPROCESS GOVERNANCE OBJECTS
-    CheckAndRemove();
-}
 
 bool CGovernanceManager::ConfirmInventoryRequest(const CInv& inv)
 {

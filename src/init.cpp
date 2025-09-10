@@ -2260,8 +2260,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     node.scheduler->scheduleEvery(std::bind(&CDeterministicMNManager::DoMaintenance, std::ref(*node.dmnman)), std::chrono::seconds{10});
 
     if (node.govman->IsValid()) {
-        node.govman->Schedule(*node.scheduler, *node.peerman);
-        node.scheduler->scheduleEvery(std::bind(&CGovernanceManager::DoMaintenance, std::ref(*node.govman), std::ref(*node.connman)), std::chrono::minutes{5});
+        node.govman->Schedule(*node.scheduler, *node.connman, *node.peerman);
     }
 
     if (node.mn_activeman) {

@@ -281,7 +281,7 @@ public:
                                 const std::unique_ptr<CDeterministicMNManager>& dmnman, CMasternodeSync& mn_sync);
     ~CGovernanceManager();
 
-    void Schedule(CScheduler& scheduler, PeerManager& peerman);
+    void Schedule(CScheduler& scheduler, CConnman& connman, PeerManager& peerman);
 
     bool LoadCache(bool load_cache);
 
@@ -302,8 +302,6 @@ public:
 
     [[nodiscard]] MessageProcessingResult ProcessMessage(CNode& peer, CConnman& connman, std::string_view msg_type, CDataStream& vRecv)
         EXCLUSIVE_LOCKS_REQUIRED(!cs_relay);
-
-    void DoMaintenance(CConnman& connman);
 
     const CGovernanceObject* FindConstGovernanceObject(const uint256& nHash) const EXCLUSIVE_LOCKS_REQUIRED(cs);
     CGovernanceObject* FindGovernanceObject(const uint256& nHash) override EXCLUSIVE_LOCKS_REQUIRED(!cs);
