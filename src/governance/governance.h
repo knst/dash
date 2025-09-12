@@ -281,6 +281,9 @@ public:
 
     bool IsValid() const override { return is_valid; }
 
+    void RelayMessage(PeerManager& peerman, const CGovernanceObject& obj) const;
+    void RelayMessage(PeerManager& peerman, const CGovernanceVote& vote) const;
+
     /**
      * This is called by AlreadyHave in net_processing.cpp as part of the inventory
      * retrieval process.  Returns true if we want to retrieve the object, otherwise

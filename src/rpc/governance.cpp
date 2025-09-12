@@ -396,7 +396,7 @@ static RPCHelpMan gobject_submit()
     PeerManager& peerman = EnsurePeerman(node);
     if (fMissingConfirmations) {
         node.govman->AddPostponedObject(govobj);
-        govobj.Relay(peerman, *CHECK_NONFATAL(node.mn_sync));
+        node.govman->RelayMessage(peerman, govobj);
     } else {
         node.govman->AddGovernanceObject(govobj, peerman);
     }

@@ -238,7 +238,7 @@ public:
         PeerManager& peerman = EnsurePeerman(context());
         if (fMissingConfirmations) {
             context().govman->AddPostponedObject(govobj);
-            govobj.Relay(peerman, *Assert(context().mn_sync));
+            context().govman->RelayMessage(peerman, govobj);
         } else {
             context().govman->AddGovernanceObject(govobj, peerman);
         }

@@ -17,7 +17,6 @@ class CGovernanceVote;
 class CMasternodeSync;
 class CKey;
 class CKeyID;
-class PeerManager;
 
 // INTENTION OF MASTERNODES REGARDING ITEM
 enum vote_outcome_enum_t : int {
@@ -107,7 +106,6 @@ public:
                                  ::ToString(nVoteOutcome) + "|" +
                                  ::ToString(nTime);
     }
-    void Relay(PeerManager& peerman, const CMasternodeSync& mn_sync, const CDeterministicMNList& tip_mn_list) const;
 
     const COutPoint& GetMasternodeOutpoint() const { return masternodeOutpoint; }
 

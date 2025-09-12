@@ -99,6 +99,34 @@ bool CGovernanceManager::LoadCache(bool load_cache)
     return is_valid;
 }
 
+void CGovernanceManager::RelayMessage(PeerManager& peerman, const CGovernanceObject& obj) const
+{
+    if (!m_mn_sync.IsSynced()) {
+        LogPrint(BCLog::GOBJECT, "%s -- won't relay until fully synced\n", __func__);
+        return;
+    }
+
+    CInv inv(MSG_GOVERNANCE_OBJECT, obj.GetHash());
+    peerman.RelayInv(inv);
+}
+
+void CGovernanceManager::RelayMessage(PeerManager& peerman, const CGovernanceVote& vote) const
+{
+    if (!m_mn_sync.IsSynced()) {
+        LogPrint(BCLog::GOBJECT, "%s -- won't relay until fully synced\n", __func__);
+        return;
+    }
+
+    const auto tip_mn_list = Assert(m_dmnman)->GetListAtChainTip();
+    auto dmn = tip_mn_list.GetMNByCollateral(vote.GetMasternodeOutpoint());
+    if (!dmn) {
+        return;
+    }
+
+    CInv inv(MSG_GOVERNANCE_OBJECT_VOTE, vote.GetHash());
+    peerman.RelayInv(inv);
+}
+
 // Accessors for thread-safe access to maps
 bool CGovernanceManager::HaveObjectForHash(const uint256& nHash) const
 {
@@ -274,7 +302,7 @@ MessageProcessingResult CGovernanceManager::ProcessMessage(CNode& peer, CConnman
         if (ProcessVote(&peer, vote, exception, connman)) {
             LogPrint(BCLog::GOBJECT, "MNGOVERNANCEOBJECTVOTE -- %s new\n", strHash);
             m_mn_sync.BumpAssetLastTime("MNGOVERNANCEOBJECTVOTE");
-            vote.Relay(peerman, m_mn_sync, tip_mn_list);
+            RelayMessage(peerman, vote);
         } else {
             LogPrint(BCLog::GOBJECT, "MNGOVERNANCEOBJECTVOTE -- Rejected vote, error = %s\n", exception.what());
             if ((exception.GetNodePenalty() != 0) && m_mn_sync.IsSynced()) {
@@ -306,7 +334,7 @@ void CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj, PeerManager
         if (pairVote.second < nNow) {
             fRemove = true;
         } else if (govobj.ProcessVote(m_mn_metaman, *this, tip_mn_list, vote, e)) {
-            vote.Relay(peerman, m_mn_sync, tip_mn_list);
+            RelayMessage(peerman, vote);
             fRemove = true;
         }
         if (fRemove) {
@@ -360,7 +388,7 @@ void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, PeerMana
     }
 
     LogPrint(BCLog::GOBJECT, "CGovernanceManager::AddGovernanceObject -- %s new, received from peer %s\n", strHash, pfrom ? pfrom->GetLogString() : "nullptr");
-    govobj.Relay(peerman, m_mn_sync);
+    RelayMessage(peerman, govobj);
 
     // Update the rate buffer
     MasternodeRateUpdate(govobj);
@@ -853,9 +881,9 @@ bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bo
 
 bool CGovernanceManager::ProcessVoteAndRelay(const CGovernanceVote& vote, CGovernanceException& exception, CConnman& connman, PeerManager& peerman)
 {
-    bool fOK = ProcessVote(/* pfrom = */ nullptr, vote, exception, connman);
+    bool fOK = ProcessVote(/*pfrom=*/nullptr, vote, exception, connman);
     if (fOK) {
-        vote.Relay(peerman, m_mn_sync, Assert(m_dmnman)->GetListAtChainTip());
+        RelayMessage(peerman, vote);
     }
     return fOK;
 }
@@ -963,7 +991,7 @@ void CGovernanceManager::CheckPostponedObjects(PeerManager& peerman)
             if (fValid) {
                 if (fReady) {
                     LogPrint(BCLog::GOBJECT, "CGovernanceManager::CheckPostponedObjects -- additional relay: hash = %s\n", govobj.GetHash().ToString());
-                    govobj.Relay(peerman, m_mn_sync);
+                    RelayMessage(peerman, govobj);
                 } else {
                     it++;
                     continue;

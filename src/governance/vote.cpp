@@ -102,23 +102,6 @@ std::string CGovernanceVote::ToString(const CDeterministicMNList& tip_mn_list) c
         voteWeight);
 }
 
-void CGovernanceVote::Relay(PeerManager& peerman, const CMasternodeSync& mn_sync, const CDeterministicMNList& tip_mn_list) const
-{
-    // Do not relay until fully synced
-    if (!mn_sync.IsSynced()) {
-        LogPrint(BCLog::GOBJECT, "CGovernanceVote::Relay -- won't relay until fully synced\n");
-        return;
-    }
-
-    auto dmn = tip_mn_list.GetMNByCollateral(masternodeOutpoint);
-    if (!dmn) {
-        return;
-    }
-
-    CInv inv(MSG_GOVERNANCE_OBJECT_VOTE, GetHash());
-    peerman.RelayInv(inv);
-}
-
 void CGovernanceVote::UpdateHash() const
 {
     // Note: doesn't match serialization
