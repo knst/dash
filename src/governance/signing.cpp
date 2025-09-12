@@ -6,7 +6,6 @@
 
 #include <evo/deterministicmns.h>
 #include <governance/classes.h>
-#include <governance/governance.h>
 #include <masternode/node.h>
 #include <masternode/sync.h>
 
@@ -18,7 +17,7 @@
 
 #include <algorithm>
 
-GovernanceSigner::GovernanceSigner(CConnman& connman, CDeterministicMNManager& dmnman, CGovernanceManager& govman,
+GovernanceSigner::GovernanceSigner(CConnman& connman, CDeterministicMNManager& dmnman, GovernanceSignerParent& govman,
                                    PeerManager& peerman, const CActiveMasternodeManager& mn_activeman,
                                    const ChainstateManager& chainman, const CMasternodeSync& mn_sync) :
     m_connman{connman},

@@ -7,6 +7,7 @@
 #include <chainlock/chainlock.h>
 #include <chainlock/signing.h>
 #include <coinjoin/server.h>
+#include <governance/governance.h>
 #include <governance/signing.h>
 #include <instantsend/instantsend.h>
 #include <instantsend/signing.h>

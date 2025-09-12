@@ -10,24 +10,46 @@
 
 #include <uint256.h>
 
+#include <memory>
 #include <optional>
+#include <vector>
 
 class CActiveMasternodeManager;
 class CBlockIndex;
 class CConnman;
+class CDeterministicMNList;
 class CDeterministicMNManager;
-class CGovernanceManager;
+class CGovernanceException;
+class CGovernanceVote;
 class ChainstateManager;
 class CMasternodeSync;
+class CNode;
 class PeerManager;
 enum vote_outcome_enum_t : int;
+
+class GovernanceSignerParent
+{
+public:
+    virtual ~GovernanceSignerParent() = default;
+
+    virtual bool IsValid() const = 0;
+    virtual bool GetBestSuperblock(const CDeterministicMNList& tip_mn_list, std::shared_ptr<CSuperblock>& pSuperblockRet, int nBlockHeight) = 0;
+    virtual bool MasternodeRateCheck(const CGovernanceObject& govobj, bool fUpdateFailStatus = false) = 0;
+    virtual bool ProcessVoteAndRelay(const CGovernanceVote& vote, CGovernanceException& exception, CConnman& connman, PeerManager& peerman) = 0;
+    virtual int GetCachedBlockHeight() const = 0;
+    virtual CGovernanceObject* FindGovernanceObject(const uint256& nHash) = 0;
+    virtual CGovernanceObject* FindGovernanceObjectByDataHash(const uint256& nDataHash) = 0;
+    virtual std::vector<std::shared_ptr<CSuperblock>> GetActiveTriggers() const = 0;
+    virtual std::vector<std::shared_ptr<const CGovernanceObject>> GetApprovedProposals(const CDeterministicMNList& tip_mn_list) = 0;
+    virtual void AddGovernanceObject(CGovernanceObject& govobj, PeerManager& peerman, const CNode* pfrom = nullptr) = 0;
+};
 
 class GovernanceSigner
 {
 private:
     CConnman& m_connman;
     CDeterministicMNManager& m_dmnman;
-    CGovernanceManager& m_govman;
+    GovernanceSignerParent& m_govman;
     PeerManager& m_peerman;
     const CActiveMasternodeManager& m_mn_activeman;
     const ChainstateManager& m_chainman;
@@ -37,7 +59,7 @@ private:
     std::optional<uint256> votedFundingYesTriggerHash{std::nullopt};
 
 public:
-    explicit GovernanceSigner(CConnman& connman, CDeterministicMNManager& dmnman, CGovernanceManager& govman,
+    explicit GovernanceSigner(CConnman& connman, CDeterministicMNManager& dmnman, GovernanceSignerParent& govman,
                               PeerManager& peerman, const CActiveMasternodeManager& mn_activeman,
                               const ChainstateManager& chainman, const CMasternodeSync& mn_sync);
     ~GovernanceSigner();

@@ -7,12 +7,16 @@
 
 #include <cachemap.h>
 #include <cachemultimap.h>
+#include <governance/signing.h>
+
 #include <protocol.h>
 #include <sync.h>
 
+#include <chrono>
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -236,7 +240,7 @@ public:
 //
 // Governance Manager : Contains all proposals for the budget
 //
-class CGovernanceManager : public GovernanceStore
+class CGovernanceManager : public GovernanceStore, public GovernanceSignerParent
 {
     friend class CGovernanceObject;
 
@@ -275,7 +279,7 @@ public:
 
     bool LoadCache(bool load_cache);
 
-    bool IsValid() const { return is_valid; }
+    bool IsValid() const override { return is_valid; }
 
     /**
      * This is called by AlreadyHave in net_processing.cpp as part of the inventory
@@ -292,15 +296,15 @@ public:
     void DoMaintenance(CConnman& connman);
 
     const CGovernanceObject* FindConstGovernanceObject(const uint256& nHash) const EXCLUSIVE_LOCKS_REQUIRED(cs);
-    CGovernanceObject* FindGovernanceObject(const uint256& nHash) EXCLUSIVE_LOCKS_REQUIRED(!cs);
-    CGovernanceObject* FindGovernanceObjectByDataHash(const uint256& nDataHash) EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    CGovernanceObject* FindGovernanceObject(const uint256& nHash) override EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    CGovernanceObject* FindGovernanceObjectByDataHash(const uint256& nDataHash) override EXCLUSIVE_LOCKS_REQUIRED(!cs);
     void DeleteGovernanceObject(const uint256& nHash);
 
     // These commands are only used in RPC
     std::vector<CGovernanceVote> GetCurrentVotes(const uint256& nParentHash, const COutPoint& mnCollateralOutpointFilter) const;
     void GetAllNewerThan(std::vector<CGovernanceObject>& objs, int64_t nMoreThanTime) const;
 
-    void AddGovernanceObject(CGovernanceObject& govobj, PeerManager& peerman, const CNode* pfrom = nullptr);
+    void AddGovernanceObject(CGovernanceObject& govobj, PeerManager& peerman, const CNode* pfrom = nullptr) override;
 
     void CheckAndRemove();
 
@@ -310,7 +314,7 @@ public:
     int64_t GetLastDiffTime() const { return nTimeLastDiff; }
     void UpdateLastDiffTime(int64_t nTimeIn) { nTimeLastDiff = nTimeIn; }
 
-    int GetCachedBlockHeight() const { return nCachedBlockHeight; }
+    int GetCachedBlockHeight() const override { return nCachedBlockHeight; }
 
     // Accessors for thread-safe access to maps
     bool HaveObjectForHash(const uint256& nHash) const;
@@ -327,11 +331,11 @@ public:
 
     void MasternodeRateUpdate(const CGovernanceObject& govobj);
 
-    bool MasternodeRateCheck(const CGovernanceObject& govobj, bool fUpdateFailStatus = false);
+    bool MasternodeRateCheck(const CGovernanceObject& govobj, bool fUpdateFailStatus = false) override;
 
     bool MasternodeRateCheck(const CGovernanceObject& govobj, bool fUpdateFailStatus, bool fForce, bool& fRateCheckBypassed);
 
-    bool ProcessVoteAndRelay(const CGovernanceVote& vote, CGovernanceException& exception, CConnman& connman, PeerManager& peerman);
+    bool ProcessVoteAndRelay(const CGovernanceVote& vote, CGovernanceException& exception, CConnman& connman, PeerManager& peerman) override;
 
     void CheckPostponedObjects(PeerManager& peerman);
 
@@ -352,7 +356,7 @@ public:
      *   - Track governance objects which are triggers
      *   - After triggers are activated and executed, they can be removed
     */
-    std::vector<std::shared_ptr<CSuperblock>> GetActiveTriggers() const EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    std::vector<std::shared_ptr<CSuperblock>> GetActiveTriggers() const override EXCLUSIVE_LOCKS_REQUIRED(!cs);
     bool AddNewTrigger(uint256 nHash) EXCLUSIVE_LOCKS_REQUIRED(cs);
     void CleanAndRemoveTriggers() EXCLUSIVE_LOCKS_REQUIRED(cs);
 
@@ -376,10 +380,10 @@ public:
     bool IsValidSuperblock(const CChain& active_chain, const CDeterministicMNList& tip_mn_list,
                            const CTransaction& txNew, int nBlockHeight, CAmount blockReward);
 
-    bool GetBestSuperblock(const CDeterministicMNList& tip_mn_list, CSuperblock_sptr& pSuperblockRet, int nBlockHeight)
+    bool GetBestSuperblock(const CDeterministicMNList& tip_mn_list, CSuperblock_sptr& pSuperblockRet, int nBlockHeight) override
         EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
-    std::vector<std::shared_ptr<const CGovernanceObject>> GetApprovedProposals(const CDeterministicMNList& tip_mn_list)
+    std::vector<std::shared_ptr<const CGovernanceObject>> GetApprovedProposals(const CDeterministicMNList& tip_mn_list) override
         EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
 private:
