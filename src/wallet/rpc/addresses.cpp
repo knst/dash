@@ -667,7 +667,7 @@ RPCHelpMan listlabels()
 }
 
 #ifdef ENABLE_EXTERNAL_SIGNER
-static RPCHelpMan walletdisplayaddress()
+RPCHelpMan walletdisplayaddress()
 {
     return RPCHelpMan{"walletdisplayaddress",
         "Display address on an external signer for verification.",
