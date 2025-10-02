@@ -35,6 +35,7 @@
 #include <functional>
 
 #include <QDebug>
+#include <QMessageBox>
 #include <QSet>
 #include <QTimer>
 
