@@ -510,6 +510,7 @@ libbitcoin_node_a_SOURCES = \
   governance/exceptions.cpp \
   governance/governance.cpp \
   governance/object.cpp \
+  governance/signing.cpp \
   governance/validators.cpp \
   governance/vote.cpp \
   governance/votedb.cpp \
