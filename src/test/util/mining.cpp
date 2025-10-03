@@ -80,7 +80,7 @@ std::shared_ptr<CBlock> PrepareBlock(const NodeContext& node, const CScript& coi
 {
     assert(node.mempool);
     auto block = std::make_shared<CBlock>(
-        BlockAssembler{node.chainman->ActiveChainstate(), node, Assert(node.mempool.get())}
+        BlockAssembler{node.chainman->ActiveChainstate(), node, Assert(node.mempool.get()), Params()}
             .CreateNewBlock(coinbase_scriptPubKey)
             ->block);
 

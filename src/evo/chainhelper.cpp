@@ -15,14 +15,14 @@
 CChainstateHelper::CChainstateHelper(CCreditPoolManager& cpoolman, CDeterministicMNManager& dmnman,
                                      CMNHFManager& mnhfman, CGovernanceManager& govman, llmq::CInstantSendManager& isman,
                                      llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumSnapshotManager& qsnapman,
-                                     const ChainstateManager& chainman,
+                                     const ChainstateManager& chainman, const Consensus::Params& consensus_params,
                                      const CMasternodeSync& mn_sync, const CSporkManager& sporkman,
                                      const llmq::CChainLocksHandler& clhandler, const llmq::CQuorumManager& qman) :
     isman{isman},
     clhandler{clhandler},
-    mn_payments{std::make_unique<CMNPaymentsProcessor>(dmnman, govman, chainman, mn_sync, sporkman)},
+    mn_payments{std::make_unique<CMNPaymentsProcessor>(dmnman, govman, chainman, consensus_params, mn_sync, sporkman)},
     special_tx{std::make_unique<CSpecialTxProcessor>(cpoolman, dmnman, mnhfman, qblockman, qsnapman, chainman,
-                                                     clhandler, qman)}
+                                                     consensus_params, clhandler, qman)}
 {}
 
 CChainstateHelper::~CChainstateHelper() = default;

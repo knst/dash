@@ -186,8 +186,9 @@ public:
         CFeeRate blockMinFeeRate;
     };
 
-    explicit BlockAssembler(CChainState& chainstate, const node::NodeContext& node, const CTxMemPool* mempool);
-    explicit BlockAssembler(CChainState& chainstate, const node::NodeContext& node, const CTxMemPool* mempool, const Options& options);
+    explicit BlockAssembler(CChainState& chainstate, const node::NodeContext& node, const CTxMemPool* mempool, const CChainParams& params);
+    explicit BlockAssembler(CChainState& chainstate, const node::NodeContext& node, const CTxMemPool* mempool, const CChainParams& params,
+                            const Options& options);
 
     /** Construct a new block template with coinbase to scriptPubKeyIn */
     std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn);

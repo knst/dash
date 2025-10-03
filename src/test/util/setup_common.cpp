@@ -291,6 +291,7 @@ ChainTestingSetup::~ChainTestingSetup()
 TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const char*>& extra_args)
     : ChainTestingSetup(chainName, extra_args)
 {
+    const CChainParams& chainparams = Params();
     // Ideally we'd move all the RPC tests to the functional testing framework
     // instead of unit tests, but for now we need these here.
     RegisterAllCoreRPCCommands(tableRPC);
@@ -315,6 +316,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
                                            m_args.GetBoolArg("-spentindex", DEFAULT_SPENTINDEX),
                                            m_args.GetBoolArg("-timestampindex", DEFAULT_TIMESTAMPINDEX),
                                            m_args.GetBoolArg("-txindex", DEFAULT_TXINDEX),
+                                           chainparams.GetConsensus(),
                                            chainparams.NetworkIDString(),
                                            m_args.GetBoolArg("-reindex-chainstate", false),
                                            m_cache_sizes.block_tree_db,
@@ -329,6 +331,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
         *Assert(m_node.evodb.get()),
         fReindex.load(),
         m_args.GetBoolArg("-reindex-chainstate", false),
+        chainparams.GetConsensus(),
         m_args.GetIntArg("-checkblocks", DEFAULT_CHECKBLOCKS),
         m_args.GetIntArg("-checklevel", DEFAULT_CHECKLEVEL),
         /*get_unix_time_seconds=*/static_cast<int64_t(*)()>(GetTime),
@@ -338,7 +341,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     assert(!maybe_verify_error.has_value());
 
     m_node.banman = std::make_unique<BanMan>(m_args.GetDataDirBase() / "banlist", nullptr, DEFAULT_MISBEHAVING_BANTIME);
-    m_node.peerman = PeerManager::make(*m_node.connman, *m_node.addrman, m_node.banman.get(),
+    m_node.peerman = PeerManager::make(chainparams, *m_node.connman, *m_node.addrman, m_node.banman.get(),
                                        *m_node.chainman, *m_node.mempool, *m_node.mn_metaman, *m_node.mn_sync,
                                        *m_node.govman, *m_node.sporkman, /*mn_activeman=*/nullptr, m_node.dmnman,
                                        /*active_ctx=*/nullptr, m_node.cj_ctx, m_node.llmq_ctx, /*ignore_incoming_txs=*/false);
@@ -486,8 +489,9 @@ CBlock TestChainSetup::CreateBlock(
     const CScript& scriptPubKey,
     CChainState& chainstate)
 {
+    const CChainParams& chainparams = Params();
     CTxMemPool empty_pool;
-    CBlock block = BlockAssembler(chainstate, m_node, &empty_pool).CreateNewBlock(scriptPubKey)->block;
+    CBlock block = BlockAssembler(chainstate, m_node, &empty_pool, chainparams).CreateNewBlock(scriptPubKey)->block;
 
     std::vector<CTransactionRef> llmqCommitments;
     for (const auto& tx : block.vtx) {
@@ -537,7 +541,7 @@ CBlock TestChainSetup::CreateBlock(
         block.hashMerkleRoot = BlockMerkleRoot(block);
     }
 
-    while (!CheckProofOfWork(block.GetHash(), block.nBits, m_node.chainman->GetConsensus())) ++block.nNonce;
+    while (!CheckProofOfWork(block.GetHash(), block.nBits, chainparams.GetConsensus())) ++block.nNonce;
 
     CBlock result = block;
     return result;

@@ -69,7 +69,7 @@ BlockAssembler::Options::Options()
     nBlockMaxSize = DEFAULT_BLOCK_MAX_SIZE;
 }
 
-BlockAssembler::BlockAssembler(CChainState& chainstate, const NodeContext& node, const CTxMemPool* mempool, const Options& options) :
+BlockAssembler::BlockAssembler(CChainState& chainstate, const NodeContext& node, const CTxMemPool* mempool, const CChainParams& params, const Options& options) :
       m_blockman(chainstate.m_blockman),
       m_cpoolman(*Assert(node.cpoolman)),
       m_chain_helper(chainstate.ChainHelper()),
@@ -78,7 +78,7 @@ BlockAssembler::BlockAssembler(CChainState& chainstate, const NodeContext& node,
       m_mnhfman(*Assert(node.mnhf_manager)),
       m_clhandler(*Assert(Assert(node.llmq_ctx)->clhandler)),
       m_isman(*Assert(Assert(node.llmq_ctx)->isman)),
-      chainparams(chainstate.m_chainman.GetParams()),
+      chainparams(params),
       m_mempool(mempool),
       m_quorum_block_processor(*Assert(Assert(node.llmq_ctx)->quorum_block_processor)),
       m_qman(*Assert(Assert(node.llmq_ctx)->qman))
@@ -104,13 +104,8 @@ static BlockAssembler::Options DefaultOptions()
     return options;
 }
 
-<<<<<<< HEAD
 BlockAssembler::BlockAssembler(CChainState& chainstate, const NodeContext& node, const CTxMemPool* mempool, const CChainParams& params)
     : BlockAssembler(chainstate, node, mempool, params, DefaultOptions()) {}
-=======
-BlockAssembler::BlockAssembler(CChainState& chainstate, const CTxMemPool& mempool)
-    : BlockAssembler(chainstate, mempool, DefaultOptions()) {}
->>>>>>> 4d0c00dffd (Merge bitcoin/bitcoin#25168: refactor: Avoid passing params where not needed)
 
 void BlockAssembler::resetBlock()
 {
@@ -220,7 +215,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     pblock->nVersion = g_versionbitscache.ComputeBlockVersion(pindexPrev, chainparams.GetConsensus());
     // Non-mainnet only: allow overriding block.nVersion with
     // -blockversion=N to test forking scenarios
-    if (chainparams.NetworkIDString() != CBaseChainParams::MAIN) {
+    if (Params().NetworkIDString() != CBaseChainParams::MAIN) {
         pblock->nVersion = gArgs.GetIntArg("-blockversion", pblock->nVersion);
     }
 
@@ -265,7 +260,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
 
     // NOTE: unlike in bitcoin, we need to pass PREVIOUS block height here
-    CAmount blockSubsidy = GetBlockSubsidyInner(pindexPrev->nBits, pindexPrev->nHeight, chainparams.GetConsensus(), fV20Active_context);
+    CAmount blockSubsidy = GetBlockSubsidyInner(pindexPrev->nBits, pindexPrev->nHeight, Params().GetConsensus(), fV20Active_context);
     CAmount blockReward = blockSubsidy + nFees;
 
     // Compute regular coinbase transaction.

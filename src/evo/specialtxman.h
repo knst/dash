@@ -51,8 +51,19 @@ private:
 public:
     explicit CSpecialTxProcessor(CCreditPoolManager& cpoolman, CDeterministicMNManager& dmnman, CMNHFManager& mnhfman,
                                  llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumSnapshotManager& qsnapman,
-                                 const ChainstateManager& chainman,
-                                 const llmq::CChainLocksHandler& clhandler, const llmq::CQuorumManager& qman);
+                                 const ChainstateManager& chainman, const Consensus::Params& consensus_params,
+                                 const llmq::CChainLocksHandler& clhandler, const llmq::CQuorumManager& qman) :
+        m_cpoolman(cpoolman),
+        m_dmnman{dmnman},
+        m_mnhfman{mnhfman},
+        m_qblockman{qblockman},
+        m_qsnapman{qsnapman},
+        m_chainman(chainman),
+        m_consensus_params{consensus_params},
+        m_clhandler{clhandler},
+        m_qman{qman}
+    {
+    }
 
     bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, bool check_sigs, TxValidationState& state)
         EXCLUSIVE_LOCKS_REQUIRED(::cs_main);

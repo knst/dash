@@ -25,6 +25,10 @@ class CSporkManager;
 class CTxMemPool;
 struct LLMQContext;
 
+namespace Consensus {
+struct Params;
+}
+
 namespace node {
 enum class ChainstateLoadingError {
     ERROR_LOADING_BLOCK_DB,
@@ -92,6 +96,7 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
                                                      bool is_spentindex_enabled,
                                                      bool is_timeindex_enabled,
                                                      bool is_txindex_enabled,
+                                                     const Consensus::Params& consensus_params,
                                                      const std::string& network_id,
                                                      bool fReindexChainState,
                                                      int64_t nBlockTreeDBCache,
@@ -117,7 +122,8 @@ void DashChainstateSetup(ChainstateManager& chainman,
                          std::unique_ptr<LLMQContext>& llmq_ctx,
                          CTxMemPool* mempool,
                          bool fReset,
-                         bool fReindexChainState);
+                         bool fReindexChainState,
+                         const Consensus::Params& consensus_params);
 
 void DashChainstateSetupClose(std::unique_ptr<CChainstateHelper>& chain_helper,
                               std::unique_ptr<CCreditPoolManager>& cpoolman,
@@ -137,6 +143,7 @@ std::optional<ChainstateLoadVerifyError> VerifyLoadedChainstate(ChainstateManage
                                                                 CEvoDB& evodb,
                                                                 bool fReset,
                                                                 bool fReindexChainState,
+                                                                const Consensus::Params& consensus_params,
                                                                 int check_blocks,
                                                                 int check_level,
                                                                 std::function<int64_t()> get_unix_time_seconds,

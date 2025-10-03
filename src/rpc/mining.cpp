@@ -131,7 +131,9 @@ static bool GenerateBlock(ChainstateManager& chainman, CBlock& block, uint64_t& 
     block_hash.SetNull();
     block.hashMerkleRoot = BlockMerkleRoot(block);
 
-    while (max_tries > 0 && block.nNonce < std::numeric_limits<uint32_t>::max() && !CheckProofOfWork(block.GetHash(), block.nBits, chainman.GetConsensus()) && !ShutdownRequested()) {
+    CChainParams chainparams(Params());
+
+    while (max_tries > 0 && block.nNonce < std::numeric_limits<uint32_t>::max() && !CheckProofOfWork(block.GetHash(), block.nBits, chainparams.GetConsensus()) && !ShutdownRequested()) {
         ++block.nNonce;
         --max_tries;
     }
@@ -158,7 +160,7 @@ static UniValue generateBlocks(ChainstateManager& chainman, const NodeContext& n
 
     UniValue blockHashes(UniValue::VARR);
     while (nGenerate > 0 && !ShutdownRequested()) {
-        std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(chainman.ActiveChainstate(), node, &mempool).CreateNewBlock(coinbase_script));
+        std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(chainman.ActiveChainstate(), node, &mempool, Params()).CreateNewBlock(coinbase_script));
         if (!pblocktemplate.get())
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
         CBlock *pblock = &pblocktemplate->block;
@@ -354,6 +356,7 @@ static RPCHelpMan generateblock()
         }
     }
 
+    CChainParams chainparams(Params());
     const LLMQContext& llmq_ctx = EnsureLLMQContext(node);
 
     ChainstateManager& chainman = EnsureChainman(node);
@@ -363,7 +366,7 @@ static RPCHelpMan generateblock()
     {
         LOCK(cs_main);
 
-        std::unique_ptr<CBlockTemplate> blocktemplate(BlockAssembler(active_chainstate, node, nullptr).CreateNewBlock(coinbase_script));
+        std::unique_ptr<CBlockTemplate> blocktemplate(BlockAssembler(active_chainstate, node, nullptr, chainparams).CreateNewBlock(coinbase_script));
         if (!blocktemplate) {
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
         }
@@ -380,7 +383,7 @@ static RPCHelpMan generateblock()
         LOCK(cs_main);
 
         BlockValidationState state;
-        if (!TestBlockValidity(state, *llmq_ctx.clhandler, *CHECK_NONFATAL(node.evodb), chainman.ActiveChainstate(), active_chainstate,
+        if (!TestBlockValidity(state, *llmq_ctx.clhandler, *CHECK_NONFATAL(node.evodb), chainparams, active_chainstate,
                                block, chainman.m_blockman.LookupBlockIndex(block.hashPrevBlock), false, false)) {
             throw JSONRPCError(RPC_VERIFY_ERROR, strprintf("TestBlockValidity failed: %s", state.GetRejectReason()));
         }
@@ -468,7 +471,7 @@ static RPCHelpMan getmininginfo()
     obj.pushKV("difficulty",       (double)GetDifficulty(active_chain.Tip()));
     obj.pushKV("networkhashps",    getnetworkhashps().HandleRequest(request));
     obj.pushKV("pooledtx",         (uint64_t)mempool.size());
-    obj.pushKV("chain", chainman.GetParams().NetworkIDString());
+    obj.pushKV("chain",            Params().NetworkIDString());
     obj.pushKV("warnings",         GetWarnings(false).original);
     return obj;
 },
@@ -703,7 +706,7 @@ static RPCHelpMan getblocktemplate()
             if (block.hashPrevBlock != pindexPrev->GetBlockHash())
                 return "inconclusive-not-best-prevblk";
             BlockValidationState state;
-            TestBlockValidity(state, *llmq_ctx.clhandler, *CHECK_NONFATAL(node.evodb), chainman.GetParams(), active_chainstate,
+            TestBlockValidity(state, *llmq_ctx.clhandler, *CHECK_NONFATAL(node.evodb), Params(), active_chainstate,
                               block, pindexPrev, false, true);
             return BIP22ValidationResult(state);
         }
@@ -722,7 +725,7 @@ static RPCHelpMan getblocktemplate()
 
     const CConnman& connman = EnsureConnman(node);
 
-    if (!chainman.GetParams().IsTestChain()) {
+    if (!Params().IsTestChain()) {
         if (connman.GetNodeCount(ConnectionDirection::Both) == 0) {
             throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, PACKAGE_NAME " is not connected!");
         }
@@ -807,7 +810,7 @@ static RPCHelpMan getblocktemplate()
         // Create new block
         CScript scriptDummy = CScript() << OP_TRUE;
         EnsureLLMQContext(node);
-        pblocktemplate = BlockAssembler(active_chainstate, node, &mempool).CreateNewBlock(scriptDummy);
+        pblocktemplate = BlockAssembler(active_chainstate, node, &mempool, Params()).CreateNewBlock(scriptDummy);
         if (!pblocktemplate)
             throw JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");
 

@@ -66,7 +66,8 @@ CBlock BuildChainTestingSetup::CreateBlock(const CBlockIndex* prev,
     const std::vector<CMutableTransaction>& txns,
     const CScript& scriptPubKey)
 {
-    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(m_node.chainman->ActiveChainstate(), m_node, m_node.mempool.get()).CreateNewBlock(scriptPubKey);
+    const CChainParams& chainparams = Params();
+    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(m_node.chainman->ActiveChainstate(), m_node, m_node.mempool.get(), chainparams).CreateNewBlock(scriptPubKey);
     CBlock& block = pblocktemplate->block;
     block.hashPrevBlock = prev->GetBlockHash();
     block.nTime = prev->nTime + 1;
@@ -83,7 +84,7 @@ CBlock BuildChainTestingSetup::CreateBlock(const CBlockIndex* prev,
         block.hashMerkleRoot = BlockMerkleRoot(block);
     }
 
-    while (!CheckProofOfWork(block.GetHash(), block.nBits, m_node.chainman->GetConsensus())) ++block.nNonce;
+    while (!CheckProofOfWork(block.GetHash(), block.nBits, chainparams.GetConsensus())) ++block.nNonce;
 
     return block;
 }

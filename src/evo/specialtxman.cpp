@@ -146,22 +146,6 @@ static bool CheckSpecialTxInner(CDeterministicMNManager& dmnman, llmq::CQuorumSn
     return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-tx-type-check");
 }
 
-CSpecialTxProcessor::CSpecialTxProcessor(CCreditPoolManager& cpoolman, CDeterministicMNManager& dmnman, CMNHFManager& mnhfman,
-                                 llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumSnapshotManager& qsnapman,
-                                 const ChainstateManager& chainman,
-                                 const llmq::CChainLocksHandler& clhandler, const llmq::CQuorumManager& qman) :
-    m_cpoolman(cpoolman),
-    m_dmnman{dmnman},
-    m_mnhfman{mnhfman},
-    m_qblockman{qblockman},
-    m_qsnapman{qsnapman},
-    m_chainman(chainman),
-    m_consensus_params{m_chainman.GetParams()},
-    m_clhandler{clhandler},
-    m_qman{qman}
-{
-}
-
 bool CSpecialTxProcessor::CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, const CCoinsViewCache& view, bool check_sigs, TxValidationState& state)
 {
     AssertLockHeld(::cs_main);
