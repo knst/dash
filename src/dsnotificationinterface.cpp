@@ -24,7 +24,6 @@
 CDSNotificationInterface::CDSNotificationInterface(CConnman& connman,
                                                    CMasternodeSync& mn_sync,
                                                    CGovernanceManager& govman,
-                                                   PeerManager& peerman,
                                                    const ChainstateManager& chainman,
                                                    const std::unique_ptr<CDeterministicMNManager>& dmnman,
                                                    const std::unique_ptr<LLMQContext>& llmq_ctx,
@@ -32,7 +31,6 @@ CDSNotificationInterface::CDSNotificationInterface(CConnman& connman,
   : m_connman(connman),
     m_mn_sync(mn_sync),
     m_govman(govman),
-    m_peerman(peerman),
     m_chainman(chainman),
     m_dmnman(dmnman),
     m_llmq_ctx(llmq_ctx),
@@ -92,7 +90,7 @@ void CDSNotificationInterface::UpdatedBlockTip(const CBlockIndex *pindexNew, con
     m_llmq_ctx->qdkgsman->UpdatedBlockTip(pindexNew, fInitialDownload);
 
     if (m_govman.IsValid()) {
-        m_govman.UpdatedBlockTip(pindexNew, m_peerman);
+        m_govman.UpdatedBlockTip(pindexNew);
     }
 }
 

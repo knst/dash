@@ -2134,7 +2134,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     RegisterValidationInterface(node.peerman.get());
 
     g_ds_notification_interface = std::make_unique<CDSNotificationInterface>(
-        *node.connman, *node.mn_sync, *node.govman, *node.peerman, chainman, node.dmnman, node.llmq_ctx, node.cj_ctx
+        *node.connman, *node.mn_sync, *node.govman, chainman, node.dmnman, node.llmq_ctx, node.cj_ctx
     );
     RegisterValidationInterface(g_ds_notification_interface.get());
 
@@ -2260,6 +2260,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     node.scheduler->scheduleEvery(std::bind(&CDeterministicMNManager::DoMaintenance, std::ref(*node.dmnman)), std::chrono::seconds{10});
 
     if (node.govman->IsValid()) {
+        node.govman->Schedule(*node.scheduler, *node.peerman);
         node.scheduler->scheduleEvery(std::bind(&CGovernanceManager::DoMaintenance, std::ref(*node.govman), std::ref(*node.connman)), std::chrono::minutes{5});
     }
 

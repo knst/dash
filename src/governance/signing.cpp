@@ -18,12 +18,11 @@
 #include <algorithm>
 
 GovernanceSigner::GovernanceSigner(CConnman& connman, CDeterministicMNManager& dmnman, GovernanceSignerParent& govman,
-                                   PeerManager& peerman, const CActiveMasternodeManager& mn_activeman,
-                                   const ChainstateManager& chainman, const CMasternodeSync& mn_sync) :
+                                   const CActiveMasternodeManager& mn_activeman, const ChainstateManager& chainman,
+                                   const CMasternodeSync& mn_sync) :
     m_connman{connman},
     m_dmnman{dmnman},
     m_govman{govman},
-    m_peerman{peerman},
     m_mn_activeman{mn_activeman},
     m_chainman{chainman},
     m_mn_sync{mn_sync}
@@ -155,7 +154,7 @@ std::optional<const CGovernanceObject> GovernanceSigner::CreateGovernanceTrigger
     }
 
     // The trigger we just created looks good, submit it
-    m_govman.AddGovernanceObject(gov_sb, m_peerman);
+    m_govman.AddGovernanceObject(gov_sb);
     return std::make_optional<CGovernanceObject>(gov_sb);
 }
 
@@ -250,7 +249,7 @@ bool GovernanceSigner::VoteFundingTrigger(const uint256& nHash, const vote_outco
     vote.SetSignature(m_mn_activeman.SignBasic(vote.GetSignatureHash()));
 
     CGovernanceException exception;
-    if (!m_govman.ProcessVoteAndRelay(vote, exception, m_connman, m_peerman)) {
+    if (!m_govman.ProcessVoteAndRelay(vote, exception, m_connman)) {
         LogPrint(BCLog::GOBJECT, "%s -- Vote FUNDING %d for trigger:%s failed:%s\n", __func__, outcome, nHash.ToString(), exception.what());
         return false;
     }

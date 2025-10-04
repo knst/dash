@@ -393,12 +393,11 @@ static RPCHelpMan gobject_submit()
 
     LogPrintf("gobject(submit) -- Adding locally created governance object - %s\n", strHash);
 
-    PeerManager& peerman = EnsurePeerman(node);
     if (fMissingConfirmations) {
         node.govman->AddPostponedObject(govobj);
-        node.govman->RelayMessage(peerman, govobj);
+        node.govman->RelayObject(govobj);
     } else {
-        node.govman->AddGovernanceObject(govobj, peerman);
+        node.govman->AddGovernanceObject(govobj);
     }
 
     return govobj.GetHash().ToString();
@@ -456,8 +455,7 @@ static UniValue VoteWithMasternodes(const JSONRPCRequest& request, const CWallet
 
         CGovernanceException exception;
         CConnman& connman = EnsureConnman(node);
-        PeerManager& peerman = EnsurePeerman(node);
-        if (node.govman->ProcessVoteAndRelay(vote, exception, connman, peerman)) {
+        if (node.govman->ProcessVoteAndRelay(vote, exception, connman)) {
             nSuccessful++;
             statusObj.pushKV("result", "success");
         } else {
@@ -961,10 +959,9 @@ static RPCHelpMan voteraw()
     }
 
     CConnman& connman = EnsureConnman(node);
-    PeerManager& peerman = EnsurePeerman(node);
 
     CGovernanceException exception;
-    if (node.govman->ProcessVoteAndRelay(vote, exception, connman, peerman)) {
+    if (node.govman->ProcessVoteAndRelay(vote, exception, connman)) {
         return "Voted successfully";
     } else {
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Error voting : " + exception.GetMessage());

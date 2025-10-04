@@ -28,7 +28,7 @@ ActiveContext::ActiveContext(ChainstateManager& chainman, CConnman& connman, CDe
                                                                *llmq_ctx.qman, sporkman, mempool, mn_sync)},
     cj_server{std::make_unique<CCoinJoinServer>(chainman, connman, dmnman, dstxman, mn_metaman, mempool, peerman,
                                                 mn_activeman, mn_sync, *llmq_ctx.isman)},
-    gov_signer{std::make_unique<GovernanceSigner>(connman, dmnman, govman, peerman, mn_activeman, chainman, mn_sync)},
+    gov_signer{std::make_unique<GovernanceSigner>(connman, dmnman, govman, mn_activeman, chainman, mn_sync)},
     ehf_sighandler{std::make_unique<llmq::CEHFSignalsHandler>(chainman, mnhfman, *llmq_ctx.sigman, *llmq_ctx.shareman,
                                                               *llmq_ctx.qman)}
 {

@@ -31,6 +31,7 @@ template<typename T>
 class CFlatDB;
 class CInv;
 class CNode;
+class CScheduler;
 class PeerManager;
 
 class CDeterministicMNList;
@@ -271,18 +272,23 @@ private:
     std::optional<uint256> votedFundingYesTriggerHash;
     std::map<uint256, std::shared_ptr<CSuperblock>> mapTrigger;
 
+    mutable Mutex cs_relay;
+    std::vector<CInv> m_relay_invs GUARDED_BY(cs_relay){};
+
 public:
     explicit CGovernanceManager(CMasternodeMetaMan& mn_metaman, CNetFulfilledRequestManager& netfulfilledman,
                                 const ChainstateManager& chainman,
                                 const std::unique_ptr<CDeterministicMNManager>& dmnman, CMasternodeSync& mn_sync);
     ~CGovernanceManager();
 
+    void Schedule(CScheduler& scheduler, PeerManager& peerman);
+
     bool LoadCache(bool load_cache);
 
     bool IsValid() const override { return is_valid; }
 
-    void RelayMessage(PeerManager& peerman, const CGovernanceObject& obj) const;
-    void RelayMessage(PeerManager& peerman, const CGovernanceVote& vote) const;
+    void RelayObject(const CGovernanceObject& obj);
+    void RelayVote(const CGovernanceVote& vote);
 
     /**
      * This is called by AlreadyHave in net_processing.cpp as part of the inventory
@@ -294,7 +300,7 @@ public:
     [[nodiscard]] MessageProcessingResult SyncSingleObjVotes(CNode& peer, const uint256& nProp, const CBloomFilter& filter, CConnman& connman);
     [[nodiscard]] MessageProcessingResult SyncObjects(CNode& peer, CConnman& connman) const;
 
-    [[nodiscard]] MessageProcessingResult ProcessMessage(CNode& peer, CConnman& connman, PeerManager& peerman, std::string_view msg_type, CDataStream& vRecv);
+    [[nodiscard]] MessageProcessingResult ProcessMessage(CNode& peer, CConnman& connman, std::string_view msg_type, CDataStream& vRecv);
 
     void DoMaintenance(CConnman& connman);
 
@@ -307,13 +313,13 @@ public:
     std::vector<CGovernanceVote> GetCurrentVotes(const uint256& nParentHash, const COutPoint& mnCollateralOutpointFilter) const;
     void GetAllNewerThan(std::vector<CGovernanceObject>& objs, int64_t nMoreThanTime) const;
 
-    void AddGovernanceObject(CGovernanceObject& govobj, PeerManager& peerman, const CNode* pfrom = nullptr) override;
+    void AddGovernanceObject(CGovernanceObject& govobj, const CNode* pfrom = nullptr) override;
 
     void CheckAndRemove();
 
     UniValue ToJson() const;
 
-    void UpdatedBlockTip(const CBlockIndex* pindex, PeerManager& peerman);
+    void UpdatedBlockTip(const CBlockIndex* pindex);
     int64_t GetLastDiffTime() const { return nTimeLastDiff; }
     void UpdateLastDiffTime(int64_t nTimeIn) { nTimeLastDiff = nTimeIn; }
 
@@ -338,9 +344,9 @@ public:
 
     bool MasternodeRateCheck(const CGovernanceObject& govobj, bool fUpdateFailStatus, bool fForce, bool& fRateCheckBypassed);
 
-    bool ProcessVoteAndRelay(const CGovernanceVote& vote, CGovernanceException& exception, CConnman& connman, PeerManager& peerman) override;
+    bool ProcessVoteAndRelay(const CGovernanceVote& vote, CGovernanceException& exception, CConnman& connman) override;
 
-    void CheckPostponedObjects(PeerManager& peerman);
+    void CheckPostponedObjects();
 
     bool AreRateChecksEnabled() const
     {
@@ -407,7 +413,7 @@ private:
     /// Called to indicate a requested object or vote has been received
     bool AcceptMessage(const uint256& nHash);
 
-    void CheckOrphanVotes(CGovernanceObject& govobj, PeerManager& peerman);
+    void CheckOrphanVotes(CGovernanceObject& govobj);
 
     void RebuildIndexes();
 

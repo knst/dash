@@ -12,7 +12,6 @@ class CDeterministicMNManager;
 class CGovernanceManager;
 class ChainstateManager;
 class CMasternodeSync;
-class PeerManager;
 struct CJContext;
 struct LLMQContext;
 
@@ -22,7 +21,6 @@ public:
     explicit CDSNotificationInterface(CConnman& connman,
                                       CMasternodeSync& mn_sync,
                                       CGovernanceManager& govman,
-                                      PeerManager& peerman,
                                       const ChainstateManager& chainman,
                                       const std::unique_ptr<CDeterministicMNManager>& dmnman,
                                       const std::unique_ptr<LLMQContext>& llmq_ctx,
@@ -50,7 +48,6 @@ private:
     CConnman& m_connman;
     CMasternodeSync& m_mn_sync;
     CGovernanceManager& m_govman;
-    PeerManager& m_peerman;
     const ChainstateManager& m_chainman;
     const std::unique_ptr<CDeterministicMNManager>& m_dmnman;
     const std::unique_ptr<LLMQContext>& m_llmq_ctx;
