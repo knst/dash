@@ -207,7 +207,7 @@ bool CGovernanceManager::SerializeVoteForHash(const uint256& nHash, CDataStream&
 void CGovernanceManager::AddPostponedObject(const CGovernanceObject& govobj)
 {
     LOCK(cs);
-    mapPostponedObjects.insert(std::make_pair(govobj.GetHash(), govobj));
+    mapPostponedObjects.emplace(govobj.GetHash(), govobj);
 }
 
 MessageProcessingResult CGovernanceManager::ProcessMessage(CNode& peer, CConnman& connman, std::string_view msg_type, CDataStream& vRecv)
