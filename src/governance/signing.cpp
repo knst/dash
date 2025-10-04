@@ -212,6 +212,12 @@ void GovernanceSigner::VoteGovernanceTriggers(const std::optional<const CGoverna
     const auto activeTriggers = m_govman.GetActiveTriggers();
     for (const auto& trigger : activeTriggers) {
         const auto govobj = m_govman.FindGovernanceObject(trigger->GetGovernanceObjHash());
+        if (!govobj) {
+            LogPrint(BCLog::GOBJECT, "%s -- Not voting NO-FUNDING for unknown trigger %s\n", __func__,
+                     trigger->GetGovernanceObjHash().ToString());
+            continue;
+        }
+
         const uint256 trigger_hash = govobj->GetHash();
         if (trigger->GetBlockHeight() <= m_govman.GetCachedBlockHeight()) {
             // ignore triggers from the past
