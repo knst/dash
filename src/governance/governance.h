@@ -296,8 +296,8 @@ public:
     [[nodiscard]] MessageProcessingResult SyncSingleObjVotes(CNode& peer, const uint256& nProp, const CBloomFilter& filter, CConnman& connman);
     [[nodiscard]] MessageProcessingResult SyncObjects(CNode& peer, CConnman& connman) const;
 
-    [[nodiscard]] MessageProcessingResult ProcessMessage(CNode& peer, CConnman& connman, std::string_view msg_type, CDataStream& vRecv)
-        EXCLUSIVE_LOCKS_REQUIRED(!cs_relay);
+    [[nodiscard]] MessageProcessingResult ProcessMessage(CNode& peer, CConnman& connman, std::string_view msg_type,
+                                                         CDataStream& vRecv) EXCLUSIVE_LOCKS_REQUIRED(!cs_relay);
 
     const CGovernanceObject* FindConstGovernanceObject(const uint256& nHash) const EXCLUSIVE_LOCKS_REQUIRED(cs);
     CGovernanceObject* FindGovernanceObject(const uint256& nHash) override EXCLUSIVE_LOCKS_REQUIRED(!cs);
@@ -386,8 +386,8 @@ public:
     bool IsValidSuperblock(const CChain& active_chain, const CDeterministicMNList& tip_mn_list,
                            const CTransaction& txNew, int nBlockHeight, CAmount blockReward);
 
-    bool GetBestSuperblock(const CDeterministicMNList& tip_mn_list, CSuperblock_sptr& pSuperblockRet, int nBlockHeight) override
-        EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    bool GetBestSuperblock(const CDeterministicMNList& tip_mn_list, CSuperblock_sptr& pSuperblockRet,
+                           int nBlockHeight) override EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
     std::vector<std::shared_ptr<const CGovernanceObject>> GetApprovedProposals(const CDeterministicMNList& tip_mn_list) override
         EXCLUSIVE_LOCKS_REQUIRED(!cs);
@@ -396,8 +396,8 @@ private:
     //! Internal functions that require locks to be held
     CGovernanceObject* FindGovernanceObjectInternal(const uint256& nHash) EXCLUSIVE_LOCKS_REQUIRED(cs);
     std::vector<std::shared_ptr<CSuperblock>> GetActiveTriggersInternal() const EXCLUSIVE_LOCKS_REQUIRED(cs);
-    bool GetBestSuperblockInternal(const CDeterministicMNList& tip_mn_list, CSuperblock_sptr& pSuperblockRet, int nBlockHeight)
-        EXCLUSIVE_LOCKS_REQUIRED(cs);
+    bool GetBestSuperblockInternal(const CDeterministicMNList& tip_mn_list, CSuperblock_sptr& pSuperblockRet,
+                                   int nBlockHeight) EXCLUSIVE_LOCKS_REQUIRED(cs);
 
     void ExecuteBestSuperblock(const CDeterministicMNList& tip_mn_list, int nBlockHeight);
 

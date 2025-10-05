@@ -210,7 +210,8 @@ void CGovernanceManager::AddPostponedObject(const CGovernanceObject& govobj)
     mapPostponedObjects.emplace(govobj.GetHash(), govobj);
 }
 
-MessageProcessingResult CGovernanceManager::ProcessMessage(CNode& peer, CConnman& connman, std::string_view msg_type, CDataStream& vRecv)
+MessageProcessingResult CGovernanceManager::ProcessMessage(CNode& peer, CConnman& connman, std::string_view msg_type,
+                                                           CDataStream& vRecv)
 {
     AssertLockNotHeld(cs_relay);
     if (!IsValid()) return {};
@@ -520,8 +521,8 @@ void CGovernanceManager::CheckAndRemove()
             } else {
                 int64_t nSuperblockCycleSeconds = Params().GetConsensus().nSuperblockCycle * Params().GetConsensus().nPowTargetSpacing;
                 nTimeExpired = (std::chrono::seconds{pObj->GetCreationTime()} +
-                                std::chrono::seconds{2 * nSuperblockCycleSeconds} +
-                                GOVERNANCE_DELETION_DELAY).count();
+                                std::chrono::seconds{2 * nSuperblockCycleSeconds} + GOVERNANCE_DELETION_DELAY)
+                                   .count();
             }
 
             mapErasedGovernanceObjects.insert(std::make_pair(nHash, nTimeExpired));
@@ -942,7 +943,8 @@ bool CGovernanceManager::ProcessVote(CNode* pfrom, const CGovernanceVote& vote, 
         std::string msg{strprintf("CGovernanceManager::%s -- Unknown parent object %s, MN outpoint = %s", __func__,
             nHashGovobj.ToString(), vote.GetMasternodeOutpoint().ToStringShort())};
         exception = CGovernanceException(msg, GOVERNANCE_EXCEPTION_WARNING);
-        if (cmmapOrphanVotes.Insert(nHashGovobj, vote_time_pair_t(vote, count_seconds(GetTime<std::chrono::seconds>() + GOVERNANCE_ORPHAN_EXPIRATION_TIME)))) {
+        if (cmmapOrphanVotes.Insert(nHashGovobj, vote_time_pair_t(vote, count_seconds(GetTime<std::chrono::seconds>() +
+                                                                                      GOVERNANCE_ORPHAN_EXPIRATION_TIME)))) {
             LEAVE_CRITICAL_SECTION(cs);
             RequestGovernanceObject(pfrom, nHashGovobj, connman);
             LogPrint(BCLog::GOBJECT, "%s\n", msg);
@@ -1013,8 +1015,10 @@ void CGovernanceManager::CheckPostponedObjects()
 
             int64_t nTimestamp = govobj.GetCreationTime();
 
-            bool fValid = (nTimestamp <= nNow + count_seconds(MAX_TIME_FUTURE_DEVIATION)) && (nTimestamp >= nNow - 2 * nSuperblockCycleSeconds);
-            bool fReady = (nTimestamp <= nNow + count_seconds(MAX_TIME_FUTURE_DEVIATION) - count_seconds(RELIABLE_PROPAGATION_TIME));
+            bool fValid = (nTimestamp <= nNow + count_seconds(MAX_TIME_FUTURE_DEVIATION)) &&
+                          (nTimestamp >= nNow - 2 * nSuperblockCycleSeconds);
+            bool fReady = (nTimestamp <=
+                           nNow + count_seconds(MAX_TIME_FUTURE_DEVIATION) - count_seconds(RELIABLE_PROPAGATION_TIME));
 
             if (fValid) {
                 if (fReady) {
@@ -1632,8 +1636,8 @@ bool CGovernanceManager::GetBestSuperblock(const CDeterministicMNList& tip_mn_li
     return GetBestSuperblockInternal(tip_mn_list, pSuperblockRet, nBlockHeight);
 }
 
-bool CGovernanceManager::GetBestSuperblockInternal(const CDeterministicMNList& tip_mn_list, CSuperblock_sptr& pSuperblockRet,
-                                            int nBlockHeight)
+bool CGovernanceManager::GetBestSuperblockInternal(const CDeterministicMNList& tip_mn_list,
+                                                   CSuperblock_sptr& pSuperblockRet, int nBlockHeight)
 {
     if (!CSuperblock::IsValidBlockHeight(nBlockHeight)) {
         return false;
@@ -1738,7 +1742,8 @@ void CGovernanceManager::ExecuteBestSuperblock(const CDeterministicMNList& tip_m
     }
 }
 
-std::vector<std::shared_ptr<const CGovernanceObject>> CGovernanceManager::GetApprovedProposals(const CDeterministicMNList& tip_mn_list)
+std::vector<std::shared_ptr<const CGovernanceObject>> CGovernanceManager::GetApprovedProposals(
+    const CDeterministicMNList& tip_mn_list)
 {
     AssertLockNotHeld(cs);
 
