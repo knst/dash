@@ -222,11 +222,12 @@ BITCOIN_CORE_H = \
   evo/specialtxman.h \
   evo/types.h \
   dsnotificationinterface.h \
-  governance/governance.h \
   governance/classes.h \
   governance/common.h \
+  governance/governance.h \
   governance/exceptions.h \
   governance/object.h \
+  governance/signing.h \
   governance/validators.h \
   governance/vote.h \
   governance/votedb.h \

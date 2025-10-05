@@ -12,6 +12,7 @@
 #include <coinjoin/common.h>
 #include <deploymentstatus.h>
 #include <evo/deterministicmns.h>
+#include <governance/classes.h>
 #include <governance/exceptions.h>
 #include <governance/governance.h>
 #include <governance/object.h>

@@ -2134,7 +2134,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     RegisterValidationInterface(node.peerman.get());
 
     g_ds_notification_interface = std::make_unique<CDSNotificationInterface>(
-        *node.connman, *node.mn_sync, *node.govman, *node.peerman, chainman, node.mn_activeman.get(), node.dmnman, node.llmq_ctx, node.cj_ctx
+        *node.connman, *node.mn_sync, *node.govman, *node.peerman, chainman, node.dmnman, node.llmq_ctx, node.cj_ctx
     );
     RegisterValidationInterface(g_ds_notification_interface.get());
 
@@ -2148,9 +2148,9 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     assert(!node.active_ctx);
     assert(!g_active_notification_interface);
     if (node.mn_activeman) {
-        node.active_ctx = std::make_unique<ActiveContext>(chainman, *node.connman, *node.dmnman, *node.cj_ctx->dstxman, *node.mn_metaman, *node.mnhf_manager,
-                                                          *node.llmq_ctx, *node.sporkman, *node.mempool, *node.peerman, *node.mn_activeman,
-                                                          *node.mn_sync);
+        node.active_ctx = std::make_unique<ActiveContext>(chainman, *node.connman, *node.dmnman, *node.cj_ctx->dstxman, *node.govman, *node.mn_metaman,
+                                                          *node.mnhf_manager, *node.sporkman, *node.mempool, *node.llmq_ctx, *node.peerman,
+                                                          *node.mn_activeman, *node.mn_sync);
         g_active_notification_interface = std::make_unique<ActiveNotificationInterface>(*node.active_ctx, *node.mn_activeman);
         RegisterValidationInterface(g_active_notification_interface.get());
     }

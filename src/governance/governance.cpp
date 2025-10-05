@@ -75,6 +75,7 @@ CGovernanceManager::CGovernanceManager(CMasternodeMetaMan& mn_metaman, CNetFulfi
     m_mn_sync{mn_sync},
     nTimeLastDiff(0),
     nCachedBlockHeight(0),
+    mapPostponedObjects(),
     fRateChecksEnabled(true),
     votedFundingYesTriggerHash(std::nullopt),
     mapTrigger{}
@@ -138,6 +139,12 @@ bool CGovernanceManager::SerializeVoteForHash(const uint256& nHash, CDataStream&
 
     CGovernanceObject* pGovobj = nullptr;
     return cmapVoteToObject.Get(nHash, pGovobj) && pGovobj->GetVoteFile().SerializeVoteToStream(nHash, ss);
+}
+
+void CGovernanceManager::AddPostponedObject(const CGovernanceObject& govobj)
+{
+    LOCK(cs);
+    mapPostponedObjects.insert(std::make_pair(govobj.GetHash(), govobj));
 }
 
 MessageProcessingResult CGovernanceManager::ProcessMessage(CNode& peer, CConnman& connman, PeerManager& peerman, std::string_view msg_type, CDataStream& vRecv)
@@ -1011,6 +1018,11 @@ void CGovernanceManager::RequestGovernanceObject(CNode* pfrom, const uint256& nH
     connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::MNGOVERNANCESYNC, nHash, filter));
 }
 
+void CGovernanceManager::AddInvalidVote(const CGovernanceVote& vote)
+{
+    cmapInvalidVotes.Insert(vote.GetHash(), vote);
+}
+
 int CGovernanceManager::RequestGovernanceObjectVotes(CNode& peer, CConnman& connman, const PeerManager& peerman) const
 {
     const std::vector<CNode*> vNodeCopy{&peer};
@@ -1259,7 +1271,7 @@ UniValue CGovernanceManager::ToJson() const
     return jsonObj;
 }
 
-void CGovernanceManager::UpdatedBlockTip(const CBlockIndex* pindex, CConnman& connman, PeerManager& peerman, const CActiveMasternodeManager* const mn_activeman)
+void CGovernanceManager::UpdatedBlockTip(const CBlockIndex* pindex, PeerManager& peerman)
 {
     // Note this gets called from ActivateBestChain without cs_main being held
     // so it should be safe to lock our mutex here without risking a deadlock
@@ -1268,12 +1280,6 @@ void CGovernanceManager::UpdatedBlockTip(const CBlockIndex* pindex, CConnman& co
     // presumably never deleted.
     if (!pindex) {
         return;
-    }
-
-    if (mn_activeman) {
-        const auto sb_opt = CreateSuperblockCandidate(pindex->nHeight);
-        const auto trigger_opt = CreateGovernanceTrigger(sb_opt, peerman, *mn_activeman);
-        VoteGovernanceTriggers(trigger_opt, connman, peerman, *mn_activeman);
     }
 
     nCachedBlockHeight = pindex->nHeight;
@@ -1668,10 +1674,8 @@ void CGovernanceManager::ExecuteBestSuperblock(const CDeterministicMNList& tip_m
         // All checks are done in CSuperblock::IsValid via IsBlockValueValid and IsBlockPayeeValid,
         // tip wouldn't be updated if anything was wrong. Mark this trigger as executed.
         pSuperblock->SetExecuted();
-        ResetVotedFundingTrigger();
     }
 }
-
 
 bool AreSuperblocksEnabled(const CSporkManager& sporkman)
 {

@@ -7,7 +7,6 @@
 
 #include <validationinterface.h>
 
-class CActiveMasternodeManager;
 class CConnman;
 class CDeterministicMNManager;
 class CGovernanceManager;
@@ -25,7 +24,6 @@ public:
                                       CGovernanceManager& govman,
                                       PeerManager& peerman,
                                       const ChainstateManager& chainman,
-                                      const CActiveMasternodeManager* const mn_activeman,
                                       const std::unique_ptr<CDeterministicMNManager>& dmnman,
                                       const std::unique_ptr<LLMQContext>& llmq_ctx,
                                       const std::unique_ptr<CJContext>& cj_ctx);
@@ -54,7 +52,6 @@ private:
     CGovernanceManager& m_govman;
     PeerManager& m_peerman;
     const ChainstateManager& m_chainman;
-    const CActiveMasternodeManager* const m_mn_activeman;
     const std::unique_ptr<CDeterministicMNManager>& m_dmnman;
     const std::unique_ptr<LLMQContext>& m_llmq_ctx;
     const std::unique_ptr<CJContext>& m_cj_ctx;
