@@ -13,9 +13,14 @@
 #include <logging.h>
 #include <timedata.h>
 #include <util/check.h>
+#include <util/time.h>
 #include <validation.h>
 
 #include <algorithm>
+
+namespace {
+constexpr std::chrono::seconds GOVERNANCE_FUDGE_WINDOW{2h};
+} // anonymous namespace
 
 GovernanceSigner::GovernanceSigner(CConnman& connman, CDeterministicMNManager& dmnman, GovernanceSignerParent& govman,
                                    const CActiveMasternodeManager& mn_activeman, const ChainstateManager& chainman,
@@ -76,8 +81,8 @@ std::optional<const CSuperblock> GovernanceSigner::CreateSuperblockCandidate(int
         // Skip proposals that are too expensive
         if (budgetAllocated + payment.nAmount > governanceBudget) continue;
 
-        int64_t windowStart = jproposal["start_epoch"].getInt<int64_t>() - GOVERNANCE_FUDGE_WINDOW;
-        int64_t windowEnd = jproposal["end_epoch"].getInt<int64_t>() + GOVERNANCE_FUDGE_WINDOW;
+        int64_t windowStart = jproposal["start_epoch"].getInt<int64_t>() - count_seconds(GOVERNANCE_FUDGE_WINDOW);
+        int64_t windowEnd = jproposal["end_epoch"].getInt<int64_t>() + count_seconds(GOVERNANCE_FUDGE_WINDOW);
 
         // Skip proposals if the SB isn't within the proposal time window
         if (SBEpochTime < windowStart) {

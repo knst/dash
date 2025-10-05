@@ -249,10 +249,6 @@ private:
     using db_type = CFlatDB<GovernanceStore>;
 
 private:
-    static const int MAX_TIME_FUTURE_DEVIATION;
-    static const int RELIABLE_PROPAGATION_TIME;
-
-private:
     const std::unique_ptr<db_type> m_db;
     bool is_valid{false};
 

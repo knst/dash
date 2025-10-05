@@ -31,10 +31,13 @@
 int nSubmittedFinalBudget;
 
 const std::string GovernanceStore::SERIALIZATION_VERSION_STRING = "CGovernanceManager-Version-16";
-const int CGovernanceManager::MAX_TIME_FUTURE_DEVIATION = 60 * 60;
-const int CGovernanceManager::RELIABLE_PROPAGATION_TIME = 60;
 
 namespace {
+constexpr std::chrono::seconds GOVERNANCE_DELETION_DELAY{10min};
+constexpr std::chrono::seconds GOVERNANCE_ORPHAN_EXPIRATION_TIME{10min};
+constexpr std::chrono::seconds MAX_TIME_FUTURE_DEVIATION{1h};
+constexpr std::chrono::seconds RELIABLE_PROPAGATION_TIME{1min};
+
 class ScopedLockBool
 {
     bool& ref;
@@ -467,7 +470,7 @@ void CGovernanceManager::CheckAndRemove()
     CleanAndRemoveTriggers();
 
     auto it = mapObjects.begin();
-    int64_t nNow = GetTime<std::chrono::seconds>().count();
+    const auto nNow = GetTime<std::chrono::seconds>();
 
     while (it != mapObjects.end()) {
         CGovernanceObject* pObj = &((*it).second);
@@ -486,10 +489,10 @@ void CGovernanceManager::CheckAndRemove()
 
         // IF DELETE=TRUE, THEN CLEAN THE MESS UP!
 
-        int64_t nTimeSinceDeletion = nNow - pObj->GetDeletionTime();
+        const auto nTimeSinceDeletion = nNow - std::chrono::seconds{pObj->GetDeletionTime()};
 
         LogPrint(BCLog::GOBJECT, "CGovernanceManager::UpdateCachesAndClean -- Checking object for deletion: %s, deletion time = %d, time since deletion = %d, delete flag = %d, expired flag = %d\n",
-            strHash, pObj->GetDeletionTime(), nTimeSinceDeletion, pObj->IsSetCachedDelete(), pObj->IsSetExpired());
+            strHash, pObj->GetDeletionTime(), nTimeSinceDeletion.count(), pObj->IsSetCachedDelete(), pObj->IsSetExpired());
 
         if ((pObj->IsSetCachedDelete() || pObj->IsSetExpired()) &&
             (nTimeSinceDeletion >= GOVERNANCE_DELETION_DELAY)) {
@@ -516,7 +519,9 @@ void CGovernanceManager::CheckAndRemove()
                 nTimeExpired = std::numeric_limits<int64_t>::max();
             } else {
                 int64_t nSuperblockCycleSeconds = Params().GetConsensus().nSuperblockCycle * Params().GetConsensus().nPowTargetSpacing;
-                nTimeExpired = pObj->GetCreationTime() + 2 * nSuperblockCycleSeconds + GOVERNANCE_DELETION_DELAY;
+                nTimeExpired = (std::chrono::seconds{pObj->GetCreationTime()} +
+                                std::chrono::seconds{2 * nSuperblockCycleSeconds} +
+                                GOVERNANCE_DELETION_DELAY).count();
             }
 
             mapErasedGovernanceObjects.insert(std::make_pair(nHash, nTimeExpired));
@@ -526,7 +531,7 @@ void CGovernanceManager::CheckAndRemove()
                 CProposalValidator validator(pObj->GetDataAsHexString());
                 if (!validator.Validate()) {
                     LogPrint(BCLog::GOBJECT, "CGovernanceManager::UpdateCachesAndClean -- set for deletion expired obj %s\n", strHash);
-                    pObj->PrepareDeletion(nNow);
+                    pObj->PrepareDeletion(nNow.count());
                 }
             }
             ++it;
@@ -536,7 +541,7 @@ void CGovernanceManager::CheckAndRemove()
     // forget about expired deleted objects
     auto s_it = mapErasedGovernanceObjects.begin();
     while (s_it != mapErasedGovernanceObjects.end()) {
-        if (s_it->second < nNow) {
+        if (s_it->second < nNow.count()) {
             mapErasedGovernanceObjects.erase(s_it++);
         } else {
             ++s_it;
@@ -546,7 +551,7 @@ void CGovernanceManager::CheckAndRemove()
     // forget about expired requests
     auto r_it = m_requested_hash_time.begin();
     while (r_it != m_requested_hash_time.end()) {
-        if (r_it->second < std::chrono::seconds(nNow)) {
+        if (r_it->second < nNow) {
             m_requested_hash_time.erase(r_it++);
         } else {
             ++r_it;
@@ -696,7 +701,7 @@ bool CGovernanceManager::ConfirmInventoryRequest(const CInv& inv)
         return false;
     }
 
-    const auto valid_until = GetTime<std::chrono::seconds>() + std::chrono::seconds(RELIABLE_PROPAGATION_TIME);
+    const auto valid_until = GetTime<std::chrono::seconds>() + RELIABLE_PROPAGATION_TIME;
     const auto& [_itr, inserted] = m_requested_hash_time.emplace(inv.hash, valid_until);
 
     if (inserted) {
@@ -822,7 +827,7 @@ void CGovernanceManager::MasternodeRateUpdate(const CGovernanceObject& govobj)
     int64_t nTimestamp = govobj.GetCreationTime();
     it->second.triggerBuffer.AddTimestamp(nTimestamp);
 
-    if (nTimestamp > GetTime() + MAX_TIME_FUTURE_DEVIATION - RELIABLE_PROPAGATION_TIME) {
+    if (nTimestamp > GetTime() + count_seconds(MAX_TIME_FUTURE_DEVIATION) - count_seconds(RELIABLE_PROPAGATION_TIME)) {
         // schedule additional relay for the object
         setAdditionalRelayObjects.insert(govobj.GetHash());
     }
@@ -863,7 +868,7 @@ bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bo
         return false;
     }
 
-    if (nTimestamp > nNow + MAX_TIME_FUTURE_DEVIATION) {
+    if (nTimestamp > nNow + count_seconds(MAX_TIME_FUTURE_DEVIATION)) {
         LogPrint(BCLog::GOBJECT, "CGovernanceManager::MasternodeRateCheck -- object %s rejected due to too new (future) timestamp, masternode = %s, timestamp = %d, current time = %d\n",
             strHash, masternodeOutpoint.ToStringShort(), nTimestamp, nNow);
         return false;
@@ -937,7 +942,7 @@ bool CGovernanceManager::ProcessVote(CNode* pfrom, const CGovernanceVote& vote, 
         std::string msg{strprintf("CGovernanceManager::%s -- Unknown parent object %s, MN outpoint = %s", __func__,
             nHashGovobj.ToString(), vote.GetMasternodeOutpoint().ToStringShort())};
         exception = CGovernanceException(msg, GOVERNANCE_EXCEPTION_WARNING);
-        if (cmmapOrphanVotes.Insert(nHashGovobj, vote_time_pair_t(vote, GetTime<std::chrono::seconds>().count() + GOVERNANCE_ORPHAN_EXPIRATION_TIME))) {
+        if (cmmapOrphanVotes.Insert(nHashGovobj, vote_time_pair_t(vote, count_seconds(GetTime<std::chrono::seconds>() + GOVERNANCE_ORPHAN_EXPIRATION_TIME)))) {
             LEAVE_CRITICAL_SECTION(cs);
             RequestGovernanceObject(pfrom, nHashGovobj, connman);
             LogPrint(BCLog::GOBJECT, "%s\n", msg);
@@ -1008,8 +1013,8 @@ void CGovernanceManager::CheckPostponedObjects()
 
             int64_t nTimestamp = govobj.GetCreationTime();
 
-            bool fValid = (nTimestamp <= nNow + MAX_TIME_FUTURE_DEVIATION) && (nTimestamp >= nNow - 2 * nSuperblockCycleSeconds);
-            bool fReady = (nTimestamp <= nNow + MAX_TIME_FUTURE_DEVIATION - RELIABLE_PROPAGATION_TIME);
+            bool fValid = (nTimestamp <= nNow + count_seconds(MAX_TIME_FUTURE_DEVIATION)) && (nTimestamp >= nNow - 2 * nSuperblockCycleSeconds);
+            bool fReady = (nTimestamp <= nNow + count_seconds(MAX_TIME_FUTURE_DEVIATION) - count_seconds(RELIABLE_PROPAGATION_TIME));
 
             if (fValid) {
                 if (fReady) {
