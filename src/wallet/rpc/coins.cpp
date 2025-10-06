@@ -17,32 +17,28 @@
 namespace wallet {
 static CAmount GetReceived(const CWallet& wallet, const UniValue& params, bool by_label) EXCLUSIVE_LOCKS_REQUIRED(wallet.cs_wallet)
 {
-    std::vector<CTxDestination> addresses;
+    std::vector<CScript> output_scripts;
 
     if (by_label) {
         // Get the set of addresses assigned to label
-        addresses = wallet.GetLabelAddresses(LabelFromValue(params[0]));
-        if (addresses.empty()) throw JSONRPCError(RPC_WALLET_ERROR, "Label not found in wallet");
+        std::string label = LabelFromValue(params[0]);
+        for (const auto& address : wallet.ListAddrBookAddresses(CWallet::AddrBookFilter{label})) {
+            auto output_script{GetScriptForDestination(address)};
+            if (wallet.IsMine(output_script)) {
+                output_scripts.emplace_back(output_script);
+            }
+        }
     } else {
         // Get the address
         CTxDestination dest = DecodeDestination(params[0].get_str());
         if (!IsValidDestination(dest)) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Dash address");
         }
-        addresses.emplace_back(dest);
-    }
-
-    // Filter by own scripts only
-    std::vector<CScript> output_scripts;
-    for (const auto& address : addresses) {
-        auto output_script{GetScriptForDestination(address)};
-        if (wallet.IsMine(output_script)) {
-            output_scripts.emplace_back(output_script);
+        CScript script_pub_key = GetScriptForDestination(dest);
+        if (!wallet.IsMine(script_pub_key)) {
+            throw JSONRPCError(RPC_WALLET_ERROR, "Address not found in wallet");
         }
-    }
-
-    if (output_scripts.empty()) {
-        throw JSONRPCError(RPC_WALLET_ERROR, "Address not found in wallet");
+        output_scripts.emplace_back(script_pub_key);
     }
 
     // Minimum confirmations
