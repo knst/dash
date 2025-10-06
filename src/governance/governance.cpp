@@ -506,21 +506,25 @@ const CGovernanceObject* CGovernanceManager::FindConstGovernanceObject(const uin
 
 CGovernanceObject* CGovernanceManager::FindGovernanceObject(const uint256& nHash)
 {
+    AssertLockNotHeld(cs);
+    LOCK(cs);
+    return FindGovernanceObjectInternal(nHash);
+}
+
+CGovernanceObject* CGovernanceManager::FindGovernanceObjectInternal(const uint256& nHash)
+{
     AssertLockHeld(cs);
-
     if (mapObjects.count(nHash)) return &mapObjects[nHash];
-
     return nullptr;
 }
 
 CGovernanceObject* CGovernanceManager::FindGovernanceObjectByDataHash(const uint256 &nDataHash)
 {
-    AssertLockHeld(cs);
-
+    AssertLockNotHeld(cs);
+    LOCK(cs);
     for (const auto& [nHash, object] : mapObjects) {
         if (object.GetDataHash() == nDataHash) return &mapObjects[nHash];
     }
-
     return nullptr;
 }
 
@@ -1406,7 +1410,7 @@ bool CGovernanceManager::AddNewTrigger(uint256 nHash)
 
     CSuperblock_sptr pSuperblock;
     try {
-        const CGovernanceObject* pGovObj = FindGovernanceObject(nHash);
+        const CGovernanceObject* pGovObj = FindGovernanceObjectInternal(nHash);
         if (!pGovObj) {
             throw std::runtime_error("CSuperblock: Failed to find Governance Object");
         }
@@ -1448,7 +1452,7 @@ void CGovernanceManager::CleanAndRemoveTriggers()
             LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s -- nullptr superblock\n", __func__);
             remove = true;
         } else {
-            pObj = FindGovernanceObject(it->first);
+            pObj = FindGovernanceObjectInternal(it->first);
             if (!pObj || pObj->GetObjectType() != GovernanceObject::TRIGGER) {
                 LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s -- Unknown or non-trigger superblock\n", __func__);
                 pSuperblock->SetStatus(SeenObjectStatus::ErrorInvalid);
@@ -1501,8 +1505,14 @@ void CGovernanceManager::CleanAndRemoveTriggers()
  *   - Look through triggers and scan for active ones
  *   - Return the triggers in a list
  */
-
 std::vector<CSuperblock_sptr> CGovernanceManager::GetActiveTriggers() const
+{
+    AssertLockNotHeld(cs);
+    LOCK(cs);
+    return GetActiveTriggersInternal();
+}
+
+std::vector<CSuperblock_sptr> CGovernanceManager::GetActiveTriggersInternal() const
 {
     AssertLockHeld(cs);
     std::vector<CSuperblock_sptr> vecResults;
@@ -1527,7 +1537,7 @@ bool CGovernanceManager::IsSuperblockTriggered(const CDeterministicMNList& tip_m
 
     LOCK(cs);
     // GET ALL ACTIVE TRIGGERS
-    std::vector<CSuperblock_sptr> vecTriggers = GetActiveTriggers();
+    std::vector<CSuperblock_sptr> vecTriggers = GetActiveTriggersInternal();
 
     LogPrint(BCLog::GOBJECT, "IsSuperblockTriggered -- vecTriggers.size() = %d\n", vecTriggers.size());
 
@@ -1537,7 +1547,7 @@ bool CGovernanceManager::IsSuperblockTriggered(const CDeterministicMNList& tip_m
             continue;
         }
 
-        CGovernanceObject* pObj = FindGovernanceObject(pSuperblock->GetGovernanceObjHash());
+        CGovernanceObject* pObj = FindGovernanceObjectInternal(pSuperblock->GetGovernanceObjHash());
         if (!pObj) {
             LogPrintf("IsSuperblockTriggered -- pObj == nullptr, continuing\n");
             continue;
@@ -1570,16 +1580,23 @@ bool CGovernanceManager::IsSuperblockTriggered(const CDeterministicMNList& tip_m
     return false;
 }
 
-
 bool CGovernanceManager::GetBestSuperblock(const CDeterministicMNList& tip_mn_list, CSuperblock_sptr& pSuperblockRet,
                                            int nBlockHeight)
+{
+    AssertLockNotHeld(cs);
+    LOCK(cs);
+    return GetBestSuperblockInternal(tip_mn_list, pSuperblockRet, nBlockHeight);
+}
+
+bool CGovernanceManager::GetBestSuperblockInternal(const CDeterministicMNList& tip_mn_list, CSuperblock_sptr& pSuperblockRet,
+                                            int nBlockHeight)
 {
     if (!CSuperblock::IsValidBlockHeight(nBlockHeight)) {
         return false;
     }
 
     AssertLockHeld(cs);
-    std::vector<CSuperblock_sptr> vecTriggers = GetActiveTriggers();
+    std::vector<CSuperblock_sptr> vecTriggers = GetActiveTriggersInternal();
     int nYesCount = 0;
 
     for (const auto& pSuperblock : vecTriggers) {
@@ -1587,7 +1604,7 @@ bool CGovernanceManager::GetBestSuperblock(const CDeterministicMNList& tip_mn_li
             continue;
         }
 
-        const CGovernanceObject* pObj = FindGovernanceObject(pSuperblock->GetGovernanceObjHash());
+        const CGovernanceObject* pObj = FindGovernanceObjectInternal(pSuperblock->GetGovernanceObjHash());
         if (!pObj) {
             continue;
         }
@@ -1612,7 +1629,7 @@ bool CGovernanceManager::GetSuperblockPayments(const CDeterministicMNList& tip_m
     // GET THE BEST SUPERBLOCK FOR THIS BLOCK HEIGHT
 
     CSuperblock_sptr pSuperblock;
-    if (!GetBestSuperblock(tip_mn_list, pSuperblock, nBlockHeight)) {
+    if (!GetBestSuperblockInternal(tip_mn_list, pSuperblock, nBlockHeight)) {
         LogPrint(BCLog::GOBJECT, "GetSuperblockPayments -- Can't find superblock for height %d\n", nBlockHeight);
         return false;
     }
@@ -1658,7 +1675,7 @@ bool CGovernanceManager::IsValidSuperblock(const CChain& active_chain, const CDe
     LOCK(cs);
 
     CSuperblock_sptr pSuperblock;
-    if (GetBestSuperblock(tip_mn_list, pSuperblock, nBlockHeight)) {
+    if (GetBestSuperblockInternal(tip_mn_list, pSuperblock, nBlockHeight)) {
         return pSuperblock->IsValid(active_chain, txNew, nBlockHeight, blockReward);
     }
 
@@ -1670,11 +1687,43 @@ void CGovernanceManager::ExecuteBestSuperblock(const CDeterministicMNList& tip_m
     LOCK(cs);
 
     CSuperblock_sptr pSuperblock;
-    if (GetBestSuperblock(tip_mn_list, pSuperblock, nBlockHeight)) {
+    if (GetBestSuperblockInternal(tip_mn_list, pSuperblock, nBlockHeight)) {
         // All checks are done in CSuperblock::IsValid via IsBlockValueValid and IsBlockPayeeValid,
         // tip wouldn't be updated if anything was wrong. Mark this trigger as executed.
         pSuperblock->SetExecuted();
     }
+}
+
+std::vector<std::shared_ptr<const CGovernanceObject>> CGovernanceManager::GetApprovedProposals(const CDeterministicMNList& tip_mn_list)
+{
+    AssertLockNotHeld(cs);
+
+    // Use std::vector of std::shared_ptr<const CGovernanceObject> because CGovernanceObject doesn't support move operations (needed for sorting the vector later)
+    std::vector<std::shared_ptr<const CGovernanceObject>> ret{};
+
+    // A proposal is considered passing if (YES votes) >= (Total Weight of Masternodes / 10),
+    // count total valid (ENABLED) masternodes to determine passing threshold.
+    const int nWeightedMnCount = tip_mn_list.GetValidWeightedMNsCount();
+    const int nAbsVoteReq = std::max(Params().GetConsensus().nGovernanceMinQuorum, nWeightedMnCount / 10);
+
+    LOCK(cs);
+    for (const auto& [unused, object] : mapObjects) {
+        // Skip all non-proposals objects
+        if (object.GetObjectType() != GovernanceObject::PROPOSAL) continue;
+        // Skip non-passing proposals
+        const int absYesCount = object.GetAbsoluteYesCount(tip_mn_list, VOTE_SIGNAL_FUNDING);
+        if (absYesCount < nAbsVoteReq) continue;
+        ret.emplace_back(std::make_shared<const CGovernanceObject>(object));
+    }
+
+    // Sort approved proposals by absolute Yes votes descending
+    std::sort(ret.begin(), ret.end(), [&tip_mn_list](auto& lhs, auto& rhs) {
+        const auto lhs_yes = lhs->GetAbsoluteYesCount(tip_mn_list, VOTE_SIGNAL_FUNDING);
+        const auto rhs_yes = rhs->GetAbsoluteYesCount(tip_mn_list, VOTE_SIGNAL_FUNDING);
+        return lhs_yes == rhs_yes ? UintToArith256(lhs->GetHash()) > UintToArith256(rhs->GetHash()) : lhs_yes > rhs_yes;
+    });
+
+    return ret;
 }
 
 bool AreSuperblocksEnabled(const CSporkManager& sporkman)

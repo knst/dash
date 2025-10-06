@@ -292,8 +292,8 @@ public:
     void DoMaintenance(CConnman& connman);
 
     const CGovernanceObject* FindConstGovernanceObject(const uint256& nHash) const EXCLUSIVE_LOCKS_REQUIRED(cs);
-    CGovernanceObject* FindGovernanceObject(const uint256& nHash) EXCLUSIVE_LOCKS_REQUIRED(cs);
-    CGovernanceObject* FindGovernanceObjectByDataHash(const uint256& nDataHash) EXCLUSIVE_LOCKS_REQUIRED(cs);
+    CGovernanceObject* FindGovernanceObject(const uint256& nHash) EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    CGovernanceObject* FindGovernanceObjectByDataHash(const uint256& nDataHash) EXCLUSIVE_LOCKS_REQUIRED(!cs);
     void DeleteGovernanceObject(const uint256& nHash);
 
     // These commands are only used in RPC
@@ -352,7 +352,7 @@ public:
      *   - Track governance objects which are triggers
      *   - After triggers are activated and executed, they can be removed
     */
-    std::vector<std::shared_ptr<CSuperblock>> GetActiveTriggers() const EXCLUSIVE_LOCKS_REQUIRED(cs);
+    std::vector<std::shared_ptr<CSuperblock>> GetActiveTriggers() const EXCLUSIVE_LOCKS_REQUIRED(!cs);
     bool AddNewTrigger(uint256 nHash) EXCLUSIVE_LOCKS_REQUIRED(cs);
     void CleanAndRemoveTriggers() EXCLUSIVE_LOCKS_REQUIRED(cs);
 
@@ -376,10 +376,20 @@ public:
     bool IsValidSuperblock(const CChain& active_chain, const CDeterministicMNList& tip_mn_list,
                            const CTransaction& txNew, int nBlockHeight, CAmount blockReward);
 
-private:
-    void ExecuteBestSuperblock(const CDeterministicMNList& tip_mn_list, int nBlockHeight);
     bool GetBestSuperblock(const CDeterministicMNList& tip_mn_list, CSuperblock_sptr& pSuperblockRet, int nBlockHeight)
+        EXCLUSIVE_LOCKS_REQUIRED(!cs);
+
+    std::vector<std::shared_ptr<const CGovernanceObject>> GetApprovedProposals(const CDeterministicMNList& tip_mn_list)
+        EXCLUSIVE_LOCKS_REQUIRED(!cs);
+
+private:
+    //! Internal functions that require locks to be held
+    CGovernanceObject* FindGovernanceObjectInternal(const uint256& nHash) EXCLUSIVE_LOCKS_REQUIRED(cs);
+    std::vector<std::shared_ptr<CSuperblock>> GetActiveTriggersInternal() const EXCLUSIVE_LOCKS_REQUIRED(cs);
+    bool GetBestSuperblockInternal(const CDeterministicMNList& tip_mn_list, CSuperblock_sptr& pSuperblockRet, int nBlockHeight)
         EXCLUSIVE_LOCKS_REQUIRED(cs);
+
+    void ExecuteBestSuperblock(const CDeterministicMNList& tip_mn_list, int nBlockHeight);
 
     void RequestGovernanceObject(CNode* pfrom, const uint256& nHash, CConnman& connman, bool fUseFilter = false) const;
 
@@ -401,8 +411,6 @@ private:
     void CleanOrphanObjects();
 
     void RemoveInvalidVotes();
-
-    friend class GovernanceSigner;
 };
 
 bool AreSuperblocksEnabled(const CSporkManager& sporkman);

@@ -40,36 +40,7 @@ std::optional<const CSuperblock> GovernanceSigner::CreateSuperblockCandidate(int
     if (nHeight % Params().GetConsensus().nSuperblockCycle < Params().GetConsensus().nSuperblockCycle - Params().GetConsensus().nSuperblockMaturityWindow) return std::nullopt;
     if (HasAlreadyVotedFundingTrigger()) return std::nullopt;
 
-    // A proposal is considered passing if (YES votes) >= (Total Weight of Masternodes / 10),
-    // count total valid (ENABLED) masternodes to determine passing threshold.
-    const auto tip_mn_list = m_dmnman.GetListAtChainTip();
-    const int nWeightedMnCount = tip_mn_list.GetValidWeightedMNsCount();
-    const int nAbsVoteReq = std::max(Params().GetConsensus().nGovernanceMinQuorum, nWeightedMnCount / 10);
-
-    // Use std::vector of std::shared_ptr<const CGovernanceObject> because CGovernanceObject doesn't support move operations (needed for sorting the vector later)
-    std::vector<std::shared_ptr<const CGovernanceObject>> approvedProposals;
-
-    {
-        LOCK(m_govman.cs);
-        for (const auto& [unused, object] : m_govman.mapObjects) {
-            // Skip all non-proposals objects
-            if (object.GetObjectType() != GovernanceObject::PROPOSAL) continue;
-
-            const int absYesCount = object.GetAbsoluteYesCount(tip_mn_list, VOTE_SIGNAL_FUNDING);
-            // Skip non-passing proposals
-            if (absYesCount < nAbsVoteReq) continue;
-
-            approvedProposals.emplace_back(std::make_shared<const CGovernanceObject>(object));
-        }
-    } // cs
-
-    // Sort approved proposals by absolute Yes votes descending
-    std::sort(approvedProposals.begin(), approvedProposals.end(), [tip_mn_list](std::shared_ptr<const CGovernanceObject> a, std::shared_ptr<const CGovernanceObject> b) {
-        const auto a_yes = a->GetAbsoluteYesCount(tip_mn_list, VOTE_SIGNAL_FUNDING);
-        const auto b_yes = b->GetAbsoluteYesCount(tip_mn_list, VOTE_SIGNAL_FUNDING);
-        return a_yes == b_yes ? UintToArith256(a->GetHash()) > UintToArith256(b->GetHash()) : a_yes > b_yes;
-    });
-
+    const auto approvedProposals = m_govman.GetApprovedProposals(m_dmnman.GetListAtChainTip());
     if (approvedProposals.empty()) {
         LogPrint(BCLog::GOBJECT, "%s -- nHeight:%d empty approvedProposals\n", __func__, nHeight);
         return std::nullopt;
@@ -148,7 +119,7 @@ std::optional<const CGovernanceObject> GovernanceSigner::CreateGovernanceTrigger
     if (!sb_opt.has_value()) return std::nullopt;
 
     //TODO: Check if nHashParentIn, nRevision and nCollateralHashIn are correct
-    LOCK2(::cs_main, m_govman.cs);
+    LOCK(::cs_main);
 
     // Check if identical trigger (equal DataHash()) is already created (signed by other masternode)
     CGovernanceObject gov_sb(uint256(), 1, GetAdjustedTime(), uint256(), sb_opt.value().GetHexStrData());
@@ -194,7 +165,7 @@ void GovernanceSigner::VoteGovernanceTriggers(const std::optional<const CGoverna
     // only active masternodes can vote on triggers
     if (m_mn_activeman.GetProTxHash().IsNull()) return;
 
-    LOCK2(::cs_main, m_govman.cs);
+    LOCK(::cs_main);
 
     if (trigger_opt.has_value()) {
         // We should never vote "yes" on another trigger or the same trigger twice
@@ -239,7 +210,7 @@ void GovernanceSigner::VoteGovernanceTriggers(const std::optional<const CGoverna
     for (const auto& trigger : activeTriggers) {
         const auto govobj = m_govman.FindGovernanceObject(trigger->GetGovernanceObjHash());
         const uint256 trigger_hash = govobj->GetHash();
-        if (trigger->GetBlockHeight() <= m_govman.nCachedBlockHeight) {
+        if (trigger->GetBlockHeight() <= m_govman.GetCachedBlockHeight()) {
             // ignore triggers from the past
             LogPrint(BCLog::GOBJECT, "%s -- Not voting NO-FUNDING for outdated trigger:%s\n", __func__, trigger_hash.ToString());
             continue;
@@ -303,11 +274,8 @@ void GovernanceSigner::UpdatedBlockTip(const CBlockIndex* pindex)
     const auto sb_opt = CreateSuperblockCandidate(pindex->nHeight);
     const auto trigger_opt = CreateGovernanceTrigger(sb_opt);
     VoteGovernanceTriggers(trigger_opt);
-    {
-        LOCK(m_govman.cs);
-        CSuperblock_sptr pSuperblock;
-        if (m_govman.GetBestSuperblock(m_dmnman.GetListAtChainTip(), pSuperblock, pindex->nHeight)) {
-            ResetVotedFundingTrigger();
-        }
+    CSuperblock_sptr pSuperblock;
+    if (m_govman.GetBestSuperblock(m_dmnman.GetListAtChainTip(), pSuperblock, pindex->nHeight)) {
+        ResetVotedFundingTrigger();
     }
 }
