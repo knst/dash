@@ -244,14 +244,9 @@ void CGovernanceObject::SetMasternodeOutpoint(const COutPoint& outpoint)
     m_obj.masternodeOutpoint = outpoint;
 }
 
-bool CGovernanceObject::Sign(const CActiveMasternodeManager& mn_activeman)
+void CGovernanceObject::SetSignature(Span<const uint8_t> sig)
 {
-    CBLSSignature sig = mn_activeman.Sign(GetSignatureHash(), false);
-    if (!sig.IsValid()) {
-        return false;
-    }
-    m_obj.vchSig = sig.ToByteVector(false);
-    return true;
+    m_obj.vchSig.assign(sig.begin(), sig.end());
 }
 
 bool CGovernanceObject::CheckSignature(const CBLSPublicKey& pubKey) const

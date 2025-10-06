@@ -97,9 +97,7 @@ public:
 
     void SetSignature(const std::vector<unsigned char>& vchSigIn) { vchSig = vchSigIn; }
 
-    bool Sign(const CKey& key, const CKeyID& keyID);
     bool CheckSignature(const CKeyID& keyID) const;
-    bool Sign(const CActiveMasternodeManager& mn_activeman);
     bool CheckSignature(const CBLSPublicKey& pubKey) const;
     bool IsValid(const CDeterministicMNList& tip_mn_list, bool useVotingKey) const;
     std::string GetSignatureString() const

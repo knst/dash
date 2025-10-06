@@ -158,16 +158,6 @@ bool CGovernanceVote::CheckSignature(const CKeyID& keyID) const
     return true;
 }
 
-bool CGovernanceVote::Sign(const CActiveMasternodeManager& mn_activeman)
-{
-    CBLSSignature sig = mn_activeman.Sign(GetSignatureHash(), false);
-    if (!sig.IsValid()) {
-        return false;
-    }
-    vchSig = sig.ToByteVector(false);
-    return true;
-}
-
 bool CGovernanceVote::CheckSignature(const CBLSPublicKey& pubKey) const
 {
     CBLSSignature sig;

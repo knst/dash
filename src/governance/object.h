@@ -11,6 +11,8 @@
 #include <governance/votedb.h>
 #include <sync.h>
 
+#include <span.h>
+
 #include <univalue.h>
 
 class CActiveMasternodeManager;
@@ -221,7 +223,7 @@ public:
     // Signature related functions
 
     void SetMasternodeOutpoint(const COutPoint& outpoint);
-    bool Sign(const CActiveMasternodeManager& mn_activeman);
+    void SetSignature(Span<const uint8_t> sig);
     bool CheckSignature(const CBLSPublicKey& pubKey) const;
 
     uint256 GetSignatureHash() const;
