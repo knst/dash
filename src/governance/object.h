@@ -15,7 +15,6 @@
 
 #include <univalue.h>
 
-class CActiveMasternodeManager;
 class CBLSPublicKey;
 class CDeterministicMNList;
 class CGovernanceManager;
@@ -23,8 +22,6 @@ class CGovernanceObject;
 class CGovernanceVote;
 class ChainstateManager;
 class CMasternodeMetaMan;
-class CMasternodeSync;
-class CNode;
 
 extern RecursiveMutex cs_main;
 

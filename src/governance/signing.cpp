@@ -12,7 +12,6 @@
 #include <chainparams.h>
 #include <logging.h>
 #include <timedata.h>
-#include <util/check.h>
 #include <util/time.h>
 #include <validation.h>
 

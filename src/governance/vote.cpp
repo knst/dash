@@ -8,10 +8,8 @@
 #include <chainparams.h>
 #include <evo/deterministicmns.h>
 #include <evo/dmn_types.h>
-#include <masternode/node.h>
 #include <masternode/sync.h>
 #include <messagesigner.h>
-#include <net_processing.h>
 #include <timedata.h>
 #include <util/string.h>
 

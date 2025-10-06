@@ -12,9 +12,7 @@
 #include <governance/validators.h>
 #include <index/txindex.h>
 #include <masternode/meta.h>
-#include <masternode/node.h>
 #include <masternode/sync.h>
-#include <net_processing.h>
 #include <timedata.h>
 #include <util/time.h>
 #include <validation.h>

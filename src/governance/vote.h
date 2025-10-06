@@ -10,12 +10,9 @@
 #include <uint256.h>
 #include <util/string.h>
 
-class CActiveMasternodeManager;
 class CBLSPublicKey;
 class CDeterministicMNList;
 class CGovernanceVote;
-class CMasternodeSync;
-class CKey;
 class CKeyID;
 
 // INTENTION OF MASTERNODES REGARDING ITEM

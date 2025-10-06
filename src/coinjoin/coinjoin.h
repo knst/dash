@@ -22,14 +22,12 @@
 #include <optional>
 #include <utility>
 
-class CActiveMasternodeManager;
 class CChainState;
 class CBLSPublicKey;
 class CBlockIndex;
 class ChainstateManager;
 class CMasternodeSync;
 class CTxMemPool;
-class TxValidationState;
 
 namespace llmq {
 class CChainLocksHandler;
