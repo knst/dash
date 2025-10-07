@@ -49,7 +49,13 @@ static RPCHelpMan masternode_connect()
             {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "The address of the masternode to connect"},
             {"v2transport", RPCArg::Type::BOOL, RPCArg::DefaultHint{"set by -v2transport"}, "Attempt to connect using BIP324 v2 transport protocol"},
         },
-        RPCResults{},
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                // TODO: implement proper type validator instead ELISION
+                {RPCResult::Type::ELISION, "", ""}
+            }
+        },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -85,7 +91,13 @@ static RPCHelpMan masternode_count()
     return RPCHelpMan{"masternode count",
         "Get information about number of masternodes.\n",
         {},
-        RPCResults{},
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                // TODO: implement proper type validator instead ELISION
+                {RPCResult::Type::ELISION, "", ""}
+            }
+        },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -157,7 +169,13 @@ static RPCHelpMan masternode_status()
     return RPCHelpMan{"masternode status",
         "Print masternode status information\n",
         {},
-        RPCResults{},
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                // TODO: implement proper type validator instead ELISION
+                {RPCResult::Type::ELISION, "", ""}
+            }
+        },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -232,7 +250,13 @@ static RPCHelpMan masternode_winners()
             {"count", RPCArg::Type::NUM, RPCArg::Default{10}, "number of last winners to return"},
             {"filter", RPCArg::Type::STR, RPCArg::Default{""}, "filter for returned winners"},
         },
-        RPCResults{},
+        RPCResult{
+            RPCResult::Type::OBJ, "", "Details about a specific deterministic masternode",
+            {
+                // TODO: implement proper type validator instead ELISION
+                {RPCResult::Type::ELISION, "", ""}
+            }
+        },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -454,7 +478,13 @@ static RPCHelpMan masternode_help()
         {
             {"command", RPCArg::Type::STR, RPCArg::Optional::NO, "The command to execute"},
         },
-        RPCResults{},
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                // TODO: implement proper type validator instead ELISION
+                {RPCResult::Type::ELISION, "", ""}
+            }
+        },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -491,7 +521,13 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
             {"mode", RPCArg::Type::STR, RPCArg::DefaultHint{"json"}, "The mode to run list in"},
             {"filter", RPCArg::Type::STR, RPCArg::Default{""}, "Filter results. Partial match by outpoint by default in all modes, additional matches in some modes are also available"},
         },
-        RPCResults{},
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                // TODO: implement proper type validator instead ELISION
+                {RPCResult::Type::ELISION, "", ""}
+            }
+        },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {

@@ -1511,6 +1511,7 @@ static RPCHelpMan protx_info()
         RPCResult{
             RPCResult::Type::OBJ, "", "Details about a specific deterministic masternode",
             {
+                // TODO: implement proper doc for protx info
                 {RPCResult::Type::ELISION, "", ""}
             }
         },
