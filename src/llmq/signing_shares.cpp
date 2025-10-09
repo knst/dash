@@ -1463,7 +1463,7 @@ void CSigSharesManager::BanNode(NodeId nodeId, PeerManager& peerman)
         return;
     }
 
-    peerman.UnitTestMisbehaving(nodeId, 100);
+    peerman.Misbehaving(nodeId, 100);
 
     LOCK(cs);
     auto it = nodeStates.find(nodeId);

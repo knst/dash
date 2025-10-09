@@ -112,7 +112,7 @@ bool CDKGPendingMessages::HasSeen(const uint256& hash) const
 void CDKGPendingMessages::Misbehaving(const NodeId from, const int score, PeerManager& peerman)
 {
     if (from == -1) return;
-    peerman.UnitTestMisbehaving(from, score);
+    peerman.Misbehaving(from, score);
 }
 
 void CDKGPendingMessages::Clear()

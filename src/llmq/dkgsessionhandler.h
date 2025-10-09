@@ -88,7 +88,6 @@ public:
     {
         CDataStream ds(SER_NETWORK, PROTOCOL_VERSION);
         ds << msg;
-        // TODO - fix it; can't call with `from`, need a `Peer peer`
         peerman.PostProcessMessage(PushPendingMessage(from, ds), from);
     }
 
