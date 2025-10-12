@@ -16,12 +16,6 @@ BOOST_FIXTURE_TEST_SUITE(mempool_tests, TestingSetup)
 
 static constexpr auto REMOVAL_REASON_DUMMY = MemPoolRemovalReason::MANUAL;
 
-class MemPoolTest final : public CTxMemPool
-{
-public:
-    using CTxMemPool::GetMinFee;
-};
-
 BOOST_AUTO_TEST_CASE(MempoolRemoveTest)
 {
     // Test CTxMemPool::remove functionality
@@ -429,7 +423,7 @@ BOOST_AUTO_TEST_CASE(MempoolAncestorIndexingTest)
 
 BOOST_AUTO_TEST_CASE(MempoolSizeLimitTest)
 {
-    auto& pool = static_cast<MemPoolTest&>(*Assert(m_node.mempool));
+    CTxMemPool& pool = *Assert(m_node.mempool);
     LOCK2(cs_main, pool.cs);
     TestMemPoolEntryHelper entry;
 

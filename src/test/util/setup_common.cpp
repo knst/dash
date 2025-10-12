@@ -17,16 +17,13 @@
 #include <index/txindex.h>
 #include <init.h>
 #include <interfaces/chain.h>
-#include <mempool_args.h>
 #include <net.h>
 #include <net_processing.h>
 #include <noui.h>
 #include <node/blockstorage.h>
 #include <node/chainstate.h>
-#include <node/context.h>
 #include <node/miner.h>
 #include <policy/fees.h>
-#include <policy/fees_args.h>
 #include <pow.h>
 #include <rpc/blockchain.h>
 #include <rpc/register.h>
@@ -38,8 +35,6 @@
 #include <test/util/index.h>
 #include <test/util/net.h>
 #include <txdb.h>
-#include <txmempool.h>
-#include <util/designator.h>
 #include <util/strencodings.h>
 #include <util/string.h>
 #include <util/thread.h>
@@ -84,17 +79,13 @@
 
 using node::BlockAssembler;
 using node::CalculateCacheSizes;
+using node::DashChainstateSetup;
+using node::DashChainstateSetupClose;
 using node::DEFAULT_ADDRESSINDEX;
 using node::DEFAULT_SPENTINDEX;
 using node::DEFAULT_TIMESTAMPINDEX;
-using node::DashChainstateSetup;
-using node::DashChainstateSetupClose;
-using node::LoadChainstate;
 using node::LoadChainstate;
 using node::NodeContext;
-using node::NodeContext;
-using node::RegenerateCommitments;
-using node::VerifyLoadedChainstate;
 using node::VerifyLoadedChainstate;
 using node::fPruneMode;
 using node::fReindex;
@@ -251,18 +242,6 @@ BasicTestingSetup::~BasicTestingSetup()
     ECC_Stop();
 }
 
-CTxMemPool::Options MemPoolOptionsForTest(const NodeContext& node)
-{
-    CTxMemPool::Options mempool_opts{
-        Desig(estimator) node.fee_estimator.get(),
-        // Default to always checking mempool regardless of
-        // chainparams.DefaultConsistencyChecks for tests
-        Desig(check_ratio) 1,
-    };
-    ApplyArgsManOptions(*node.args, mempool_opts);
-    return mempool_opts;
-}
-
 ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::vector<const char*>& extra_args)
     : BasicTestingSetup(chainName, extra_args)
 {
@@ -272,8 +251,8 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
     m_node.scheduler->m_service_thread = std::thread(util::TraceThread, "scheduler", [&] { m_node.scheduler->serviceQueue(); });
     GetMainSignals().RegisterBackgroundSignalScheduler(*m_node.scheduler);
 
-    m_node.fee_estimator = std::make_unique<CBlockPolicyEstimator>(FeeestPath(*m_node.args));
-    m_node.mempool = std::make_unique<CTxMemPool>(MemPoolOptionsForTest(m_node));
+    m_node.fee_estimator = std::make_unique<CBlockPolicyEstimator>();
+    m_node.mempool = std::make_unique<CTxMemPool>(m_node.fee_estimator.get(), m_node.args->GetIntArg("-checkmempool", 1));
 
     m_cache_sizes = CalculateCacheSizes(m_args);
 
