@@ -50,11 +50,7 @@ static RPCHelpMan masternode_connect()
             {"v2transport", RPCArg::Type::BOOL, RPCArg::DefaultHint{"set by -v2transport"}, "Attempt to connect using BIP324 v2 transport protocol"},
         },
         RPCResult{
-            RPCResult::Type::OBJ, "", "",
-            {
-                // TODO: implement proper type validator instead ELISION
-                {RPCResult::Type::ELISION, "", ""}
-            }
+            RPCResult::Type::STR, "status", "Returns 'successfully connected' if succeed"
         },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
@@ -94,8 +90,23 @@ static RPCHelpMan masternode_count()
         RPCResult{
             RPCResult::Type::OBJ, "", "",
             {
-                // TODO: implement proper type validator instead ELISION
-                {RPCResult::Type::ELISION, "", ""}
+                {RPCResult::Type::NUM, "total", "Total amount Masternodes"},
+                {RPCResult::Type::NUM, "enabled", "Amount of enabled Masternodes"},
+                {RPCResult::Type::OBJ, "details", "Amount of enabled Masternodes",
+                    {{RPCResult::Type::OBJ, "", "",
+                    {
+                        {RPCResult::Type::OBJ, "regular", "Details for regular masternodes",
+                            {
+                                {RPCResult::Type::NUM, "total", "Total amount regular Masternodes"},
+                                {RPCResult::Type::NUM, "enabled", "Amount of enabled regular Masternodes"}
+                        }},
+                        {RPCResult::Type::OBJ, "evo", "Details for Evo nodes",
+                            {
+                                {RPCResult::Type::NUM, "total", "Total amount Evo nodes"},
+                                {RPCResult::Type::NUM, "enabled", "Amount of enabled Evo nodes"}
+                        }},
+                    }},
+                    }}
             }
         },
         RPCExamples{""},
@@ -253,8 +264,7 @@ static RPCHelpMan masternode_winners()
         RPCResult{
             RPCResult::Type::OBJ, "", "Details about a specific deterministic masternode",
             {
-                // TODO: implement proper type validator instead ELISION
-                {RPCResult::Type::ELISION, "", ""}
+                {RPCResult::Type::STR, "height", "payment string"}
             }
         },
         RPCExamples{""},
@@ -478,13 +488,7 @@ static RPCHelpMan masternode_help()
         {
             {"command", RPCArg::Type::STR, RPCArg::Optional::NO, "The command to execute"},
         },
-        RPCResult{
-            RPCResult::Type::OBJ, "", "",
-            {
-                // TODO: implement proper type validator instead ELISION
-                {RPCResult::Type::ELISION, "", ""}
-            }
-        },
+        RPCResult{RPCResult::Type::NONE, "", ""},
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
