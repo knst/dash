@@ -884,13 +884,9 @@ static RPCHelpMan gobject_getcurrentvotes()
             {"vout", RPCArg::Type::STR, RPCArg::Default{""}, "masternode collateral output index, required if <txid> present"},
         },
         RPCResult{
-            RPCResult::Type::ARR, "", "list of governance objects",
+            RPCResult::Type::OBJ, "", "Map with governance votes",
             {
-                {RPCResult::Type::OBJ, "hash", "Hash of governance vote",
-                {
-                    // TODO: list fields of output for RPC help instead ELISION
-                    {RPCResult::Type::ELISION, "", ""}
-                }},
+                {RPCResult::Type::STR, "votehash", "Human-friendly presentation of vote"},
             },
         },
         RPCExamples{""},
