@@ -358,8 +358,19 @@ static RPCHelpMan getrawtransactionmulti() {
                     {"verbose", RPCArg::Type::BOOL, RPCArg::Default{false},
                      "If false, return a string, otherwise return a json object"},
             },
-            // TODO: replace RPCResults to proper annotation
-            RPCResults{},
+            RPCResult{
+                RPCResult::Type::OBJ, "", "",
+                {
+                    {"if verbose is not set or set to false",
+                        RPCResult::Type::STR_HEX, "txid", "The serialized, hex-encoded data for 'txid'"},
+                    {"if verbose is set to true",
+                        RPCResult::Type::OBJ, "txid", "The decoded network-serialized transaction.",
+                        {
+                            {RPCResult::Type::ELISION, "", "The layout is the same as the output of getrawtransaction."},
+                        }},
+                    {"if tx is unknown", RPCResult::Type::STR, "txid", "None"},
+                },
+            },
             RPCExamples{
                     HelpExampleCli("getrawtransactionmulti",
                                    R"('{"blockhash1":["txid1","txid2"], "0":["txid3"]}')")
