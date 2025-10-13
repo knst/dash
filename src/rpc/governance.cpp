@@ -43,7 +43,16 @@ static RPCHelpMan gobject_count()
         {
             {"mode", RPCArg::Type::STR, RPCArg::DefaultHint{"json"}, "Output format: json (\"json\") or string in free form (\"all\")"},
         },
-        RPCResults{},
+        {
+            RPCResult{"for mode = json",
+                RPCResult::Type::OBJ, "", "",
+                {
+                    // TODO: list fields of output for RPC help instead ELISION
+                    {RPCResult::Type::ELISION, "", ""}
+                }
+            },
+            RPCResult{"for mode = all", RPCResult::Type::STR, "", "The transaction hash in hex"},
+        },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -71,7 +80,18 @@ static RPCHelpMan gobject_deserialize()
         {
             {"hex_data", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "data in hex string form"},
         },
-        RPCResults{},
+        {
+            RPCResult{
+                RPCResult::Type::OBJ, "", "Deserialized governance object",
+                {
+                    // TODO: list fields of output for RPC help instead ELISION
+                    {RPCResult::Type::ELISION, "", ""}
+                }
+            },
+            RPCResult{"for mode = all",
+                RPCResult::Type::STR, "", "The transaction hash in hex"
+            },
+        },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -96,7 +116,12 @@ static RPCHelpMan gobject_check()
         {
             {"hex_data", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "data in hex string format"},
         },
-        RPCResults{},
+        RPCResult{"if object is valid",
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::STR, "Object status", "OK"},
+            }
+        },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -145,7 +170,9 @@ static RPCHelpMan gobject_prepare()
             {"outputHash", RPCArg::Type::STR_HEX, RPCArg::Default{""}, "the single output to submit the proposal fee from"},
             {"outputIndex", RPCArg::Type::NUM, RPCArg::Default{0}, "The output index."},
         },
-        RPCResults{},
+        {
+            RPCResult{"if object valid", RPCResult::Type::STR, "", "serialized governance object"},
+        },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -254,7 +281,16 @@ static RPCHelpMan gobject_list_prepared()
         {
             {"count", RPCArg::Type::NUM, RPCArg::Default{10}, "Maximum number of objects to return."},
         },
-        RPCResults{},
+        RPCResult{
+            RPCResult::Type::ARR, "", "list of governance objects",
+            {
+                {RPCResult::Type::OBJ, "", "",
+                {
+                    // TODO: list fields of output for RPC help instead ELISION
+                    {RPCResult::Type::ELISION, "", ""}
+                }},
+            }
+        },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -303,7 +339,7 @@ static RPCHelpMan gobject_submit()
             {"data-hex", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "data in hex string form"},
             {"fee-txid", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "txid of the corresponding proposal fee transaction"},
         },
-        RPCResults{},
+        RPCResult{RPCResult::Type::STR_HEX, "data", "A string that is serialized, hex-encoded data for the gobject"},
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
