@@ -245,7 +245,6 @@ static RPCHelpMan quorum_info()
         RPCResult{
             RPCResult::Type::OBJ, "", "",
             {
-                // TODO: list fields of output for RPC help instead ELISION
                 {RPCResult::Type::ELISION, "", ""}
             },
         },
@@ -422,7 +421,17 @@ static RPCHelpMan quorum_memberof()
                 "Can be CPU/disk heavy when the value is larger than the number of active quorums."
             },
         },
-        RPCResults{},
+        RPCResult{
+            RPCResult::Type::ARR, "quorums", "",
+            {
+                {RPCResult::Type::OBJ, "", "Quorum Info",
+                {
+                    {RPCResult::Type::ELISION, "", "See for details help for `quorum info`"},
+                    {RPCResult::Type::BOOL, "isValidMember", ""},
+                    {RPCResult::Type::NUM, "memberIndex", ""},
+                }},
+            },
+        },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
