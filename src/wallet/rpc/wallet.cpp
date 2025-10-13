@@ -96,7 +96,7 @@ static RPCHelpMan setcoinjoinrounds()
                 "The default number of rounds is " + ToString(DEFAULT_COINJOIN_ROUNDS) +
                 " Cannot be more than " + ToString(MAX_COINJOIN_ROUNDS) + " nor less than " + ToString(MIN_COINJOIN_ROUNDS)},
         },
-        RPCResults{},
+        RPCResult{RPCResult::Type::NONE, "", ""},
         RPCExamples{
             HelpExampleCli("setcoinjoinrounds", "4")
     + HelpExampleRpc("setcoinjoinrounds", "16")
@@ -127,7 +127,7 @@ static RPCHelpMan setcoinjoinamount()
                 "The default amount is " + ToString(DEFAULT_COINJOIN_AMOUNT) +
                 " Cannot be more than " + ToString(MAX_COINJOIN_AMOUNT) + " nor less than " + ToString(MIN_COINJOIN_AMOUNT)},
         },
-        RPCResults{},
+        RPCResult{RPCResult::Type::NONE, "", ""},
         RPCExamples{
             HelpExampleCli("setcoinjoinamount", "500")
     + HelpExampleRpc("setcoinjoinamount", "208")
