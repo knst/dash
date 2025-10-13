@@ -722,7 +722,18 @@ static RPCHelpMan gobject_list_helper(const bool make_a_diff)
             {"signal", RPCArg::Type::STR, RPCArg::Default{"valid"}, "cached signal, possible values: [valid|funding|delete|endorsed|all]"},
             {"type", RPCArg::Type::STR, RPCArg::Default{"all"}, "object type, possible values: [proposals|triggers|all]"},
         },
-        RPCResults{},
+        {
+            RPCResult{"if request is valid",
+                RPCResult::Type::OBJ, "hash", "Object details",
+                {
+                    // TODO: list fields of output for RPC help instead ELISION
+                    {RPCResult::Type::ELISION, "", ""}
+                },
+            },
+            RPCResult{"if request is invalid",
+                RPCResult::Type::STR_HEX, "", "Error string"
+            },
+        },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -768,7 +779,15 @@ static RPCHelpMan gobject_get()
         {
             {"governance-hash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "object id"},
         },
-        RPCResults{},
+        {
+            RPCResult{
+                RPCResult::Type::OBJ, "", "",
+                {
+                    // TODO: list fields of output for RPC help instead ELISION
+                    {RPCResult::Type::ELISION, "", ""}
+                }
+            },
+        },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -864,7 +883,16 @@ static RPCHelpMan gobject_getcurrentvotes()
             {"txid", RPCArg::Type::STR_HEX, RPCArg::Default{""}, "masternode collateral txid"},
             {"vout", RPCArg::Type::STR, RPCArg::Default{""}, "masternode collateral output index, required if <txid> present"},
         },
-        RPCResults{},
+        RPCResult{
+            RPCResult::Type::ARR, "", "list of governance objects",
+            {
+                {RPCResult::Type::OBJ, "hash", "Hash of governance vote",
+                {
+                    // TODO: list fields of output for RPC help instead ELISION
+                    {RPCResult::Type::ELISION, "", ""}
+                }},
+            },
+        },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -930,7 +958,7 @@ static RPCHelpMan gobject()
         {
             {"command", RPCArg::Type::STR, RPCArg::Optional::NO, "The command to execute"},
         },
-        RPCResults{},
+        RPCResult{RPCResult::Type::NONE, "", ""},
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -952,7 +980,7 @@ static RPCHelpMan voteraw()
             {"time", RPCArg::Type::NUM, RPCArg::Optional::NO, ""},
             {"vote-sig", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, ""},
         },
-        RPCResults{},
+        RPCResult{RPCResult::Type::STR, "", "Result of voting"},
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
