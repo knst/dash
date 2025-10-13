@@ -1404,7 +1404,16 @@ static RPCHelpMan protx_list()
             {"detailed", RPCArg::Type::BOOL, RPCArg::Default{false}, "If not specified, only the hashes of the ProTx will be returned."},
             {"height", RPCArg::Type::NUM, RPCArg::DefaultHint{"current chain-tip"}, ""},
         },
-        RPCResults{},
+        RPCResult{
+            RPCResult::Type::ARR, "", "list of masternodes",
+            {
+                {RPCResult::Type::OBJ, "", "",
+                {
+                    // TODO: list fields of output for RPC help instead ELISION
+                    {RPCResult::Type::ELISION, "", ""}
+                }},
+            },
+        },
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -1645,8 +1654,40 @@ static RPCHelpMan protx_listdiff()
                        {"baseBlock", RPCArg::Type::NUM, RPCArg::Optional::NO, "The starting block height."},
                        {"block", RPCArg::Type::NUM, RPCArg::Optional::NO, "The ending block height."},
                },
-               RPCResults{},
-               RPCExamples{""},
+                RPCResult {
+                    RPCResult::Type::OBJ, "", "",
+                    {
+                        {RPCResult::Type::NUM, "baseHeight", "height of base (starting) block"},
+                        {RPCResult::Type::NUM, "blockHeight", "height of target (ending) block"},
+                        {RPCResult::Type::ARR, "addedMNs", "added masternodes",
+                            {
+                                {RPCResult::Type::OBJ, "", "",
+                                {
+                                    // TODO: list fields of output for RPC help instead ELISION
+                                    {RPCResult::Type::ELISION, "", ""}
+                                }},
+                            },
+                        },
+                        {RPCResult::Type::ARR, "removedMns", "added masternodes",
+                            {
+                                {RPCResult::Type::STR_HEX, "protx", "ProTx of removed masternode"},
+                            },
+                        },
+                        {RPCResult::Type::ARR, "addedMNs", "added masternodes",
+                            {
+                                {RPCResult::Type::OBJ, "", "",
+                                {
+                                    {RPCResult::Type::OBJ, "protx", "ProTx of updated masternode",
+                                    {
+                                        // TODO: list fields of output for RPC help instead ELISION
+                                        {RPCResult::Type::ELISION, "", ""}
+                                    }},
+                                }},
+                            },
+                        },
+                    },
+                },
+                RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
     const NodeContext& node = EnsureAnyNodeContext(request.context);
@@ -1744,7 +1785,7 @@ static RPCHelpMan protx_help()
         {
             {"command", RPCArg::Type::STR, RPCArg::Optional::NO, "The command to execute"},
         },
-        RPCResults{},
+        RPCResult{RPCResult::Type::NONE, "", ""},
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -1834,7 +1875,7 @@ static RPCHelpMan bls_help()
         {
             {"command", RPCArg::Type::STR, RPCArg::Optional::NO, "The command to execute"},
         },
-        RPCResults{},
+        RPCResult{RPCResult::Type::NONE, "", ""},
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
