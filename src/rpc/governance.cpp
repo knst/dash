@@ -520,6 +520,23 @@ static bool CheckWalletOwnsKey(const CWallet& wallet, const CKeyID& keyid)
     return wallet.IsMine(script) == isminetype::ISMINE_SPENDABLE;
 }
 
+namespace {
+const RPCResult vote_results{
+    RPCResult::Type::OBJ, "", "",
+        {
+            {RPCResult::Type::STR, "overall", "Total amount of successfull and failed votes"},
+            {RPCResult::Type::OBJ, "detail", "Detailed information for each vote",
+            {
+                {RPCResult::Type::OBJ, "protx", "ProTx of masternode for voting",
+                {
+                    {RPCResult::Type::STR, "result", "Result of voting: {success|failed}"},
+                    {RPCResult::Type::STR, "errorMessage", /*optional=*/true, "Error message if failed"},
+                }},
+            }},
+        },
+};
+} // anonymous namespace
+
 static RPCHelpMan gobject_vote_many()
 {
     return RPCHelpMan{"gobject vote-many",
@@ -530,7 +547,7 @@ static RPCHelpMan gobject_vote_many()
             {"vote", RPCArg::Type::STR, RPCArg::Optional::NO, "vote, possible values: [funding|valid|delete|endorsed]"},
             {"vote-outcome", RPCArg::Type::STR, RPCArg::Optional::NO, "vote outcome, possible values: [yes|no|abstain]"},
         },
-        RPCResults{},
+        vote_results,
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
@@ -583,7 +600,7 @@ static RPCHelpMan gobject_vote_alias()
             {"vote-outcome", RPCArg::Type::STR, RPCArg::Optional::NO, "vote outcome, possible values: [yes|no|abstain]"},
             {"protx-hash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "masternode's proTxHash"},
         },
-        RPCResults{},
+        vote_results,
         RPCExamples{""},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
