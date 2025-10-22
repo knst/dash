@@ -919,17 +919,8 @@ CFeeRate CBlockPolicyEstimator::estimateSmartFee(int confTarget, FeeCalculation 
 void CBlockPolicyEstimator::Flush() {
     FlushUnconfirmed();
 
-<<<<<<< HEAD
-<<<<<<< HEAD
+    AutoFile est_file(fsbridge::fopen(m_estimation_filepath, "wb"));
     fs::path est_filepath = gArgs.GetDataDirNet() / FEE_ESTIMATES_FILENAME;
-    AutoFile est_file{fsbridge::fopen(est_filepath, "wb")};
-=======
-    CAutoFile est_file(fsbridge::fopen(m_estimation_filepath, "wb"), SER_DISK, CLIENT_VERSION);
->>>>>>> 7da2d0506e (Merge bitcoin/bitcoin#25290: [kernel 3a/n] Decouple `CTxMemPool` from `ArgsManager`)
-=======
-    fs::path est_filepath = gArgs.GetDataDirNet() / FEE_ESTIMATES_FILENAME;
-    CAutoFile est_file(fsbridge::fopen(est_filepath, "wb"), SER_DISK, CLIENT_VERSION);
->>>>>>> a069c2b504 (Revert "Merge bitcoin/bitcoin#25290: [kernel 3a/n] Decouple `CTxMemPool` from `ArgsManager`")
     if (est_file.IsNull() || !Write(est_file)) {
         LogPrintf("Failed to write fee estimates to %s. Continue anyway.\n", fs::PathToString(est_filepath));
     }
