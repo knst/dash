@@ -17,6 +17,7 @@
 #include <util/moneystr.h>
 #include <validation.h>
 #include <util/time.h>
+#include <util/system.h>
 
 #include <instantsend/instantsend.h>
 #include <llmq/context.h>

@@ -8,6 +8,7 @@
 #include <hash.h>
 #include <index/blockfilterindex.h>
 #include <node/blockstorage.h>
+#include <util/system.h>
 #include <serialize.h>
 
 using node::UndoReadFromDisk;
