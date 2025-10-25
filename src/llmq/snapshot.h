@@ -43,6 +43,11 @@ public:
     std::vector<int> mnSkipList;
 
     CQuorumSnapshot() = default;
+    CQuorumSnapshot(const CQuorumSnapshot& snapshot) = default;
+    CQuorumSnapshot(CQuorumSnapshot&& snapshot) = default;
+    CQuorumSnapshot& operator=(const CQuorumSnapshot& snapshot) = default;
+    CQuorumSnapshot& operator=(CQuorumSnapshot&& snapshot) = default;
+
     CQuorumSnapshot(std::vector<bool> _activeQuorumMembers, int _mnSkipListMode, std::vector<int> _mnSkipList) :
         activeQuorumMembers(std::move(_activeQuorumMembers)),
         mnSkipListMode(_mnSkipListMode),

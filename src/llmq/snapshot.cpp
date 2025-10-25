@@ -265,7 +265,7 @@ bool BuildQuorumRotationInfo(CDeterministicMNManager& dmnman, CQuorumSnapshotMan
             errorRet = strprintf("Can not find quorum snapshot at H(%d)", h);
             return false;
         } else {
-            response.quorumSnapshotList.push_back(snapshotNeededH.value());
+            response.quorumSnapshotList.emplace_back(std::move(snapshotNeededH.value()));
         }
 
         CSimplifiedMNListDiff mnhneeded;
@@ -338,7 +338,7 @@ uint256 GetLastBaseBlockHash(Span<const CBlockIndex*> baseBlockIndexes, const CB
 
 std::optional<CQuorumSnapshot> CQuorumSnapshotManager::GetSnapshotForBlock(const Consensus::LLMQType llmqType, const CBlockIndex* pindex)
 {
-    CQuorumSnapshot snapshot = {};
+    CQuorumSnapshot snapshot;
 
     auto snapshotHash = ::SerializeHash(std::make_pair(llmqType, pindex->GetBlockHash()));
 

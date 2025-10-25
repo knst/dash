@@ -931,7 +931,6 @@ static RPCHelpMan quorum_rotationinfo()
     ;
 
     llmq::CGetQuorumRotationInfo cmd;
-    llmq::CQuorumRotationInfo quorumRotationInfoRet;
     std::string strError;
 
     cmd.blockRequestHash = ParseHashV(request.params[0], "blockRequestHash");
@@ -951,11 +950,13 @@ static RPCHelpMan quorum_rotationinfo()
         }
     }
 
-    LOCK(cs_main);
-
-    if (!BuildQuorumRotationInfo(*CHECK_NONFATAL(node.dmnman), *llmq_ctx.qsnapman, chainman, *llmq_ctx.qman,
-                                 *llmq_ctx.quorum_block_processor, cmd, false, quorumRotationInfoRet, strError)) {
-        throw JSONRPCError(RPC_INVALID_REQUEST, strError);
+    llmq::CQuorumRotationInfo quorumRotationInfoRet;
+    {
+        LOCK(cs_main);
+        if (!BuildQuorumRotationInfo(*CHECK_NONFATAL(node.dmnman), *llmq_ctx.qsnapman, chainman, *llmq_ctx.qman,
+                                     *llmq_ctx.quorum_block_processor, cmd, false, quorumRotationInfoRet, strError)) {
+            throw JSONRPCError(RPC_INVALID_REQUEST, strError);
+        }
     }
 
     return quorumRotationInfoRet.ToJson();
