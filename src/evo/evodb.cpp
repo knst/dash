@@ -32,9 +32,9 @@ void CEvoDBScopedCommitter::Rollback()
 }
 
 CEvoDB::CEvoDB(const util::DbWrapperParams& db_params) :
-    db{util::MakeDbWrapper({db_params.path / "evodb", db_params.memory, db_params.wipe, /*cache_size=*/64 << 20})},
-    rootBatch{*db},
-    rootDBTransaction{*db, rootBatch},
+    db{util::DbWrapperParams({db_params.path / "evodb", db_params.memory, db_params.wipe, /*cache_size=*/64 << 20})},
+    rootBatch{db},
+    rootDBTransaction{db, rootBatch},
     curDBTransaction{rootDBTransaction, rootDBTransaction}
 {
 }
@@ -58,7 +58,7 @@ bool CEvoDB::CommitRootTransaction()
     LOCK(cs);
     assert(curDBTransaction.IsClean());
     rootDBTransaction.Commit();
-    bool ret = db->WriteBatch(rootBatch);
+    bool ret = db.WriteBatch(rootBatch);
     rootBatch.Clear();
     return ret;
 }

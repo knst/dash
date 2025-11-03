@@ -27,7 +27,7 @@ static std::tuple<std::string, uint32_t, uint256> BuildInversedISLockKey(std::st
 } // anonymous namespace
 
 CInstantSendDb::CInstantSendDb(const util::DbWrapperParams& db_params) :
-    db{util::MakeDbWrapper({db_params.path / "llmq" / "isdb", db_params.memory, db_params.wipe, /*cache_size=*/32 << 20})}
+    db{std::make_unique<CDBWrapper>(util::DbWrapperParams{db_params.path / "llmq" / "isdb", db_params.memory, db_params.wipe, /*cache_size=*/32 << 20})}
 {
     Upgrade({db_params.path / "llmq" / "isdb", db_params.memory, /*wipe=*/true, /*cache_size=*/32 << 20});
 }
@@ -40,8 +40,7 @@ void CInstantSendDb::Upgrade(const util::DbWrapperParams& db_params)
     int v{0};
     if (!db->Read(DB_VERSION, v) || v < CInstantSendDb::CURRENT_VERSION) {
         // Wipe db
-        db.reset();
-        db = util::MakeDbWrapper(db_params);
+        db = std::make_unique<CDBWrapper>(db_params);
         CDBBatch batch(*db);
         batch.Write(DB_VERSION, CInstantSendDb::CURRENT_VERSION);
         // Sync DB changes to disk

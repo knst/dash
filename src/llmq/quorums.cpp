@@ -212,8 +212,8 @@ CQuorumManager::CQuorumManager(CBLSWorker& _blsWorker, CChainState& chainstate, 
                                CQuorumBlockProcessor& _quorumBlockProcessor, CQuorumSnapshotManager& qsnapman,
                                const CActiveMasternodeManager* const mn_activeman, const CMasternodeSync& mn_sync,
                                const CSporkManager& sporkman, const util::DbWrapperParams& db_params) :
-    db{util::MakeDbWrapper(
-        {db_params.path / "llmq" / "quorumdb", db_params.memory, db_params.wipe, /*cache_size=*/1 << 20})},
+    db{std::make_unique<CDBWrapper>(util::DbWrapperParams{
+        db_params.path / "llmq" / "quorumdb", db_params.memory, db_params.wipe, /*cache_size=*/1 << 20})},
     blsWorker{_blsWorker},
     m_chainstate{chainstate},
     m_dmnman{dmnman},

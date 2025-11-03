@@ -40,7 +40,7 @@ class CEvoDB
 public:
     Mutex cs;
 private:
-    std::unique_ptr<CDBWrapper> db;
+    CDBWrapper db;
 
     using RootTransaction = CDBTransaction<CDBWrapper, CDBBatch>;
     using CurTransaction = CDBTransaction<RootTransaction, RootTransaction>;
@@ -98,7 +98,7 @@ public:
 
     CDBWrapper& GetRawDB()
     {
-        return *db;
+        return db;
     }
 
     [[nodiscard]] size_t GetMemoryUsage() const
@@ -108,7 +108,7 @@ public:
 
     bool CommitRootTransaction() EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
-    bool IsEmpty() { return db->IsEmpty(); }
+    bool IsEmpty() { return db.IsEmpty(); }
 
     bool VerifyBestBlock(const uint256& hash) EXCLUSIVE_LOCKS_REQUIRED(!cs);
     void WriteBestBlock(const uint256& hash) EXCLUSIVE_LOCKS_REQUIRED(!cs);

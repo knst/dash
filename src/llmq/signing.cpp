@@ -28,7 +28,7 @@
 namespace llmq
 {
 CRecoveredSigsDb::CRecoveredSigsDb(const util::DbWrapperParams& db_params) :
-    db{util::MakeDbWrapper({db_params.path / "llmq" / "recsigdb", db_params.memory, db_params.wipe, /*cache_size=*/8 << 20})}
+    db{std::make_unique<CDBWrapper>(util::DbWrapperParams{db_params.path / "llmq" / "recsigdb", db_params.memory, db_params.wipe, /*cache_size=*/8 << 20})}
 {
 }
 

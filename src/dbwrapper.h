@@ -38,6 +38,16 @@ namespace leveldb {
 class Env;
 }
 
+namespace util {
+struct DbWrapperParams
+{
+    const fs::path path{""};
+    const bool memory{false};
+    const bool wipe{false};
+    const size_t cache_size{1 << 20};
+};
+} // namespace util
+
 static const size_t DBWRAPPER_PREALLOC_KEY_SIZE = 64;
 static const size_t DBWRAPPER_PREALLOC_VALUE_SIZE = 1024;
 
@@ -264,6 +274,9 @@ public:
 
     CDBWrapper(const CDBWrapper&) = delete;
     CDBWrapper& operator=(const CDBWrapper&) = delete;
+    CDBWrapper(const util::DbWrapperParams& params) :CDBWrapper(params.path, params.cache_size, params.memory, params.wipe)
+    {
+    }
 
     template <typename K>
     bool ReadDataStream(const K& key, CDataStream& ssValue) const
@@ -708,20 +721,5 @@ public:
         return std::make_unique<CDBTransactionIterator<CDBTransaction>>(*this);
     }
 };
-
-namespace util {
-struct DbWrapperParams
-{
-    const fs::path path{""};
-    const bool memory{false};
-    const bool wipe{false};
-    const size_t cache_size{1 << 20};
-};
-
-static inline std::unique_ptr<CDBWrapper> MakeDbWrapper(const DbWrapperParams& params)
-{
-    return std::make_unique<CDBWrapper>(params.path, params.cache_size, params.memory, params.wipe);
-}
-} // namespace util
 
 #endif // BITCOIN_DBWRAPPER_H
