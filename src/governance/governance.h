@@ -380,7 +380,6 @@ public:
     std::vector<CInv> FetchRelayInventory() EXCLUSIVE_LOCKS_REQUIRED(!cs_relay);
     void CheckAndRemove() EXCLUSIVE_LOCKS_REQUIRED(!cs_store);
     void RequestOrphanObjects(CConnman& connman) EXCLUSIVE_LOCKS_REQUIRED(!cs_store);
-    void CleanOrphanObjects() EXCLUSIVE_LOCKS_REQUIRED(!cs_store);
 
 private:
     // Branches of ProcessMessage
