@@ -649,6 +649,7 @@ public:
     void StartHandlers() override;
     void StopHandlers() override;
     void InterruptHandlers() override;
+    void ScheduleHandlers(CScheduler& scheduler) override;
 
     /** Implement PeerManagerInternal */
     void PeerMisbehaving(const NodeId pnode, const int howmuch, const std::string& message = "") override EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex);
@@ -1686,6 +1687,13 @@ void PeerManagerImpl::InterruptHandlers()
 {
     for (auto& handler : m_handlers) {
         handler->Interrupt();
+    }
+}
+
+void PeerManagerImpl::ScheduleHandlers(CScheduler& scheduler)
+{
+    for (auto& handler : m_handlers) {
+        handler->Schedule(scheduler, m_connman);
     }
 }
 
