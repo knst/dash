@@ -42,4 +42,6 @@ elif [ "$BUILD_TARGET" = "s390x" ]; then
   source ./ci/test/00_setup_env_s390x.sh
 elif [ "$BUILD_TARGET" = "win64" ]; then
   source ./ci/test/00_setup_env_win64.sh
+elif [ "$BUILD_TARGET" = "arm64-android" ]; then
+  source ./ci/test/00_setup_env_android.sh
 fi

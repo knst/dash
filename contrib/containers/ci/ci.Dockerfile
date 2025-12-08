@@ -23,11 +23,14 @@ RUN set -ex; \
     g++-mingw-w64-x86-64 \
     gawk \
     gettext \
+    gradle \
     libtool \
     m4 \
+    openjdk-8-jdk \
     pkg-config \
     wine-stable \
     wine64 \
+    unzip \
     zip \
     && rm -rf /var/lib/apt/lists/*
 
