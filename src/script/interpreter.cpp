@@ -1553,7 +1553,8 @@ static const HashWriter HASHER_TAPSIGHASH = TaggedHash("TapSighash");
 template<typename T>
 bool SignatureHashSchnorr(uint256& hash_out, const T& tx_to, uint32_t in_pos, uint8_t hash_type, SigVersion sigversion, const PrecomputedTransactionData& cache)
 {
-    uint8_t ext_flag;
+    // TODO: either remove attribute or variable ext_flag. It's not used but it kept for backport compatibility
+    [[maybe_unused]] uint8_t ext_flag;
     switch (sigversion) {
     case SigVersion::TAPROOT:
         ext_flag = 0;
