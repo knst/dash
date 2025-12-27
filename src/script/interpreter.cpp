@@ -315,7 +315,7 @@ public:
 
 static bool EvalChecksigPreTapscript(const valtype& vchSig, const valtype& vchPubKey, CScript::const_iterator pbegincodehash, CScript::const_iterator pend, unsigned int flags, const BaseSignatureChecker& checker, SigVersion sigversion, ScriptError* serror, bool& fSuccess)
 {
-    assert(sigversion == SigVersion::BASE || sigversion == SigVersion::WITNESS_V0);
+    assert(sigversion == SigVersion::BASE);
 
     // Subset of script starting at the most recent codeseparator
     CScript scriptCode(pbegincodehash, pend);
@@ -351,6 +351,7 @@ static bool EvalChecksigTapscript(const valtype& sig, const valtype& pubkey, Scr
      */
     success = !sig.empty();
     if (success) {
+        /*
         // Implement the sigops/witnesssize ratio test.
         // Passing with an upgradable public key version is also counted.
         assert(execdata.m_validation_weight_left_init);
@@ -358,6 +359,7 @@ static bool EvalChecksigTapscript(const valtype& sig, const valtype& pubkey, Scr
         if (execdata.m_validation_weight_left < 0) {
             return set_error(serror, SCRIPT_ERR_TAPSCRIPT_VALIDATION_WEIGHT);
         }
+        */
     }
     if (pubkey.size() == 0) {
         return set_error(serror, SCRIPT_ERR_PUBKEYTYPE);
@@ -388,7 +390,6 @@ static bool EvalChecksig(const valtype& sig, const valtype& pubkey, CScript::con
 {
     switch (sigversion) {
     case SigVersion::BASE:
-    case SigVersion::WITNESS_V0:
         return EvalChecksigPreTapscript(sig, pubkey, pbegincodehash, pend, flags, checker, sigversion, serror, success);
     case SigVersion::TAPSCRIPT:
         return EvalChecksigTapscript(sig, pubkey, execdata, flags, checker, sigversion, serror, success);
@@ -410,7 +411,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
     static const valtype vchTrue(1, 1);
 
     // sigversion cannot be TAPROOT here, as it admits no script execution.
-    assert(sigversion == SigVersion::BASE || sigversion == SigVersion::WITNESS_V0 || sigversion == SigVersion::TAPSCRIPT);
+    assert(sigversion == SigVersion::BASE || sigversion == SigVersion::TAPSCRIPT);
 
     CScript::const_iterator pc = script.begin();
     CScript::const_iterator pend = script.end();
@@ -420,7 +421,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
     ConditionStack vfExec;
     std::vector<valtype> altstack;
     set_error(serror, SCRIPT_ERR_UNKNOWN_ERROR);
-    if ((sigversion == SigVersion::BASE || sigversion == SigVersion::WITNESS_V0) && script.size() > MAX_SCRIPT_SIZE) {
+    if ((sigversion == SigVersion::BASE) && script.size() > MAX_SCRIPT_SIZE) {
         return set_error(serror, SCRIPT_ERR_SCRIPT_SIZE);
     }
     int nOpCount = 0;
@@ -442,7 +443,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
             if (vchPushValue.size() > MAX_SCRIPT_ELEMENT_SIZE)
                 return set_error(serror, SCRIPT_ERR_PUSH_SIZE);
 
-            if (sigversion == SigVersion::BASE || sigversion == SigVersion::WITNESS_V0) {
+            if (sigversion == SigVersion::BASE) {
                 // Note how OP_RESERVED does not count towards the opcode limit.
                 if (opcode > OP_16 && ++nOpCount > MAX_OPS_PER_SCRIPT) {
                     return set_error(serror, SCRIPT_ERR_OP_COUNT);
