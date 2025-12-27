@@ -1776,6 +1776,8 @@ bool GenericTransactionSignatureChecker<T>::CheckSequence(const CScriptNum& nSeq
 template class GenericTransactionSignatureChecker<CTransaction>;
 template class GenericTransactionSignatureChecker<CMutableTransaction>;
 
+/*
+// TODO: refactor and use it for TAPROOT verify! Now there's not call of `checker.CheckSchnorrSignature` at all
 static bool VerifyTaprootCommitment(const std::vector<unsigned char>& control, const std::vector<unsigned char>& program, const CScript& script)
 {
     const int path_len = (control.size() - TAPROOT_CONTROL_BASE_SIZE) / TAPROOT_CONTROL_NODE_SIZE;
@@ -1797,7 +1799,6 @@ static bool VerifyTaprootCommitment(const std::vector<unsigned char>& control, c
     return q.CheckPayToContract(p, k, control[0] & 1);
 }
 
-// TODO: refactor and use it for TAPROOT verify! Now there's not call of `checker.CheckSchnorrSignature` at all
 static bool VerifyWitnessProgram(const CScriptWitness& witness, const std::vector<unsigned char>& program, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* serror)
 {
     CScript exec_script; //!< Actually executed script (last stack item in P2WSH; implied P2PKH script in P2WPKH; leaf script in P2TR)
@@ -1842,6 +1843,7 @@ static bool VerifyWitnessProgram(const CScriptWitness& witness, const std::vecto
     }
     // There is intentionally no return statement here, to be able to use "control reaches end of non-void function" warnings to detect gaps in the logic above.
 }
+*/
 
 bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* serror)
 {
