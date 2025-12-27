@@ -1506,14 +1506,14 @@ void PrecomputedTransactionData::Init(const T& txTo, std::vector<CTxOut>&& spent
         m_spent_outputs_ready = true;
     }
 
-    // TODO: replace it to real identifier; by tx version probably
+    // TODO: replace it to real detection; by tx version probably
     bool uses_bip341_taproot = true;
     for (size_t inpos = 0; inpos < txTo.vin.size(); ++inpos) {
-        if (m_spent_outputs_ready && m_spent_outputs[inpos].scriptPubKey.size() == 2 + TAPROOT_SIZE) {
-            // TODO: replace it to real bip341 determination; by tx version probably
+        if (m_spent_outputs_ready && m_spent_outputs[inpos].scriptPubKey.size() == 2 + SIG_TAPROOT_SIZE) {
+            // TODO: replace it to real bip341 detection; by tx version probably
         }
     }
-    if (uses_bip341_taproot {
+    if (uses_bip341_taproot) {
         m_prevouts_single_hash = GetPrevoutsSHA256(txTo);
         m_sequences_single_hash = GetSequencesSHA256(txTo);
         m_outputs_single_hash = GetOutputsSHA256(txTo);
@@ -1546,8 +1546,9 @@ template PrecomputedTransactionData::PrecomputedTransactionData(const CMutableTr
         return false;
     }
     assert(!"Unknown MissingDataBehavior value");
+}
 
-static const CHashWriter HASHER_TAPSIGHASH = TaggedHash("TapSighash");
+static const HashWriter HASHER_TAPSIGHASH = TaggedHash("TapSighash");
 
 template<typename T>
 bool SignatureHashSchnorr(uint256& hash_out, const T& tx_to, uint32_t in_pos, uint8_t hash_type, SigVersion sigversion, const PrecomputedTransactionData& cache)

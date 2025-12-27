@@ -148,7 +148,7 @@ struct PrecomputedTransactionData
 
 enum class SigVersion
 {
-    BASE = 0,
+    BASE = 0, //!< Bare scripts and BIP16 P2SH-wrapped redeemscripts
     TAPROOT = 2,     //!< Witness v1 with 32-byte program, not BIP16 P2SH-wrapped, key path spending; see BIP 341
 };
 
