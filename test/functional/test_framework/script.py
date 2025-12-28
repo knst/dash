@@ -17,6 +17,7 @@ from .messages import (
     CTransaction,
     CTxOut,
     hash256,
+    ser_string,
     sha256,
 )
 

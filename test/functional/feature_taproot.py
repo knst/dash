@@ -7,17 +7,15 @@
 from test_framework.blocktools import (
     create_coinbase,
     create_block,
-    add_witness_commitment,
-    MAX_BLOCK_SIGOPS_WEIGHT,
-    WITNESS_SCALE_FACTOR,
+#    add_witness_commitment,
+#    MAX_BLOCK_SIGOPS_WEIGHT,
+#    WITNESS_SCALE_FACTOR,
 )
 from test_framework.messages import (
     COutPoint,
     CTransaction,
     CTxIn,
-    CTxInWitness,
     CTxOut,
-    ToHex,
 )
 from test_framework.script import (
     ANNEX_TAG,
@@ -1258,7 +1256,7 @@ class TaprootTest(BitcoinTestFramework):
             # Add change
             fund_tx.vout.append(CTxOut(balance - 10000, random.choice(host_spks)))
             # Ask the wallet to sign
-            ss = BytesIO(bytes.fromhex(node.signrawtransactionwithwallet(ToHex(fund_tx))["hex"]))
+            ss = BytesIO(bytes.fromhex(node.signrawtransactionwithwallet(fund_tx.serialize().hex())["hex"]))
             fund_tx.deserialize(ss)
             # Construct UTXOData entries
             fund_tx.rehash()

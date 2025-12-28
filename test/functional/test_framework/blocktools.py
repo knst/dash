@@ -172,8 +172,8 @@ def script_BIP34_coinbase_height(height):
     return CScript([CScriptNum(height)])
 
 
-#def create_coinbase(height, pubkey=None, dip4_activated=False, v20_activated=False, nValue=500, extra_output_script=None, fees=0):
-def create_coinbase(height, pubkey=None, dip4_activated=False, v20_activated=False, nValue=500):
+def create_coinbase(height, pubkey=None, dip4_activated=False, v20_activated=False, nValue=500, extra_output_script=None, fees=0):
+#def create_coinbase(height, pubkey=None, dip4_activated=False, v20_activated=False, nValue=500, fees=0):
     """Create a coinbase transaction, assuming no miner fees.
 
     If pubkey is passed in, the coinbase output will be a P2PK output;
