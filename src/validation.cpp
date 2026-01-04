@@ -51,7 +51,6 @@
 
 #include <chainlock/chainlock.h>
 #include <evo/chainhelper.h>
-#include <evo/deterministicmns.h>
 #include <evo/evodb.h>
 #include <evo/specialtx.h>
 #include <evo/specialtxman.h>

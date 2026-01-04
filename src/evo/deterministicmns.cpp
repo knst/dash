@@ -24,7 +24,6 @@
 #include <node/blockstorage.h>
 #include <script/standard.h>
 #include <uint256.h>
-#include <validation.h>
 
 #include <functional>
 #include <optional>
