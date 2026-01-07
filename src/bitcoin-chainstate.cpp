@@ -24,6 +24,18 @@
 #include <validation.h>
 #include <validationinterface.h>
 
+
+// TODO: review & probably remove
+#include <test/util/net.h>
+#include <governance/governance.h>
+#include <evo/chainhelper.h>
+#include <evo/evodb.h>
+#include <netfulfilledman.h>
+#include <masternode/node.h>
+#include <masternode/meta.h>
+#include <masternode/sync.h>
+#include <spork.h>
+
 #include <filesystem>
 #include <functional>
 #include <iosfwd>
@@ -74,11 +86,76 @@ int main(int argc, char* argv[])
     // SETUP: Chainstate
     ChainstateManager chainman;
 
+    /*
+    auto maybe_load_error = LoadChainstate(fReindex.load(),
+                                           *Assert(m_node.chainman.get()),
+                                           *assert(m_node.govman.get()),
+                                           *assert(m_node.mn_metaman.get()),
+                                           *assert(m_node.mn_sync.get()),
+                                           *assert(m_node.sporkman.get()),
+                                           m_node.mn_activeman,
+                                           m_node.chain_helper,
+                                           m_node.cpoolman,
+                                           m_node.dmnman,
+                                           m_node.evodb,
+                                           m_node.mnhf_manager,
+                                           m_node.llmq_ctx,
+                                           Assert(m_node.mempool.get()),
+                                           fPruneMode,
+                                           m_args.GetBoolArg("-addressindex", DEFAULT_ADDRESSINDEX),
+                                           !m_args.GetBoolArg("-disablegovernance", !DEFAULT_GOVERNANCE_ENABLE),
+                                           m_args.GetBoolArg("-spentindex", DEFAULT_SPENTINDEX),
+                                           m_args.GetBoolArg("-timestampindex", DEFAULT_TIMESTAMPINDEX),
+                                           m_args.GetBoolArg("-txindex", DEFAULT_TXINDEX),
+                                           chainparams.GetConsensus(),
+                                           chainparams.NetworkIDString(),
+                                           m_args.GetBoolArg("-reindex-chainstate", false),
+                                           m_cache_sizes.block_tree_db,
+                                           m_cache_sizes.coins_db,
+                                           m_cache_sizes.coins,
+                                           block_tree_db_in_memory=true,
+                                           coins_db_in_memory=true);
+                                           */
+    // TODO: remove govman? remove govman in Dash Core if -disablegovernance?
+    const auto netgroupman = std::make_unique<NetGroupManager>(/*asmap=*/std::vector<bool>());
+    const auto addrman = std::make_unique<AddrMan>(netgroupman,
+                                               /*deterministic=*/false,
+                                               0);
+    const auto connman = std::make_unique<ConnmanTestMsg>(0x1337, 0x1337, *addrman, *netgroupman); // Deterministic randomness for tests.
+    const auto evodb = std::make_unique<CEvoDB>(1 << 20, true, true);
+    const auto mnhf_manager = std::make_unique<CMNHFManager>(*m_node.evodb);
+    const auto cpoolman = std::make_unique<CCreditPoolManager>(*m_node.evodb);
+    const auto mn_metaman = std::make_unique<CMasternodeMetaMan>();
+    const auto netfulfilledman = std::make_unique<CNetFulfilledRequestManager>();
+    const auto sporkman = std::make_unique<CSporkManager>();
+    const auto mn_sync = std::make_unique<CMasternodeSync>(connman, netfulfilledman);
+    const auto govman = std::make_unique<CGovernanceManager>(*mn_metaman, *netfulfilledman, chainman, /*dmnman=*/nullptr, mn_sync);
+    std::unique_ptr<CActiveMasternodeManager> mn_activeman{nullptr};
+    const auto chain_helper = std::make_unique<CChainstateHelper>(*cpoolman, *dmnman, *mnhf_manager, govman, *(llmq_ctx->isman), *(llmq_ctx->quorum_block_processor),
+                                                       *(llmq_ctx->qsnapman), chainman, consensus_params, mn_sync, sporkman, *(llmq_ctx->clhandler),
+                                                       *(llmq_ctx->qman));
     auto rv = node::LoadChainstate(false,
                                    std::ref(chainman),
-                                   nullptr,
+                                           *Assert(govman.get()), // dash
+                                           *Assert(mn_metaman.get()), // dash
+                                           *Assert(mn_sync.get()), // dash
+                                           *Assert(sporkman.get()), // dash
+                                           mn_activeman, //m_node.mn_activeman, // dash
+                                           chain_helper, //m_node.chain_helper, // dash
+                                           cpoolman, // m_node.cpoolman, // dash
+                                           nullptr, // m_node.dmnman, // dash
+                                           evodb, //m_node.evodb, // dash
+                                           mnhf_manager, //m_node.mnhf_manager, // dash
+                                           nullptr, // m_node.llmq_ctx, // dash
+                                   nullptr, // mempool ?
                                    false,
+                                           false, //m_args.GetBoolArg("-addressindex", DEFAULT_ADDRESSINDEX),
+                                           true, //!m_args.GetBoolArg("-disablegovernance", !DEFAULT_GOVERNANCE_ENABLE),
+                                           false, //m_args.GetBoolArg("-spentindex", DEFAULT_SPENTINDEX),
+                                           false, // m_args.GetBoolArg("-timestampindex", DEFAULT_TIMESTAMPINDEX),
+                                           false, // m_args.GetBoolArg("-txindex", DEFAULT_TXINDEX),
                                    chainparams.GetConsensus(),
+                                   chainparams.NetworkIDString(), // dash
                                    false,
                                    2 << 20,
                                    2 << 22,

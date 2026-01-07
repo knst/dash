@@ -1103,7 +1103,6 @@ bitcoin_chainstate_SOURCES = \
   chainparams.cpp \
   clientversion.cpp \
   coins.cpp \
-  compat/glibcxx_sanity.cpp \
   compressor.cpp \
   consensus/merkle.cpp \
   consensus/tx_check.cpp \
