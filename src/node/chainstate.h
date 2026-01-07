@@ -11,7 +11,6 @@
 #include <optional>
 #include <string>
 
-class CActiveMasternodeManager;
 class CChainstateHelper;
 class CCreditPoolManager;
 class CDeterministicMNManager;
@@ -84,7 +83,6 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
                                                      CMasternodeMetaMan& mn_metaman,
                                                      CMasternodeSync& mn_sync,
                                                      CSporkManager& sporkman,
-                                                     std::unique_ptr<CActiveMasternodeManager>& mn_activeman,
                                                      std::unique_ptr<CChainstateHelper>& chain_helper,
                                                      std::unique_ptr<CCreditPoolManager>& cpoolman,
                                                      std::unique_ptr<CDeterministicMNManager>& dmnman,
@@ -116,7 +114,6 @@ void DashChainstateSetup(ChainstateManager& chainman,
                          CMasternodeMetaMan& mn_metaman,
                          CMasternodeSync& mn_sync,
                          CSporkManager& sporkman,
-                         std::unique_ptr<CActiveMasternodeManager>& mn_activeman,
                          std::unique_ptr<CChainstateHelper>& chain_helper,
                          std::unique_ptr<CCreditPoolManager>& cpoolman,
                          std::unique_ptr<CDeterministicMNManager>& dmnman,

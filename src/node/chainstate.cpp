@@ -40,7 +40,6 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
                                                      CMasternodeMetaMan& mn_metaman,
                                                      CMasternodeSync& mn_sync,
                                                      CSporkManager& sporkman,
-                                                     std::unique_ptr<CActiveMasternodeManager>& mn_activeman,
                                                      std::unique_ptr<CChainstateHelper>& chain_helper,
                                                      std::unique_ptr<CCreditPoolManager>& cpoolman,
                                                      std::unique_ptr<CDeterministicMNManager>& dmnman,
@@ -88,7 +87,7 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
     pblocktree.reset();
     pblocktree.reset(new CBlockTreeDB(nBlockTreeDBCache, block_tree_db_in_memory, fReset));
 
-    DashChainstateSetup(chainman, govman, mn_metaman, mn_sync, sporkman, mn_activeman, chain_helper, cpoolman,
+    DashChainstateSetup(chainman, govman, mn_metaman, mn_sync, sporkman, chain_helper, cpoolman,
                         dmnman, evodb, mnhf_manager, llmq_ctx, mempool, data_dir, dash_dbs_in_memory,
                         /*llmq_dbs_wipe=*/fReset || fReindexChainState, bls_threads, max_recsigs_age, consensus_params);
 
@@ -215,7 +214,6 @@ void DashChainstateSetup(ChainstateManager& chainman,
                          CMasternodeMetaMan& mn_metaman,
                          CMasternodeSync& mn_sync,
                          CSporkManager& sporkman,
-                         std::unique_ptr<CActiveMasternodeManager>& mn_activeman,
                          std::unique_ptr<CChainstateHelper>& chain_helper,
                          std::unique_ptr<CCreditPoolManager>& cpoolman,
                          std::unique_ptr<CDeterministicMNManager>& dmnman,
