@@ -9,7 +9,6 @@
 #include <coinjoin/util.h>
 #include <evo/types.h>
 #include <msg_result.h>
-
 #include <net_types.h>
 #include <protocol.h>
 #include <util/ranges.h>
@@ -72,7 +71,7 @@ public:
 
 class CoinJoinWalletManager {
 public:
-    using wallet_name_cjman_map = std::map<const std::string, std::unique_ptr<CCoinJoinClientManager>>;
+    using wallet_name_cjman_map = std::unordered_map<std::string, std::unique_ptr<CCoinJoinClientManager>>;
 
 public:
     CoinJoinWalletManager() = delete;
@@ -97,7 +96,7 @@ public:
     {
         LOCK(cs_wallet_manager_map);
         for (auto&& [_, clientman] : m_wallet_manager_map) {
-            func(clientman);
+            func(*clientman);
         }
     };
 
@@ -105,7 +104,7 @@ public:
     bool ForAnyCJClientMan(Callable&& func) EXCLUSIVE_LOCKS_REQUIRED(!cs_wallet_manager_map)
     {
         LOCK(cs_wallet_manager_map);
-        return ranges::any_of(m_wallet_manager_map, [&](auto& pair) { return func(pair.second); });
+        return ranges::any_of(m_wallet_manager_map, [&](auto& pair) { return func(*pair.second); });
     };
 
 private:
