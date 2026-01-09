@@ -174,7 +174,7 @@ bool AreInputsStandard(const CTransaction& tx, const CCoinsViewCache& mapInputs,
             if (subscript.GetSigOpCount(true) > MAX_P2SH_SIGOPS) {
                 return false;
             }
-        } else if (whichType == TxoutType::WITNESS_V1_TAPROOT) {
+        } else if (whichType == TxoutType::TAPROOT) {
             // Don't allow Taproot spends unless Taproot is active.
             if (!taproot_active) return false;
         }

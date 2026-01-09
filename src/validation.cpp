@@ -884,7 +884,6 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
         return false; // state filled in by CheckTxInputs
     }
 
-    const auto& params = args.m_chainparams.GetConsensus();
     bool taproot_state = DeploymentActiveAfter(m_active_chainstate.m_chain.Tip(), m_active_chainstate.m_chainman, Consensus::DEPLOYMENT_V24);
     if (fRequireStandard && !AreInputsStandard(tx, m_view, taproot_state)) {
         return state.Invalid(TxValidationResult::TX_INPUTS_NOT_STANDARD, "bad-txns-nonstandard-inputs");

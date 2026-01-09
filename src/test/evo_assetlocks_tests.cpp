@@ -146,7 +146,8 @@ BOOST_FIXTURE_TEST_CASE(evo_assetlock, TestChain100Setup)
 
     BOOST_CHECK(CheckAssetLockTx(CTransaction(tx), tx_state));
 
-    BOOST_CHECK(AreInputsStandard(CTransaction(tx), coins));
+    BOOST_CHECK(AreInputsStandard(CTransaction(tx), coins, false));
+    BOOST_CHECK(AreInputsStandard(CTransaction(tx), coins, true));
 
     // Check version
     {
