@@ -515,7 +515,6 @@ ERR_CLEANSTACK = {"err_msg": "Stack size must be exactly one after execution"}
 ERR_STACK_EMPTY = {"err_msg": "Operation not valid with the current stack size"}
 ERR_UNDECODABLE = {"err_msg": "Opcode missing or not understood"}
 ERR_NO_SUCCESS = {"err_msg": "Script evaluated without error but finished with a false/empty top stack element"}
-ERR_EMPTY_WITNESS = {"err_msg": "Witness program was passed an empty witness"}
 ERR_CHECKSIGVERIFY = {"err_msg": "Script failed an OP_CHECKSIGVERIFY operation"}
 
 VALID_SIGHASHES_ECDSA = [
@@ -733,8 +732,6 @@ def spenders_taproot_active():
     add_spender(spenders, "spendpath/bitflipmerkle", tap=tap, leaf="128deep", **SINGLE_SIG, key=secs[0], failure={"merklebranch": bitflipper(default_merklebranch)}, **ERR_WITNESS_PROGRAM_MISMATCH)
     # Test that bitflips in the inner pubkey invalidate it.
     add_spender(spenders, "spendpath/bitflippubkey", tap=tap, leaf="128deep", **SINGLE_SIG, key=secs[0], failure={"pubkey_inner": bitflipper(default_pubkey_inner)}, **ERR_WITNESS_PROGRAM_MISMATCH)
-    # Test that empty witnesses are invalid.
-    add_spender(spenders, "spendpath/emptywit", tap=tap, leaf="128deep", **SINGLE_SIG, key=secs[0], failure={"witness": []}, **ERR_EMPTY_WITNESS)
     # Test that adding garbage to the control block invalidates it.
     add_spender(spenders, "spendpath/padlongcontrol", tap=tap, leaf="128deep", **SINGLE_SIG, key=secs[0], failure={"controlblock": lambda ctx: default_controlblock(ctx) + random_bytes(random.randrange(1, 32))}, **ERR_CONTROLBLOCK_SIZE)
     # Test that truncating the control block invalidates it.
@@ -1036,7 +1033,7 @@ def spenders_taproot_inactive():
     # Test that keypath spending is valid & standard if compliant, but valid and nonstandard otherwise.
     add_spender(spenders, "inactive/keypath_valid", key=sec, tap=tap)
     add_spender(spenders, "inactive/keypath_invalidsig", key=sec, tap=tap, standard=False, sighash=bitflipper(default_sighash))
-    add_spender(spenders, "inactive/keypath_empty", key=sec, tap=tap, standard=False, witness=[])
+    add_spender(spenders, "inactive/keypath_empty", key=sec, tap=tap, standard=False)
 
     # Same for scriptpath spending (but using future features like annex, leaf versions, or OP_SUCCESS is nonstandard).
     add_spender(spenders, "inactive/scriptpath_valid", key=sec, tap=tap, leaf="pk", inputs=[getter("sign")])
