@@ -1603,6 +1603,12 @@ void PrecomputedTransactionData::Init(const T& txTo, std::vector<CTxOut>&& spent
     }
 
     // TODO: replace it to real detection; by tx version probably
+    // TODO: replace it to real detection; by tx version probably
+    // TODO: replace it to real detection; by tx version probably
+    // TODO: replace it to real detection; by tx version probably
+    // TODO: replace it to real detection; by tx version probably
+    // TODO: replace it to real detection; by tx version probably
+    // it's used in VerifyScript, EvalScript, etc
     bool uses_bip341_taproot = true;
     for (size_t inpos = 0; inpos < txTo.vin.size(); ++inpos) {
         if (m_spent_outputs_ready && m_spent_outputs[inpos].scriptPubKey.size() == 2 + SIG_TAPROOT_SIZE) {
