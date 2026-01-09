@@ -87,11 +87,10 @@ void WalletModel::setClientModel(ClientModel* client_model)
     if (!m_client_model) timer->stop();
 }
 
-/*
 std::unique_ptr<interfaces::CoinJoin::Client> WalletModel::coinJoin() const
 {
     return m_node.coinJoinLoader()->GetClient(m_wallet->getWalletName());
-}*/
+}
 
 void WalletModel::updateStatus()
 {

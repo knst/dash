@@ -1932,3 +1932,17 @@ void CoinJoinWalletManager::Remove(const std::string& name) {
     LOCK(cs_wallet_manager_map);
     m_wallet_manager_map.erase(name);
 }
+
+void CoinJoinWalletManager::Flush(const std::string& name)
+{
+    auto clientman = Assert(Get(name));
+    clientman->ResetPool();
+    clientman->StopMixing();
+}
+
+CCoinJoinClientManager* CoinJoinWalletManager::Get(const std::string& name) const
+{
+    LOCK(cs_wallet_manager_map);
+    auto it = m_wallet_manager_map.find(name);
+    return (it != m_wallet_manager_map.end()) ? it->second.get() : nullptr;
+}
