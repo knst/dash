@@ -2253,7 +2253,7 @@ static unsigned int GetBlockScriptFlags(const CBlockIndex* pindex, const Chainst
     }
 
     // Start enforcing Taproot using versionbits logic.
-    if (DeploymentActiveAt(*pindex, consensusparams, Consensus::DEPLOYMENT_V24)) {
+    if (DeploymentActiveAt(*pindex, chainman, Consensus::DEPLOYMENT_V24)) {
         flags |= SCRIPT_VERIFY_TAPROOT;
     }
 
