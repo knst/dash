@@ -5,9 +5,11 @@
 #ifndef BITCOIN_INTERFACES_COINJOIN_H
 #define BITCOIN_INTERFACES_COINJOIN_H
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
+#include <iostream>
 
 namespace node {
 struct NodeContext;
@@ -16,6 +18,7 @@ namespace wallet {
 class CWallet;
 } // namespace wallet
 
+class CCoinJoinClientManager;
 class UniValue;
 
 namespace interfaces {
@@ -24,7 +27,9 @@ namespace CoinJoin {
 class Client
 {
 public:
-    virtual ~Client() {}
+    virtual ~Client() {
+        std::cerr << "~Coinjoin::Client()!";
+    }
     virtual void resetCachedBlocks() = 0;
     virtual void resetPool() = 0;
     virtual int getCachedBlocks() = 0;
@@ -45,8 +50,7 @@ public:
     virtual void AddWallet(const std::shared_ptr<wallet::CWallet>&) = 0;
     //! Remove wallet from CoinJoin client manager
     virtual void RemoveWallet(const std::string&) = 0;
-    virtual void FlushWallet(const std::string&) = 0;
-    virtual std::unique_ptr<CoinJoin::Client> GetClient(const std::string&) = 0;
+    virtual bool ForNamedClient(const std::string&, std::function<void(CCoinJoinClientManager&)> fn) = 0;
 };
 } // namespace CoinJoin
 

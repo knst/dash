@@ -34,7 +34,7 @@ public:
 
 public:
     bool hasQueue(const uint256& hash) const override;
-    CCoinJoinClientManager* getClient(const std::string& name) override;
+    bool forNamedCJClientMan(const std::string& name, std::function<void(CCoinJoinClientManager&)> fn) override;
     MessageProcessingResult processMessage(CNode& peer, CChainState& chainstate, CConnman& connman, CTxMemPool& mempool,
                                            std::string_view msg_type, CDataStream& vRecv) override;
     std::optional<CCoinJoinQueue> getQueueFromHash(const uint256& hash) const override;
@@ -42,7 +42,6 @@ public:
     std::vector<CDeterministicMNCPtr> getMixingMasternodes() override;
     void addWallet(const std::shared_ptr<wallet::CWallet>& wallet) override;
     void removeWallet(const std::string& name) override;
-    void flushWallet(const std::string& name) override;
 
 protected:
     // CValidationInterface
@@ -91,9 +90,9 @@ bool CJWalletManagerImpl::hasQueue(const uint256& hash) const
     return false;
 }
 
-CCoinJoinClientManager* CJWalletManagerImpl::getClient(const std::string& name)
+bool CJWalletManagerImpl::forNamedCJClientMan(const std::string& name, std::function<void(CCoinJoinClientManager&)> fn)
 {
-    return walletman.Get(name);
+    return walletman.ForNamedCJClientMan(name, fn);
 }
 
 MessageProcessingResult CJWalletManagerImpl::processMessage(CNode& pfrom, CChainState& chainstate, CConnman& connman,
@@ -136,11 +135,6 @@ std::vector<CDeterministicMNCPtr> CJWalletManagerImpl::getMixingMasternodes()
 void CJWalletManagerImpl::addWallet(const std::shared_ptr<wallet::CWallet>& wallet)
 {
     walletman.Add(wallet);
-}
-
-void CJWalletManagerImpl::flushWallet(const std::string& name)
-{
-    walletman.Flush(name);
 }
 
 void CJWalletManagerImpl::removeWallet(const std::string& name)

@@ -7,9 +7,9 @@
 
 #include <evo/types.h>
 #include <msg_result.h>
-
 #include <validationinterface.h>
 
+#include <functional>
 #include <optional>
 #include <string_view>
 
@@ -47,7 +47,7 @@ public:
 
 public:
     virtual bool hasQueue(const uint256& hash) const = 0;
-    virtual CCoinJoinClientManager* getClient(const std::string& name) = 0;
+    virtual bool forNamedCJClientMan(const std::string& name, std::function<void(CCoinJoinClientManager&)> fn) = 0;
     virtual MessageProcessingResult processMessage(CNode& peer, CChainState& chainstate, CConnman& connman,
                                                    CTxMemPool& mempool, std::string_view msg_type, CDataStream& vRecv) = 0;
     virtual std::optional<CCoinJoinQueue> getQueueFromHash(const uint256& hash) const = 0;
@@ -55,7 +55,6 @@ public:
     virtual std::vector<CDeterministicMNCPtr> getMixingMasternodes() = 0;
     virtual void addWallet(const std::shared_ptr<wallet::CWallet>& wallet) = 0;
     virtual void removeWallet(const std::string& name) = 0;
-    virtual void flushWallet(const std::string& name) = 0;
 
 protected:
     // CValidationInterface

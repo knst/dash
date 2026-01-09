@@ -26,7 +26,9 @@ class CoinJoinClientImpl : public interfaces::CoinJoin::Client
 
 public:
     explicit CoinJoinClientImpl(CCoinJoinClientManager& clientman)
-        : m_clientman(clientman) {}
+        : m_clientman(clientman) {
+        LogPrintf("CoinJoinClientImpl created!\n");
+        }
 
     void resetCachedBlocks() override
     {
@@ -105,15 +107,19 @@ public:
         manager().removeWallet(name);
         g_wallet_init_interface.InitCoinJoinSettings(*this, wallet_loader());
     }
+    bool ForNamedClient(const std::string& name, std::function<void(CCoinJoinClientManager&)> fn)
+    {
+        return manager().forNamedCJClientMan(name, fn);
+    }
+    /*
     void FlushWallet(const std::string& name) override
     {
-        manager().flushWallet(name);
+        manager().forNamedCJClientMan(name, [](CCoinJoinClientManager& clientman) {
+                clientman.ResetPool();
+                clientman.StopMixing();
+                });
     }
-    std::unique_ptr<interfaces::CoinJoin::Client> GetClient(const std::string& name) override
-    {
-        auto clientman = manager().getClient(name);
-        return clientman ? std::make_unique<CoinJoinClientImpl>(*clientman) : nullptr;
-    }
+    */
 
     NodeContext& m_node;
 };
