@@ -34,7 +34,6 @@ from .script_util import (
 from .util import assert_equal
 
 MAX_BLOCK_SIGOPS = 40000
-MAX_BLOCK_SIGOPS = 20000
 
 # Genesis block time (regtest)
 TIME_GENESIS_BLOCK = 1417713337
