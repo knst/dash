@@ -37,6 +37,7 @@ public:
     virtual bool startMixing() = 0;
     virtual void stopMixing() = 0;
 };
+
 class Loader
 {
 public:
