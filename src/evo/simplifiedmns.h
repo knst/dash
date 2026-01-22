@@ -112,7 +112,7 @@ public:
     CSimplifiedMNList() = default;
 
     // This constructor from std::vector is used in unit-tests
-    explicit CSimplifiedMNList(std::vector<std::unique_ptr<CSimplifiedMNListEntry>>&& smlEntries);
+    explicit CSimplifiedMNList(std::vector<std::unique_ptr<CSimplifiedMNListEntry>>&& smlEntries) noexcept;
 
     uint256 CalcMerkleRoot(bool* pmutated = nullptr) const;
     bool operator==(const CSimplifiedMNList& rhs) const;

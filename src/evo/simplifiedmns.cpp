@@ -65,7 +65,7 @@ std::string CSimplifiedMNListEntry::ToString() const
                      (nVersion >= ProTxVersion::ExtAddr ? "" : strprintf(", platformHTTPPort=%d", platformHTTPPort)));
 }
 
-CSimplifiedMNList::CSimplifiedMNList(std::vector<std::unique_ptr<CSimplifiedMNListEntry>>&& smlEntries)
+CSimplifiedMNList::CSimplifiedMNList(std::vector<std::unique_ptr<CSimplifiedMNListEntry>>&& smlEntries) noexcept
 {
     mnList = std::move(smlEntries);
 
