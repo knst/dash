@@ -23,8 +23,8 @@ void NetSigning::ProcessMessage(CNode& pfrom, const std::string& msg_type, CData
         auto recoveredSig = std::make_shared<llmq::CRecoveredSig>();
         vRecv >> *recoveredSig;
 
-        WITH_LOCK(cs_main, m_peer_manager->PeerEraseObjectRequest(pfrom.GetId(),
-                                                                  CInv{MSG_QUORUM_RECOVERED_SIG, recoveredSig->GetHash()}));
+        WITH_LOCK(cs_main, m_peer_manager->PeerEraseObjectRequest(pfrom.GetId(), CInv{MSG_QUORUM_RECOVERED_SIG,
+                                                                                      recoveredSig->GetHash()}));
 
         if (!Params().GetLLMQ(recoveredSig->getLlmqType()).has_value()) {
             m_peer_manager->PeerMisbehaving(pfrom.GetId(), 100);
@@ -217,7 +217,7 @@ void NetSigning::WorkThreadDispatcher()
                     bool moreWork = m_shares_manager->ProcessPendingSigShares();
 
                     if (!moreWork) {
-                        return;  // No work found, exit immediately
+                        return; // No work found, exit immediately
                     }
                 }
             });

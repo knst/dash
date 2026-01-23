@@ -1591,9 +1591,7 @@ bool CSigSharesManager::IsAnyPendingProcessing() const
     LOCK(cs);
     // Check if there's work, spawn a helper if so
     return std::any_of(nodeStates.begin(), nodeStates.end(),
-        [](const auto& entry) {
-            return !entry.second.pendingIncomingSigShares.Empty();
-        });
+                       [](const auto& entry) { return !entry.second.pendingIncomingSigShares.Empty(); });
 }
 
 void CSigSharesManager::SignAndProcessSingleShare(PendingSignatureData work)

@@ -23,7 +23,8 @@ class CSigningManager;
 class NetSigning final : public NetHandler, public CValidationInterface
 {
 public:
-    NetSigning(PeerManagerInternal* peer_manager, llmq::CSigningManager& sig_manager, llmq::CSigSharesManager* shares_manager) :
+    NetSigning(PeerManagerInternal* peer_manager, llmq::CSigningManager& sig_manager,
+               llmq::CSigSharesManager* shares_manager) :
         NetHandler(peer_manager),
         m_sig_manager{sig_manager},
         m_shares_manager{shares_manager}

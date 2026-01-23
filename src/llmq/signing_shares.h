@@ -364,7 +364,12 @@ struct PendingSignatureData {
     const uint256 id;
     const uint256 msgHash;
 
-    PendingSignatureData(CQuorumCPtr quorum, const uint256& id, const uint256& msgHash) : quorum(std::move(quorum)), id(id), msgHash(msgHash){}
+    PendingSignatureData(CQuorumCPtr quorum, const uint256& id, const uint256& msgHash) :
+        quorum(std::move(quorum)),
+        id(id),
+        msgHash(msgHash)
+    {
+    }
 };
 
 class CSigSharesManager : public llmq::CRecoveredSigsListener
