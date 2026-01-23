@@ -77,7 +77,7 @@ void NetSigning::ProcessMessage(CNode& pfrom, const std::string& msg_type, CData
             return;
         }
         if (!ranges::all_of(msgs,
-                            [this, &pfrom](const auto& inv){ return m_shares_manager->ProcessMessageSigShares(pfrom, inv); })) {
+                            [this, &pfrom, &msg_type](const auto& inv){ return m_shares_manager->ProcessMessageSigShares(pfrom, inv, msg_type); })) {
             m_shares_manager->BanNode(pfrom.GetId());
             return;
         }

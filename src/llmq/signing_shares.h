@@ -451,7 +451,7 @@ private:
 public:
     // all of these return false when the currently processed message should be aborted (as each message actually contains multiple messages)
     bool ProcessMessageSigSesAnn(const CNode& pfrom, const CSigSesAnn& ann) EXCLUSIVE_LOCKS_REQUIRED(!cs);
-    bool ProcessMessageSigShares(const CNode& pfrom, const CSigSharesInv& inv) EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    bool ProcessMessageSigShares(const CNode& pfrom, const CSigSharesInv& inv, const std::string& msg_type) EXCLUSIVE_LOCKS_REQUIRED(!cs);
     bool ProcessMessageBatchedSigShares(const CNode& pfrom, const CBatchedSigShares& batchedSigShares)
         EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
