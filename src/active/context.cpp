@@ -69,14 +69,12 @@ ActiveContext::~ActiveContext()
 
 void ActiveContext::Interrupt()
 {
-    shareman->InterruptWorkerThread();
 }
 
 void ActiveContext::Start(CConnman& connman, PeerManager& peerman)
 {
     qman_handler->Start();
     qdkgsman->StartThreads(connman, peerman);
-    shareman->Start();
     cl_signer->RegisterRecoveryInterface();
     is_signer->RegisterRecoveryInterface();
 }
@@ -85,7 +83,6 @@ void ActiveContext::Stop()
 {
     is_signer->UnregisterRecoveryInterface();
     cl_signer->UnregisterRecoveryInterface();
-    shareman->Stop();
     qdkgsman->StopThreads();
     qman_handler->Stop();
 }
