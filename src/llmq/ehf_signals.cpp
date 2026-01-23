@@ -112,7 +112,8 @@ MessageProcessingResult CEHFSignalsHandler::HandleNewRecoveredSig(const CRecover
         CMutableTransaction tx = mnhfPayload.PrepareTx();
 
         CTransactionRef tx_to_sent = MakeTransactionRef(std::move(tx));
-        LogPrintf("CEHFSignalsHandler::HandleNewRecoveredSig Special EHF TX is created hash=%s\n", tx_to_sent->GetHash().ToString());
+        LogPrintf("CEHFSignalsHandler::HandleNewRecoveredSig Special EHF TX is created hash=%s\n",
+                  tx_to_sent->GetHash().ToString());
         LOCK(::cs_main);
         const MempoolAcceptResult result = m_chainman.ProcessTransaction(tx_to_sent);
         if (result.m_result_type == MempoolAcceptResult::ResultType::VALID) {
@@ -120,7 +121,8 @@ MessageProcessingResult CEHFSignalsHandler::HandleNewRecoveredSig(const CRecover
             ret.m_transactions.push_back(tx_to_sent->GetHash());
             return ret;
         }
-        LogPrintf("CEHFSignalsHandler::HandleNewRecoveredSig -- AcceptToMemoryPool failed: %s\n", result.m_state.ToString());
+        LogPrintf("CEHFSignalsHandler::HandleNewRecoveredSig -- AcceptToMemoryPool failed: %s\n",
+                  result.m_state.ToString());
         return {};
     }
     return {};
