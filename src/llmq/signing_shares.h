@@ -16,7 +16,6 @@
 #include <serialize.h>
 #include <sync.h>
 #include <uint256.h>
-#include <util/threadinterrupt.h>
 #include <util/time.h>
 
 #include <atomic>
@@ -24,7 +23,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -388,8 +386,6 @@ private:
 
     mutable Mutex cs;
 
-//    CThreadInterrupt workInterrupt;
-
     SigShareMap<CSigShare> sigShares GUARDED_BY(cs);
     Uint256HashMap<CSignedSession> signedSessions GUARDED_BY(cs);
 
@@ -427,7 +423,6 @@ public:
 
     void RegisterRecoveryInterface() EXCLUSIVE_LOCKS_REQUIRED(!cs);
     void UnregisterRecoveryInterface() EXCLUSIVE_LOCKS_REQUIRED(!cs);
-    void InterruptWorkerThread() EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
     void ProcessMessage(const CNode& pnode, const std::string& msg_type, CDataStream& vRecv) EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
@@ -480,11 +475,6 @@ private:
 
     void RemoveSigSharesForSession(const uint256& signHash) EXCLUSIVE_LOCKS_REQUIRED(cs);
 
-public:
-    void Cleanup() EXCLUSIVE_LOCKS_REQUIRED(!cs);
-    void RemoveBannedNodeStates() EXCLUSIVE_LOCKS_REQUIRED(!cs);
-    bool SendMessages() EXCLUSIVE_LOCKS_REQUIRED(!cs);
-
 private:
     void BanNode(NodeId nodeId) EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
@@ -496,11 +486,11 @@ private:
     void CollectSigSharesToAnnounce(std::unordered_map<NodeId, Uint256HashMap<CSigSharesInv>>& sigSharesToAnnounce)
         EXCLUSIVE_LOCKS_REQUIRED(cs);
 
-    // Thread main functions
-//    void HousekeepingThreadMain() EXCLUSIVE_LOCKS_REQUIRED(!cs);
-//    void WorkDispatcherThreadMain() EXCLUSIVE_LOCKS_REQUIRED(!cs_pendingSigns, !cs);
-
 public:
+    void Cleanup() EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    void RemoveBannedNodeStates() EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    bool SendMessages() EXCLUSIVE_LOCKS_REQUIRED(!cs);
+
     // Dispatcher functions
     std::vector<PendingSignatureData> DispatchPendingSigns() EXCLUSIVE_LOCKS_REQUIRED(!cs_pendingSigns);
     // Worker pool task functions
