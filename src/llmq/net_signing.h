@@ -53,6 +53,7 @@ private:
     void WorkThreadCleaning();
     void WorkThreadDispatcher();
 
+    bool ProcessPendingSigShares();
 private:
     CSigningManager& m_sig_manager;
     CSigSharesManager* m_shares_manager;
