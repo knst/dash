@@ -774,7 +774,7 @@ private:
 
     /** Various helpers for headers processing, invoked by ProcessHeadersMessage() */
     /** Return true if headers are continuous and have valid proof-of-work (DoS points assigned on failure) */
-    bool CheckHeadersPoW(const std::vector<CBlockHeader>& headers, const Consensus::Params& consensusParams, Peer& peer);
+    bool CheckHeadersPoW(const std::vector<CBlockHeader>& headers, const Consensus::Params& consensusParams, CNode& pfrom);
     /** Calculate an anti-DoS work threshold for headers chains */
     arith_uint256 GetAntiDoSWorkThreshold();
     /** Deal with state tracking and headers sync for peers that send the
@@ -3123,17 +3123,17 @@ void PeerManagerImpl::SendBlockTransactions(CNode& pfrom, const CBlock& block, c
     m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::BLOCKTXN, resp));
 }
 
-bool PeerManagerImpl::CheckHeadersPoW(const std::vector<CBlockHeader>& headers, const Consensus::Params& consensusParams, Peer& peer)
+bool PeerManagerImpl::CheckHeadersPoW(const std::vector<CBlockHeader>& headers, const Consensus::Params& consensusParams, CNode& pfrom)
 {
     // Do these headers have proof-of-work matching what's claimed?
     if (!HasValidProofOfWork(headers, consensusParams)) {
-        Misbehaving(peer, 100, "header with invalid proof of work");
+        Misbehaving(pfrom.GetId(), 100, "header with invalid proof of work");
         return false;
     }
 
     // Are these headers connected to each other?
     if (!CheckHeadersAreContinuous(headers)) {
-        Misbehaving(peer, 20, "non-continuous headers sequence");
+        Misbehaving(pfrom.GetId(), 20, "non-continuous headers sequence");
         return false;
     }
     return true;
@@ -3208,7 +3208,9 @@ bool PeerManagerImpl::CheckHeadersAreContinuous(const std::vector<CBlockHeader>&
 bool PeerManagerImpl::IsContinuationOfLowWorkHeadersSync(Peer& peer, CNode& pfrom, std::vector<CBlockHeader>& headers)
 {
     if (peer.m_headers_sync) {
-        auto result = peer.m_headers_sync->ProcessNextHeaders(headers, headers.size() == MAX_HEADERS_RESULTS);
+        // TODO: remove duplicated code by moving it inside helper
+        const bool uses_compressed = UsesCompressedHeaders(peer);
+        auto result = peer.m_headers_sync->ProcessNextHeaders(headers, headers.size() == GetHeadersLimit(pfrom, uses_compressed));
         if (result.request_more) {
             auto locator = peer.m_headers_sync->NextHeadersRequestLocator();
             // If we were instructed to ask for a locator, it should not be empty.
@@ -3220,7 +3222,8 @@ bool PeerManagerImpl::IsContinuationOfLowWorkHeadersSync(Peer& peer, CNode& pfro
                 // it may be possible to bypass this via compactblock
                 // processing, so check the result before logging just to be
                 // safe.
-                bool sent_getheaders = MaybeSendGetHeaders(pfrom, locator, peer);
+                std::string msg_type = UsesCompressedHeaders(peer) ? NetMsgType::GETHEADERS2 : NetMsgType::GETHEADERS;
+                bool sent_getheaders = MaybeSendGetHeaders(pfrom, msg_type, locator, peer);
                 if (sent_getheaders) {
                     LogPrint(BCLog::NET, "more getheaders (from %s) to peer=%d\n",
                             locator.vHave.front().ToString(), pfrom.GetId());
@@ -3264,7 +3267,8 @@ bool PeerManagerImpl::TryLowWorkHeadersSync(Peer& peer, CNode& pfrom, const CBlo
         // Only try to sync with this peer if their headers message was full;
         // otherwise they don't have more headers after this so no point in
         // trying to sync their too-little-work chain.
-        if (headers.size() == MAX_HEADERS_RESULTS) {
+        const bool uses_compressed = UsesCompressedHeaders(peer);
+        if (headers.size() == GetHeadersLimit(pfrom, uses_compressed)) {
             // Note: we could advance to the last header in this set that is
             // known to us, rather than starting at the first header (which we
             // may already have); however this is unlikely to matter much since
@@ -3469,7 +3473,7 @@ void PeerManagerImpl::ProcessHeadersMessage(CNode& pfrom, Peer& peer,
     // We'll rely on headers having valid proof-of-work further down, as an
     // anti-DoS criteria (note: this check is required before passing any
     // headers into HeadersSyncState).
-    if (!CheckHeadersPoW(headers, m_chainparams.GetConsensus(), peer)) {
+    if (!CheckHeadersPoW(headers, m_chainparams.GetConsensus(), pfrom)) {
         // Misbehaving() calls are handled within CheckHeadersPoW(), so we can
         // just return. (Note that even if a header is announced via compact
         // block, the header itself should be valid, so this type of error can
