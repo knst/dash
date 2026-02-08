@@ -9,11 +9,12 @@ from decimal import Decimal
 from test_framework.test_framework import BitcoinTestFramework
 
 from test_framework.p2p import (
+    CompressibleBlockHeader,
     P2PInterface,
 )
 
 from test_framework.messages import (
-    msg_headers,
+    msg_headers2,
 )
 
 from test_framework.blocktools import (
@@ -101,20 +102,21 @@ class RejectLowDifficultyHeadersTest(BitcoinTestFramework):
         if (current_height < 3000):
             self.generate(node, 3000-current_height, sync_fun=self.no_op)
 
-        # Send a group of 2000 headers, forking from genesis.
+        # Send a group of 8000 headers, forking from genesis.
         new_blocks = []
         hashPrevBlock = int(node.getblockhash(0), 16)
-        for i in range(2000):
+        for i in range(8000):
             block = create_block(hashprev = hashPrevBlock, tmpl=node.getblocktemplate(NORMAL_GBT_REQUEST_PARAMS))
             block.solve()
-            new_blocks.append(block)
+            new_blocks.append(CompressibleBlockHeader(block))
             hashPrevBlock = block.sha256
 
-        headers_message = msg_headers(headers=new_blocks)
+        headers_message = msg_headers2(headers=new_blocks)
         p2p.send_and_ping(headers_message)
 
         # getpeerinfo should show a sync in progress
-        assert_equal(node.getpeerinfo()[0]['presynced_headers'], 2000)
+        self.log.info(f"get peer info: {node.getpeerinfo()}")
+        assert_equal(node.getpeerinfo()[0]['presynced_headers'], 8000)
 
     def run_test(self):
         self.test_chains_sync_when_long_enough()
