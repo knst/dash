@@ -770,7 +770,7 @@ private:
     */
     void ProcessHeadersMessage(CNode& pfrom, Peer& peer,
                                std::vector<CBlockHeader>&& headers,
-                               bool via_compact_block)
+                               bool via_compact_block, bool uses_compressed)
         EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex, g_msgproc_mutex);
     [[nodiscard]] MessageProcessingResult ProcessPlatformBanMessage(NodeId node, std::string_view msg_type, CDataStream& vRecv)
         EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex, g_msgproc_mutex);
@@ -822,7 +822,7 @@ private:
      */
     bool TryLowWorkHeadersSync(Peer& peer, CNode& pfrom,
                                   const CBlockIndex* chain_start_header,
-                                  std::vector<CBlockHeader>& headers)
+                                  std::vector<CBlockHeader>& headers, bool uses_compressed)
         EXCLUSIVE_LOCKS_REQUIRED(!peer.m_headers_sync_mutex, !m_peer_mutex);
 
     /** Return true if the given header is an ancestor of
@@ -3268,7 +3268,7 @@ bool PeerManagerImpl::IsContinuationOfLowWorkHeadersSync(Peer& peer, CNode& pfro
     return false;
 }
 
-bool PeerManagerImpl::TryLowWorkHeadersSync(Peer& peer, CNode& pfrom, const CBlockIndex* chain_start_header, std::vector<CBlockHeader>& headers)
+bool PeerManagerImpl::TryLowWorkHeadersSync(Peer& peer, CNode& pfrom, const CBlockIndex* chain_start_header, std::vector<CBlockHeader>& headers, bool uses_compressed)
 {
     // Calculate the total work on this chain.
     arith_uint256 total_work = chain_start_header->nChainWork + CalculateHeadersWork(headers);
@@ -3283,7 +3283,7 @@ bool PeerManagerImpl::TryLowWorkHeadersSync(Peer& peer, CNode& pfrom, const CBlo
         // Only try to sync with this peer if their headers message was full;
         // otherwise they don't have more headers after this so no point in
         // trying to sync their too-little-work chain.
-        const bool uses_compressed = UsesCompressedHeaders(peer);
+        LogPrintf("knst headers[compressed=%d]: %d == %d ?\n", uses_compressed, headers.size(), GetHeadersLimit(pfrom, uses_compressed));
         if (headers.size() == GetHeadersLimit(pfrom, uses_compressed)) {
             // Note: we could advance to the last header in this set that is
             // known to us, rather than starting at the first header (which we
@@ -3469,7 +3469,7 @@ void PeerManagerImpl::UpdatePeerStateForReceivedHeaders(CNode& pfrom,
 
 void PeerManagerImpl::ProcessHeadersMessage(CNode& pfrom, Peer& peer,
                                             std::vector<CBlockHeader>&& headers,
-                                            bool via_compact_block)
+                                            bool via_compact_block, bool uses_compressed)
 {
     size_t nCount = headers.size();
 
@@ -3563,7 +3563,7 @@ void PeerManagerImpl::ProcessHeadersMessage(CNode& pfrom, Peer& peer,
     // Do anti-DoS checks to determine if we should process or store for later
     // processing.
     if (!already_validated_work && TryLowWorkHeadersSync(peer, pfrom,
-                chain_start_header, headers)) {
+                chain_start_header, headers, uses_compressed)) {
         // If we successfully started a low-work headers sync, then there
         // should be no headers to process any further.
         Assume(headers.empty());
@@ -3588,8 +3588,8 @@ void PeerManagerImpl::ProcessHeadersMessage(CNode& pfrom, Peer& peer,
     Assume(pindexLast);
 
     // Consider fetching more headers if we are not using our headers-sync mechanism.
-    const bool uses_compressed = UsesCompressedHeaders(peer);
     const std::string msg_type = uses_compressed ? NetMsgType::GETHEADERS2 : NetMsgType::GETHEADERS;
+    LogPrintf("knst headers[compressed=%d]: %d == %d ?\n", uses_compressed, nCount, GetHeadersLimit(pfrom, uses_compressed));
     if (nCount == GetHeadersLimit(pfrom, uses_compressed) && !have_headers_sync) {
         // Headers message had its maximum size; the peer may have more headers.
         if (MaybeSendGetHeaders(pfrom, msg_type, GetLocator(pindexLast), peer)) {
@@ -5252,7 +5252,7 @@ void PeerManagerImpl::ProcessMessage(
             // the peer if the header turns out to be for an invalid block.
             // Note that if a peer tries to build on an invalid chain, that
             // will be detected and the peer will be disconnected/discouraged.
-            return ProcessHeadersMessage(pfrom, *peer, {cmpctblock.header}, /*via_compact_block=*/true);
+            return ProcessHeadersMessage(pfrom, *peer, {cmpctblock.header}, /*via_compact_block=*/true, false);
         }
 
         if (fBlockReconstructed) {
@@ -5374,6 +5374,7 @@ void PeerManagerImpl::ProcessMessage(
 
         // Bypass the normal CBlock deserialization, as we don't want to risk deserializing 2000 full blocks.
         unsigned int nCount = ReadCompactSize(vRecv);
+        LogPrintf("knst headers[compressed=%d]: %d == %d ?\n", msg_type == NetMsgType::HEADERS2, nCount, GetHeadersLimit(pfrom, msg_type == NetMsgType::HEADERS2));
         if (nCount > GetHeadersLimit(pfrom, msg_type == NetMsgType::HEADERS2)) {
             Misbehaving(pfrom.GetId(), 20, strprintf("headers message size = %u", nCount));
             return;
@@ -5395,7 +5396,7 @@ void PeerManagerImpl::ProcessMessage(
             }
         }
 
-        return ProcessHeadersMessage(pfrom, *peer, std::move(headers), /*via_compact_block=*/false);
+        return ProcessHeadersMessage(pfrom, *peer, std::move(headers), /*via_compact_block=*/false, msg_type == NetMsgType::HEADERS2);
     }
 
     if (msg_type == NetMsgType::BLOCK)
