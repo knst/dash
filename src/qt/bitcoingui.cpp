@@ -1041,9 +1041,7 @@ void BitcoinGUI::addWallet(WalletModel* walletModel)
         showDebugWindow();
     });
     connect(this, &BitcoinGUI::setPrivacy, wallet_view, &WalletView::setPrivacy);
-    const bool privacy = isPrivacyModeActivated();
-    wallet_view->setPrivacy(privacy);
-    enableHistoryAction(privacy);
+    wallet_view->setPrivacy(isPrivacyModeActivated());
     const QString display_name = walletModel->getDisplayName();
     m_wallet_selector->addItem(display_name, QVariant::fromValue(walletModel));
 }
@@ -1105,7 +1103,7 @@ void BitcoinGUI::setWalletActionsEnabled(bool enabled)
         sendCoinsButton->setEnabled(enabled);
         coinJoinCoinsButton->setEnabled(enabled && clientModel->coinJoinOptions().isEnabled());
         receiveCoinsButton->setEnabled(enabled);
-        historyButton->setEnabled(enabled);
+        historyButton->setEnabled(enabled && !isPrivacyModeActivated());
     }
 #endif // ENABLE_WALLET
 
