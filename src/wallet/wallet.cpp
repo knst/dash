@@ -3242,6 +3242,7 @@ std::shared_ptr<CWallet> CWallet::Create(WalletContext& context, const std::stri
         for (auto spk_man : walletInstance->GetActiveScriptPubKeyMans()) {
             if (spk_man->HavePrivateKeys()) {
                 warnings.push_back(strprintf(_("Warning: Private keys detected in wallet {%s} with disabled private keys"), walletFile));
+                break;
             }
         }
     }
