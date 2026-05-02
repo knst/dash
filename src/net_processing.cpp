@@ -2365,7 +2365,8 @@ bool PeerManagerImpl::AlreadyHave(const CInv& inv)
 
     case MSG_SPORK:
         {
-            return m_sporkman.GetSporkByHash(inv.hash).has_value();
+            return m_chainparams.NetworkIDString() == CBaseChainParams::MAIN ||
+                   m_sporkman.GetSporkByHash(inv.hash).has_value();
         }
 
     case MSG_GOVERNANCE_OBJECT:
@@ -2473,6 +2474,8 @@ void PeerManagerImpl::PushInventory(NodeId nodeid, const CInv& inv)
 
 void PeerManagerImpl::RelayInv(const CInv& inv, const int minProtoVersion)
 {
+    if (inv.type == MSG_SPORK && m_chainparams.NetworkIDString() == CBaseChainParams::MAIN) return;
+
     // TODO: Migrate to iteration through m_peer_map
     m_connman.ForEachNode([&](CNode* pnode) {
         if (pnode->nVersion < minProtoVersion || !pnode->CanRelay())
@@ -2486,6 +2489,8 @@ void PeerManagerImpl::RelayInv(const CInv& inv, const int minProtoVersion)
 
 void PeerManagerImpl::RelayInv(const CInv& inv)
 {
+    if (inv.type == MSG_SPORK && m_chainparams.NetworkIDString() == CBaseChainParams::MAIN) return;
+
     READ_LOCK(m_peer_mutex);
     for (const auto& [_, peer] : m_peer_map) {
         if (!peer->GetInvRelay()) continue;
@@ -2930,7 +2935,7 @@ void PeerManagerImpl::ProcessGetData(CNode& pfrom, Peer& peer, const std::atomic
             }
         }
 
-        if (!push && inv.type == MSG_SPORK) {
+        if (!push && inv.type == MSG_SPORK && m_chainparams.NetworkIDString() != CBaseChainParams::MAIN) {
             if (auto opt_spork = m_sporkman.GetSporkByHash(inv.hash)) {
                 m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::SPORK, *opt_spork));
                 push = true;
@@ -3760,6 +3765,7 @@ void PeerManagerImpl::ProcessMessage(
     ::g_stats_client->inc("message.received." + SanitizeString(msg_type), 1.0f);
 
     const bool is_masternode = m_active_ctx != nullptr;
+    const bool p2p_sporks_enabled = m_chainparams.NetworkIDString() != CBaseChainParams::MAIN;
 
     PeerRef peer = GetPeerRef(pfrom.GetId());
     if (peer == nullptr) return;
@@ -4343,6 +4349,11 @@ void PeerManagerImpl::ProcessMessage(
             }
 
             if (interruptMsgProc) return;
+
+            if (inv.type == MSG_SPORK && m_chainparams.NetworkIDString() == CBaseChainParams::MAIN) {
+                LogPrint(BCLog::NET, "Ignoring mainnet spork inventory %s peer=%d\n", inv.hash.ToString(), pfrom.GetId());
+                continue;
+            }
 
             if (inv.IsMsgBlk()) {
                 const bool fAlreadyHave = AlreadyHaveBlock(inv.hash);
@@ -5463,6 +5474,8 @@ void PeerManagerImpl::ProcessMessage(
     }
 
     if (msg_type == NetMsgType::SPORK) {
+        if (!p2p_sporks_enabled) return;
+
         CSporkMessage spork;
         vRecv >> spork;
 
@@ -5480,6 +5493,10 @@ void PeerManagerImpl::ProcessMessage(
     }
 
     if (msg_type == NetMsgType::GETSPORKS) {
+        // Mainnet sporks are hardened. Keep the legacy p2p message accepted,
+        // but return an empty response instead of serving cached spork state.
+        if (!p2p_sporks_enabled) return;
+
         // For 'getsporks', active sporks is sent to the requesting peer.
         auto active_sporks = m_sporkman.ActiveSporks();
         for (const auto& pair : active_sporks) {
