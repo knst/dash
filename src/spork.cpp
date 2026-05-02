@@ -141,11 +141,19 @@ bool CSporkManager::IsSporkValid(const CSporkMessage& spork)
 
 bool CSporkManager::ProcessSpork(const CSporkMessage& spork)
 {
+    if (!IsSporkValid(spork)) {
+        return false;
+    }
+
+    const auto opt_keyIDSigner = spork.GetSignerKeyID();
+    if (!opt_keyIDSigner) {
+        return false;
+    }
+    const auto keyIDSigner = *opt_keyIDSigner;
+
     uint256 hash = spork.GetHash();
     std::string strLogMsg{strprintf("SPORK -- hash: %s id: %d value: %10d", hash.ToString(), spork.nSporkID,
                                     spork.nValue)};
-    assert(spork.GetSignerKeyID().has_value());
-    auto keyIDSigner = spork.GetSignerKeyID().value();
 
     {
         LOCK(cs); // make sure to not lock this together with cs_main
