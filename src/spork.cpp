@@ -145,7 +145,7 @@ bool CSporkManager::ProcessSpork(const CSporkMessage& spork)
     std::string strLogMsg{strprintf("SPORK -- hash: %s id: %d value: %10d", hash.ToString(), spork.nSporkID,
                                     spork.nValue)};
 
-    if (spork.GetSignerKeyID().has_value()) return false;
+    if (!spork.GetSignerKeyID().has_value()) return false;
 
     auto keyIDSigner = spork.GetSignerKeyID().value();
 
