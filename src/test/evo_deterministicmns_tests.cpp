@@ -990,6 +990,31 @@ BOOST_AUTO_TEST_CASE(v19_activation_legacy)
     FuncV19Activation(setup);
 }
 
+BOOST_AUTO_TEST_CASE(v19_boundary_validation_failure_restores_bls_scheme)
+{
+    TestChainV19Setup setup;
+    auto& chainman = *Assert(setup.m_node.chainman.get());
+    const CScript coinbase_pk = GetScriptForRawPubKey(setup.coinbaseKey.GetPubKey());
+
+    // Validating a V19-boundary block switches bls_legacy_scheme to basic; a
+    // later failure must restore it rather than leak the change globally.
+    bls::bls_legacy_scheme.store(true);
+
+    CMutableTransaction bad_tx;
+    bad_tx.nVersion = 1;
+    bad_tx.vin.emplace_back(COutPoint(uint256::ONE, 0));
+    bad_tx.vout.emplace_back(1 * COIN, CScript{} << OP_TRUE);
+    CBlock block = setup.CreateBlock({bad_tx}, coinbase_pk, chainman.ActiveChainstate());
+
+    LOCK(cs_main);
+    BlockValidationState state;
+    BOOST_CHECK(!TestBlockValidity(state, *Assert(setup.m_node.chainlocks), *Assert(setup.m_node.evodb), Params(),
+                                   chainman.ActiveChainstate(), block, chainman.ActiveChain().Tip(),
+                                   /*fCheckPOW=*/true, /*fCheckMerkleRoot=*/true));
+    BOOST_CHECK_EQUAL(state.GetRejectReason(), "bad-txns-inputs-missingorspent");
+    BOOST_CHECK(bls::bls_legacy_scheme.load());
+}
+
 BOOST_AUTO_TEST_CASE(dip3_protx_legacy)
 {
     TestChainDIP3Setup setup;
