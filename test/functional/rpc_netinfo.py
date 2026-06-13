@@ -519,6 +519,26 @@ class NetInfoTest(BitcoinTestFramework):
         assert_equal(grt_proregtx['platformP2PPort'], DEFAULT_PORT_PLATFORM_P2P)
         assert_equal(grt_proregtx['platformHTTPPort'], DEFAULT_PORT_PLATFORM_HTTP)
 
+        self.log.info("Test legacy-to-extended listdiff after restart reports valid deprecated Platform ports")
+        proupservtx_hash = self.node_two.update_mn(self, True,
+                                                   f"127.0.0.1:{self.node_two.mn.nodePort}",
+                                                   DEFAULT_PORT_PLATFORM_P2P + 1,
+                                                   DEFAULT_PORT_PLATFORM_HTTP + 1)
+        proupservtx_height = self.node_simple.getrawtransaction(proupservtx_hash, True)['height']
+
+        # Restart the deprecated-RPC node to force deterministic MN state through the serialized
+        # snapshot/diff path. This caught a regression where ExtAddr Platform addresses were correct
+        # but the deprecated scalar ports in protx listdiff were reported as 0.
+        self.restart_node(self.node_simple.index)
+        self.reconnect_nodes()
+
+        protx_listdiff_rpc = self.node_simple.protx('listdiff', proupservtx_height - 1, proupservtx_height)
+        protx_listdiff_rpc = self.extract_from_listdiff(protx_listdiff_rpc, self.node_two.mn.proTxHash)
+        self.check_netinfo_fields(protx_listdiff_rpc['addresses'], self.node_two.mn.nodePort,
+                                  DEFAULT_PORT_PLATFORM_HTTP + 1, DEFAULT_PORT_PLATFORM_P2P + 1)
+        assert_equal(protx_listdiff_rpc['platformP2PPort'], DEFAULT_PORT_PLATFORM_P2P + 1)
+        assert_equal(protx_listdiff_rpc['platformHTTPPort'], DEFAULT_PORT_PLATFORM_HTTP + 1)
+
         # Destroy and re-register node as blank
         self.node_two.destroy_mn(self)
         self.reconnect_nodes()
