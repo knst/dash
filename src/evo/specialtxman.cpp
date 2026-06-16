@@ -6,7 +6,6 @@
 
 #include <chainlock/chainlock.h>
 #include <chainlock/clsig.h>
-#include <chainlock/handler.h>
 #include <evo/assetlocktx.h>
 #include <evo/cbtx.h>
 #include <evo/creditpool.h>
