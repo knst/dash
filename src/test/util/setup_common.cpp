@@ -69,7 +69,6 @@
 #include <evo/specialtx.h>
 #include <evo/specialtxman.h>
 #include <flat-database.h>
-#include <governance/governance.h>
 #include <llmq/context.h>
 #include <llmq/signing.h>
 #include <masternode/meta.h>
@@ -347,8 +346,6 @@ void ChainTestingSetup::LoadVerifyActivateChainstate()
                                            llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE);
     assert(!maybe_load_error.has_value());
 
-    m_node.govman = std::make_unique<CGovernanceManager>(*m_node.mn_metaman, *m_node.chainman, *m_node.chain_helper->superblocks, *m_node.dmnman, *m_node.mn_sync);
-
     auto maybe_verify_error = VerifyLoadedChainstate(
         chainman,
         *Assert(m_node.evodb.get()),
@@ -431,11 +428,6 @@ TestingSetup::~TestingSetup()
     if (m_node.connman) {
         m_node.connman->Stop();
     }
-
-    // govman holds a reference to chain_helper->superblocks, so it must be reset
-    // before DashChainstateSetupClose() destroys chain_helper (matches PrepareShutdown
-    // ordering in init.cpp).
-    m_node.govman.reset();
 
     // DashChainstateSetup() is called by LoadChainstate() internally but
     // winding them down is our responsibility
