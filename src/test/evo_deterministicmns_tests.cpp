@@ -516,7 +516,7 @@ void FuncProUpRegTxVersionHandlingBeforeV24(TestChainSetup& setup)
     BOOST_CHECK(dmn->pdmnState->pubKeyOperator.Get() == operator_key_legacy.GetPublicKey());
 };
 
-void FuncProUpRegTxV4OnLegacyRejected(TestChainSetup& setup)
+void FuncProUpRegTxV3OnLegacyRejected(TestChainSetup& setup)
 {
     auto& chainman = *Assert(setup.m_node.chainman.get());
     auto& dmnman = *Assert(setup.m_node.dmnman);
@@ -548,7 +548,7 @@ void FuncProUpRegTxV4OnLegacyRejected(TestChainSetup& setup)
     BOOST_REQUIRE_EQUAL(dmnman.GetListAtChainTip().GetMN(proTxHash)->pdmnState->nVersion, ProTxVersion::LegacyBLS);
 
     CProUpRegTx proTx;
-    proTx.nVersion = ProTxVersion::MultiPayout;
+    proTx.nVersion = ProTxVersion::ExtAddr;
     proTx.proTxHash = proTxHash;
     proTx.pubKeyOperator.Set(operator_key.GetPublicKey(), bls::bls_legacy_scheme.load());
     proTx.keyIDVoting = owner_key.GetPubKey().GetID();
@@ -573,7 +573,7 @@ void FuncProUpRegTxV4OnLegacyRejected(TestChainSetup& setup)
     BOOST_CHECK_EQUAL(val_state.GetRejectReason(), "bad-protx-version-upgrade");
 };
 
-void FuncProUpRegTxV2CannotBypassV4PayoutCollateralReuse(TestChainSetup& setup)
+void FuncProUpRegTxV2CannotBypassV3PayoutCollateralReuse(TestChainSetup& setup)
 {
     auto& chainman = *Assert(setup.m_node.chainman.get());
     auto& dmnman = *Assert(setup.m_node.dmnman);
@@ -606,7 +606,7 @@ void FuncProUpRegTxV2CannotBypassV4PayoutCollateralReuse(TestChainSetup& setup)
     dmnman.UpdatedBlockTip(chainman.ActiveChain().Tip());
 
     CProRegTx pro_reg;
-    pro_reg.nVersion = ProTxVersion::MultiPayout;
+    pro_reg.nVersion = ProTxVersion::ExtAddr;
     pro_reg.netInfo = NetInfoInterface::MakeNetInfo(pro_reg.nVersion);
     BOOST_CHECK_EQUAL(pro_reg.netInfo->AddEntry(NetInfoPurpose::CORE_P2P, "1.1.1.1:9999"), NetInfoStatus::Success);
     pro_reg.keyIDOwner = owner_key.GetPubKey().GetID();
@@ -635,7 +635,7 @@ void FuncProUpRegTxV2CannotBypassV4PayoutCollateralReuse(TestChainSetup& setup)
 
     auto dmn = dmnman.GetListAtChainTip().GetMN(proTxHash);
     BOOST_REQUIRE(dmn);
-    BOOST_CHECK_EQUAL(dmn->pdmnState->nVersion, ProTxVersion::MultiPayout);
+    BOOST_CHECK_EQUAL(dmn->pdmnState->nVersion, ProTxVersion::ExtAddr);
     BOOST_CHECK_EQUAL(dmn->pdmnState->payouts.size(), 1U);
     BOOST_CHECK(dmn->pdmnState->payouts.front().scriptPayout == script_payout);
 
@@ -1256,16 +1256,16 @@ BOOST_AUTO_TEST_CASE(proupreg_version_handling_before_v24)
     FuncProUpRegTxVersionHandlingBeforeV24(setup);
 }
 
-BOOST_AUTO_TEST_CASE(proupreg_v4_on_legacy_rejected)
+BOOST_AUTO_TEST_CASE(proupreg_v3_on_legacy_rejected)
 {
     TestChainV24SignalBeforeV19Setup setup;
-    FuncProUpRegTxV4OnLegacyRejected(setup);
+    FuncProUpRegTxV3OnLegacyRejected(setup);
 }
 
-BOOST_AUTO_TEST_CASE(proupreg_v2_cannot_bypass_v4_payout_collateral_reuse)
+BOOST_AUTO_TEST_CASE(proupreg_v2_cannot_bypass_v3_payout_collateral_reuse)
 {
     TestChainV24SignalBeforeV19Setup setup;
-    FuncProUpRegTxV2CannotBypassV4PayoutCollateralReuse(setup);
+    FuncProUpRegTxV2CannotBypassV3PayoutCollateralReuse(setup);
 }
 
 BOOST_AUTO_TEST_CASE(dip3_protx_legacy)
