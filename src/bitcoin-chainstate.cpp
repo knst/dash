@@ -31,6 +31,7 @@
 #include <util/thread.h>
 #include <validation.h>
 #include <validationinterface.h>
+#include <univalue.h>
 
 #include <filesystem>
 #include <functional>
