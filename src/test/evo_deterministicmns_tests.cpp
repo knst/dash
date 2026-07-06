@@ -189,6 +189,36 @@ static CMutableTransaction CreateProUpRevTx(const CChain& active_chain, const CT
     return tx;
 }
 
+template <typename ProTx>
+static CMutableTransaction FundAndSignSpecialTxByHash(const CChain& active_chain, const CTxMemPool& mempool,
+                                                     SimpleUTXOMap& utxos, uint16_t nType, ProTx& payload,
+                                                     const CKey& signing_key, const CKey& coinbaseKey)
+{
+    CMutableTransaction tx;
+    tx.nVersion = 3;
+    tx.nType = nType;
+    FundTransaction(active_chain, tx, utxos, GetScriptForDestination(PKHash(coinbaseKey.GetPubKey())), 1 * COIN, coinbaseKey);
+    payload.inputsHash = CalcTxInputsHash(CTransaction(tx));
+    CHashSigner::SignHash(::SerializeHash(payload), signing_key, payload.vchSig);
+    SetTxPayload(tx, payload);
+    SignTransaction(mempool, tx, coinbaseKey);
+    return tx;
+}
+
+static void ActivateV24(TestChainSetup& setup)
+{
+    auto& chainman = *Assert(setup.m_node.chainman.get());
+    auto& dmnman = *Assert(setup.m_node.dmnman);
+    const CScript coinbase_pk = GetScriptForRawPubKey(setup.coinbaseKey.GetPubKey());
+    while (chainman.ActiveChain().Height() < 499) {
+        setup.CreateAndProcessBlock({}, coinbase_pk);
+        dmnman.UpdatedBlockTip(chainman.ActiveChain().Tip());
+    }
+    BOOST_REQUIRE(DeploymentActiveAfter(chainman.ActiveChain().Tip(), chainman.GetConsensus(), Consensus::DEPLOYMENT_V19));
+    BOOST_REQUIRE(DeploymentActiveAfter(chainman.ActiveChain().Tip(), chainman, Consensus::DEPLOYMENT_V24));
+    BOOST_REQUIRE(!bls::bls_legacy_scheme.load());
+}
+
 template<typename ProTx>
 static CMutableTransaction MalleateProTxPayout(const CMutableTransaction& tx)
 {
@@ -492,15 +522,9 @@ void FuncProUpRegTxVersionHandlingBeforeV24(TestChainSetup& setup)
     proTxLegacy.keyIDVoting = owner_key.GetPubKey().GetID();
     proTxLegacy.scriptPayout = payoutScript3;
 
-    CMutableTransaction tx_upreg3;
-    tx_upreg3.nVersion = 3;
-    tx_upreg3.nType = TRANSACTION_PROVIDER_UPDATE_REGISTRAR;
-    FundTransaction(chainman.ActiveChain(), tx_upreg3, utxos, GetScriptForDestination(PKHash(setup.coinbaseKey.GetPubKey())),
-                    1 * COIN, setup.coinbaseKey);
-    proTxLegacy.inputsHash = CalcTxInputsHash(CTransaction(tx_upreg3));
-    CHashSigner::SignHash(::SerializeHash(proTxLegacy), owner_key, proTxLegacy.vchSig);
-    SetTxPayload(tx_upreg3, proTxLegacy);
-    SignTransaction(*(setup.m_node.mempool), tx_upreg3, setup.coinbaseKey);
+    const auto tx_upreg3 = FundAndSignSpecialTxByHash(chainman.ActiveChain(), *(setup.m_node.mempool), utxos,
+                                                      TRANSACTION_PROVIDER_UPDATE_REGISTRAR, proTxLegacy, owner_key,
+                                                      setup.coinbaseKey);
 
     setup.CreateAndProcessBlock({tx_upreg3}, coinbase_pk);
     dmnman.UpdatedBlockTip(chainman.ActiveChain().Tip());
@@ -523,9 +547,6 @@ void FuncProUpRegTxV3OnLegacyValid(TestChainSetup& setup)
     auto& dmnman = *Assert(setup.m_node.dmnman);
     const CScript coinbase_pk = GetScriptForRawPubKey(setup.coinbaseKey.GetPubKey());
 
-    BOOST_REQUIRE(!DeploymentActiveAfter(chainman.ActiveChain().Tip(), chainman.GetConsensus(), Consensus::DEPLOYMENT_V19));
-    BOOST_REQUIRE(!DeploymentActiveAfter(chainman.ActiveChain().Tip(), chainman, Consensus::DEPLOYMENT_V24));
-
     auto utxos = BuildSimpleUtxoMap(setup.m_coinbase_txns);
     CKey owner_key;
     CBLSSecretKey operator_key;
@@ -534,18 +555,9 @@ void FuncProUpRegTxV3OnLegacyValid(TestChainSetup& setup)
     const auto proTxHash = tx_reg.GetHash();
     setup.CreateAndProcessBlock({tx_reg}, coinbase_pk);
     dmnman.UpdatedBlockTip(chainman.ActiveChain().Tip());
+    BOOST_CHECK_EQUAL(dmnman.GetListAtChainTip().GetMN(proTxHash)->pdmnState->nVersion, ProTxVersion::LegacyBLS);
 
-    auto dmn = dmnman.GetListAtChainTip().GetMN(proTxHash);
-    BOOST_REQUIRE(dmn);
-    BOOST_CHECK_EQUAL(dmn->pdmnState->nVersion, ProTxVersion::LegacyBLS);
-
-    for (int i = 0; i < 2000 && !DeploymentActiveAfter(chainman.ActiveChain().Tip(), chainman, Consensus::DEPLOYMENT_V24); ++i) {
-        setup.CreateAndProcessBlock({}, coinbase_pk);
-        dmnman.UpdatedBlockTip(chainman.ActiveChain().Tip());
-    }
-    BOOST_REQUIRE(DeploymentActiveAfter(chainman.ActiveChain().Tip(), chainman.GetConsensus(), Consensus::DEPLOYMENT_V19));
-    BOOST_REQUIRE(DeploymentActiveAfter(chainman.ActiveChain().Tip(), chainman, Consensus::DEPLOYMENT_V24));
-    BOOST_REQUIRE(!bls::bls_legacy_scheme.load());
+    ActivateV24(setup);
     BOOST_REQUIRE_EQUAL(dmnman.GetListAtChainTip().GetMN(proTxHash)->pdmnState->nVersion, ProTxVersion::LegacyBLS);
 
     CProUpRegTx proTx;
@@ -554,16 +566,8 @@ void FuncProUpRegTxV3OnLegacyValid(TestChainSetup& setup)
     proTx.pubKeyOperator.Set(operator_key.GetPublicKey(), bls::bls_legacy_scheme.load());
     proTx.keyIDVoting = owner_key.GetPubKey().GetID();
     proTx.payouts = {{GenerateRandomAddress(), MasternodePayoutShare::MAX_REWARD}};
-
-    CMutableTransaction tx;
-    tx.nVersion = 3;
-    tx.nType = TRANSACTION_PROVIDER_UPDATE_REGISTRAR;
-    FundTransaction(chainman.ActiveChain(), tx, utxos, GetScriptForDestination(PKHash(setup.coinbaseKey.GetPubKey())),
-                    1 * COIN, setup.coinbaseKey);
-    proTx.inputsHash = CalcTxInputsHash(CTransaction(tx));
-    CHashSigner::SignHash(::SerializeHash(proTx), owner_key, proTx.vchSig);
-    SetTxPayload(tx, proTx);
-    SignTransaction(*(setup.m_node.mempool), tx, setup.coinbaseKey);
+    const auto tx = FundAndSignSpecialTxByHash(chainman.ActiveChain(), *(setup.m_node.mempool), utxos,
+                                               TRANSACTION_PROVIDER_UPDATE_REGISTRAR, proTx, owner_key, setup.coinbaseKey);
 
     TxValidationState val_state;
     {
@@ -580,13 +584,7 @@ void FuncProUpRegTxV2CannotBypassV3PayoutCollateralReuse(TestChainSetup& setup)
     auto& dmnman = *Assert(setup.m_node.dmnman);
     const CScript coinbase_pk = GetScriptForRawPubKey(setup.coinbaseKey.GetPubKey());
 
-    for (int i = 0; i < 2000 && !DeploymentActiveAfter(chainman.ActiveChain().Tip(), chainman, Consensus::DEPLOYMENT_V24); ++i) {
-        setup.CreateAndProcessBlock({}, coinbase_pk);
-        dmnman.UpdatedBlockTip(chainman.ActiveChain().Tip());
-    }
-    BOOST_REQUIRE(DeploymentActiveAfter(chainman.ActiveChain().Tip(), chainman.GetConsensus(), Consensus::DEPLOYMENT_V19));
-    BOOST_REQUIRE(DeploymentActiveAfter(chainman.ActiveChain().Tip(), chainman, Consensus::DEPLOYMENT_V24));
-    BOOST_REQUIRE(!bls::bls_legacy_scheme.load());
+    ActivateV24(setup);
 
     auto utxos = BuildSimpleUtxoMap(setup.m_coinbase_txns);
     CKey owner_key;
@@ -647,15 +645,9 @@ void FuncProUpRegTxV2CannotBypassV3PayoutCollateralReuse(TestChainSetup& setup)
     pro_upreg.keyIDVoting = owner_key.GetPubKey().GetID();
     pro_upreg.scriptPayout = script_collateral;
 
-    CMutableTransaction tx_upreg;
-    tx_upreg.nVersion = 3;
-    tx_upreg.nType = TRANSACTION_PROVIDER_UPDATE_REGISTRAR;
-    FundTransaction(chainman.ActiveChain(), tx_upreg, utxos, GetScriptForDestination(PKHash(setup.coinbaseKey.GetPubKey())),
-                    1 * COIN, setup.coinbaseKey);
-    pro_upreg.inputsHash = CalcTxInputsHash(CTransaction(tx_upreg));
-    CHashSigner::SignHash(::SerializeHash(pro_upreg), owner_key, pro_upreg.vchSig);
-    SetTxPayload(tx_upreg, pro_upreg);
-    SignTransaction(*(setup.m_node.mempool), tx_upreg, setup.coinbaseKey);
+    const auto tx_upreg = FundAndSignSpecialTxByHash(chainman.ActiveChain(), *(setup.m_node.mempool), utxos,
+                                                     TRANSACTION_PROVIDER_UPDATE_REGISTRAR, pro_upreg, owner_key,
+                                                     setup.coinbaseKey);
 
     TxValidationState val_state;
     {
@@ -1257,7 +1249,7 @@ BOOST_AUTO_TEST_CASE(proupreg_version_handling_before_v24)
     FuncProUpRegTxVersionHandlingBeforeV24(setup);
 }
 
-BOOST_AUTO_TEST_CASE(proupreg_v3_on_legacy_rejected)
+BOOST_AUTO_TEST_CASE(proupreg_v3_on_legacy_valid)
 {
     TestChainV24SignalBeforeV19Setup setup;
     FuncProUpRegTxV3OnLegacyValid(setup);
