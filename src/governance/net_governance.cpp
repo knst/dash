@@ -77,17 +77,17 @@ void NetGovernance::ProcessMessage(CNode& peer, const std::string& msg_type, CDa
         vRecv >> filter;
 
         LogPrint(BCLog::GOBJECT, "MNGOVERNANCESYNC -- syncing governance objects to our peer %s\n", peer.GetLogString());
+        const std::string vote_sync_request{strprintf("%s-votes-%s", NetMsgType::MNGOVERNANCESYNC, nProp.ToString())};
+        assert(m_netfulfilledman.IsValid());
+        if (m_netfulfilledman.HasFulfilledRequest(peer.addr, vote_sync_request)) {
+            // Asking for the whole list multiple times in a short period of time is no good
+            LogPrint(BCLog::GOBJECT, "MNGOVERNANCESYNC -- peer already asked me for the list for %s\n, nProp.ToString");
+            m_peer_manager->PeerMisbehaving(peer.GetId(), 20);
+            return;
+        }
+        m_netfulfilledman.AddFulfilledRequest(peer.addr, NetMsgType::MNGOVERNANCESYNC);
         if (nProp == uint256()) {
             // Full sync of all governance objects
-            assert(m_netfulfilledman.IsValid());
-            if (m_netfulfilledman.HasFulfilledRequest(peer.addr, NetMsgType::MNGOVERNANCESYNC)) {
-                // Asking for the whole list multiple times in a short period of time is no good
-                LogPrint(BCLog::GOBJECT, "MNGOVERNANCESYNC -- peer already asked me for the list\n");
-                m_peer_manager->PeerMisbehaving(peer.GetId(), 20);
-                return;
-            }
-            m_netfulfilledman.AddFulfilledRequest(peer.addr, NetMsgType::MNGOVERNANCESYNC);
-
             auto invs = m_gov_manager.GetSyncableObjectInvs();
             LogPrint(BCLog::GOBJECT, "MNGOVERNANCESYNC -- syncing %d objects to peer=%d\n", invs.size(), peer.GetId());
 
