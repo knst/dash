@@ -82,6 +82,13 @@ class ProTxVersionTest(DashTestFramework):
         migrate_legacy_mn: MasternodeInfo = self.dynamically_add_masternode()
         assert migrate_legacy_mn is not None
 
+        # A third legacy-scheme masternode kept untouched at v1 until v24. After v24 it is bumped
+        # straight to v3 via update_service, which never supplies a new operator key. This leaves a
+        # v3 state whose stored operator key is still the legacy one, exercising the version-derived
+        # BLS scheme selection on both the serialize (snapshot/mnlistdiff) and reload paths.
+        bump_legacy_mn: MasternodeInfo = self.dynamically_add_masternode()
+        assert bump_legacy_mn is not None
+
         mn_list_before = self.nodes[0].masternodelist()
         pubkeyoperator_list_before = set([mn_list_before[e]["pubkeyoperator"] for e in mn_list_before])
 
@@ -145,6 +152,8 @@ class ProTxVersionTest(DashTestFramework):
         self.wait_for_chainlocked_block_all_nodes(self.nodes[0].getbestblockhash())
 
         self.test_protx_v24_versioning(new_mn, migrate_legacy_mn, basic_mn, payout_mn)
+        # v24 stays active after the call above; the legacy-key bump is an independent scenario
+        self.test_legacy_update_service_v24(bump_legacy_mn)
 
     def test_protx_v24_versioning(self, mn: MasternodeInfo, legacy_mn: MasternodeInfo, basic_mn: MasternodeInfo, payout_mn: MasternodeInfo):
         assert not softfork_active(self.nodes[0], 'v24')
@@ -224,6 +233,44 @@ class ProTxVersionTest(DashTestFramework):
         self.connect_nodes(0, 1)
         self.connect_nodes(1, 2)
         assert_equal(self.nodes[1].masternodelist(), list_before)
+
+    def test_legacy_update_service_v24(self, mn: MasternodeInfo):
+        # update_service supplies no new operator key, so bumping a legacy (v1) masternode to v3 leaves
+        # the stored LegacyBLS operator key in place, only re-tagged to the basic scheme by the version.
+        # This exercises the version-derived BLS serialization on the snapshot/mnlistdiff path against a
+        # node that reloads the state without ever forcing the lazy key to decode.
+        node = self.nodes[0]
+        mn_key = f"{mn.collateral_txid}-{mn.collateral_vout}"
+
+        self.log.info("A pre-v19 masternode left untouched is still LegacyBLS (v1) after v24")
+        state = node.protx('info', mn.proTxHash)['state']
+        assert_equal(state['version'], 1)
+        pubkeyoperator_v1 = state['pubKeyOperator']
+        assert_equal(node.masternodelist()[mn_key]['pubkeyoperator'], pubkeyoperator_v1)
+
+        self.log.info("update_service bumps the legacy masternode straight to v3 without a new operator key")
+        node.sendtoaddress(mn.fundsAddr, 1)
+        self.bump_mocktime(10 * 60 + 1) # to make tx safe to include in block
+        self.generate(node, 1)
+        mn.update_service(node, submit=True, addrs_core_p2p=[f'127.0.0.1:{mn.nodePort}'])
+        self.bump_mocktime(10 * 60 + 1) # to make tx safe to include in block
+        self.generate(node, 1)
+        assert_equal(node.protx('info', mn.proTxHash)['state']['version'], 3)
+
+        self.log.info("Reloading from disk preserves the re-tagged legacy operator key across a snapshot round-trip")
+        list_before = self.nodes[1].masternodelist()
+        self.restart_node(1, extra_args=self.extra_args[1])
+        self.connect_nodes(0, 1)
+        self.connect_nodes(1, 2)
+        assert_equal(self.nodes[1].masternodelist(), list_before)
+
+        # node[1] only ever saw this masternode through mnlistdiff and a disk reload, never by processing
+        # the update_service tx, so a serialize-side re-encode of the operator key surfaces as a mismatch.
+        pubkeyoperator_node0 = node.protx('info', mn.proTxHash)['state']['pubKeyOperator']
+        pubkeyoperator_node1 = self.nodes[1].protx('info', mn.proTxHash)['state']['pubKeyOperator']
+        assert_equal(pubkeyoperator_node1, pubkeyoperator_node0)
+        # The underlying operator key point must survive the legacy->basic scheme re-tag unchanged
+        assert_equal(pubkeyoperator_node0, pubkeyoperator_v1)
 
     def test_revoke_protx(self, node_idx, revoke_mn: MasternodeInfo):
         funds_address = self.nodes[0].getnewaddress()
