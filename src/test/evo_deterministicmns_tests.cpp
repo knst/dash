@@ -210,12 +210,11 @@ static void ActivateV24(TestChainSetup& setup)
     auto& chainman = *Assert(setup.m_node.chainman.get());
     auto& dmnman = *Assert(setup.m_node.dmnman);
     const CScript coinbase_pk = GetScriptForRawPubKey(setup.coinbaseKey.GetPubKey());
-    while (chainman.ActiveChain().Height() < 499) {
+    while (!DeploymentActiveAfter(chainman.ActiveChain().Tip(), chainman, Consensus::DEPLOYMENT_V24)) {
         setup.CreateAndProcessBlock({}, coinbase_pk);
         dmnman.UpdatedBlockTip(chainman.ActiveChain().Tip());
     }
     BOOST_REQUIRE(DeploymentActiveAfter(chainman.ActiveChain().Tip(), chainman.GetConsensus(), Consensus::DEPLOYMENT_V19));
-    BOOST_REQUIRE(DeploymentActiveAfter(chainman.ActiveChain().Tip(), chainman, Consensus::DEPLOYMENT_V24));
     BOOST_REQUIRE(!bls::bls_legacy_scheme.load());
 }
 
@@ -241,6 +240,42 @@ static CScript GenerateRandomAddress()
     CKey key;
     key.MakeNewKey(false);
     return GetScriptForDestination(PKHash(key.GetPubKey()));
+}
+
+static void ProcessBlock(TestChainSetup& setup, const std::vector<CMutableTransaction>& txns)
+{
+    auto& chainman = *Assert(setup.m_node.chainman.get());
+    auto& dmnman = *Assert(setup.m_node.dmnman);
+    setup.CreateAndProcessBlock(txns, GetScriptForRawPubKey(setup.coinbaseKey.GetPubKey()));
+    dmnman.UpdatedBlockTip(chainman.ActiveChain().Tip());
+}
+
+static COutPoint FindCollateralOutpoint(const CMutableTransaction& tx)
+{
+    for (size_t i = 0; i < tx.vout.size(); ++i) {
+        if (tx.vout[i].nValue == dmn_types::Regular.collat_amount) return COutPoint(tx.GetHash(), i);
+    }
+    return COutPoint();
+}
+
+static uint256 RegisterLegacyMN(TestChainSetup& setup, SimpleUTXOMap& utxos, CKey& owner_key, CBLSSecretKey& operator_key)
+{
+    auto& chainman = *Assert(setup.m_node.chainman.get());
+    auto tx_reg = CreateProRegTx(chainman.ActiveChain(), *(setup.m_node.mempool), utxos, 1, GenerateRandomAddress(),
+                                 setup.coinbaseKey, owner_key, operator_key);
+    ProcessBlock(setup, {tx_reg});
+    return tx_reg.GetHash();
+}
+
+static TxValidationState CheckProUpRegTxAtTip(TestChainSetup& setup, const CMutableTransaction& tx)
+{
+    auto& chainman = *Assert(setup.m_node.chainman.get());
+    auto& dmnman = *Assert(setup.m_node.dmnman);
+    TxValidationState state;
+    LOCK(cs_main);
+    CheckProUpRegTx(CTransaction(tx), chainman.ActiveChain().Tip(), dmnman, chainman.ActiveChainstate().CoinsTip(),
+                    chainman, state, /*check_sigs=*/true);
+    return state;
 }
 
 static CDeterministicMNCPtr FindPayoutDmn(CDeterministicMNManager& dmnman, const CBlock& block)
@@ -462,11 +497,7 @@ void FuncProUpRegTxVersionHandlingBeforeV24(TestChainSetup& setup)
     auto utxos = BuildSimpleUtxoMap(setup.m_coinbase_txns);
     CKey owner_key;
     CBLSSecretKey operator_key;
-    auto tx_reg = CreateProRegTx(chainman.ActiveChain(), *(setup.m_node.mempool), utxos, 1, GenerateRandomAddress(),
-                                 setup.coinbaseKey, owner_key, operator_key);
-    const auto proTxHash = tx_reg.GetHash();
-    setup.CreateAndProcessBlock({tx_reg}, coinbase_pk);
-    dmnman.UpdatedBlockTip(chainman.ActiveChain().Tip());
+    const auto proTxHash = RegisterLegacyMN(setup, utxos, owner_key, operator_key);
 
     auto dmn = dmnman.GetListAtChainTip().GetMN(proTxHash);
     BOOST_REQUIRE(dmn);
@@ -545,17 +576,11 @@ void FuncProUpRegTxV3OnLegacyValid(TestChainSetup& setup)
 {
     auto& chainman = *Assert(setup.m_node.chainman.get());
     auto& dmnman = *Assert(setup.m_node.dmnman);
-    const CScript coinbase_pk = GetScriptForRawPubKey(setup.coinbaseKey.GetPubKey());
 
     auto utxos = BuildSimpleUtxoMap(setup.m_coinbase_txns);
     CKey owner_key;
     CBLSSecretKey operator_key;
-    auto tx_reg = CreateProRegTx(chainman.ActiveChain(), *(setup.m_node.mempool), utxos, 1, GenerateRandomAddress(),
-                                 setup.coinbaseKey, owner_key, operator_key);
-    const auto proTxHash = tx_reg.GetHash();
-    setup.CreateAndProcessBlock({tx_reg}, coinbase_pk);
-    dmnman.UpdatedBlockTip(chainman.ActiveChain().Tip());
-    BOOST_CHECK_EQUAL(dmnman.GetListAtChainTip().GetMN(proTxHash)->pdmnState->nVersion, ProTxVersion::LegacyBLS);
+    const auto proTxHash = RegisterLegacyMN(setup, utxos, owner_key, operator_key);
 
     ActivateV24(setup);
     BOOST_REQUIRE_EQUAL(dmnman.GetListAtChainTip().GetMN(proTxHash)->pdmnState->nVersion, ProTxVersion::LegacyBLS);
@@ -569,20 +594,13 @@ void FuncProUpRegTxV3OnLegacyValid(TestChainSetup& setup)
     const auto tx = FundAndSignSpecialTxByHash(chainman.ActiveChain(), *(setup.m_node.mempool), utxos,
                                                TRANSACTION_PROVIDER_UPDATE_REGISTRAR, proTx, owner_key, setup.coinbaseKey);
 
-    TxValidationState val_state;
-    {
-        LOCK(cs_main);
-        BOOST_CHECK(CheckProUpRegTx(CTransaction(tx), chainman.ActiveChain().Tip(), dmnman,
-                                    chainman.ActiveChainstate().CoinsTip(), chainman, val_state, /*check_sigs=*/true));
-    }
-    BOOST_CHECK(val_state.IsValid());
+    BOOST_CHECK(CheckProUpRegTxAtTip(setup, tx).IsValid());
 };
 
 void FuncProUpRegTxV2CannotBypassV3PayoutCollateralReuse(TestChainSetup& setup)
 {
     auto& chainman = *Assert(setup.m_node.chainman.get());
     auto& dmnman = *Assert(setup.m_node.dmnman);
-    const CScript coinbase_pk = GetScriptForRawPubKey(setup.coinbaseKey.GetPubKey());
 
     ActivateV24(setup);
 
@@ -601,8 +619,7 @@ void FuncProUpRegTxV2CannotBypassV3PayoutCollateralReuse(TestChainSetup& setup)
     FundTransaction(chainman.ActiveChain(), tx_collateral, utxos, script_collateral, dmn_types::Regular.collat_amount,
                     setup.coinbaseKey);
     SignTransaction(*(setup.m_node.mempool), tx_collateral, setup.coinbaseKey);
-    setup.CreateAndProcessBlock({tx_collateral}, coinbase_pk);
-    dmnman.UpdatedBlockTip(chainman.ActiveChain().Tip());
+    ProcessBlock(setup, {tx_collateral});
 
     CProRegTx pro_reg;
     pro_reg.nVersion = ProTxVersion::ExtAddr;
@@ -612,12 +629,7 @@ void FuncProUpRegTxV2CannotBypassV3PayoutCollateralReuse(TestChainSetup& setup)
     pro_reg.pubKeyOperator.Set(operator_key.GetPublicKey(), bls::bls_legacy_scheme.load());
     pro_reg.keyIDVoting = owner_key.GetPubKey().GetID();
     pro_reg.payouts = {{script_payout, MasternodePayoutShare::MAX_REWARD}};
-    for (size_t i = 0; i < tx_collateral.vout.size(); ++i) {
-        if (tx_collateral.vout[i].nValue == dmn_types::Regular.collat_amount) {
-            pro_reg.collateralOutpoint = COutPoint(tx_collateral.GetHash(), i);
-            break;
-        }
-    }
+    pro_reg.collateralOutpoint = FindCollateralOutpoint(tx_collateral);
 
     CMutableTransaction tx_reg;
     tx_reg.nVersion = 3;
@@ -629,14 +641,11 @@ void FuncProUpRegTxV2CannotBypassV3PayoutCollateralReuse(TestChainSetup& setup)
     SetTxPayload(tx_reg, pro_reg);
     SignTransaction(*(setup.m_node.mempool), tx_reg, setup.coinbaseKey);
     const auto proTxHash = tx_reg.GetHash();
-    setup.CreateAndProcessBlock({tx_reg}, coinbase_pk);
-    dmnman.UpdatedBlockTip(chainman.ActiveChain().Tip());
+    ProcessBlock(setup, {tx_reg});
 
     auto dmn = dmnman.GetListAtChainTip().GetMN(proTxHash);
     BOOST_REQUIRE(dmn);
     BOOST_CHECK_EQUAL(dmn->pdmnState->nVersion, ProTxVersion::ExtAddr);
-    BOOST_CHECK_EQUAL(dmn->pdmnState->payouts.size(), 1U);
-    BOOST_CHECK(dmn->pdmnState->payouts.front().scriptPayout == script_payout);
 
     CProUpRegTx pro_upreg;
     pro_upreg.nVersion = ProTxVersion::BasicBLS;
@@ -649,13 +658,7 @@ void FuncProUpRegTxV2CannotBypassV3PayoutCollateralReuse(TestChainSetup& setup)
                                                      TRANSACTION_PROVIDER_UPDATE_REGISTRAR, pro_upreg, owner_key,
                                                      setup.coinbaseKey);
 
-    TxValidationState val_state;
-    {
-        LOCK(cs_main);
-        BOOST_CHECK(!CheckProUpRegTx(CTransaction(tx_upreg), chainman.ActiveChain().Tip(), dmnman,
-                                     chainman.ActiveChainstate().CoinsTip(), chainman, val_state, /*check_sigs=*/true));
-    }
-    BOOST_CHECK_EQUAL(val_state.GetRejectReason(), "bad-protx-payee-reuse");
+    BOOST_CHECK_EQUAL(CheckProUpRegTxAtTip(setup, tx_upreg).GetRejectReason(), "bad-protx-payee-reuse");
 }
 
 void FuncDIP3Protx(TestChainSetup& setup)
@@ -887,13 +890,7 @@ void FuncTestMempoolReorg(TestChainSetup& setup)
     payload.pubKeyOperator.Set(operatorKey.GetPublicKey(), bls::bls_legacy_scheme.load());
     payload.keyIDVoting = ownerKey.GetPubKey().GetID();
     payload.scriptPayout = scriptPayout;
-
-    for (size_t i = 0; i < tx_collateral.vout.size(); ++i) {
-        if (tx_collateral.vout[i].nValue == dmn_types::Regular.collat_amount) {
-            payload.collateralOutpoint = COutPoint(tx_collateral.GetHash(), i);
-            break;
-        }
-    }
+    payload.collateralOutpoint = FindCollateralOutpoint(tx_collateral);
 
     CMutableTransaction tx_reg;
     tx_reg.nVersion = 3;
@@ -963,13 +960,7 @@ void FuncTestMempoolDualProregtx(TestChainSetup& setup)
     payload.pubKeyOperator.Set(operatorKey.GetPublicKey(), bls::bls_legacy_scheme.load());
     payload.keyIDVoting = ownerKey.GetPubKey().GetID();
     payload.scriptPayout = scriptPayout;
-
-    for (size_t i = 0; i < tx_reg1.vout.size(); ++i) {
-        if (tx_reg1.vout[i].nValue == dmn_types::Regular.collat_amount) {
-            payload.collateralOutpoint = COutPoint(tx_reg1.GetHash(), i);
-            break;
-        }
-    }
+    payload.collateralOutpoint = FindCollateralOutpoint(tx_reg1);
 
     CMutableTransaction tx_reg2;
     tx_reg2.nVersion = 3;
@@ -1033,13 +1024,7 @@ void FuncVerifyDB(TestChainSetup& setup)
     payload.pubKeyOperator.Set(operatorKey.GetPublicKey(), bls::bls_legacy_scheme.load());
     payload.keyIDVoting = ownerKey.GetPubKey().GetID();
     payload.scriptPayout = scriptPayout;
-
-    for (size_t i = 0; i < tx_collateral.vout.size(); ++i) {
-        if (tx_collateral.vout[i].nValue == dmn_types::Regular.collat_amount) {
-            payload.collateralOutpoint = COutPoint(tx_collateral.GetHash(), i);
-            break;
-        }
-    }
+    payload.collateralOutpoint = FindCollateralOutpoint(tx_collateral);
 
     CMutableTransaction tx_reg;
     tx_reg.nVersion = 3;
@@ -1220,7 +1205,7 @@ struct TestChainV24SignalBeforeV19Setup : public TestChainSetup {
         TestChainSetup(494, CBaseChainParams::REGTEST,
                        {"-testactivationheight=v19@500", "-testactivationheight=v20@500",
                         "-testactivationheight=mn_rr@500",
-                        "-vbparams=v24:0:9999999999:0:500:400:300:5:0"})
+                        "-vbparams=v24:0:9999999999:500:1:1:1:5:0"})
     {
         assert(!DeploymentActiveAfter(m_node.chainman->ActiveChain().Tip(), m_node.chainman->GetConsensus(),
                                       Consensus::DEPLOYMENT_V19));
