@@ -70,7 +70,7 @@ private:
     mutable Mutex cs_ProcessDSQueue;
 
     mutable Mutex cs_wallet_manager_map;
-    std::map<const std::string, std::unique_ptr<CCoinJoinClientManager>> m_wallet_manager_map GUARDED_BY(cs_wallet_manager_map);
+    std::map<const std::string, std::shared_ptr<CCoinJoinClientManager>> m_wallet_manager_map GUARDED_BY(cs_wallet_manager_map);
 
     void DoMaintenance(CConnman& connman) EXCLUSIVE_LOCKS_REQUIRED(!cs_wallet_manager_map);
 
@@ -142,10 +142,14 @@ bool CJWalletManagerImpl::hasQueue(const uint256& hash) const
 
 bool CJWalletManagerImpl::doForClient(const std::string& name, const std::function<void(CCoinJoinClientManager&)>& func)
 {
-    LOCK(cs_wallet_manager_map);
-    auto it = m_wallet_manager_map.find(name);
-    if (it == m_wallet_manager_map.end()) return false;
-    func(*it->second);
+    std::shared_ptr<CCoinJoinClientManager> clientman;
+    {
+        LOCK(cs_wallet_manager_map);
+        auto it = m_wallet_manager_map.find(name);
+        if (it == m_wallet_manager_map.end()) return false;
+        clientman = it->second;
+    }
+    func(*clientman);
     return true;
 }
 
@@ -176,7 +180,7 @@ void CJWalletManagerImpl::addWallet(const std::shared_ptr<wallet::CWallet>& wall
 {
     LOCK(cs_wallet_manager_map);
     m_wallet_manager_map.try_emplace(wallet->GetName(),
-                                     std::make_unique<CCoinJoinClientManager>(wallet, m_dmnman, m_mn_metaman, m_mn_sync,
+                                     std::make_shared<CCoinJoinClientManager>(wallet, m_dmnman, m_mn_metaman, m_mn_sync,
                                                                               m_isman, m_queueman.get()));
 }
 
