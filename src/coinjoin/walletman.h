@@ -48,7 +48,9 @@ public:
 
 public:
     virtual bool hasQueue(const uint256& hash) const = 0;
-    //! Execute func under the wallet manager lock for the client identified by name.
+    //! Execute func for the client identified by name. The client is kept alive
+    //! for the duration of the call but func runs without the wallet manager
+    //! map lock held, so it may acquire CWallet::cs_wallet.
     //! Returns true if the client was found and func was called, false otherwise.
     virtual bool doForClient(const std::string& name, const std::function<void(CCoinJoinClientManager&)>& func) = 0;
     virtual MessageProcessingResult processMessage(CNode& peer, CChainState& chainstate, CConnman& connman,

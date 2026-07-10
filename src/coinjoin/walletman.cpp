@@ -24,6 +24,7 @@
 
 #include <memory>
 #include <ranges>
+#include <vector>
 
 #ifdef ENABLE_WALLET
 class CJWalletManagerImpl final : public CJWalletManager
@@ -70,6 +71,9 @@ private:
     mutable Mutex cs_ProcessDSQueue;
 
     mutable Mutex cs_wallet_manager_map;
+    // cs_wallet_manager_map only protects the map itself and must not be held
+    // while executing client manager code: managers acquire CWallet::cs_wallet,
+    // which is also held by callers looking up managers (e.g. `newkeypool`).
     std::map<const std::string, std::shared_ptr<CCoinJoinClientManager>> m_wallet_manager_map GUARDED_BY(cs_wallet_manager_map);
 
     void DoMaintenance(CConnman& connman) EXCLUSIVE_LOCKS_REQUIRED(!cs_wallet_manager_map);
@@ -77,11 +81,13 @@ private:
     [[nodiscard]] MessageProcessingResult ProcessDSQueue(NodeId from, CConnman& connman, std::string_view msg_type,
                                                          CDataStream& vRecv) EXCLUSIVE_LOCKS_REQUIRED(!cs_ProcessDSQueue, !cs_wallet_manager_map);
 
+    std::vector<std::shared_ptr<CCoinJoinClientManager>> GetClientManagersSnapshot() const
+        EXCLUSIVE_LOCKS_REQUIRED(!cs_wallet_manager_map);
+
     template <typename Callable>
     void ForEachCJClientMan(Callable&& func) EXCLUSIVE_LOCKS_REQUIRED(!cs_wallet_manager_map)
     {
-        LOCK(cs_wallet_manager_map);
-        for (auto& [_, clientman] : m_wallet_manager_map) {
+        for (const auto& clientman : GetClientManagersSnapshot()) {
             func(*clientman);
         }
     }
@@ -89,8 +95,8 @@ private:
     template <typename Callable>
     bool ForAnyCJClientMan(Callable&& func) EXCLUSIVE_LOCKS_REQUIRED(!cs_wallet_manager_map)
     {
-        LOCK(cs_wallet_manager_map);
-        return std::ranges::any_of(m_wallet_manager_map, [&](auto& pair) { return func(*pair.second); });
+        return std::ranges::any_of(GetClientManagersSnapshot(),
+                                   [&](const auto& clientman) { return func(*clientman); });
     }
 };
 
@@ -111,9 +117,12 @@ CJWalletManagerImpl::CJWalletManagerImpl(ChainstateManager& chainman, CDetermini
 
 CJWalletManagerImpl::~CJWalletManagerImpl()
 {
-    LOCK(cs_wallet_manager_map);
-    for (auto& [_, clientman] : m_wallet_manager_map) {
-        clientman.reset();
+    // Swap the map out under the lock but let the managers (which may acquire
+    // CWallet::cs_wallet during teardown) be destroyed after releasing it
+    decltype(m_wallet_manager_map) clientmans;
+    {
+        LOCK(cs_wallet_manager_map);
+        clientmans.swap(m_wallet_manager_map);
     }
 }
 
@@ -138,6 +147,17 @@ bool CJWalletManagerImpl::hasQueue(const uint256& hash) const
         return m_queueman->HasQueue(hash);
     }
     return false;
+}
+
+std::vector<std::shared_ptr<CCoinJoinClientManager>> CJWalletManagerImpl::GetClientManagersSnapshot() const
+{
+    LOCK(cs_wallet_manager_map);
+    std::vector<std::shared_ptr<CCoinJoinClientManager>> ret;
+    ret.reserve(m_wallet_manager_map.size());
+    for (const auto& [_, clientman] : m_wallet_manager_map) {
+        ret.emplace_back(clientman);
+    }
+    return ret;
 }
 
 bool CJWalletManagerImpl::doForClient(const std::string& name, const std::function<void(CCoinJoinClientManager&)>& func)
@@ -178,10 +198,15 @@ std::vector<CDeterministicMNCPtr> CJWalletManagerImpl::getMixingMasternodes()
 
 void CJWalletManagerImpl::addWallet(const std::shared_ptr<wallet::CWallet>& wallet)
 {
+    // Construct the manager before taking the map lock; if insertion is
+    // skipped because the name is already known, the new manager is destroyed
+    // after the lock is released
+    const auto name{wallet->GetName()};
+    auto clientman{std::make_shared<CCoinJoinClientManager>(wallet, m_dmnman, m_mn_metaman, m_mn_sync, m_isman,
+                                                            m_queueman.get())};
+
     LOCK(cs_wallet_manager_map);
-    m_wallet_manager_map.try_emplace(wallet->GetName(),
-                                     std::make_shared<CCoinJoinClientManager>(wallet, m_dmnman, m_mn_metaman, m_mn_sync,
-                                                                              m_isman, m_queueman.get()));
+    m_wallet_manager_map.try_emplace(name, std::move(clientman));
 }
 
 void CJWalletManagerImpl::flushWallet(const std::string& name)
@@ -194,8 +219,17 @@ void CJWalletManagerImpl::flushWallet(const std::string& name)
 
 void CJWalletManagerImpl::removeWallet(const std::string& name)
 {
-    LOCK(cs_wallet_manager_map);
-    m_wallet_manager_map.erase(name);
+    // Detach the manager under the lock but let it be destroyed after the
+    // lock is released
+    std::shared_ptr<CCoinJoinClientManager> clientman;
+    {
+        LOCK(cs_wallet_manager_map);
+        auto it = m_wallet_manager_map.find(name);
+        if (it != m_wallet_manager_map.end()) {
+            clientman = std::move(it->second);
+            m_wallet_manager_map.erase(it);
+        }
+    }
 }
 
 void CJWalletManagerImpl::DoMaintenance(CConnman& connman)
@@ -203,10 +237,8 @@ void CJWalletManagerImpl::DoMaintenance(CConnman& connman)
     if (m_queueman && m_mn_sync.IsBlockchainSynced() && !ShutdownRequested()) {
         m_queueman->CheckQueue();
     }
-    LOCK(cs_wallet_manager_map);
-    for (auto& [_, clientman] : m_wallet_manager_map) {
-        clientman->DoMaintenance(m_chainman, connman, m_mempool);
-    }
+    ForEachCJClientMan(
+        [&](CCoinJoinClientManager& clientman) { clientman.DoMaintenance(m_chainman, connman, m_mempool); });
 }
 
 MessageProcessingResult CJWalletManagerImpl::processMessage(CNode& pfrom, CChainState& chainstate, CConnman& connman,
