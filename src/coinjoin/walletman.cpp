@@ -219,16 +219,12 @@ void CJWalletManagerImpl::flushWallet(const std::string& name)
 
 void CJWalletManagerImpl::removeWallet(const std::string& name)
 {
-    // Detach the manager under the lock but let it be destroyed after the
-    // lock is released
-    std::shared_ptr<CCoinJoinClientManager> clientman;
+    // Detach the manager under the lock; the extracted node destroys its
+    // shared_ptr after the lock is released
+    decltype(m_wallet_manager_map)::node_type node;
     {
         LOCK(cs_wallet_manager_map);
-        auto it = m_wallet_manager_map.find(name);
-        if (it != m_wallet_manager_map.end()) {
-            clientman = std::move(it->second);
-            m_wallet_manager_map.erase(it);
-        }
+        node = m_wallet_manager_map.extract(name);
     }
 }
 
