@@ -182,6 +182,16 @@ bool BuildSimplifiedMNListDiff(CDeterministicMNManager& dmnman, const Chainstate
         errorRet = strprintf("base block %s is higher then block %s", baseBlockHash.ToString(), blockHash.ToString());
         return false;
     }
+    if (!(baseBlockIndex->nStatus & BLOCK_HAVE_DATA)) {
+        errorRet = strprintf("block data for base block %s is not available (pruned or below an unvalidated snapshot base)",
+                             baseBlockIndex->GetBlockHash().ToString());
+        return false;
+    }
+    if (!(blockIndex->nStatus & BLOCK_HAVE_DATA)) {
+        errorRet = strprintf("block data for block %s is not available (pruned or below an unvalidated snapshot base)",
+                             blockIndex->GetBlockHash().ToString());
+        return false;
+    }
 
     auto baseDmnList = dmnman.GetListForBlock(baseBlockIndex);
     auto dmnList = dmnman.GetListForBlock(blockIndex);
@@ -222,4 +232,9 @@ bool BuildSimplifiedMNListDiff(CDeterministicMNManager& dmnman, const Chainstate
     mnListDiffRet.cbTxMerkleTree = CPartialMerkleTree(vHashes, vMatch);
 
     return true;
+}
+
+bool IsBlockDataUnavailableError(const std::string& error)
+{
+    return error.find("is not available (pruned or below an unvalidated snapshot base)") != std::string::npos;
 }
