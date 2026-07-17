@@ -45,6 +45,15 @@ static bool SetStateVersion(CDeterministicMNState& state_mn, uint16_t nVersion, 
                             BlockValidationState& state)
 {
     const bool needs_extended = nVersion >= ProTxVersion::ExtAddr;
+    // Keep the operator key's BLS encoding a deterministic function of nVersion, matching the SML and
+    // on-disk serialization, so the unique-property index is re-keyed to the same scheme on every node
+    // whether the list was built online or reloaded from a snapshot. Done before the early return because
+    // callers pre-set nVersion, which would otherwise skip a needed re-encode. Runs only under the
+    // v24-gated version transition, so pre-v24 blocks are untouched.
+    if (state_mn.pubKeyOperator != CBLSLazyPublicKey()) {
+        const auto pubkey{state_mn.pubKeyOperator.Get()};
+        state_mn.pubKeyOperator.Set(pubkey, nVersion == ProTxVersion::LegacyBLS);
+    }
     if (state_mn.nVersion == nVersion && state_mn.netInfo->CanStorePlatform() == needs_extended) {
         return true;
     }
