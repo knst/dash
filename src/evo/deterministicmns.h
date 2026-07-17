@@ -551,7 +551,17 @@ private:
     template <typename T>
     [[nodiscard]] bool UpdateUniqueProperty(const CDeterministicMN& dmn, const T& oldValue, const T& newValue)
     {
-        if (oldValue == newValue) {
+        // A BLS operator key can keep the same point while its serialized encoding (legacy<->basic)
+        // changes on a version transition; the map is keyed by GetUniquePropertyHash(), so only that
+        // hash reveals that the entry must be re-keyed. Detect this for the operator key alone and keep
+        // the plain value comparison for every other unique property, so unrelated paths are untouched.
+        // The encoding change is produced solely by SetStateVersion() under the v24-gated version bump,
+        // so pre-v24 blocks are unaffected.
+        if constexpr (std::is_same_v<std::decay_t<T>, CBLSLazyPublicKey>) {
+            if (GetUniquePropertyHash(oldValue) == GetUniquePropertyHash(newValue)) {
+                return true;
+            }
+        } else if (oldValue == newValue) {
             return true;
         }
         static const T nullValue{};
