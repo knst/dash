@@ -1242,8 +1242,10 @@ static RPCHelpMan protx_update_registrar_wrapper(const bool specific_legacy_bls_
         // new pubkey
         ptx.pubKeyOperator.Set(ParseBLSPubKey(request.params[1].get_str(), "operator BLS address", use_legacy), use_legacy);
     } else {
-        // same pubkey, reuse as is
-        ptx.pubKeyOperator = dmn->pdmnState->pubKeyOperator;
+        // Reuse the same operator key, re-encoded to match nVersion (which may have been bumped past
+        // the key's original scheme).
+        ptx.pubKeyOperator.Set(dmn->pdmnState->pubKeyOperator.Get(),
+                               /*legacy=*/ptx.nVersion == ProTxVersion::LegacyBLS);
     }
 
     CHECK_NONFATAL(ptx.pubKeyOperator.IsLegacy() == (ptx.nVersion == ProTxVersion::LegacyBLS));
