@@ -623,6 +623,77 @@ void FuncProUpRegTxV3OnLegacyValid(TestChainSetup& setup)
     BOOST_CHECK(val_state.IsValid());
 };
 
+// A service update that raises a legacy masternode to BasicBLS re-encodes its operator key to the basic
+// scheme (keeping the same point) and re-keys the unique-property index. This asserts the resulting state
+// is consistent: the key matches nVersion, the index finds it, and the list built online is identical to
+// one rebuilt from its serialized (snapshot) form - i.e. no reconstruction-history divergence.
+void FuncProUpServReencodesLegacyOperatorKeyV24(TestChainSetup& setup)
+{
+    auto& chainman = *Assert(setup.m_node.chainman.get());
+    auto& dmnman = *Assert(setup.m_node.dmnman);
+    auto tip_index    = [&] { return WITH_LOCK(::cs_main, return chainman.ActiveChain().Tip()); };
+    auto sync_dmn_tip = [&] { dmnman.UpdatedBlockTip(tip_index()); };
+    const CScript coinbase_pk = GetScriptForRawPubKey(setup.coinbaseKey.GetPubKey());
+
+    BOOST_REQUIRE(bls::bls_legacy_scheme.load());
+
+    auto utxos = BuildSimpleUtxoMap(setup.m_coinbase_txns);
+    CKey owner_key;
+    CBLSSecretKey operator_key;
+    auto tx_reg = CreateProRegTx(chainman, utxos, 1, GenerateRandomAddress(),
+                                 setup.coinbaseKey, owner_key, operator_key);
+    const auto proTxHash = tx_reg.GetHash();
+    setup.CreateAndProcessBlock({tx_reg}, coinbase_pk);
+    sync_dmn_tip();
+    {
+        auto dmn = dmnman.GetListAtChainTip().GetMN(proTxHash);
+        BOOST_REQUIRE(dmn);
+        BOOST_CHECK_EQUAL(dmn->pdmnState->nVersion, ProTxVersion::LegacyBLS);
+        BOOST_CHECK(dmn->pdmnState->pubKeyOperator.IsLegacy());
+    }
+
+    for (int i = 0; i < 2000 && !DeploymentActiveAfter(tip_index(), chainman, Consensus::DEPLOYMENT_V24); ++i) {
+        setup.CreateAndProcessBlock({}, coinbase_pk);
+        sync_dmn_tip();
+    }
+    BOOST_REQUIRE(DeploymentActiveAfter(tip_index(), chainman, Consensus::DEPLOYMENT_V24));
+
+    // A legacy masternode may only rise to BasicBLS via a service update (higher versions are rejected).
+    CProUpServTx ups;
+    ups.nVersion = ProTxVersion::BasicBLS;
+    ups.proTxHash = proTxHash;
+    ups.netInfo = NetInfoInterface::MakeNetInfo(ups.nVersion);
+    BOOST_CHECK_EQUAL(ups.netInfo->AddEntry(NetInfoPurpose::CORE_P2P, "1.1.1.2:2"), NetInfoStatus::Success);
+
+    CMutableTransaction tx_ups;
+    tx_ups.nVersion = 3;
+    tx_ups.nType = TRANSACTION_PROVIDER_UPDATE_SERVICE;
+    const auto spent = FundTransaction(chainman, tx_ups, utxos,
+                                       GetScriptForDestination(PKHash(setup.coinbaseKey.GetPubKey())), 1 * COIN);
+    ups.inputsHash = CalcTxInputsHash(CTransaction(tx_ups));
+    ups.sig = operator_key.Sign(::SerializeHash(ups), bls::bls_legacy_scheme);
+    SetTxPayload(tx_ups, ups);
+    SignTransaction(tx_ups, spent, setup.coinbaseKey);
+    setup.CreateAndProcessBlock({tx_ups}, coinbase_pk);
+    sync_dmn_tip();
+
+    const auto list = dmnman.GetListAtChainTip();
+    auto dmn = list.GetMN(proTxHash);
+    BOOST_REQUIRE(dmn);
+    BOOST_CHECK_EQUAL(dmn->pdmnState->nVersion, ProTxVersion::BasicBLS);
+    BOOST_CHECK(!dmn->pdmnState->pubKeyOperator.IsLegacy());
+    BOOST_CHECK(dmn->pdmnState->pubKeyOperator.Get() == operator_key.GetPublicKey());
+    BOOST_CHECK(list.HasUniqueProperty(dmn->pdmnState->pubKeyOperator));
+
+    // A list rebuilt from its serialized (snapshot) form must index the same operator key: without the
+    // re-key the online list keeps the legacy-scheme hash while the reload uses the basic-scheme hash.
+    CDataStream ds(SER_DISK, CLIENT_VERSION);
+    ds << list;
+    CDeterministicMNList reloaded;
+    ds >> reloaded;
+    BOOST_CHECK(reloaded.HasUniqueProperty(dmn->pdmnState->pubKeyOperator));
+};
+
 void FuncProUpRegTxV2CannotBypassV3PayoutCollateralReuse(TestChainSetup& setup)
 {
     auto& chainman = *Assert(setup.m_node.chainman.get());
@@ -1558,6 +1629,12 @@ BOOST_AUTO_TEST_CASE(proupreg_v3_on_legacy_rejected)
     FuncProUpRegTxV3OnLegacyValid(setup);
 }
 
+BOOST_AUTO_TEST_CASE(proupserv_reencodes_legacy_operator_key_v24)
+{
+    TestChainV24SignalBeforeV19Setup setup;
+    FuncProUpServReencodesLegacyOperatorKeyV24(setup);
+}
+
 BOOST_AUTO_TEST_CASE(proupreg_v2_cannot_bypass_v3_payout_collateral_reuse)
 {
     TestChainV24SignalBeforeV19Setup setup;
@@ -1745,6 +1822,48 @@ BOOST_AUTO_TEST_CASE(migration_logic_validation)
     BOOST_CHECK_EQUAL(convertedDiff.state.GetBannedHeight(), legacyDiff.state.GetBannedHeight());
     BOOST_CHECK(convertedDiff.state.pubKeyOperator.Get() == legacyDiff.state.pubKeyOperator.Get());
     BOOST_CHECK_EQUAL(convertedDiff.state.pubKeyOperator.ToString(), legacyDiff.state.pubKeyOperator.ToString());
+}
+
+// The unique-property map is keyed by the operator key's serialization, while UpdateUniqueProperty
+// detects a change by its point. Re-encoding the key from the legacy to the basic scheme (same point)
+// must therefore re-key the map, otherwise an in-place update and a list rebuilt from a snapshot would
+// disagree on whether the key is present.
+BOOST_FIXTURE_TEST_CASE(operator_key_reencode_needs_map_rekey, BasicTestingSetup)
+{
+    CKey ownerKey;
+    ownerKey.MakeNewKey(true);
+    CKey votingKey;
+    votingKey.MakeNewKey(true);
+    CBLSSecretKey sk;
+    sk.MakeNewKey();
+
+    CProRegTx proReg;
+    proReg.nVersion = ProTxVersion::LegacyBLS;
+    proReg.keyIDOwner = ownerKey.GetPubKey().GetID();
+    proReg.keyIDVoting = votingKey.GetPubKey().GetID();
+    proReg.pubKeyOperator.Set(sk.GetPublicKey(), /*legacy=*/true);
+    proReg.netInfo = NetInfoInterface::MakeNetInfo(proReg.nVersion);
+
+    auto dmn = std::make_shared<CDeterministicMN>(0, MnType::Regular);
+    dmn->proTxHash = uint256::ONE;
+    dmn->collateralOutpoint = COutPoint(uint256::ONE, 0);
+    dmn->pdmnState = std::make_shared<CDeterministicMNState>(proReg);
+
+    CDeterministicMNList list(uint256::ONE, 1, 1);
+    list.AddMN(dmn);
+
+    // Indexed under the legacy serialization; the basic serialization of the same point is not found.
+    CBLSLazyPublicKey basic;
+    basic.Set(sk.GetPublicKey(), /*legacy=*/false);
+    BOOST_CHECK(!list.HasUniqueProperty(basic));
+
+    // Raise to BasicBLS and re-encode the same key to basic; the update must re-key the index to match.
+    auto newState = std::make_shared<CDeterministicMNState>(*dmn->pdmnState);
+    newState->nVersion = ProTxVersion::BasicBLS;
+    newState->pubKeyOperator.Set(newState->pubKeyOperator.Get(), /*legacy=*/false);
+    list.UpdateMN(dmn->proTxHash, newState);
+
+    BOOST_CHECK(list.HasUniqueProperty(basic));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
