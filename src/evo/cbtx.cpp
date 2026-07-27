@@ -10,6 +10,7 @@
 #include <llmq/options.h>
 #include <llmq/quorumsman.h>
 #include <llmq/utils.h>
+#include <unordered_lru_cache.h>
 #include <util/std23.h>
 
 #include <chain.h>

@@ -22,6 +22,7 @@ class CQuorumBlockProcessor;
 class CQuorumManager;
 class CQuorumSnapshotManager;
 class CSigningManager;
+class QuorumResolutionCache;
 } // namespace llmq
 namespace util {
 struct DbWrapperParams;
@@ -46,6 +47,7 @@ public:
     const std::shared_ptr<CBLSWorker> bls_worker;
     const std::unique_ptr<llmq::CQuorumSnapshotManager> qsnapman;
     const std::unique_ptr<llmq::CQuorumBlockProcessor> quorum_block_processor;
+    const std::unique_ptr<llmq::QuorumResolutionCache> qcache;
     const std::unique_ptr<llmq::CQuorumManager> qman;
     const std::unique_ptr<llmq::CSigningManager> sigman;
     const std::unique_ptr<llmq::CInstantSendManager> isman;

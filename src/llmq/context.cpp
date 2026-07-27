@@ -7,6 +7,7 @@
 #include <bls/bls_worker.h>
 #include <instantsend/instantsend.h>
 #include <llmq/blockprocessor.h>
+#include <llmq/quorumcache.h>
 #include <llmq/quorumsman.h>
 #include <llmq/signing.h>
 #include <llmq/snapshot.h>
@@ -19,8 +20,9 @@ LLMQContext::LLMQContext(CDeterministicMNManager& dmnman, CEvoDB& evo_db, CSpork
     qsnapman{std::make_unique<llmq::CQuorumSnapshotManager>(evo_db)},
     quorum_block_processor{std::make_unique<llmq::CQuorumBlockProcessor>(chainman, dmnman, evo_db,
                                                                          *qsnapman, bls_threads)},
+    qcache{std::make_unique<llmq::QuorumResolutionCache>(chainman.GetConsensus())},
     qman{std::make_unique<llmq::CQuorumManager>(*bls_worker, dmnman, evo_db, *quorum_block_processor, *qsnapman,
-                                                chainman, db_params)},
+                                                *qcache, chainman, db_params)},
     sigman{std::make_unique<llmq::CSigningManager>(*qman, db_params, max_recsigs_age)},
     isman{std::make_unique<llmq::CInstantSendManager>(sporkman, db_params)}
 {
