@@ -51,6 +51,7 @@ class Chainstate;
 class CBlockTreeDB;
 class CChainParams;
 class CEvoDB;
+class EvoChainState;
 class CMNHFManager;
 class CTxMemPool;
 class TxValidationState;
@@ -513,6 +514,10 @@ protected:
     const std::unique_ptr<CChainstateHelper>& m_chain_helper;
     CEvoDB& m_evoDb;
 
+    //! Chain-derived Evo state of this chainstate (EvoDB staging plus the
+    //! managers whose contents are a function of this chain).
+    std::unique_ptr<EvoChainState> m_evo;
+
 public:
     //! Reference to a BlockManager instance which itself is shared across all
     //! Chainstate instances.
@@ -533,6 +538,17 @@ public:
                          CEvoDB& evoDb,
                          const std::unique_ptr<CChainstateHelper>& chain_helper,
                          std::optional<uint256> from_snapshot_blockhash = std::nullopt);
+    ~Chainstate();
+
+    //! Attach or detach this chainstate's Evo state bundle.
+    void InitEvoChainState(std::unique_ptr<EvoChainState> evo);
+    void ResetEvoChainState();
+
+    EvoChainState& Evo()
+    {
+        assert(m_evo);
+        return *m_evo;
+    }
 
     /**
      * Initialize the CoinsViews UTXO set database management data structures. The in-memory

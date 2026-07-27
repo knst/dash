@@ -223,6 +223,7 @@ BITCOIN_CORE_H = \
   evo/deterministicmns.h \
   evo/dmn_types.h \
   evo/dmnstate.h \
+  evo/evochainstate.h \
   evo/evodb.h \
   evo/mnauth.h \
   evo/mnhftx.h \
@@ -532,6 +533,7 @@ libbitcoin_node_a_SOURCES = \
   evo/creditpool.cpp \
   evo/deterministicmns.cpp \
   evo/dmnstate.cpp \
+  evo/evochainstate.cpp \
   evo/evodb.cpp \
   evo/mnauth.cpp \
   evo/mnhftx.cpp \
@@ -1266,6 +1268,7 @@ libdashkernel_la_SOURCES = \
   evo/creditpool.cpp \
   evo/deterministicmns.cpp \
   evo/dmnstate.cpp \
+  evo/evochainstate.cpp \
   evo/evodb.cpp \
   evo/mnhftx.cpp \
   evo/netinfo.cpp \

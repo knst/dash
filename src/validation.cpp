@@ -56,6 +56,7 @@
 #include <chainlock/chainlock.h>
 #include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
+#include <evo/evochainstate.h>
 #include <evo/evodb.h>
 #include <evo/specialtx.h>
 #include <evo/specialtxman.h>
@@ -1619,6 +1620,19 @@ Chainstate::Chainstate(CTxMemPool* mempool,
       m_params(chainman.GetParams()),
       m_chainman(chainman),
       m_from_snapshot_blockhash(from_snapshot_blockhash) {}
+
+Chainstate::~Chainstate() = default;
+
+void Chainstate::InitEvoChainState(std::unique_ptr<EvoChainState> evo)
+{
+    assert(!m_evo);
+    m_evo = std::move(evo);
+}
+
+void Chainstate::ResetEvoChainState()
+{
+    m_evo.reset();
+}
 
 void Chainstate::InitCoinsDB(
     size_t cache_size_bytes,
