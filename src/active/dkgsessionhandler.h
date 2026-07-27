@@ -29,7 +29,7 @@ namespace llmq {
 class CDKGSession;
 class CDKGDebugManager;
 class CDKGSessionManager;
-class CQuorumBlockProcessor;
+class CommitmentPool;
 class CQuorumSnapshotManager;
 } // namespace llmq
 

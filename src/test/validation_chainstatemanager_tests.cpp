@@ -21,7 +21,7 @@
 #include <chainlock/handler.h>
 #include <evo/evochainstate.h>
 #include <evo/evodb.h>
-#include <llmq/blockprocessor.h>
+#include <llmq/commitmentpool.h>
 #include <llmq/commitment.h>
 #include <llmq/context.h>
 #include <llmq/quorumcache.h>
@@ -611,7 +611,7 @@ BOOST_FIXTURE_TEST_CASE(chainstatemanager_dual_chainstate_evo_isolation, Snapsho
     // about: a commitment recorded for the snapshot chain's current DKG cycle
     // satisfies the requirement there, while the background chain's own cycle
     // still demands one.
-    auto& qblockman = *Assert(m_node.llmq_ctx)->quorum_block_processor;
+    auto& cpool = *Assert(m_node.llmq_ctx)->commitment_pool;
     const auto& llmq_params = *Assert(Params().GetLLMQ(qc.llmqType));
     const auto eval_height = [&](const CChain& chain) {
         int height = chain.Height();
@@ -626,8 +626,8 @@ BOOST_FIXTURE_TEST_CASE(chainstatemanager_dual_chainstate_evo_isolation, Snapsho
     cycle_qc.quorumHash = snap_qblock->GetBlockHash();
     snapshot_cs->Evo().commitments->WriteMinedCommitment(cycle_qc, snap_tip->GetBlockHash(), snap_eval,
                                                          snap_qblock->nHeight, /*rotation_enabled=*/false);
-    BOOST_CHECK_EQUAL(qblockman.GetNumCommitmentsRequired(llmq_params, snapshot_cs->m_chain, snap_eval), 0);
-    BOOST_CHECK_EQUAL(qblockman.GetNumCommitmentsRequired(llmq_params, background_cs->m_chain,
+    BOOST_CHECK_EQUAL(cpool.GetNumCommitmentsRequired(llmq_params, snapshot_cs->m_chain, snap_eval), 0);
+    BOOST_CHECK_EQUAL(cpool.GetNumCommitmentsRequired(llmq_params, background_cs->m_chain,
                                                           eval_height(background_cs->m_chain)),
                       1);
 }

@@ -51,7 +51,7 @@
 #include <evo/smldiff.h>
 #include <instantsend/instantsend.h>
 #include <instantsend/lock.h>
-#include <llmq/blockprocessor.h>
+#include <llmq/commitmentpool.h>
 #include <llmq/commitment.h>
 #include <llmq/context.h>
 #include <llmq/options.h>
@@ -2282,7 +2282,7 @@ bool PeerManagerImpl::AlreadyHave(const CInv& inv)
         return false;
 
     case MSG_QUORUM_FINAL_COMMITMENT:
-        return m_llmq_ctx->quorum_block_processor->HasMineableCommitment(inv.hash);
+        return m_llmq_ctx->commitment_pool->HasMineableCommitment(inv.hash);
     case MSG_QUORUM_RECOVERED_SIG:
     // TODO: move it to NetSigning
         return m_llmq_ctx->sigman->AlreadyHave(inv);
@@ -2867,7 +2867,7 @@ void PeerManagerImpl::ProcessGetData(CNode& pfrom, Peer& peer, const std::atomic
 
         if (!push && (inv.type == MSG_QUORUM_FINAL_COMMITMENT)) {
             llmq::CFinalCommitment o;
-            if (m_llmq_ctx->quorum_block_processor->GetMineableCommitmentByHash(
+            if (m_llmq_ctx->commitment_pool->GetMineableCommitmentByHash(
                     inv.hash, o)) {
                 m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::QFCOMMITMENT, o));
                 push = true;
@@ -5550,7 +5550,7 @@ void PeerManagerImpl::ProcessMessage(
             PostProcessMessage(m_cj_walletman->processMessage(pfrom, m_chainman.ActiveChainstate(), m_connman, m_mempool, msg_type, vRecv), pfrom.GetId());
         }
         PostProcessMessage(CMNAuth::ProcessMessage(pfrom, peer->m_their_services, m_connman, m_mn_metaman, m_nodeman, m_mn_sync, m_dmnman->GetListAtChainTip(), msg_type, vRecv), pfrom.GetId());
-        PostProcessMessage(m_llmq_ctx->quorum_block_processor->ProcessMessage(pfrom, msg_type, vRecv), pfrom.GetId());
+        PostProcessMessage(m_llmq_ctx->commitment_pool->ProcessMessage(pfrom, msg_type, vRecv), pfrom.GetId());
         PostProcessMessage(ProcessPlatformBanMessage(pfrom.GetId(), msg_type, vRecv), pfrom.GetId());
 
         if (msg_type == NetMsgType::CLSIG) {

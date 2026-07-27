@@ -14,7 +14,7 @@
 #include <evo/mnhftx.h>
 #include <evo/netinfo.h>
 #include <evo/simplifiedmns.h>
-#include <llmq/blockprocessor.h>
+#include <llmq/commitmentpool.h>
 #include <llmq/commitment.h>
 #include <llmq/quorumsman.h>
 #include <llmq/utils.h>
@@ -708,14 +708,14 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(Chainstate& chainstate, const
         LogPrint(BCLog::BENCHMARK, "      - CheckCreditPoolDiffForBlock: %.2fms [%.2fs]\n", 0.001 * (nTime4 - nTime3),
                  nTimeCreditPool * 0.000001);
 
-        if (!m_qblockman.ProcessBlock(chainstate, block, pindex, state, fJustCheck, fCheckCbTxMerkleRoots)) {
+        if (!m_cpool.ProcessBlock(chainstate, block, pindex, state, fJustCheck, fCheckCbTxMerkleRoots)) {
             // pass the state returned by the function above
             return false;
         }
 
         int64_t nTime5 = GetTimeMicros();
         nTimeQuorum += nTime5 - nTime4;
-        LogPrint(BCLog::BENCHMARK, "      - m_qblockman.ProcessBlock: %.2fms [%.2fs]\n", 0.001 * (nTime5 - nTime4),
+        LogPrint(BCLog::BENCHMARK, "      - m_cpool.ProcessBlock: %.2fms [%.2fs]\n", 0.001 * (nTime5 - nTime4),
                  nTimeQuorum * 0.000001);
 
         CDeterministicMNList mn_list;
@@ -829,7 +829,7 @@ bool CSpecialTxProcessor::UndoSpecialTxsInBlock(Chainstate& chainstate, const CB
             return false;
         }
 
-        if (!m_qblockman.UndoBlock(chainstate, block, pindex)) {
+        if (!m_cpool.UndoBlock(chainstate, block, pindex)) {
             return false;
         }
     } catch (const std::exception& e) {

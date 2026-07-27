@@ -23,7 +23,7 @@ namespace Consensus {
 struct Params;
 } // namespace Consensus
 namespace llmq {
-class CQuorumBlockProcessor;
+class CommitmentPool;
 class CQuorumManager;
 class CQuorumSnapshotManager;
 class MinedCommitmentsStore;
@@ -67,7 +67,7 @@ public:
                            const Consensus::Params& consensus_params);
     ~EvoChainState();
 
-    void ConnectLLMQ(llmq::CQuorumBlockProcessor& qblockman, const llmq::CQuorumManager& qman,
+    void ConnectLLMQ(llmq::CommitmentPool& cpool, const llmq::CQuorumManager& qman,
                      const chainlock::Chainlocks& chainlocks);
     //! Drop the special-tx processor. Must run before the LLMQ shells it
     //! references are destroyed; the rest of the bundle outlives them.

@@ -33,7 +33,7 @@ struct Params;
 } // namespace Consensus
 namespace llmq {
 class CInstantSendManager;
-class CQuorumBlockProcessor;
+class CommitmentPool;
 class CQuorumManager;
 class CQuorumSnapshotManager;
 } // namespace llmq

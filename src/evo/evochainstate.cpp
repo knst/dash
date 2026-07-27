@@ -40,10 +40,10 @@ EvoChainState::EvoChainState(const util::DbWrapperParams& db_params, std::option
 
 EvoChainState::~EvoChainState() = default;
 
-void EvoChainState::ConnectLLMQ(llmq::CQuorumBlockProcessor& qblockman, const llmq::CQuorumManager& qman,
+void EvoChainState::ConnectLLMQ(llmq::CommitmentPool& cpool, const llmq::CQuorumManager& qman,
                                 const chainlock::Chainlocks& chainlocks)
 {
-    special_tx = std::make_unique<CSpecialTxProcessor>(*cpoolman, *dmnman, *mnhfman, qblockman, *commitments, *qsnapman,
+    special_tx = std::make_unique<CSpecialTxProcessor>(*cpoolman, *dmnman, *mnhfman, cpool, *commitments, *qsnapman,
                                                        m_chainman, m_consensus_params, chainlocks, qman);
 }
 

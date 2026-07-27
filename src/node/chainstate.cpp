@@ -217,13 +217,13 @@ void DashChainstateSetup(ChainstateManager& chainman,
                                              bls_threads, worker_count, max_recsigs_age);
 
     chainman.m_make_evo_chainstate = [&chainman, &mn_metaman, &chainlocks,
-                                      qblockman = llmq_ctx->quorum_block_processor.get(),
+                                      cpool = llmq_ctx->commitment_pool.get(),
                                       qman = llmq_ctx->qman.get(), data_dir,
                                       dash_dbs_in_memory](Chainstate& chainstate, bool wipe) {
         auto evo_state = std::make_unique<EvoChainState>(
             util::DbWrapperParams{.path = data_dir, .memory = dash_dbs_in_memory, .wipe = wipe},
             chainstate.m_from_snapshot_blockhash, mn_metaman, chainman, chainman.GetConsensus());
-        evo_state->ConnectLLMQ(*qblockman, *qman, chainlocks);
+        evo_state->ConnectLLMQ(*cpool, *qman, chainlocks);
         return evo_state;
     };
 

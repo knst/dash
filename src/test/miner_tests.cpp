@@ -25,7 +25,7 @@
 #include <chainlock/handler.h>
 #include <governance/governance.h>
 #include <instantsend/instantsend.h>
-#include <llmq/blockprocessor.h>
+#include <llmq/commitmentpool.h>
 #include <llmq/context.h>
 
 #include <test/util/setup_common.h>

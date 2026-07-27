@@ -29,10 +29,12 @@ EXPECTED_BITCOIN_CIRCULAR_DEPENDENCIES = (
 )
 
 EXPECTED_DASH_CIRCULAR_DEPENDENCIES = (
-    "banman -> common/bloom -> evo/assetlocktx -> llmq/quorumsman -> llmq/blockprocessor -> net -> banman",
+    "banman -> common/bloom -> evo/assetlocktx -> llmq/quorumsman -> llmq/commitmentpool -> net -> banman",
     "coinjoin/client -> coinjoin/util -> wallet/wallet -> psbt -> node/transaction -> net_processing -> coinjoin/walletman -> coinjoin/client",
     "common/bloom -> evo/assetlocktx -> llmq/commitment -> evo/deterministicmns -> evo/simplifiedmns -> merkleblock -> common/bloom",
-    "common/bloom -> evo/assetlocktx -> llmq/quorumsman -> llmq/blockprocessor -> net -> common/bloom",
+    "common/bloom -> evo/assetlocktx -> llmq/quorumsman -> llmq/commitmentpool -> net -> common/bloom",
+    "evo/smldiff -> llmq/commitment -> llmq/utils -> llmq/snapshot -> evo/smldiff",
+    "llmq/quorumcache -> llmq/utils -> llmq/snapshot -> llmq/quorumcache",
     "consensus/tx_verify -> evo/assetlocktx -> llmq/commitment -> validation -> consensus/tx_verify",
     "consensus/tx_verify -> evo/assetlocktx -> llmq/commitment -> validation -> txmempool -> consensus/tx_verify",
     "evo/assetlocktx -> llmq/commitment -> validation -> txmempool -> evo/assetlocktx",
@@ -42,11 +44,9 @@ EXPECTED_DASH_CIRCULAR_DEPENDENCIES = (
     "evo/netinfo -> evo/providertx -> evo/netinfo",
     "evo/netinfo -> evo/providertx -> validation -> txmempool -> evo/netinfo",
     "evo/providertx -> validation -> txmempool -> evo/providertx",
-    "evo/smldiff -> llmq/blockprocessor -> llmq/utils -> llmq/snapshot -> evo/smldiff",
     "evo/specialtxman -> validation -> evo/specialtxman",
     "governance/superblock -> validation -> masternode/payments -> governance/superblock",
     "instantsend/instantsend -> node/blockstorage -> validation -> txmempool -> instantsend/instantsend",
-    "llmq/blockprocessor -> llmq/utils -> llmq/snapshot -> llmq/blockprocessor",
     "llmq/commitment -> llmq/utils -> llmq/snapshot -> llmq/commitment",
     "net -> netmessagemaker -> net",
     "netaddress -> netbase -> netaddress",

@@ -27,7 +27,7 @@ namespace llmq {
 class ActiveDKGSessionHandler;
 class CDKGDebugManager;
 class CDKGSessionManager;
-class CQuorumBlockProcessor;
+class CommitmentPool;
 class CQuorumManager;
 class CQuorumSnapshotManager;
 class QuorumRole;
@@ -60,7 +60,7 @@ public:
     NetDKG(PeerManagerInternal* peer_manager, const CSporkManager& sporkman, CDKGSessionManager& qdkgsman,
            const ChainstateManager& chainman, bool quorums_watch, CQuorumManager& qman, QuorumRole& role,
            CBLSWorker& bls_worker, CDeterministicMNManager& dmnman, CMasternodeMetaMan& mn_metaman,
-           CDKGDebugManager& dkgdbgman, CQuorumBlockProcessor& qblockman, CQuorumSnapshotManager& qsnapman,
+           CDKGDebugManager& dkgdbgman, CommitmentPool& cpool, CQuorumSnapshotManager& qsnapman,
            const CActiveMasternodeManager& mn_activeman, CConnman& connman);
 
     ~NetDKG();
@@ -84,7 +84,7 @@ private:
         CDeterministicMNManager& dmnman;
         CMasternodeMetaMan& mn_metaman;
         CDKGDebugManager& dkgdbgman;
-        CQuorumBlockProcessor& qblockman;
+        CommitmentPool& cpool;
         CQuorumSnapshotManager& qsnapman;
         CConnman& connman;
     };

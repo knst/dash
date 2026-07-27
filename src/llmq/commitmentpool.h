@@ -2,8 +2,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_LLMQ_BLOCKPROCESSOR_H
-#define BITCOIN_LLMQ_BLOCKPROCESSOR_H
+#ifndef BITCOIN_LLMQ_COMMITMENTPOOL_H
+#define BITCOIN_LLMQ_COMMITMENTPOOL_H
 
 #include <bls/bls.h>
 #include <llmq/params.h>
@@ -35,7 +35,13 @@ namespace llmq
 {
 class CFinalCommitment;
 
-class CQuorumBlockProcessor
+/**
+ * Node-global home of quorum final commitments that are not (yet) chain state:
+ * the pool of mineable commitments fed by qfcommit relay and DKG results, the
+ * P2P intake for them, and the block-connect/undo transitions that move
+ * commitments between the pool and the per-chainstate MinedCommitmentsStore.
+ */
+class CommitmentPool
 {
 private:
     ChainstateManager& m_chainman;
@@ -47,11 +53,11 @@ private:
     std::map<uint256, CFinalCommitment> minableCommitments GUARDED_BY(minableCommitmentsCs);
 
 public:
-    CQuorumBlockProcessor() = delete;
-    CQuorumBlockProcessor(const CQuorumBlockProcessor&) = delete;
-    CQuorumBlockProcessor& operator=(const CQuorumBlockProcessor&) = delete;
-    explicit CQuorumBlockProcessor(ChainstateManager& chainman, int8_t bls_threads);
-    ~CQuorumBlockProcessor();
+    CommitmentPool() = delete;
+    CommitmentPool(const CommitmentPool&) = delete;
+    CommitmentPool& operator=(const CommitmentPool&) = delete;
+    explicit CommitmentPool(ChainstateManager& chainman, int8_t bls_threads);
+    ~CommitmentPool();
 
     [[nodiscard]] MessageProcessingResult ProcessMessage(const CNode& peer, std::string_view msg_type, CDataStream& vRecv)
         EXCLUSIVE_LOCKS_REQUIRED(!minableCommitmentsCs);
@@ -86,4 +92,4 @@ private:
 };
 } // namespace llmq
 
-#endif // BITCOIN_LLMQ_BLOCKPROCESSOR_H
+#endif // BITCOIN_LLMQ_COMMITMENTPOOL_H

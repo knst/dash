@@ -8,7 +8,7 @@
 #include <chainparams.h>
 #include <evo/deterministicmns.h>
 #include <hash.h>
-#include <llmq/blockprocessor.h>
+#include <llmq/commitmentpool.h>
 #include <llmq/commitment.h>
 #include <llmq/debug.h>
 #include <llmq/dkgsession.h>
@@ -342,14 +342,14 @@ NetDKG::NetDKG(PeerManagerInternal* peer_manager, const CSporkManager& sporkman,
 NetDKG::NetDKG(PeerManagerInternal* peer_manager, const CSporkManager& sporkman, CDKGSessionManager& qdkgsman,
                const ChainstateManager& chainman, bool quorums_watch, CQuorumManager& qman, QuorumRole& role,
                CBLSWorker& bls_worker, CDeterministicMNManager& dmnman, CMasternodeMetaMan& mn_metaman,
-               CDKGDebugManager& dkgdbgman, CQuorumBlockProcessor& qblockman, CQuorumSnapshotManager& qsnapman,
+               CDKGDebugManager& dkgdbgman, CommitmentPool& cpool, CQuorumSnapshotManager& qsnapman,
                const CActiveMasternodeManager& mn_activeman, CConnman& connman) :
     NetHandler(peer_manager),
     m_qdkgsman{qdkgsman},
     m_qman{qman},
     m_sporkman{sporkman},
     m_chainman{chainman},
-    m_active{std::make_unique<ActiveDKG>(ActiveDKG{dmnman, mn_metaman, dkgdbgman, qblockman, qsnapman, connman})}
+    m_active{std::make_unique<ActiveDKG>(ActiveDKG{dmnman, mn_metaman, dkgdbgman, cpool, qsnapman, connman})}
 {
     m_qdkgsman.InitializeHandlers(
         [&](const Consensus::LLMQParams& llmq_params, int quorum_idx) -> std::unique_ptr<ActiveDKGSessionHandler> {
@@ -697,7 +697,7 @@ void NetDKG::HandleDKGRound(ActiveDKGSessionHandler& handler)
     if (handler.params.is_single_member()) {
         auto finalCommitment = curSession->FinalizeSingleCommitment();
         if (!finalCommitment.IsNull()) { // it can be null only if we are not member
-            if (auto inv_opt = active.qblockman.AddMineableCommitment(finalCommitment); inv_opt.has_value()) {
+            if (auto inv_opt = active.cpool.AddMineableCommitment(finalCommitment); inv_opt.has_value()) {
                 m_peer_manager->PeerRelayInv(inv_opt.value());
             }
         }
@@ -769,7 +769,7 @@ void NetDKG::HandleDKGRound(ActiveDKGSessionHandler& handler)
 
     auto finalCommitments = curSession->FinalizeCommitments();
     for (const auto& fqc : finalCommitments) {
-        if (auto inv_opt = active.qblockman.AddMineableCommitment(fqc); inv_opt.has_value()) {
+        if (auto inv_opt = active.cpool.AddMineableCommitment(fqc); inv_opt.has_value()) {
             m_peer_manager->PeerRelayInv(inv_opt.value());
         }
     }

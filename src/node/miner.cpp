@@ -36,7 +36,7 @@
 #include <evo/specialtxman.h>
 #include <governance/governance.h>
 #include <instantsend/instantsend.h>
-#include <llmq/blockprocessor.h>
+#include <llmq/commitmentpool.h>
 #include <llmq/context.h>
 #include <llmq/options.h>
 #include <llmq/snapshot.h>
@@ -78,7 +78,7 @@ BlockAssembler::BlockAssembler(Chainstate& chainstate, const NodeContext& node, 
       m_isman(*Assert(Assert(node.llmq_ctx)->isman)),
       chainparams(chainstate.m_chainman.GetParams()),
       m_mempool(mempool),
-      m_quorum_block_processor(*Assert(Assert(node.llmq_ctx)->quorum_block_processor)),
+      m_commitment_pool(*Assert(Assert(node.llmq_ctx)->commitment_pool)),
       m_commitments(*Assert(node.commitments)),
       m_qman(*Assert(Assert(node.llmq_ctx)->qman))
 {
@@ -224,7 +224,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     if (fDIP0003Active_context) {
         for (const Consensus::LLMQParams& params : llmq::GetEnabledQuorumParams(m_chainstate.m_chainman, pindexPrev)) {
             std::vector<CTransactionRef> vqcTx;
-            if (m_quorum_block_processor.GetMineableCommitmentsTx(params,
+            if (m_commitment_pool.GetMineableCommitmentsTx(params,
                                                                   nHeight,
                                                                   vqcTx)) {
                 for (const auto& qcTx : vqcTx) {

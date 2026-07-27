@@ -291,7 +291,7 @@ BITCOIN_CORE_H = \
   key.h \
   key_io.h \
   limitedmap.h \
-  llmq/blockprocessor.h \
+  llmq/commitmentpool.h \
   llmq/commitment.h \
   llmq/context.h \
   llmq/debug.h \
@@ -574,7 +574,7 @@ libbitcoin_node_a_SOURCES = \
   kernel/coinstats.cpp \
   kernel/context.cpp \
   kernel/mempool_persist.cpp \
-  llmq/blockprocessor.cpp \
+  llmq/commitmentpool.cpp \
   llmq/commitment.cpp \
   llmq/context.cpp \
   llmq/debug.cpp \
@@ -1304,7 +1304,7 @@ libdashkernel_la_SOURCES = \
   kernel/mempool_persist.cpp \
   key.cpp \
   key_io.cpp \
-  llmq/blockprocessor.cpp \
+  llmq/commitmentpool.cpp \
   llmq/commitment.cpp \
   llmq/context.cpp \
   llmq/debug.cpp \

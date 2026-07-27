@@ -16,7 +16,7 @@
 #include <deploymentstatus.h>
 #include <governance/superblock.h>
 #include <key_io.h>
-#include <llmq/blockprocessor.h>
+#include <llmq/commitmentpool.h>
 #include <llmq/context.h>
 #include <evo/evodb.h>
 #include <masternode/sync.h>

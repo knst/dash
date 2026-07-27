@@ -34,7 +34,7 @@ class ChainlockHandler;
 namespace Consensus { struct Params; };
 namespace llmq {
 class CInstantSendManager;
-class CQuorumBlockProcessor;
+class CommitmentPool;
 class MinedCommitmentsStore;
 class MinedCommitmentsStore;
 class CQuorumManager;
@@ -177,7 +177,7 @@ private:
     llmq::CInstantSendManager& m_isman;
     const CChainParams& chainparams;
     const CTxMemPool* const m_mempool;
-    const llmq::CQuorumBlockProcessor& m_quorum_block_processor;
+    const llmq::CommitmentPool& m_commitment_pool;
     const llmq::MinedCommitmentsStore& m_commitments;
     const llmq::CQuorumManager& m_qman;
 

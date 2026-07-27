@@ -8,7 +8,7 @@
 #include <chainlock/clsig.h>
 #include <chainlock/handler.h>
 #include <evo/deterministicmns.h>
-#include <llmq/blockprocessor.h>
+#include <llmq/commitmentpool.h>
 #include <llmq/quorumcache.h>
 #include <llmq/commitment.h>
 #include <llmq/context.h>
@@ -421,7 +421,7 @@ static RPCHelpMan quorum_dkgstatus()
         }
 
         LOCK(cs_main);
-        std::optional<std::vector<llmq::CFinalCommitment>> vfqc = llmq_ctx.quorum_block_processor->GetMineableCommitments(llmq_params, tipHeight);
+        std::optional<std::vector<llmq::CFinalCommitment>> vfqc = llmq_ctx.commitment_pool->GetMineableCommitments(llmq_params, tipHeight);
         if (vfqc.has_value()) {
             for (const auto& fqc : vfqc.value()) {
                 minableCommitments.push_back(fqc.ToJson());

@@ -49,7 +49,7 @@ class QuorumResolutionCache;
 
 /**
  * The quorum manager maintains quorums which were mined on chain. When a quorum is requested from the manager,
- * it will lookup the commitment (through CQuorumBlockProcessor) and build a CQuorum object from it.
+ * it will lookup the commitment (through CommitmentPool) and build a CQuorum object from it.
  */
 class CQuorumManager final
 {

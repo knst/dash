@@ -16,7 +16,7 @@ class PeerManager;
 
 namespace llmq {
 class CInstantSendManager;
-class CQuorumBlockProcessor;
+class CommitmentPool;
 class CQuorumManager;
 class CSigningManager;
 
@@ -42,7 +42,7 @@ public:
      *  For example, constructor `qman` requires `bls_worker`.
      */
     const std::shared_ptr<CBLSWorker> bls_worker;
-    const std::unique_ptr<llmq::CQuorumBlockProcessor> quorum_block_processor;
+    const std::unique_ptr<llmq::CommitmentPool> commitment_pool;
     const std::unique_ptr<llmq::CQuorumManager> qman;
     const std::unique_ptr<llmq::CSigningManager> sigman;
     const std::unique_ptr<llmq::CInstantSendManager> isman;

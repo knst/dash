@@ -11,7 +11,7 @@
 #include <bls/bls_ies.h>
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
-#include <llmq/blockprocessor.h>
+#include <llmq/commitmentpool.h>
 #include <llmq/commitment.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/options.h>

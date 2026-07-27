@@ -6,7 +6,7 @@
 
 #include <bls/bls_worker.h>
 #include <instantsend/instantsend.h>
-#include <llmq/blockprocessor.h>
+#include <llmq/commitmentpool.h>
 #include <llmq/quorumcache.h>
 #include <llmq/quorumsman.h>
 #include <llmq/signing.h>
@@ -17,7 +17,7 @@ LLMQContext::LLMQContext(CSporkManager& sporkman,
                          ChainstateManager& chainman, const util::DbWrapperParams& db_params, int8_t bls_threads,
                          int16_t worker_count, int64_t max_recsigs_age) :
     bls_worker{std::make_shared<CBLSWorker>()},
-    quorum_block_processor{std::make_unique<llmq::CQuorumBlockProcessor>(chainman, bls_threads)},
+    commitment_pool{std::make_unique<llmq::CommitmentPool>(chainman, bls_threads)},
     qman{std::make_unique<llmq::CQuorumManager>(*bls_worker, chainman, db_params)},
     sigman{std::make_unique<llmq::CSigningManager>(*qman, db_params, max_recsigs_age)},
     isman{std::make_unique<llmq::CInstantSendManager>(sporkman, db_params)}
