@@ -43,14 +43,18 @@ class CChainstateHelper
 private:
     llmq::CInstantSendManager& isman;
     const CMasternodeSync& mn_sync;
+    const std::unique_ptr<CCreditPoolManager> credit_pool_manager;
+    const std::unique_ptr<CMNHFManager> ehf_manager;
+    const std::unique_ptr<CSpecialTxProcessor> special_tx;
 
 public:
-    const std::unique_ptr<CCreditPoolManager> credit_pool_manager;
     const chainlock::Chainlocks& m_chainlocks;
-    const std::unique_ptr<CMNHFManager> ehf_manager;
     const std::unique_ptr<governance::SuperblockManager> superblocks;
     const std::unique_ptr<CMNPaymentsProcessor> mn_payments;
-    const std::unique_ptr<CSpecialTxProcessor> special_tx;
+
+    CCreditPoolManager& CreditPool() const { return *credit_pool_manager; }
+    CMNHFManager& Ehf() const { return *ehf_manager; }
+    CSpecialTxProcessor& SpecialTx() const { return *special_tx; }
 
 public:
     CChainstateHelper() = delete;

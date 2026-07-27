@@ -2493,7 +2493,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                                                        const CDeterministicMNList& prevList, const CCoinsViewCache& view,
                                                        bool debugLogs, BlockValidationState& state,
                                                        CDeterministicMNList& mnListRet) -> bool {
-                    return node.chain_helper->special_tx->RebuildListFromBlock(block, pindexPrev, prevList, view, debugLogs, state, mnListRet);
+                    return node.chain_helper->SpecialTx().RebuildListFromBlock(block, pindexPrev, prevList, view, debugLogs, state, mnListRet);
                 };
                 auto result = node.dmnman->RecalculateAndRepairDiffs(start_index, stop_index, chainman, build_list_func, true);
 

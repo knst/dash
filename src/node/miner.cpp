@@ -288,7 +288,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
         BlockValidationState state;
         CDeterministicMNList mn_list;
-        if (!m_chain_helper.special_tx->BuildNewListFromBlock(*pblock, pindexPrev, m_chainstate.CoinsTip(), true, state, mn_list)) {
+        if (!m_chain_helper.SpecialTx().BuildNewListFromBlock(*pblock, pindexPrev, m_chainstate.CoinsTip(), true, state, mn_list)) {
             throw std::runtime_error(strprintf("%s: BuildNewListFromBlock failed: %s", __func__, state.ToString()));
         }
         if (!CalcCbTxMerkleRootMNList(cbTx.merkleRootMNList, mn_list.to_sml(), state)) {
@@ -306,7 +306,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     LogPrintf("CreateNewBlock() h[%d] CbTx failed to find best CL. Inserting null CL\n", nHeight);
                 }
                 BlockValidationState state;
-                const auto creditPoolDiff = GetCreditPoolDiffForBlock(*m_chain_helper.credit_pool_manager, *pblock, pindexPrev, chainparams.GetConsensus(), blockSubsidy, state);
+                const auto creditPoolDiff = GetCreditPoolDiffForBlock(m_chain_helper.CreditPool(), *pblock, pindexPrev, chainparams.GetConsensus(), blockSubsidy, state);
                 if (creditPoolDiff == std::nullopt) {
                     throw std::runtime_error(strprintf("%s: GetCreditPoolDiffForBlock failed: %s", __func__, state.ToString()));
                 }
@@ -474,7 +474,7 @@ void BlockAssembler::addPackageTxs(const CTxMemPool& mempool, int& nPackagesSele
     }
 
     // This map with signals is used only to find duplicates
-    std::unordered_map<uint8_t, int> signals = m_chain_helper.ehf_manager->GetSignalsStage(pindexPrev);
+    std::unordered_map<uint8_t, int> signals = m_chain_helper.Ehf().GetSignalsStage(pindexPrev);
 
     // mapModifiedTx will store sorted packages after they are modified
     // because some of their txs are already in the block

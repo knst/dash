@@ -173,7 +173,7 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
         }
     }
 
-    if (!chain_helper->ehf_manager->ForceSignalDBUpdate()) {
+    if (!chain_helper->Ehf().ForceSignalDBUpdate()) {
         return {ChainstateLoadStatus::FAILURE, _("Error upgrading evo database for EHF")};
     }
 

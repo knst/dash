@@ -448,7 +448,7 @@ static std::string SignAndSendSpecialTx(const JSONRPCRequest& request, CChainsta
     }
 
     TxValidationState state;
-    if (!chain_helper.special_tx->CheckSpecialTx(CTransaction(tx), tip, chainman.ActiveChainstate().CoinsTip(), true, state)) {
+    if (!chain_helper.SpecialTx().CheckSpecialTx(CTransaction(tx), tip, chainman.ActiveChainstate().CoinsTip(), true, state)) {
         throw std::runtime_error(state.ToString());
     }
     } // cs_main
@@ -1910,7 +1910,7 @@ static UniValue evodb_verify_or_repair_impl(const JSONRPCRequest& request, bool 
                                            const CDeterministicMNList& prevList, const CCoinsViewCache& view,
                                            bool debugLogs, BlockValidationState& state,
                                            CDeterministicMNList& mnListRet) -> bool {
-        return chain_helper.special_tx->RebuildListFromBlock(block, pindexPrev, prevList, view, debugLogs, state, mnListRet);
+        return chain_helper.SpecialTx().RebuildListFromBlock(block, pindexPrev, prevList, view, debugLogs, state, mnListRet);
     };
 
     // Call the dmnman method to do the work

@@ -37,7 +37,7 @@ void CEHFSignalsHandler::UpdatedBlockTip(const CBlockIndex* const pindexNew)
 {
     if (!DeploymentActiveAfter(pindexNew, Params().GetConsensus(), Consensus::DEPLOYMENT_V20)) return;
 
-    const auto ehfSignals = m_chainman.ActiveChainstate().ChainHelper().ehf_manager->GetSignalsStage(pindexNew);
+    const auto ehfSignals = m_chainman.ActiveChainstate().ChainHelper().Ehf().GetSignalsStage(pindexNew);
     for (const auto& deployment : Params().GetConsensus().vDeployments) {
         // Skip deployments that do not use dip0023
         if (!deployment.useEHF) continue;
@@ -93,7 +93,7 @@ RecoveredSigResult CEHFSignalsHandler::HandleNewRecoveredSig(const CRecoveredSig
         return std::monostate{};
     }
 
-    const auto ehfSignals = m_chainman.ActiveChainstate().ChainHelper().ehf_manager->GetSignalsStage(
+    const auto ehfSignals = m_chainman.ActiveChainstate().ChainHelper().Ehf().GetSignalsStage(
         WITH_LOCK(::cs_main, return m_chainman.ActiveTip()));
     MNHFTxPayload mnhfPayload;
     for (const auto& deployment : Params().GetConsensus().vDeployments) {

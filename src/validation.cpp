@@ -986,7 +986,7 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
     // DoS scoring a node for non-critical errors, e.g. duplicate keys because a TX is received that was already
     // mined
     // NOTE: we use UTXO here and do NOT allow mempool txes as masternode collaterals
-    if (!m_chain_helper.special_tx->CheckSpecialTx(tx, m_active_chainstate.m_chain.Tip(), m_active_chainstate.CoinsTip(), true, state))
+    if (!m_chain_helper.SpecialTx().CheckSpecialTx(tx, m_active_chainstate.m_chain.Tip(), m_active_chainstate.CoinsTip(), true, state))
         return false;
 
     if (m_pool.existsProviderTxConflict(tx)) {
@@ -1982,7 +1982,7 @@ DisconnectResult Chainstate::DisconnectBlock(const CBlock& block, const CBlockIn
     }
 
     std::optional<MNListUpdates> mnlist_updates_opt{std::nullopt};
-    if (!m_chain_helper->special_tx->UndoSpecialTxsInBlock(*this, block, pindex, mnlist_updates_opt)) {
+    if (!m_chain_helper->SpecialTx().UndoSpecialTxsInBlock(*this, block, pindex, mnlist_updates_opt)) {
         error("DisconnectBlock(): UndoSpecialTxsInBlock failed");
         return DISCONNECT_FAILED;
     }
@@ -2317,7 +2317,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
 
     // MUST process special txes before updating UTXO to ensure consistency between mempool and block processing
     std::optional<MNListUpdates> mnlist_updates_opt{std::nullopt};
-    if (!m_chain_helper->special_tx->ProcessSpecialTxsInBlock(*this, block, pindex, view, fJustCheck, fScriptChecks, state, mnlist_updates_opt)) {
+    if (!m_chain_helper->SpecialTx().ProcessSpecialTxsInBlock(*this, block, pindex, view, fJustCheck, fScriptChecks, state, mnlist_updates_opt)) {
         return error("ConnectBlock(DASH): ProcessSpecialTxsInBlock for block %s failed with %s",
                      pindex->GetBlockHash().ToString(), state.ToString());
     }
@@ -4609,7 +4609,7 @@ bool Chainstate::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& in
     // MUST process special txes before updating UTXO to ensure consistency between mempool and block processing
     BlockValidationState state;
     std::optional<MNListUpdates> mnlist_updates_opt{std::nullopt};
-    if (!m_chain_helper->special_tx->ProcessSpecialTxsInBlock(*this, block, pindex, inputs, false /*fJustCheck*/, false /*fScriptChecks*/, state, mnlist_updates_opt)) {
+    if (!m_chain_helper->SpecialTx().ProcessSpecialTxsInBlock(*this, block, pindex, inputs, false /*fJustCheck*/, false /*fScriptChecks*/, state, mnlist_updates_opt)) {
         return error("RollforwardBlock(DASH): ProcessSpecialTxsInBlock for block %s failed with %s",
             pindex->GetBlockHash().ToString(), state.ToString());
     }

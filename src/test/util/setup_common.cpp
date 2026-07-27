@@ -578,7 +578,7 @@ CBlock TestChainSetup::CreateBlock(
         Assert(cbTx.has_value());
         BlockValidationState state;
         CDeterministicMNList mn_list;
-        if (!chainstate.ChainHelper().special_tx->BuildNewListFromBlock(block, chainstate.m_chain.Tip(), chainstate.CoinsTip(), true, state, mn_list)) {
+        if (!chainstate.ChainHelper().SpecialTx().BuildNewListFromBlock(block, chainstate.m_chain.Tip(), chainstate.CoinsTip(), true, state, mn_list)) {
             Assert(false);
         }
         if (!CalcCbTxMerkleRootMNList(cbTx->merkleRootMNList, mn_list.to_sml(), state)) {
