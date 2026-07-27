@@ -146,6 +146,8 @@ BOOST_AUTO_TEST_CASE(chainstatemanager_rebalance_caches)
     c1.InitCoinsDB(
         /*cache_size_bytes=*/1 << 23, /*in_memory=*/true, /*should_wipe=*/false);
 
+    DashChainstateSetup(manager, m_node, /*llmq_dbs_in_memory=*/true, /*llmq_dbs_wipe=*/false);
+
     {
         LOCK(::cs_main);
         c1.InitCoinsCache(1 << 23);
@@ -178,6 +180,8 @@ BOOST_AUTO_TEST_CASE(chainstatemanager_rebalance_caches)
     BOOST_CHECK_CLOSE(c1.m_coinsdb_cache_size_bytes, max_cache * 0.05, 1);
     BOOST_CHECK_CLOSE(c2.m_coinstip_cache_size_bytes, max_cache * 0.95, 1);
     BOOST_CHECK_CLOSE(c2.m_coinsdb_cache_size_bytes, max_cache * 0.95, 1);
+
+    DashChainstateSetupClose(m_node);
 }
 
 struct SnapshotTestSetup : TestChain100Setup {
@@ -192,6 +196,7 @@ struct SnapshotTestSetup : TestChain100Setup {
                               {},
                               /*coins_db_in_memory=*/false,
                               /*block_tree_db_in_memory=*/false,
+                              /*dash_dbs_in_memory=*/false,
                           }
     {
     }

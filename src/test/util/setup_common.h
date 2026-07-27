@@ -112,6 +112,7 @@ struct ChainTestingSetup : public BasicTestingSetup {
     node::CacheSizes m_cache_sizes{};
     bool m_coins_db_in_memory{true};
     bool m_block_tree_db_in_memory{true};
+    bool m_dash_dbs_in_memory{true};
 
     explicit ChainTestingSetup(const std::string& chainName = CBaseChainParams::MAIN, const std::vector<const char*>& extra_args = {});
     ~ChainTestingSetup();
@@ -127,7 +128,8 @@ struct TestingSetup : public ChainTestingSetup {
         const std::string& chainName = CBaseChainParams::MAIN,
         const std::vector<const char*>& extra_args = {},
         const bool coins_db_in_memory = true,
-        const bool block_tree_db_in_memory = true);
+        const bool block_tree_db_in_memory = true,
+        const bool dash_dbs_in_memory = true);
     ~TestingSetup();
 };
 
@@ -147,7 +149,8 @@ struct TestChainSetup : public TestingSetup
                    const std::string& chain_name = CBaseChainParams::REGTEST,
                    const std::vector<const char*>& extra_args = {},
                    const bool coins_db_in_memory = true,
-                   const bool block_tree_db_in_memory = true);
+                   const bool block_tree_db_in_memory = true,
+                   const bool dash_dbs_in_memory = true);
     ~TestChainSetup();
 
     /**
@@ -235,7 +238,8 @@ struct TestChain100Setup : public TestChainSetup {
         const std::string& chain_name = CBaseChainParams::REGTEST,
         const std::vector<const char*>& extra_args = {},
         const bool coins_db_in_memory = true,
-        const bool block_tree_db_in_memory = true);
+        const bool block_tree_db_in_memory = true,
+        const bool dash_dbs_in_memory = true);
 };
 
 /**
