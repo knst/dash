@@ -25,7 +25,7 @@ struct RPCResult;
 
 namespace llmq {
 class CFinalCommitment;
-class CQuorumBlockProcessor;
+class MinedCommitmentsStore;
 class CQuorumManager;
 } // namespace llmq
 
@@ -83,7 +83,7 @@ public:
     ~CSimplifiedMNListDiff();
 
     bool BuildQuorumsDiff(const CBlockIndex* baseBlockIndex, const CBlockIndex* blockIndex,
-                          const llmq::CQuorumBlockProcessor& quorum_block_processor);
+                          const llmq::MinedCommitmentsStore& commitments);
     bool BuildQuorumChainlockInfo(const llmq::CQuorumManager& qman, const CBlockIndex* blockIndex);
 
     [[nodiscard]] static RPCResult GetJsonHelp(const std::string& key, bool optional);
@@ -91,7 +91,7 @@ public:
 };
 
 bool BuildSimplifiedMNListDiff(CDeterministicMNManager& dmnman, const ChainstateManager& chainman,
-                               const llmq::CQuorumBlockProcessor& qblockman, const llmq::CQuorumManager& qman,
+                               const llmq::MinedCommitmentsStore& commitments, const llmq::CQuorumManager& qman,
                                const uint256& baseBlockHash, const uint256& blockHash, CSimplifiedMNListDiff& mnListDiffRet,
                                std::string& errorRet, bool extended = false) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 

@@ -584,7 +584,7 @@ CBlock TestChainSetup::CreateBlock(
         if (!CalcCbTxMerkleRootMNList(cbTx->merkleRootMNList, mn_list.to_sml(), state)) {
             Assert(false);
         }
-        if (!CalcCbTxMerkleRootQuorums(block, chainstate.m_chain.Tip(), *m_node.llmq_ctx->quorum_block_processor, cbTx->merkleRootQuorums, state)) {
+        if (!CalcCbTxMerkleRootQuorums(block, chainstate.m_chain.Tip(), *m_node.llmq_ctx->commitments, cbTx->merkleRootQuorums, state)) {
             Assert(false);
         }
         CMutableTransaction tmpTx{*block.vtx[0]};

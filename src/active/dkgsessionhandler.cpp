@@ -19,7 +19,7 @@
 namespace llmq {
 ActiveDKGSessionHandler::ActiveDKGSessionHandler(
     CBLSWorker& bls_worker, CDeterministicMNManager& dmnman, CMasternodeMetaMan& mn_metaman,
-    llmq::CDKGDebugManager& dkgdbgman, llmq::CDKGSessionManager& qdkgsman, llmq::CQuorumBlockProcessor& qblockman,
+    llmq::CDKGDebugManager& dkgdbgman, llmq::CDKGSessionManager& qdkgsman,
     llmq::CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager& mn_activeman, const ChainstateManager& chainman,
     const CSporkManager& sporkman, const Consensus::LLMQParams& llmq_params, bool quorums_watch, int quorums_idx) :
     llmq::CDKGSessionHandler(llmq_params),
@@ -28,7 +28,6 @@ ActiveDKGSessionHandler::ActiveDKGSessionHandler(
     m_mn_metaman{mn_metaman},
     m_dkgdbgman{dkgdbgman},
     m_qdkgsman{qdkgsman},
-    m_qblockman{qblockman},
     m_qsnapman{qsnapman},
     m_mn_activeman{mn_activeman},
     m_chainman{chainman},

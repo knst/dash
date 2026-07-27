@@ -31,12 +31,12 @@
 
 namespace llmq {
 CQuorumManager::CQuorumManager(CBLSWorker& _blsWorker, CDeterministicMNManager& dmnman, CEvoDB& _evoDb,
-                               CQuorumBlockProcessor& _quorumBlockProcessor, CQuorumSnapshotManager& qsnapman,
+                               MinedCommitmentsStore& commitments, CQuorumSnapshotManager& qsnapman,
                                QuorumResolutionCache& qcache, const ChainstateManager& chainman,
                                const util::DbWrapperParams& db_params) :
     blsWorker{_blsWorker},
     m_dmnman{dmnman},
-    quorumBlockProcessor{_quorumBlockProcessor},
+    m_commitments{commitments},
     m_qsnapman{qsnapman},
     m_qcache{qcache},
     m_chainman{chainman},
@@ -69,7 +69,7 @@ CQuorumPtr CQuorumManager::BuildQuorumFromCommitment(const Consensus::LLMQType l
 {
     const uint256& quorumHash{pQuorumBaseBlockIndex->GetBlockHash()};
 
-    auto [qc, minedBlockHash] = quorumBlockProcessor.GetMinedCommitment(llmqType, quorumHash);
+    auto [qc, minedBlockHash] = m_commitments.GetMinedCommitment(llmqType, quorumHash);
     if (minedBlockHash == uint256::ZERO) {
         LogPrint(BCLog::LLMQ, "CQuorumManager::%s -- No mined commitment for llmqType[%d] nHeight[%d] quorumHash[%s]\n", __func__, std23::to_underlying(llmqType), pQuorumBaseBlockIndex->nHeight, pQuorumBaseBlockIndex->GetBlockHash().ToString());
         return nullptr;
@@ -142,18 +142,6 @@ bool CQuorumManager::BuildQuorumContributions(const CFinalCommitmentPtr& fqc, co
     LogPrint(BCLog::LLMQ, "CQuorumManager::%s -- built quorum vvec and skShare. time=%d\n", __func__, t2.count());
 
     return true;
-}
-
-bool CQuorumManager::HasQuorum(Consensus::LLMQType llmqType, const CQuorumBlockProcessor& quorum_block_processor, const uint256& quorumHash)
-{
-    return quorum_block_processor.HasMinedCommitment(llmqType, quorumHash);
-}
-
-bool CQuorumManager::HasQuorum(Consensus::LLMQType llmqType, const CQuorumBlockProcessor& quorum_block_processor,
-                               const uint256& quorumHash, const CChain& chain)
-{
-    AssertLockHeld(::cs_main);
-    return quorum_block_processor.HasMinedCommitment(llmqType, quorumHash, chain);
 }
 
 std::vector<CQuorumCPtr> CQuorumManager::ScanQuorums(Consensus::LLMQType llmqType, size_t nCountRequested) const
@@ -251,8 +239,8 @@ std::vector<CQuorumCPtr> CQuorumManager::ScanQuorums(Consensus::LLMQType llmqTyp
 
     // Get the block indexes of the mined commitments to build the required quorums from
     std::vector<const CBlockIndex*> pQuorumBaseBlockIndexes{ llmq_params_opt->useRotation ?
-            quorumBlockProcessor.GetMinedCommitmentsIndexedUntilBlock(llmqType, pIndexScanCommitments, nScanCommitments) :
-            quorumBlockProcessor.GetMinedCommitmentsUntilBlock(llmqType, pIndexScanCommitments, nScanCommitments)
+            m_commitments.GetMinedCommitmentsIndexedUntilBlock(llmqType, pIndexScanCommitments, nScanCommitments) :
+            m_commitments.GetMinedCommitmentsUntilBlock(llmqType, pIndexScanCommitments, nScanCommitments)
     };
     vecResultQuorums.reserve(vecResultQuorums.size() + pQuorumBaseBlockIndexes.size());
 
@@ -397,7 +385,7 @@ CQuorumCPtr CQuorumManager::GetQuorum(Consensus::LLMQType llmqType, gsl::not_nul
 
     // we must check this before we look into the cache. Reorgs might have happened which would mean we might have
     // cached quorums which are not in the active chain anymore
-    if (!HasQuorum(llmqType, quorumBlockProcessor, quorumHash)) {
+    if (!m_commitments.HasMinedCommitment(llmqType, quorumHash)) {
         return nullptr;
     }
 
@@ -416,7 +404,7 @@ CQuorumCPtr CQuorumManager::GetQuorum(Consensus::LLMQType llmqType,
     AssertLockHeld(::cs_main);
 
     const auto quorumHash = pQuorumBaseBlockIndex->GetBlockHash();
-    if (!HasQuorum(llmqType, quorumBlockProcessor, quorumHash, chain)) {
+    if (!m_commitments.HasMinedCommitment(llmqType, quorumHash, chain)) {
         return nullptr;
     }
 

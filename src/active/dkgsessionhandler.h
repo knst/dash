@@ -50,7 +50,6 @@ private:
     CMasternodeMetaMan& m_mn_metaman;
     llmq::CDKGDebugManager& m_dkgdbgman;
     llmq::CDKGSessionManager& m_qdkgsman;
-    llmq::CQuorumBlockProcessor& m_qblockman;
     llmq::CQuorumSnapshotManager& m_qsnapman;
     const CActiveMasternodeManager& m_mn_activeman;
     const ChainstateManager& m_chainman;
@@ -73,7 +72,7 @@ public:
     ActiveDKGSessionHandler& operator=(const ActiveDKGSessionHandler&) = delete;
     ActiveDKGSessionHandler(CBLSWorker& bls_worker, CDeterministicMNManager& dmnman, CMasternodeMetaMan& mn_metaman,
                             llmq::CDKGDebugManager& dkgdbgman, llmq::CDKGSessionManager& qdkgsman,
-                            llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumSnapshotManager& qsnapman,
+                            llmq::CQuorumSnapshotManager& qsnapman,
                             const CActiveMasternodeManager& mn_activeman, const ChainstateManager& chainman,
                             const CSporkManager& sporkman, const Consensus::LLMQParams& llmq_params, bool quorums_watch,
                             int quorums_idx);

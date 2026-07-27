@@ -9,6 +9,7 @@
 #include <chainlock/handler.h>
 #include <evo/deterministicmns.h>
 #include <llmq/blockprocessor.h>
+#include <llmq/quorumcache.h>
 #include <llmq/commitment.h>
 #include <llmq/context.h>
 #include <llmq/debug.h>
@@ -185,7 +186,7 @@ static RPCHelpMan quorum_list_extended()
     };
 }
 
-static UniValue BuildQuorumInfo(const llmq::CQuorumBlockProcessor& quorum_block_processor,
+static UniValue BuildQuorumInfo(const llmq::MinedCommitmentsStore& commitments,
                                 const llmq::CQuorum& quorum, bool includeMembers, bool includeSkShare)
 {
     UniValue ret(UniValue::VOBJ);
@@ -197,7 +198,7 @@ static UniValue BuildQuorumInfo(const llmq::CQuorumBlockProcessor& quorum_block_
     ret.pushKV("minedBlock", quorum.minedBlockHash.ToString());
 
     if (quorum.params.useRotation) {
-        auto previousActiveCommitment = quorum_block_processor.GetLastMinedCommitmentsByQuorumIndexUntilBlock(quorum.params.type, quorum.m_quorum_base_block_index, quorum.qc->quorumIndex, 0);
+        auto previousActiveCommitment = commitments.GetLastMinedCommitmentsByQuorumIndexUntilBlock(quorum.params.type, quorum.m_quorum_base_block_index, quorum.qc->quorumIndex, 0);
         if (previousActiveCommitment.has_value()) {
             int previousConsecutiveDKGFailures = (quorum.m_quorum_base_block_index->nHeight - previousActiveCommitment.value()->nHeight) /  quorum.params.dkgInterval - 1;
             ret.pushKV("previousConsecutiveDKGFailures", previousConsecutiveDKGFailures);
@@ -297,7 +298,7 @@ static RPCHelpMan quorum_info()
         throw JSONRPCError(RPC_INVALID_PARAMETER, "quorum not found");
     }
 
-    return BuildQuorumInfo(*llmq_ctx.quorum_block_processor, *quorum, true, includeSkShare);
+    return BuildQuorumInfo(*llmq_ctx.commitments, *quorum, true, includeSkShare);
 },
     };
 }
@@ -490,7 +491,7 @@ static RPCHelpMan quorum_memberof()
         auto quorums = llmq_ctx.qman->ScanQuorums(llmq_params_opt->type, count);
         for (auto& quorum : quorums) {
             if (quorum->IsMember(dmn->proTxHash)) {
-                auto json = BuildQuorumInfo(*llmq_ctx.quorum_block_processor, *quorum, false, false);
+                auto json = BuildQuorumInfo(*llmq_ctx.commitments, *quorum, false, false);
                 json.pushKV("isValidMember", quorum->IsValidMember(dmn->proTxHash));
                 json.pushKV("memberIndex", quorum->GetMemberIndex(dmn->proTxHash));
                 result.push_back(json);
@@ -982,7 +983,7 @@ static RPCHelpMan quorum_rotationinfo()
     LOCK(cs_main);
 
     if (!BuildQuorumRotationInfo(*CHECK_NONFATAL(node.dmnman), *llmq_ctx.qsnapman, chainman, *llmq_ctx.qman,
-                                 *llmq_ctx.quorum_block_processor, cmd, false, quorumRotationInfoRet, strError)) {
+                                 *llmq_ctx.commitments, cmd, false, quorumRotationInfoRet, strError)) {
         throw JSONRPCError(RPC_INVALID_REQUEST, strError);
     }
 

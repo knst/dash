@@ -22,7 +22,7 @@ class CBlockIndex;
 class CEvoDB;
 struct RPCResult;
 namespace llmq {
-class CQuorumBlockProcessor;
+class MinedCommitmentsStore;
 class CQuorumManager;
 } // namespace llmq
 
@@ -213,7 +213,7 @@ public:
 
 bool BuildQuorumRotationInfo(CDeterministicMNManager& dmnman, CQuorumSnapshotManager& qsnapman,
                              const ChainstateManager& chainman, const CQuorumManager& qman,
-                             const CQuorumBlockProcessor& qblockman, const CGetQuorumRotationInfo& request,
+                             const MinedCommitmentsStore& commitments, const CGetQuorumRotationInfo& request,
                              bool use_legacy_construction, CQuorumRotationInfo& response, std::string& errorRet)
     EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 uint256 GetLastBaseBlockHash(Span<const CBlockIndex*> baseBlockIndexes, const CBlockIndex* blockIndex,

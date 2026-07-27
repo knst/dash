@@ -8,7 +8,7 @@
 #include <evo/evodb.h>
 #include <evo/simplifiedmns.h>
 #include <evo/smldiff.h>
-#include <llmq/blockprocessor.h>
+#include <llmq/quorumcache.h>
 #include <llmq/commitment.h>
 #include <validation.h>
 
@@ -62,7 +62,7 @@ std::optional<llmq::CycleData> ConstructCycle(llmq::CQuorumSnapshotManager& qsna
 namespace llmq {
 bool BuildQuorumRotationInfo(CDeterministicMNManager& dmnman, CQuorumSnapshotManager& qsnapman,
                              const ChainstateManager& chainman, const CQuorumManager& qman,
-                             const CQuorumBlockProcessor& qblockman, const CGetQuorumRotationInfo& request,
+                             const MinedCommitmentsStore& commitments, const CGetQuorumRotationInfo& request,
                              bool use_legacy_construction, CQuorumRotationInfo& response, std::string& errorRet)
 {
     AssertLockHeld(::cs_main);
@@ -109,7 +109,7 @@ bool BuildQuorumRotationInfo(CDeterministicMNManager& dmnman, CQuorumSnapshotMan
     if (!CheckBlockDataAvailable(tipBlockIndex, errorRet)) return false;
     if (use_legacy_construction) {
         // Build MN list Diff always with highest baseblock
-        if (!BuildSimplifiedMNListDiff(dmnman, chainman, qblockman, qman, baseBlockIndexes.back()->GetBlockHash(),
+        if (!BuildSimplifiedMNListDiff(dmnman, chainman, commitments, qman, baseBlockIndexes.back()->GetBlockHash(),
                                        tipBlockIndex->GetBlockHash(), response.mnListDiffTip, errorRet)) {
             return false;
         }
@@ -139,7 +139,7 @@ bool BuildQuorumRotationInfo(CDeterministicMNManager& dmnman, CQuorumSnapshotMan
     }
     if (use_legacy_construction) {
         // Build MN list Diff always with highest baseblock
-        if (!BuildSimplifiedMNListDiff(dmnman, chainman, qblockman, qman,
+        if (!BuildSimplifiedMNListDiff(dmnman, chainman, commitments, qman,
                                        GetLastBaseBlockHash(baseBlockIndexes, cycle_base_opt->m_work_index,
                                                             use_legacy_construction),
                                        cycle_base_opt->m_work_index->GetBlockHash(), response.mnListDiffH, errorRet)) {
@@ -158,7 +158,7 @@ bool BuildQuorumRotationInfo(CDeterministicMNManager& dmnman, CQuorumSnapshotMan
             return false;
         }
         if (use_legacy_construction) {
-            if (!BuildSimplifiedMNListDiff(dmnman, chainman, qblockman, qman,
+            if (!BuildSimplifiedMNListDiff(dmnman, chainman, commitments, qman,
                                            GetLastBaseBlockHash(baseBlockIndexes, cycle_opt->m_work_index,
                                                                 use_legacy_construction),
                                            cycle_opt->m_work_index->GetBlockHash(), cycle_opt->m_diff, errorRet)) {
@@ -169,8 +169,8 @@ bool BuildQuorumRotationInfo(CDeterministicMNManager& dmnman, CQuorumSnapshotMan
     }
 
     std::set<int> snapshotHeightsNeeded;
-    for (const auto& obj : qblockman.GetLastMinedCommitmentsPerQuorumIndexUntilBlock(llmqType, blockIndex, /*cycle=*/0)) {
-        auto [qc, minedBlockHash] = qblockman.GetMinedCommitment(llmqType, obj->GetBlockHash());
+    for (const auto& obj : commitments.GetLastMinedCommitmentsPerQuorumIndexUntilBlock(llmqType, blockIndex, /*cycle=*/0)) {
+        auto [qc, minedBlockHash] = commitments.GetMinedCommitment(llmqType, obj->GetBlockHash());
         if (minedBlockHash == uint256::ZERO) {
             return false;
         }
@@ -193,7 +193,7 @@ bool BuildQuorumRotationInfo(CDeterministicMNManager& dmnman, CQuorumSnapshotMan
         }
         response.quorumSnapshotList.push_back(cycle_opt->m_snap);
         CSimplifiedMNListDiff mnhneeded;
-        if (!BuildSimplifiedMNListDiff(dmnman, chainman, qblockman, qman,
+        if (!BuildSimplifiedMNListDiff(dmnman, chainman, commitments, qman,
                                        GetLastBaseBlockHash(baseBlockIndexes, cycle_opt->m_work_index,
                                                             use_legacy_construction),
                                        cycle_opt->m_work_index->GetBlockHash(), mnhneeded, errorRet)) {
@@ -208,7 +208,7 @@ bool BuildQuorumRotationInfo(CDeterministicMNManager& dmnman, CQuorumSnapshotMan
     if (!use_legacy_construction) {
         for (size_t idx = target_cycles.size(); idx-- > 0;) {
             auto* cycle{target_cycles[idx]};
-            if (!BuildSimplifiedMNListDiff(dmnman, chainman, qblockman, qman,
+            if (!BuildSimplifiedMNListDiff(dmnman, chainman, commitments, qman,
                                            GetLastBaseBlockHash(baseBlockIndexes, cycle->m_work_index,
                                                                 use_legacy_construction),
                                            cycle->m_work_index->GetBlockHash(), cycle->m_diff, errorRet)) {
@@ -217,7 +217,7 @@ bool BuildQuorumRotationInfo(CDeterministicMNManager& dmnman, CQuorumSnapshotMan
             baseBlockIndexes.push_back(cycle->m_work_index);
         }
 
-        if (!BuildSimplifiedMNListDiff(dmnman, chainman, qblockman, qman,
+        if (!BuildSimplifiedMNListDiff(dmnman, chainman, commitments, qman,
                                        GetLastBaseBlockHash(baseBlockIndexes, cycle_base_opt->m_work_index,
                                                             use_legacy_construction),
                                        cycle_base_opt->m_work_index->GetBlockHash(), response.mnListDiffH, errorRet)) {
@@ -225,7 +225,7 @@ bool BuildQuorumRotationInfo(CDeterministicMNManager& dmnman, CQuorumSnapshotMan
         }
         baseBlockIndexes.push_back(cycle_base_opt->m_work_index);
 
-        if (!BuildSimplifiedMNListDiff(dmnman, chainman, qblockman, qman,
+        if (!BuildSimplifiedMNListDiff(dmnman, chainman, commitments, qman,
                                        GetLastBaseBlockHash(baseBlockIndexes, tipBlockIndex, use_legacy_construction),
                                        tipBlockIndex->GetBlockHash(), response.mnListDiffTip, errorRet)) {
             return false;

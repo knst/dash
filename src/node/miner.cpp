@@ -80,6 +80,7 @@ BlockAssembler::BlockAssembler(Chainstate& chainstate, const NodeContext& node, 
       chainparams(chainstate.m_chainman.GetParams()),
       m_mempool(mempool),
       m_quorum_block_processor(*Assert(Assert(node.llmq_ctx)->quorum_block_processor)),
+      m_commitments(*Assert(Assert(node.llmq_ctx)->commitments)),
       m_qman(*Assert(Assert(node.llmq_ctx)->qman))
 {
     blockMinFeeRate = options.blockMinFeeRate;
@@ -294,7 +295,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
             throw std::runtime_error(strprintf("%s: CalcCbTxMerkleRootMNList failed: %s", __func__, state.ToString()));
         }
         if (fDIP0008Active_context) {
-            if (!CalcCbTxMerkleRootQuorums(*pblock, pindexPrev, m_quorum_block_processor, cbTx.merkleRootQuorums, state)) {
+            if (!CalcCbTxMerkleRootQuorums(*pblock, pindexPrev, m_commitments, cbTx.merkleRootQuorums, state)) {
                 throw std::runtime_error(strprintf("%s: CalcCbTxMerkleRootQuorums failed: %s", __func__, state.ToString()));
             }
             if (fV20Active_context) {

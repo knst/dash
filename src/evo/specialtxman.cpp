@@ -754,7 +754,7 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(Chainstate& chainstate, const
 
             if (opt_cbTx->nVersion >= CCbTx::Version::MERKLE_ROOT_QUORUMS) {
                 uint256 calculatedMerkleRootQuorums;
-                if (!CalcCbTxMerkleRootQuorums(block, pindex->pprev, m_qblockman, calculatedMerkleRootQuorums, state)) {
+                if (!CalcCbTxMerkleRootQuorums(block, pindex->pprev, m_commitments, calculatedMerkleRootQuorums, state)) {
                     // pass the state returned by the function above
                     return false;
                 }

@@ -22,6 +22,7 @@ class CQuorumBlockProcessor;
 class CQuorumManager;
 class CQuorumSnapshotManager;
 class CSigningManager;
+class MinedCommitmentsStore;
 class QuorumResolutionCache;
 } // namespace llmq
 namespace util {
@@ -46,6 +47,7 @@ public:
      */
     const std::shared_ptr<CBLSWorker> bls_worker;
     const std::unique_ptr<llmq::CQuorumSnapshotManager> qsnapman;
+    const std::unique_ptr<llmq::MinedCommitmentsStore> commitments;
     const std::unique_ptr<llmq::CQuorumBlockProcessor> quorum_block_processor;
     const std::unique_ptr<llmq::QuorumResolutionCache> qcache;
     const std::unique_ptr<llmq::CQuorumManager> qman;

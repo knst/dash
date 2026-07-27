@@ -22,7 +22,7 @@ class TxValidationState;
 struct RPCResult;
 
 namespace llmq {
-class CQuorumBlockProcessor;
+class MinedCommitmentsStore;
 }// namespace llmq
 
 // coinbase transaction
@@ -71,7 +71,7 @@ template<> struct is_serializable_enum<CCbTx::Version> : std::true_type {};
 bool CheckCbTx(const CCbTx& cbTx, const CBlockIndex* pindexPrev, TxValidationState& state);
 
 bool CalcCbTxMerkleRootQuorums(const CBlock& block, const CBlockIndex* pindexPrev,
-                               const llmq::CQuorumBlockProcessor& quorum_block_processor, uint256& merkleRootRet,
+                               const llmq::MinedCommitmentsStore& commitments, uint256& merkleRootRet,
                                BlockValidationState& state);
 
 std::optional<std::pair<CBLSSignature, uint32_t>> GetNonNullCoinbaseChainlock(const CBlockIndex* pindex);

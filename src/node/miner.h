@@ -36,6 +36,8 @@ namespace Consensus { struct Params; };
 namespace llmq {
 class CInstantSendManager;
 class CQuorumBlockProcessor;
+class MinedCommitmentsStore;
+class MinedCommitmentsStore;
 class CQuorumManager;
 } // namespace llmq
 
@@ -178,6 +180,7 @@ private:
     const CChainParams& chainparams;
     const CTxMemPool* const m_mempool;
     const llmq::CQuorumBlockProcessor& m_quorum_block_processor;
+    const llmq::MinedCommitmentsStore& m_commitments;
     const llmq::CQuorumManager& m_qman;
 
 public:

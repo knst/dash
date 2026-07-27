@@ -34,6 +34,7 @@ struct Params;
 namespace llmq {
 class CInstantSendManager;
 class CQuorumBlockProcessor;
+class MinedCommitmentsStore;
 class CQuorumManager;
 class CQuorumSnapshotManager;
 } // namespace llmq
@@ -57,6 +58,7 @@ public:
     CChainstateHelper& operator=(const CChainstateHelper&) = delete;
     explicit CChainstateHelper(CEvoDB& evodb, CDeterministicMNManager& dmnman, const CMasternodeSync& mn_sync,
                                llmq::CInstantSendManager& isman, llmq::CQuorumBlockProcessor& qblockman,
+                               const llmq::MinedCommitmentsStore& commitments,
                                llmq::CQuorumSnapshotManager& qsnapman, const ChainstateManager& chainman,
                                const Consensus::Params& consensus_params, const chainlock::Chainlocks& chainlocks,
                                const llmq::CQuorumManager& qman);

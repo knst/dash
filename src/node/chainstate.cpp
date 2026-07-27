@@ -220,8 +220,8 @@ void DashChainstateSetup(ChainstateManager& chainman,
     }
     chain_helper.reset();
     chain_helper = std::make_unique<CChainstateHelper>(evodb, *dmnman, mn_sync, *(llmq_ctx->isman), *(llmq_ctx->quorum_block_processor),
-                                                       *(llmq_ctx->qsnapman), chainman, chainman.GetConsensus(), chainlocks,
-                                                       *(llmq_ctx->qman));
+                                                       *(llmq_ctx->commitments), *(llmq_ctx->qsnapman), chainman,
+                                                       chainman.GetConsensus(), chainlocks, *(llmq_ctx->qman));
 }
 
 void DashChainstateSetupClose(std::unique_ptr<CChainstateHelper>& chain_helper,

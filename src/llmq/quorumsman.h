@@ -44,8 +44,8 @@ enum class VerifyRecSigStatus : uint8_t {
 
 class QuorumRole;
 class CDKGSessionManager;
-class CQuorumBlockProcessor;
 class CQuorumSnapshotManager;
+class MinedCommitmentsStore;
 class QuorumResolutionCache;
 
 /**
@@ -57,7 +57,7 @@ class CQuorumManager final
 private:
     CBLSWorker& blsWorker;
     CDeterministicMNManager& m_dmnman;
-    CQuorumBlockProcessor& quorumBlockProcessor;
+    MinedCommitmentsStore& m_commitments;
     CQuorumSnapshotManager& m_qsnapman;
     QuorumResolutionCache& m_qcache;
     const ChainstateManager& m_chainman;
@@ -82,7 +82,7 @@ public:
     CQuorumManager(const CQuorumManager&) = delete;
     CQuorumManager& operator=(const CQuorumManager&) = delete;
     explicit CQuorumManager(CBLSWorker& _blsWorker, CDeterministicMNManager& dmnman, CEvoDB& _evoDb,
-                            CQuorumBlockProcessor& _quorumBlockProcessor, CQuorumSnapshotManager& qsnapman,
+                            MinedCommitmentsStore& commitments, CQuorumSnapshotManager& qsnapman,
                             QuorumResolutionCache& qcache, const ChainstateManager& chainman,
                             const util::DbWrapperParams& db_params);
     ~CQuorumManager();
@@ -104,11 +104,6 @@ public:
     bool GetEncryptedContributions(Consensus::LLMQType llmq_type, const CBlockIndex* block_index,
                                    const std::vector<bool>& valid_members, const uint256& protx_hash,
                                    std::vector<CBLSIESEncryptedObject<CBLSSecretKey>>& vec_enc) const;
-
-    static bool HasQuorum(Consensus::LLMQType llmqType, const CQuorumBlockProcessor& quorum_block_processor, const uint256& quorumHash);
-    static bool HasQuorum(Consensus::LLMQType llmqType, const CQuorumBlockProcessor& quorum_block_processor,
-                          const uint256& quorumHash, const CChain& chain)
-        EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     // all these methods will lock cs_main for a short period of time
     CQuorumCPtr GetQuorum(Consensus::LLMQType llmqType, const uint256& quorumHash) const

@@ -354,7 +354,7 @@ NetDKG::NetDKG(PeerManagerInternal* peer_manager, const CSporkManager& sporkman,
     m_qdkgsman.InitializeHandlers(
         [&](const Consensus::LLMQParams& llmq_params, int quorum_idx) -> std::unique_ptr<ActiveDKGSessionHandler> {
             return std::make_unique<ActiveDKGSessionHandler>(bls_worker, dmnman, mn_metaman, dkgdbgman, qdkgsman,
-                                                             qblockman, qsnapman, mn_activeman, chainman, sporkman,
+                                                             qsnapman, mn_activeman, chainman, sporkman,
                                                              llmq_params, quorums_watch, quorum_idx);
         });
     m_qman.ConnectManagers(&role, &m_qdkgsman);

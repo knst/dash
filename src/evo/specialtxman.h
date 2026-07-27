@@ -33,6 +33,7 @@ class Chainlocks;
 namespace Consensus { struct Params; }
 namespace llmq {
 class CQuorumBlockProcessor;
+class MinedCommitmentsStore;
 class CQuorumManager;
 class CQuorumSnapshotManager;
 } // namespace llmq
@@ -46,6 +47,7 @@ private:
     CDeterministicMNManager& m_dmnman;
     CMNHFManager& m_mnhfman;
     llmq::CQuorumBlockProcessor& m_qblockman;
+    const llmq::MinedCommitmentsStore& m_commitments;
     llmq::CQuorumSnapshotManager& m_qsnapman;
     const ChainstateManager& m_chainman;
     const Consensus::Params& m_consensus_params;
@@ -54,13 +56,15 @@ private:
 
 public:
     explicit CSpecialTxProcessor(CCreditPoolManager& cpoolman, CDeterministicMNManager& dmnman, CMNHFManager& mnhfman,
-                                 llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumSnapshotManager& qsnapman,
+                                 llmq::CQuorumBlockProcessor& qblockman,
+                                 const llmq::MinedCommitmentsStore& commitments, llmq::CQuorumSnapshotManager& qsnapman,
                                  const ChainstateManager& chainman, const Consensus::Params& consensus_params,
                                  const chainlock::Chainlocks& chainlocks, const llmq::CQuorumManager& qman) :
         m_cpoolman(cpoolman),
         m_dmnman{dmnman},
         m_mnhfman{mnhfman},
         m_qblockman{qblockman},
+        m_commitments{commitments},
         m_qsnapman{qsnapman},
         m_chainman(chainman),
         m_consensus_params{consensus_params},

@@ -18,10 +18,11 @@ LLMQContext::LLMQContext(CDeterministicMNManager& dmnman, CEvoDB& evo_db, CSpork
                          int16_t worker_count, int64_t max_recsigs_age) :
     bls_worker{std::make_shared<CBLSWorker>()},
     qsnapman{std::make_unique<llmq::CQuorumSnapshotManager>(evo_db)},
-    quorum_block_processor{std::make_unique<llmq::CQuorumBlockProcessor>(chainman, dmnman, evo_db,
-                                                                         *qsnapman, bls_threads)},
+    commitments{std::make_unique<llmq::MinedCommitmentsStore>(evo_db, chainman)},
+    quorum_block_processor{std::make_unique<llmq::CQuorumBlockProcessor>(chainman, dmnman, *qsnapman,
+                                                                         *commitments, bls_threads)},
     qcache{std::make_unique<llmq::QuorumResolutionCache>(chainman.GetConsensus())},
-    qman{std::make_unique<llmq::CQuorumManager>(*bls_worker, dmnman, evo_db, *quorum_block_processor, *qsnapman,
+    qman{std::make_unique<llmq::CQuorumManager>(*bls_worker, dmnman, evo_db, *commitments, *qsnapman,
                                                 *qcache, chainman, db_params)},
     sigman{std::make_unique<llmq::CSigningManager>(*qman, db_params, max_recsigs_age)},
     isman{std::make_unique<llmq::CInstantSendManager>(sporkman, db_params)}

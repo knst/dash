@@ -6,7 +6,7 @@
 
 #include <evo/deterministicmns.h>
 #include <evo/specialtx.h>
-#include <llmq/blockprocessor.h>
+#include <llmq/quorumcache.h>
 #include <llmq/commitment.h>
 #include <llmq/quorumsman.h>
 #include <util/std23.h>
@@ -30,10 +30,10 @@ CSimplifiedMNListDiff::CSimplifiedMNListDiff() = default;
 CSimplifiedMNListDiff::~CSimplifiedMNListDiff() = default;
 
 bool CSimplifiedMNListDiff::BuildQuorumsDiff(const CBlockIndex* baseBlockIndex, const CBlockIndex* blockIndex,
-                                             const llmq::CQuorumBlockProcessor& quorum_block_processor)
+                                             const llmq::MinedCommitmentsStore& commitments)
 {
-    auto baseQuorums = quorum_block_processor.GetMinedAndActiveCommitmentsUntilBlock(baseBlockIndex);
-    auto quorums = quorum_block_processor.GetMinedAndActiveCommitmentsUntilBlock(blockIndex);
+    auto baseQuorums = commitments.GetMinedAndActiveCommitmentsUntilBlock(baseBlockIndex);
+    auto quorums = commitments.GetMinedAndActiveCommitmentsUntilBlock(blockIndex);
 
     std::set<std::pair<Consensus::LLMQType, uint256>> baseQuorumHashes;
     std::set<std::pair<Consensus::LLMQType, uint256>> quorumHashes;
@@ -56,7 +56,7 @@ bool CSimplifiedMNListDiff::BuildQuorumsDiff(const CBlockIndex* baseBlockIndex, 
     for (const auto& p : quorumHashes) {
         const auto& [llmqType, hash] = p;
         if (!baseQuorumHashes.count(p)) {
-            auto [qc, minedBlockHash] = quorum_block_processor.GetMinedCommitment(llmqType, hash);
+            auto [qc, minedBlockHash] = commitments.GetMinedCommitment(llmqType, hash);
             if (minedBlockHash == uint256::ZERO) {
                 return false;
             }
@@ -152,7 +152,7 @@ CSimplifiedMNListDiff BuildSimplifiedDiff(const CDeterministicMNList& from, cons
 }
 
 bool BuildSimplifiedMNListDiff(CDeterministicMNManager& dmnman, const ChainstateManager& chainman,
-                               const llmq::CQuorumBlockProcessor& qblockman, const llmq::CQuorumManager& qman,
+                               const llmq::MinedCommitmentsStore& commitments, const llmq::CQuorumManager& qman,
                                const uint256& baseBlockHash, const uint256& blockHash,
                                CSimplifiedMNListDiff& mnListDiffRet, std::string& errorRet, bool extended)
 {
@@ -202,7 +202,7 @@ bool BuildSimplifiedMNListDiff(CDeterministicMNManager& dmnman, const Chainstate
     // null block hash was provided to get the diff from the genesis block.
     mnListDiffRet.baseBlockHash = baseBlockHash;
 
-    if (!mnListDiffRet.BuildQuorumsDiff(baseBlockIndex, blockIndex, qblockman)) {
+    if (!mnListDiffRet.BuildQuorumsDiff(baseBlockIndex, blockIndex, commitments)) {
         errorRet = strprintf("failed to build quorums diff");
         return false;
     }

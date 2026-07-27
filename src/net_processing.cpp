@@ -5389,7 +5389,7 @@ void PeerManagerImpl::ProcessMessage(
 
         CSimplifiedMNListDiff mnListDiff;
         std::string strError;
-        if (BuildSimplifiedMNListDiff(*m_dmnman, m_chainman, *m_llmq_ctx->quorum_block_processor, *m_llmq_ctx->qman,
+        if (BuildSimplifiedMNListDiff(*m_dmnman, m_chainman, *m_llmq_ctx->commitments, *m_llmq_ctx->qman,
                                       cmd.baseBlockHash, cmd.blockHash, mnListDiff, strError))
         {
             m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::MNLISTDIFF, mnListDiff));
@@ -5439,7 +5439,7 @@ void PeerManagerImpl::ProcessMessage(
         llmq::CQuorumRotationInfo quorumRotationInfoRet;
         std::string strError;
         bool use_legacy_construction = pfrom.GetCommonVersion() < EFFICIENT_QRINFO_VERSION;;
-        if (BuildQuorumRotationInfo(*m_dmnman, *m_llmq_ctx->qsnapman, m_chainman, *m_llmq_ctx->qman, *m_llmq_ctx->quorum_block_processor, cmd, use_legacy_construction, quorumRotationInfoRet, strError)) {
+        if (BuildQuorumRotationInfo(*m_dmnman, *m_llmq_ctx->qsnapman, m_chainman, *m_llmq_ctx->qman, *m_llmq_ctx->commitments, cmd, use_legacy_construction, quorumRotationInfoRet, strError)) {
             m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::QUORUMROTATIONINFO, quorumRotationInfoRet));
         } else {
             strError = strprintf("getquorumrotationinfo failed for size(baseBlockHashes)=%d, blockRequestHash=%s. error=%s", cmd.baseBlockHashes.size(), cmd.blockRequestHash.ToString(), strError);
