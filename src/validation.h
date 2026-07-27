@@ -1062,6 +1062,14 @@ public:
     std::optional<uint256> SnapshotBlockhash() const;
 
     //! Is there a snapshot in use and has it been fully validated?
+    //!
+    //! TODO(assumeutxo): snapshot completion is not implemented; nothing sets
+    //! m_snapshot_validated yet. Beyond upstream's coins-dir swap, completion
+    //! must fold the background chainstate's EvoDB into the snapshot
+    //! chainstate's: the two keyspaces are disjoint by height except for the
+    //! seeded base overlap, which must be verified to byte-match (this is the
+    //! holistic check of the seeded snapshot Evo state), and the merged DB
+    //! keeps the snapshot chainstate's best-block marker.
     bool IsSnapshotValidated() const EXCLUSIVE_LOCKS_REQUIRED(::cs_main) { return m_snapshot_validated; }
 
     //! Whether active-state-dependent masternode duties must remain disabled.

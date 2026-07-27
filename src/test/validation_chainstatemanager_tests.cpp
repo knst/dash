@@ -19,8 +19,12 @@
 #include <validationinterface.h>
 
 #include <chainlock/handler.h>
+#include <evo/evochainstate.h>
 #include <evo/evodb.h>
 #include <llmq/blockprocessor.h>
+#include <llmq/commitment.h>
+#include <llmq/context.h>
+#include <llmq/quorumcache.h>
 #include <llmq/signing.h>
 #include <llmq/signing_shares.h>
 
@@ -31,6 +35,26 @@
 #include <boost/test/unit_test.hpp>
 
 using node::SnapshotMetadata;
+
+namespace {
+//! Counts tip-related notifications to prove background-chainstate activity
+//! stays silent.
+struct TipEventCounter : public CValidationInterface {
+    int block_connected{0};
+    int updated_tip{0};
+    int mn_list_changed{0};
+    int chainstate_flushed{0};
+
+protected:
+    void BlockConnected(const std::shared_ptr<const CBlock>&, const CBlockIndex*) override { ++block_connected; }
+    void UpdatedBlockTip(const CBlockIndex*, const CBlockIndex*, bool) override { ++updated_tip; }
+    void NotifyMasternodeListChanged(bool, const CDeterministicMNList&, const CDeterministicMNListDiff&) override
+    {
+        ++mn_list_changed;
+    }
+    void ChainStateFlushed(const CBlockLocator&) override { ++chainstate_flushed; }
+};
+} // namespace
 
 BOOST_FIXTURE_TEST_SUITE(validation_chainstatemanager_tests, ChainTestingSetup)
 
@@ -552,6 +576,98 @@ BOOST_FIXTURE_TEST_CASE(chainstatemanager_snapshot_init, SnapshotTestSetup)
             }
         }
     }
+}
+
+//! Each chainstate owns its own EvoDB and evo managers; records written by one
+//! chainstate are invisible to the other, both through the stores directly and
+//! through the chain-resolving LLMQ shell.
+BOOST_FIXTURE_TEST_CASE(chainstatemanager_dual_chainstate_evo_isolation, SnapshotTestSetup)
+{
+    auto [background_cs, snapshot_cs] = this->SetupSnapshot();
+
+    BOOST_CHECK(&background_cs->Evo() != &snapshot_cs->Evo());
+    BOOST_CHECK(&background_cs->Evo().evodb != &snapshot_cs->Evo().evodb);
+    BOOST_CHECK(fs::exists(gArgs.GetDataDirNet() / "evodb_snapshot"));
+
+    LOCK(::cs_main);
+
+    // Best-block markers track each chain independently.
+    BOOST_CHECK(snapshot_cs->Evo().evodb.VerifyBestBlock(snapshot_cs->m_chain.Tip()->GetBlockHash()));
+    BOOST_CHECK(!background_cs->Evo().evodb.VerifyBestBlock(snapshot_cs->m_chain.Tip()->GetBlockHash()));
+
+    // Record a commitment for a block only the snapshot chain contains.
+    const CBlockIndex* snap_tip = snapshot_cs->m_chain.Tip();
+    llmq::CFinalCommitment qc;
+    qc.llmqType = Consensus::LLMQType::LLMQ_TEST;
+    qc.quorumHash = snap_tip->GetBlockHash();
+    snapshot_cs->Evo().commitments->WriteMinedCommitment(qc, snap_tip->GetBlockHash(), snap_tip->nHeight,
+                                                         snap_tip->nHeight, /*rotation_enabled=*/false);
+
+    BOOST_CHECK(snapshot_cs->Evo().commitments->HasMinedCommitment(qc.llmqType, qc.quorumHash, snapshot_cs->m_chain));
+    BOOST_CHECK(
+        !background_cs->Evo().commitments->HasMinedCommitment(qc.llmqType, qc.quorumHash, background_cs->m_chain));
+
+    // The node-global shell resolves the store from the chain it is asked
+    // about: a commitment recorded for the snapshot chain's current DKG cycle
+    // satisfies the requirement there, while the background chain's own cycle
+    // still demands one.
+    auto& qblockman = *Assert(m_node.llmq_ctx)->quorum_block_processor;
+    const auto& llmq_params = *Assert(Params().GetLLMQ(qc.llmqType));
+    const auto eval_height = [&](const CChain& chain) {
+        int height = chain.Height();
+        int cycle_start = height - (height % llmq_params.dkgInterval);
+        if (cycle_start + llmq_params.dkgMiningWindowStart > height) cycle_start -= llmq_params.dkgInterval;
+        return std::min(height, cycle_start + llmq_params.dkgMiningWindowEnd);
+    };
+    const int snap_eval = eval_height(snapshot_cs->m_chain);
+    const CBlockIndex* snap_qblock = snapshot_cs->m_chain[snap_eval - (snap_eval % llmq_params.dkgInterval)];
+    llmq::CFinalCommitment cycle_qc;
+    cycle_qc.llmqType = llmq_params.type;
+    cycle_qc.quorumHash = snap_qblock->GetBlockHash();
+    snapshot_cs->Evo().commitments->WriteMinedCommitment(cycle_qc, snap_tip->GetBlockHash(), snap_eval,
+                                                         snap_qblock->nHeight, /*rotation_enabled=*/false);
+    BOOST_CHECK_EQUAL(qblockman.GetNumCommitmentsRequired(llmq_params, snapshot_cs->m_chain, snap_eval), 0);
+    BOOST_CHECK_EQUAL(qblockman.GetNumCommitmentsRequired(llmq_params, background_cs->m_chain,
+                                                          eval_height(background_cs->m_chain)),
+                      1);
+}
+
+//! Blocks connected on the background chainstate emit no tip, block,
+//! masternode-list, or flush notifications; active-chainstate blocks do.
+BOOST_FIXTURE_TEST_CASE(chainstatemanager_background_notifications_suppressed, SnapshotTestSetup)
+{
+    auto [background_cs, snapshot_cs] = this->SetupSnapshot();
+
+    auto counter = std::make_shared<TipEventCounter>();
+    RegisterSharedValidationInterface(counter);
+
+    std::vector<CMutableTransaction> no_txns;
+    CScript scriptPubKey = CScript() << ToByteVector(coinbaseKey.GetPubKey()) << OP_CHECKSIG;
+    CBlock background_block = this->CreateBlock(no_txns, scriptPubKey, *background_cs);
+    auto pblock = std::make_shared<const CBlock>(background_block);
+    {
+        LOCK(::cs_main);
+        BlockValidationState state;
+        CBlockIndex* pindex{nullptr};
+        bool newblock{false};
+        BOOST_REQUIRE(CheckBlock(*pblock, state, Params().GetConsensus()));
+        BOOST_REQUIRE(background_cs->AcceptBlock(pblock, state, &pindex, true, nullptr, &newblock));
+    }
+    BlockValidationState state;
+    BOOST_REQUIRE(background_cs->ActivateBestChain(state, pblock));
+    SyncWithValidationInterfaceQueue();
+
+    BOOST_CHECK_EQUAL(counter->block_connected, 0);
+    BOOST_CHECK_EQUAL(counter->updated_tip, 0);
+    BOOST_CHECK_EQUAL(counter->mn_list_changed, 0);
+    BOOST_CHECK_EQUAL(counter->chainstate_flushed, 0);
+
+    mineBlocks(1);
+    SyncWithValidationInterfaceQueue();
+    BOOST_CHECK_EQUAL(counter->block_connected, 1);
+    BOOST_CHECK_EQUAL(counter->updated_tip, 1);
+
+    UnregisterSharedValidationInterface(counter);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
