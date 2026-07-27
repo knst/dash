@@ -58,6 +58,7 @@
 #include <evo/deterministicmns.h>
 #include <evo/evochainstate.h>
 #include <evo/evodb.h>
+#include <evo/mnhftx.h>
 #include <evo/specialtx.h>
 #include <evo/specialtxman.h>
 #include <masternode/payments.h>
@@ -1610,12 +1611,10 @@ void CoinsViews::InitCache()
 Chainstate::Chainstate(CTxMemPool* mempool,
                          BlockManager& blockman,
                          ChainstateManager& chainman,
-                         CEvoDB& evoDb,
                          const std::unique_ptr<CChainstateHelper>& chain_helper,
                          std::optional<uint256> from_snapshot_blockhash)
     : m_mempool(mempool),
       m_chain_helper(chain_helper),
-      m_evoDb(evoDb),
       m_blockman(blockman),
       m_params(chainman.GetParams()),
       m_chainman(chainman),
@@ -1632,17 +1631,6 @@ void Chainstate::InitEvoChainState(std::unique_ptr<EvoChainState> evo)
 {
     assert(!m_evo);
     m_evo = std::move(evo);
-}
-
-EvoChainState& Chainstate::Evo()
-{
-    if (m_evo) return *m_evo;
-    return *Assert(m_chainman.ActiveChainstate().m_evo);
-}
-
-std::unique_ptr<EvoChainState> Chainstate::DetachEvoChainState()
-{
-    return std::move(m_evo);
 }
 
 void Chainstate::ResetEvoChainState()
@@ -1995,7 +1983,7 @@ DisconnectResult Chainstate::DisconnectBlock(const CBlock& block, const CBlockIn
     assert(m_chain_helper);
 
     bool fDIP0003Active = DeploymentActiveAt(*pindex, m_params.GetConsensus(), Consensus::DEPLOYMENT_DIP0003);
-    if (fDIP0003Active && !m_evoDb.VerifyBestBlock(pindex->GetBlockHash())) {
+    if (fDIP0003Active && !Evo().evodb.VerifyBestBlock(pindex->GetBlockHash())) {
         // Nodes that upgraded after DIP3 activation will have to reindex to ensure evodb consistency
         AbortNode("Found EvoDB inconsistency, you must reindex to continue");
         return DISCONNECT_FAILED;
@@ -2073,7 +2061,7 @@ DisconnectResult Chainstate::DisconnectBlock(const CBlock& block, const CBlockIn
 
     // move best block pointer to prevout block
     view.SetBestBlock(pindex->pprev->GetBlockHash());
-    m_evoDb.WriteBestBlock(pindex->pprev->GetBlockHash());
+    Evo().evodb.WriteBestBlock(pindex->pprev->GetBlockHash());
 
     if (this == &m_chainman.ActiveChainstate() && mnlist_updates_opt.has_value()) {
         auto& mnlu = mnlist_updates_opt.value();
@@ -2227,7 +2215,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
 
     if (pindex->pprev) {
         bool fDIP0003Active = DeploymentActiveAt(*pindex, m_params.GetConsensus(), Consensus::DEPLOYMENT_DIP0003);
-        if (fDIP0003Active && !m_evoDb.VerifyBestBlock(pindex->pprev->GetBlockHash())) {
+        if (fDIP0003Active && !Evo().evodb.VerifyBestBlock(pindex->pprev->GetBlockHash())) {
             // Nodes that upgraded after DIP3 activation will have to reindex to ensure evodb consistency
             return AbortNode(state, "Found EvoDB inconsistency, you must reindex to continue");
         }
@@ -2537,7 +2525,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
 
     // add this block to the view's block chain
     view.SetBestBlock(pindex->GetBlockHash());
-    m_evoDb.WriteBestBlock(pindex->GetBlockHash());
+    Evo().evodb.WriteBestBlock(pindex->GetBlockHash());
 
     // Block is committed: keep the scheme it switched to (fJustCheck dry runs returned above).
     bls_scheme_guard.Commit();
@@ -2665,7 +2653,7 @@ bool Chainstate::FlushStateToDisk(
         // The cache is over the limit, we have to write now.
         bool fCacheCritical = mode == FlushStateMode::IF_NEEDED && cache_state >= CoinsCacheSizeState::CRITICAL;
         // The evodb cache is too large
-        bool fEvoDbCacheCritical = mode == FlushStateMode::IF_NEEDED && m_evoDb.GetMemoryUsage() >= (64 << 20);
+        bool fEvoDbCacheCritical = mode == FlushStateMode::IF_NEEDED && Evo().evodb.GetMemoryUsage() >= (64 << 20);
         // It's been a while since we wrote the block index to disk. Do this frequently, so we don't need to redownload after a crash.
         bool fPeriodicWrite = mode == FlushStateMode::PERIODIC && nNow > m_last_write + DATABASE_WRITE_INTERVAL;
         // It's been very long since we flushed the cache. Do this infrequently, to optimize cache usage.
@@ -2722,7 +2710,7 @@ bool Chainstate::FlushStateToDisk(
             }
             {
                 LOG_TIME_SECONDS("write evodb cache to disk");
-                if (!m_evoDb.CommitRootTransaction()) {
+                if (!Evo().evodb.CommitRootTransaction()) {
                     return AbortNode(state, "Failed to commit EvoDB");
                 }
             }
@@ -2815,7 +2803,7 @@ void Chainstate::UpdateTip(const CBlockIndex* pindexNew)
         // Only log every so often so that we don't bury log messages at the tip.
         constexpr int BACKGROUND_LOG_INTERVAL = 2000;
         if (pindexNew->nHeight % BACKGROUND_LOG_INTERVAL == 0) {
-            UpdateTipLog(coins_tip, pindexNew, m_params, m_evoDb, __func__, "[background validation] ", "");
+            UpdateTipLog(coins_tip, pindexNew, m_params, Evo().evodb, __func__, "[background validation] ", "");
         }
         return;
     }
@@ -2848,7 +2836,7 @@ void Chainstate::UpdateTip(const CBlockIndex* pindexNew)
             }
         }
     }
-    UpdateTipLog(coins_tip, pindexNew, m_params, m_evoDb, __func__, "", warning_messages.original);
+    UpdateTipLog(coins_tip, pindexNew, m_params, Evo().evodb, __func__, "", warning_messages.original);
 }
 
 /** Disconnect m_chain's tip.
@@ -2884,7 +2872,7 @@ bool Chainstate::DisconnectTip(BlockValidationState& state, DisconnectedBlockTra
     // Apply the block atomically to the chain state.
     int64_t nStart = GetTimeMicros();
     {
-        auto dbTx = m_evoDb.BeginTransaction();
+        auto dbTx = Evo().evodb.BeginTransaction();
 
         CCoinsViewCache view(&CoinsTip());
         assert(view.GetBestBlock() == pindexDelete->GetBlockHash());
@@ -3033,7 +3021,7 @@ bool Chainstate::ConnectTip(BlockValidationState& state, CBlockIndex* pindexNew,
     // nBlocksTotal may be zero until the ConnectBlock() call below.
     LogPrint(BCLog::BENCHMARK, "  - Load block from disk: %.2fms\n", (nTime2 - nTime1) * MILLI);
     {
-        auto dbTx = m_evoDb.BeginTransaction();
+        auto dbTx = Evo().evodb.BeginTransaction();
 
         CCoinsViewCache view(&CoinsTip());
         bool rv = ConnectBlock(blockConnecting, state, pindexNew, view);
@@ -4401,7 +4389,6 @@ MempoolAcceptResult ChainstateManager::ProcessTransaction(const CTransactionRef&
 
 bool TestBlockValidity(BlockValidationState& state,
                        const chainlock::Chainlocks& chainlocks,
-                       CEvoDB& evoDb,
                        const CChainParams& chainparams,
                        Chainstate& chainstate,
                        const CBlock& block,
@@ -4426,7 +4413,7 @@ bool TestBlockValidity(BlockValidationState& state,
     indexDummy.phashBlock = &block_hash;
 
     // begin tx and let it rollback
-    auto dbTx = evoDb.BeginTransaction();
+    auto dbTx = chainstate.Evo().evodb.BeginTransaction();
 
     // NOTE: CheckBlockHeader is called by CheckBlock
     if (!ContextualCheckBlockHeader(block, state, chainstate.m_blockman, chainstate.m_chainman, pindexPrev))
@@ -4501,7 +4488,6 @@ bool CVerifyDB::VerifyDB(
     Chainstate& chainstate,
     const Consensus::Params& consensus_params,
     CCoinsView& coinsview,
-    CEvoDB& evoDb,
     int nCheckLevel, int nCheckDepth)
 {
     AssertLockHeld(cs_main);
@@ -4514,7 +4500,7 @@ bool CVerifyDB::VerifyDB(
     ScopedBLSLegacyScheme bls_scheme_guard;
 
     // begin tx and let it rollback
-    auto dbTx = evoDb.BeginTransaction();
+    auto dbTx = chainstate.Evo().evodb.BeginTransaction();
 
     // Verify blocks in the best chain
     if (nCheckDepth <= 0 || nCheckDepth > chainstate.m_chain.Height()) {
@@ -4695,12 +4681,12 @@ bool Chainstate::ReplayBlocks()
         pindexFork = LastCommonAncestor(pindexOld, pindexNew);
         assert(pindexFork != nullptr);
         const bool fDIP0003Active = DeploymentActiveAt(*pindexOld, m_params.GetConsensus(), Consensus::DEPLOYMENT_DIP0003);
-        if (fDIP0003Active && !m_evoDb.VerifyBestBlock(pindexOld->GetBlockHash())) {
+        if (fDIP0003Active && !Evo().evodb.VerifyBestBlock(pindexOld->GetBlockHash())) {
             return error("ReplayBlocks(DASH): Found EvoDB inconsistency");
         }
     }
 
-    auto dbTx = m_evoDb.BeginTransaction();
+    auto dbTx = Evo().evodb.BeginTransaction();
 
     // Rollback along the old branch.
     while (pindexOld != pindexFork) {
@@ -4733,7 +4719,7 @@ bool Chainstate::ReplayBlocks()
     }
 
     cache.SetBestBlock(pindexNew->GetBlockHash());
-    m_evoDb.WriteBestBlock(pindexNew->GetBlockHash());
+    Evo().evodb.WriteBestBlock(pindexNew->GetBlockHash());
     bool flushed = cache.Flush();
     assert(flushed);
     dbTx->Commit();
@@ -5383,7 +5369,6 @@ Chainstate& ChainstateManager::ChainstateForChain(const CChain& chain) const
 }
 
 Chainstate& ChainstateManager::InitializeChainstate(CTxMemPool* mempool,
-                                                     CEvoDB& evoDb,
                                                      const std::unique_ptr<CChainstateHelper>& chain_helper)
 {
     AssertLockHeld(::cs_main);
@@ -5391,7 +5376,7 @@ Chainstate& ChainstateManager::InitializeChainstate(CTxMemPool* mempool,
     assert(!m_active_chainstate);
 
     m_ibd_chainstate = std::make_unique<Chainstate>(
-        mempool, m_blockman, *this, evoDb, chain_helper);
+        mempool, m_blockman, *this, chain_helper);
     m_active_chainstate = m_ibd_chainstate.get();
     return *m_active_chainstate;
 }
@@ -5494,7 +5479,6 @@ bool ChainstateManager::ActivateSnapshot(
 
     auto snapshot_chainstate = WITH_LOCK(::cs_main, return std::make_unique<Chainstate>(
             /*mempool=*/ nullptr, m_blockman, *this,
-            this->ActiveChainstate().m_evoDb,
             this->ActiveChainstate().m_chain_helper,
             base_blockhash
         )
@@ -5520,7 +5504,11 @@ bool ChainstateManager::ActivateSnapshot(
             snapshot_ok = false;
         }
     }
-    if (!snapshot_ok) {
+    if (snapshot_ok) {
+        LOCK(::cs_main);
+        snapshot_chainstate->InitEvoChainState(
+            Assert(m_make_evo_chainstate)(*snapshot_chainstate, /*wipe=*/true));
+    } else {
         LOCK(::cs_main);
         this->MaybeRebalanceCaches();
 
@@ -5548,11 +5536,7 @@ bool ChainstateManager::ActivateSnapshot(
         assert(chaintip_loaded);
 
         m_active_chainstate = m_snapshot_chainstate.get();
-        if (m_ibd_chainstate) {
-            // There is a single Evo state bundle and it serves the active
-            // chainstate; move it along with the activation.
-            m_snapshot_chainstate->InitEvoChainState(m_ibd_chainstate->DetachEvoChainState());
-        }
+        AbstractEHFManager::RegisterInstance(m_snapshot_chainstate->Evo().mnhfman.get());
 
         LogPrintf("[snapshot] successfully activated snapshot %s\n", base_blockhash.ToString());
         LogPrintf("[snapshot] (%.2f MB)\n",
@@ -5914,9 +5898,13 @@ Chainstate& ChainstateManager::ActivateExistingSnapshot(CTxMemPool* mempool, uin
     assert(!m_snapshot_chainstate);
     m_snapshot_chainstate = std::make_unique<Chainstate>(
         mempool, m_blockman, *this,
-        this->ActiveChainstate().m_evoDb,
         this->ActiveChainstate().m_chain_helper,
         base_blockhash);
+    if (m_make_evo_chainstate) {
+        // During startup detection this runs before Dash chainstate setup and
+        // the setup loop attaches the bundle; afterwards attach it here.
+        m_snapshot_chainstate->InitEvoChainState(m_make_evo_chainstate(*m_snapshot_chainstate, /*wipe=*/false));
+    }
     LogPrintf("[snapshot] switching active chainstate to %s\n", m_snapshot_chainstate->ToString());
     m_active_chainstate = m_snapshot_chainstate.get();
     return *m_snapshot_chainstate;

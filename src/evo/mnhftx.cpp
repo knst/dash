@@ -48,14 +48,11 @@ CMNHFManager::CMNHFManager(CEvoDB& evoDb, const ChainstateManager& chainman) :
     m_evoDb(evoDb),
     m_chainman{chainman}
 {
-    assert(globalInstance == nullptr);
-    globalInstance = this;
 }
 
 CMNHFManager::~CMNHFManager()
 {
-    assert(globalInstance != nullptr);
-    globalInstance = nullptr;
+    if (globalInstance == this) globalInstance = nullptr;
 }
 
 CMNHFManager::Signals CMNHFManager::GetSignalsStage(const CBlockIndex* const pindexPrev)

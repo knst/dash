@@ -6,8 +6,10 @@
 #define BITCOIN_EVO_EVOCHAINSTATE_H
 
 #include <memory>
+#include <optional>
 
 class CCreditPoolManager;
+class uint256;
 class CDeterministicMNManager;
 class CEvoDB;
 class ChainstateManager;
@@ -27,6 +29,9 @@ class CQuorumSnapshotManager;
 class MinedCommitmentsStore;
 class QuorumResolutionCache;
 } // namespace llmq
+namespace util {
+struct DbWrapperParams;
+} // namespace util
 
 /**
  * Chain-derived Evo state of one chainstate: the EvoDB it is staged in and
@@ -52,8 +57,13 @@ public:
     //! Built by ConnectLLMQ once the LLMQ shells exist; dies first on teardown.
     std::unique_ptr<CSpecialTxProcessor> special_tx;
 
-    //! Borrow a node-owned EvoDB. Transitional until the bundle owns its DB.
-    explicit EvoChainState(CEvoDB& borrowed_evodb, CMasternodeMetaMan& mn_metaman, const ChainstateManager& chainman,
+    //! Open (or create) this chainstate's own EvoDB in `db_params.path`, under
+    //! "evodb" for the base chainstate or "evodb_snapshot" for a snapshot
+    //! chainstate. A freshly created snapshot EvoDB is seeded with the
+    //! snapshot base as its best block so the first connected block passes the
+    //! EvoDB/coins consistency check.
+    explicit EvoChainState(const util::DbWrapperParams& db_params, std::optional<uint256> snapshot_base,
+                           CMasternodeMetaMan& mn_metaman, const ChainstateManager& chainman,
                            const Consensus::Params& consensus_params);
     ~EvoChainState();
 

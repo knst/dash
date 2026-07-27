@@ -21,6 +21,7 @@
 #include <util/fs.h>
 #include <util/translation.h>
 #include <validation.h>
+#include <versionbits.h>
 
 #include <bls/bls.h>
 #include <evo/chainhelper.h>
@@ -30,6 +31,7 @@
 #include <evo/mnhftx.h>
 #include <gsl/pointers.h>
 #include <llmq/context.h>
+#include <llmq/quorumsman.h>
 
 #include <atomic>
 #include <cassert>
@@ -43,7 +45,6 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
                                                      chainlock::Chainlocks& chainlocks,
                                                      const CMasternodeSync& mn_sync,
                                                      std::unique_ptr<CChainstateHelper>& chain_helper,
-                                                     std::unique_ptr<CEvoDB>& evodb,
                                                      std::unique_ptr<LLMQContext>& llmq_ctx,
                                                      const fs::path& data_dir,
                                                      const CacheSizes& cache_sizes,
@@ -54,16 +55,21 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
     };
 
     LOCK(cs_main);
-    evodb.reset();
-    evodb = std::make_unique<CEvoDB>(util::DbWrapperParams{.path = data_dir, .memory = options.dash_dbs_in_memory, .wipe = options.reindex || options.reindex_chainstate});
     chainman.m_total_coinstip_cache = cache_sizes.coins;
     chainman.m_total_coinsdb_cache = cache_sizes.coins_db;
 
     // Load the fully validated chainstate.
-    chainman.InitializeChainstate(options.mempool, *evodb, chain_helper);
+    chainman.InitializeChainstate(options.mempool, chain_helper);
 
     // Load a chain created from a UTXO snapshot, if any exist.
     chainman.DetectSnapshotChainstate(options.mempool);
+
+    if (!chainman.SnapshotBlockhash() && fs::exists(data_dir / "evodb_snapshot")) {
+        // Leftover of an interrupted snapshot activation; the matching coins
+        // snapshot is gone, so the Evo side must go too.
+        LogPrintf("Removing stale evodb_snapshot directory (%s)\n", fs::PathToString(data_dir / "evodb_snapshot"));
+        fs::remove_all(data_dir / "evodb_snapshot");
+    }
 
     auto& pblocktree{chainman.m_blockman.m_block_tree_db};
     // new CBlockTreeDB tries to delete the existing file, which
@@ -72,8 +78,8 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
     pblocktree.reset(new CBlockTreeDB(cache_sizes.block_tree_db, options.block_tree_db_in_memory, options.reindex));
 
     DashChainstateSetup(chainman, mn_metaman, sporkman, chainlocks, mn_sync, chain_helper,
-                        *evodb, llmq_ctx, options.mempool, data_dir, options.dash_dbs_in_memory,
-                        /*llmq_dbs_wipe=*/options.reindex || options.reindex_chainstate, options.bls_threads, options.worker_count,
+                        llmq_ctx, options.mempool, data_dir, options.dash_dbs_in_memory,
+                        /*dash_dbs_wipe=*/options.reindex || options.reindex_chainstate, options.bls_threads, options.worker_count,
                         options.max_recsigs_age);
 
     if (options.reindex) {
@@ -158,10 +164,7 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
         assert(chainstate->CanFlushToDisk());
 
         // flush evodb
-        // TODO: CEvoDB instance should probably be a part of Chainstate
-        // (for multiple chainstates to actually work in parallel)
-        // and not a global
-        if (&chainman.ActiveChainstate() == chainstate && !evodb->CommitRootTransaction()) {
+        if (!chainstate->Evo().evodb.CommitRootTransaction()) {
             return {ChainstateLoadStatus::FAILURE, _("Failed to commit Evo database")};
         }
 
@@ -198,32 +201,49 @@ void DashChainstateSetup(ChainstateManager& chainman,
                          chainlock::Chainlocks& chainlocks,
                          const CMasternodeSync& mn_sync,
                          std::unique_ptr<CChainstateHelper>& chain_helper,
-                         CEvoDB& evodb,
                          std::unique_ptr<LLMQContext>& llmq_ctx,
                          CTxMemPool* mempool,
                          const fs::path& data_dir,
-                         bool llmq_dbs_in_memory,
-                         bool llmq_dbs_wipe,
+                         bool dash_dbs_in_memory,
+                         bool dash_dbs_wipe,
                          int8_t bls_threads,
                          int16_t worker_count,
                          int64_t max_recsigs_age)
 {
     // Same logic as pblocktree
-    WITH_LOCK(::cs_main, chainman.ActiveChainstate().ResetEvoChainState());
-    auto evo_state = std::make_unique<EvoChainState>(evodb, mn_metaman, chainman, chainman.GetConsensus());
-
     llmq_ctx.reset();
-    llmq_ctx = std::make_unique<LLMQContext>(*evo_state, sporkman, chainman,
-                                             util::DbWrapperParams{.path = data_dir, .memory = llmq_dbs_in_memory, .wipe = llmq_dbs_wipe},
+    llmq_ctx = std::make_unique<LLMQContext>(sporkman, chainman,
+                                             util::DbWrapperParams{.path = data_dir, .memory = dash_dbs_in_memory, .wipe = dash_dbs_wipe},
                                              bls_threads, worker_count, max_recsigs_age);
-    evo_state->ConnectLLMQ(*(llmq_ctx->quorum_block_processor), *(llmq_ctx->qman), chainlocks);
+
+    chainman.m_make_evo_chainstate = [&chainman, &mn_metaman, &chainlocks,
+                                      qblockman = llmq_ctx->quorum_block_processor.get(),
+                                      qman = llmq_ctx->qman.get(), data_dir,
+                                      dash_dbs_in_memory](Chainstate& chainstate, bool wipe) {
+        auto evo_state = std::make_unique<EvoChainState>(
+            util::DbWrapperParams{.path = data_dir, .memory = dash_dbs_in_memory, .wipe = wipe},
+            chainstate.m_from_snapshot_blockhash, mn_metaman, chainman, chainman.GetConsensus());
+        evo_state->ConnectLLMQ(*qblockman, *qman, chainlocks);
+        return evo_state;
+    };
+
+    {
+        LOCK(::cs_main);
+        for (Chainstate* chainstate : chainman.GetAll()) {
+            chainstate->ResetEvoChainState();
+            chainstate->InitEvoChainState(chainman.m_make_evo_chainstate(*chainstate, dash_dbs_wipe));
+            llmq_ctx->qman->MigrateOldQuorumDB(chainstate->Evo().evodb);
+        }
+    }
+
+    EvoChainState& active_evo = WITH_LOCK(::cs_main, return chainman.ActiveChainstate().Evo());
+    AbstractEHFManager::RegisterInstance(active_evo.mnhfman.get());
     if (mempool) {
-        mempool->ConnectManagers(evo_state->dmnman.get(), llmq_ctx->isman.get());
+        mempool->ConnectManagers(active_evo.dmnman.get(), llmq_ctx->isman.get());
     }
     chain_helper.reset();
-    chain_helper = std::make_unique<CChainstateHelper>(*(evo_state->dmnman), mn_sync, *(llmq_ctx->isman), chainman,
+    chain_helper = std::make_unique<CChainstateHelper>(*active_evo.dmnman, mn_sync, *(llmq_ctx->isman), chainman,
                                                        chainman.GetConsensus(), chainlocks);
-    WITH_LOCK(::cs_main, chainman.ActiveChainstate().InitEvoChainState(std::move(evo_state)));
 }
 
 void BindActiveEvoViews(ChainstateManager& chainman, NodeContext& node)
@@ -233,6 +253,7 @@ void BindActiveEvoViews(ChainstateManager& chainman, NodeContext& node)
     node.dmnman = evo.dmnman.get();
     node.qsnapman = evo.qsnapman.get();
     node.commitments = evo.commitments.get();
+    node.evodb = &evo.evodb;
 }
 
 void ClearEvoViews(NodeContext& node)
@@ -240,6 +261,7 @@ void ClearEvoViews(NodeContext& node)
     node.dmnman = nullptr;
     node.qsnapman = nullptr;
     node.commitments = nullptr;
+    node.evodb = nullptr;
 }
 
 void DashChainstateSetupClose(ChainstateManager& chainman,
@@ -268,9 +290,11 @@ void DashChainstateSetupClose(ChainstateManager& chainman,
             chainstate->ResetEvoChainState();
         }
     }
+    chainman.m_make_evo_chainstate = nullptr;
+    AbstractEHFManager::RegisterInstance(nullptr);
 }
 
-ChainstateLoadResult VerifyLoadedChainstate(ChainstateManager& chainman, CEvoDB& evodb,
+ChainstateLoadResult VerifyLoadedChainstate(ChainstateManager& chainman,
                                             const ChainstateLoadOptions& options)
 {
     auto is_coinsview_empty = [&](Chainstate* chainstate) EXCLUSIVE_LOCKS_REQUIRED(::cs_main) {
@@ -295,7 +319,6 @@ ChainstateLoadResult VerifyLoadedChainstate(ChainstateManager& chainman, CEvoDB&
 
             if (!CVerifyDB().VerifyDB(
                     *chainstate, chainman.GetConsensus(), chainstate->CoinsDB(),
-                    evodb,
                     options.check_level,
                     options.check_blocks)) {
                 return {ChainstateLoadStatus::FAILURE, _("Corrupted block database detected")};
@@ -313,10 +336,9 @@ ChainstateLoadResult VerifyLoadedChainstate(ChainstateManager& chainman, CEvoDB&
             }
 
         } else {
-            // TODO: CEvoDB instance should probably be a part of Chainstate
-            // (for multiple chainstates to actually work in parallel)
-            // and not a global
-            if (&chainman.ActiveChainstate() == chainstate && !evodb.IsEmpty()) {
+            // A freshly seeded snapshot EvoDB legitimately has content before
+            // any block is connected; only the base chainstate check applies.
+            if (!chainstate->m_from_snapshot_blockhash && !chainstate->Evo().evodb.IsEmpty()) {
                 // EvoDB processed some blocks earlier but we have no blocks anymore, something is wrong
                 return {ChainstateLoadStatus::FAILURE, _("Error initializing block database")};
             }

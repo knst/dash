@@ -122,6 +122,17 @@ public:
     };
 
     /**
+     * With more than one chainstate there is one EHF manager per chainstate;
+     * the active chainstate's manager is the registered one. Registration is
+     * explicit because versionbits cannot reach ChainstateManager itself.
+     * TODO(assumeutxo): thread the manager through versionbits callers so
+     * background validation resolves its own chainstate's signals.
+     */
+    static void RegisterInstance(AbstractEHFManager* instance) {
+        globalInstance = instance;
+    };
+
+    /**
      * `GetSignalsStage' prepares signals for new block.
      * The results are diffent with GetFromCache results due to one more
      * stage of processing: signals that would be expired in next block

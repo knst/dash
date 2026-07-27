@@ -11,12 +11,17 @@
 #include <evo/specialtxman.h>
 #include <llmq/quorumcache.h>
 #include <llmq/snapshot.h>
+#include <node/utxo_snapshot.h>
+#include <uint256.h>
 
-EvoChainState::EvoChainState(CEvoDB& borrowed_evodb, CMasternodeMetaMan& mn_metaman, const ChainstateManager& chainman,
+EvoChainState::EvoChainState(const util::DbWrapperParams& db_params, std::optional<uint256> snapshot_base,
+                             CMasternodeMetaMan& mn_metaman, const ChainstateManager& chainman,
                              const Consensus::Params& consensus_params) :
+    m_evodb_owned{std::make_unique<CEvoDB>(
+        db_params, snapshot_base ? "evodb" + std::string{node::SNAPSHOT_CHAINSTATE_SUFFIX} : "evodb")},
     m_chainman{chainman},
     m_consensus_params{consensus_params},
-    evodb{borrowed_evodb},
+    evodb{*m_evodb_owned},
     dmnman{std::make_unique<CDeterministicMNManager>(evodb, mn_metaman)},
     mnhfman{std::make_unique<CMNHFManager>(evodb, chainman)},
     cpoolman{std::make_unique<CCreditPoolManager>(evodb, chainman)},
@@ -24,6 +29,13 @@ EvoChainState::EvoChainState(CEvoDB& borrowed_evodb, CMasternodeMetaMan& mn_meta
     commitments{std::make_unique<llmq::MinedCommitmentsStore>(evodb, chainman)},
     qcache{std::make_unique<llmq::QuorumResolutionCache>(consensus_params)}
 {
+    if (snapshot_base && evodb.IsEmpty()) {
+        auto db_tx = evodb.BeginTransaction();
+        evodb.WriteBestBlock(*snapshot_base);
+        db_tx->Commit();
+        bool committed = evodb.CommitRootTransaction();
+        assert(committed);
+    }
 }
 
 EvoChainState::~EvoChainState() = default;

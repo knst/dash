@@ -41,14 +41,13 @@ BOOST_AUTO_TEST_CASE(chainstatemanager)
 {
     ChainstateManager& manager = *m_node.chainman;
     CTxMemPool& mempool = *m_node.mempool;
-    CEvoDB& evodb = *m_node.evodb;
     std::vector<Chainstate*> chainstates;
 
     BOOST_CHECK(!manager.SnapshotBlockhash().has_value());
 
     // Create a legacy (IBD) chainstate.
     //
-    Chainstate& c1 = WITH_LOCK(::cs_main, return manager.InitializeChainstate(&mempool, evodb, m_node.chain_helper));
+    Chainstate& c1 = WITH_LOCK(::cs_main, return manager.InitializeChainstate(&mempool, m_node.chain_helper));
     chainstates.push_back(&c1);
     c1.InitCoinsDB(
         /*cache_size_bytes=*/1 << 23, /*in_memory=*/true, /*should_wipe=*/false);
@@ -134,7 +133,6 @@ BOOST_AUTO_TEST_CASE(chainstatemanager_rebalance_caches)
 {
     ChainstateManager& manager = *m_node.chainman;
     CTxMemPool& mempool = *m_node.mempool;
-    CEvoDB& evodb = *m_node.evodb;
     size_t max_cache = 10000;
     manager.m_total_coinsdb_cache = max_cache;
     manager.m_total_coinstip_cache = max_cache;
@@ -143,7 +141,7 @@ BOOST_AUTO_TEST_CASE(chainstatemanager_rebalance_caches)
 
     // Create a legacy (IBD) chainstate.
     //
-    Chainstate& c1 = WITH_LOCK(cs_main, return manager.InitializeChainstate(&mempool, evodb, m_node.chain_helper));
+    Chainstate& c1 = WITH_LOCK(cs_main, return manager.InitializeChainstate(&mempool, m_node.chain_helper));
     chainstates.push_back(&c1);
     c1.InitCoinsDB(
         /*cache_size_bytes=*/1 << 23, /*in_memory=*/true, /*should_wipe=*/false);

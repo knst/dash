@@ -12,7 +12,6 @@
 class CBLSWorker;
 class ChainstateManager;
 class CSporkManager;
-class EvoChainState;
 class PeerManager;
 
 namespace llmq {
@@ -31,7 +30,7 @@ public:
     LLMQContext() = delete;
     LLMQContext(const LLMQContext&) = delete;
     LLMQContext& operator=(const LLMQContext&) = delete;
-    explicit LLMQContext(EvoChainState& evo, CSporkManager& sporkman,
+    explicit LLMQContext(CSporkManager& sporkman,
                          ChainstateManager& chainman, const util::DbWrapperParams& db_params, int8_t bls_threads,
                          int16_t worker_count, int64_t max_recsigs_age);
     ~LLMQContext();

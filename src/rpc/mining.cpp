@@ -376,7 +376,7 @@ static RPCHelpMan generateblock()
         LOCK(cs_main);
 
         BlockValidationState state;
-        if (!TestBlockValidity(state, *CHECK_NONFATAL(node.chainlocks), *CHECK_NONFATAL(node.evodb), chainman.GetParams(), active_chainstate,
+        if (!TestBlockValidity(state, *CHECK_NONFATAL(node.chainlocks), chainman.GetParams(), active_chainstate,
                                block, chainman.m_blockman.LookupBlockIndex(block.hashPrevBlock), false, false)) {
             throw JSONRPCError(RPC_VERIFY_ERROR, strprintf("TestBlockValidity failed: %s", state.GetRejectReason()));
         }
@@ -697,7 +697,7 @@ static RPCHelpMan getblocktemplate()
             if (block.hashPrevBlock != pindexPrev->GetBlockHash())
                 return "inconclusive-not-best-prevblk";
             BlockValidationState state;
-            TestBlockValidity(state, *CHECK_NONFATAL(node.chainlocks), *CHECK_NONFATAL(node.evodb), chainman.GetParams(), active_chainstate,
+            TestBlockValidity(state, *CHECK_NONFATAL(node.chainlocks), chainman.GetParams(), active_chainstate,
                               block, pindexPrev, false, true);
             return BIP22ValidationResult(state);
         }

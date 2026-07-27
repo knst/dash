@@ -73,7 +73,6 @@ BlockAssembler::BlockAssembler(Chainstate& chainstate, const NodeContext& node, 
       m_blockman(chainstate.m_blockman),
       m_chain_helper(chainstate.ChainHelper()),
       m_chainstate(chainstate),
-      m_evoDb(*Assert(node.evodb)),
       m_chainlocks(*Assert(node.chainlocks)),
       m_clhandler(*Assert(node.clhandler)),
       m_isman(*Assert(Assert(node.llmq_ctx)->isman)),
@@ -335,7 +334,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(*pblock->vtx[0]);
 
     BlockValidationState state;
-    if (!TestBlockValidity(state, m_chainlocks, m_evoDb, chainparams, m_chainstate, *pblock, pindexPrev, false, false)) {
+    if (!TestBlockValidity(state, m_chainlocks, chainparams, m_chainstate, *pblock, pindexPrev, false, false)) {
         throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, state.ToString()));
     }
     int64_t nTime2 = GetTimeMicros();

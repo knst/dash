@@ -23,7 +23,6 @@ class CBlockIndex;
 class CChainParams;
 class CChainstateHelper;
 class CConnman;
-class CEvoDB;
 class CScript;
 struct LLMQContext;
 
@@ -173,7 +172,6 @@ private:
     BlockManager& m_blockman;
     CChainstateHelper& m_chain_helper;
     Chainstate& m_chainstate;
-    CEvoDB& m_evoDb;
     const chainlock::Chainlocks& m_chainlocks;
     chainlock::ChainlockHandler& m_clhandler;
     llmq::CInstantSendManager& m_isman;

@@ -93,7 +93,6 @@ int main(int argc, char* argv[])
     ChainstateManager chainman{chainman_opts};
 
     CMasternodeMetaMan metaman;
-    std::unique_ptr<CEvoDB> evodb;
     CMasternodeSync mn_sync{std::make_unique<NullNodeSyncNotifier>()};
     CSporkManager sporkman;
     chainlock::Chainlocks chainlocks(sporkman);
@@ -115,7 +114,6 @@ int main(int argc, char* argv[])
                                    chainlocks,
                                    mn_sync,
                                    chain_helper,
-                                   evodb,
                                    llmq_ctx,
                                    gArgs.GetDataDirNet(),
                                    cache_sizes,
@@ -124,7 +122,7 @@ int main(int argc, char* argv[])
         std::cerr << "Failed to load Chain state from your datadir." << std::endl;
         goto epilogue;
     } else {
-        std::tie(status, error) = node::VerifyLoadedChainstate(chainman, *evodb, options);
+        std::tie(status, error) = node::VerifyLoadedChainstate(chainman, options);
         if (status != node::ChainstateLoadStatus::SUCCESS) {
             std::cerr << "Failed to verify loaded Chain state from your datadir." << std::endl;
             goto epilogue;
@@ -282,5 +280,4 @@ epilogue:
     GetMainSignals().UnregisterBackgroundSignalScheduler();
     // Tear down Dash kernel objects before kernel::~Context().
     node::DashChainstateSetupClose(chainman, chain_helper, llmq_ctx, /*mempool=*/nullptr);
-    evodb.reset();
 }

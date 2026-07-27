@@ -378,7 +378,6 @@ bool IsBlockMutated(const CBlock& block);
 /** Check a block is completely valid from start to finish (only works on top of our current best block) */
 bool TestBlockValidity(BlockValidationState& state,
                        const chainlock::Chainlocks& chainlocks,
-                       CEvoDB& evoDb,
                        const CChainParams& chainparams,
                        Chainstate& chainstate,
                        const CBlock& block,
@@ -395,7 +394,6 @@ public:
         Chainstate& chainstate,
         const Consensus::Params& consensus_params,
         CCoinsView& coinsview,
-        CEvoDB& evoDb,
         int nCheckLevel,
         int nCheckDepth) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 };
@@ -512,7 +510,6 @@ protected:
 
     //! Dash
     const std::unique_ptr<CChainstateHelper>& m_chain_helper;
-    CEvoDB& m_evoDb;
 
     //! Chain-derived Evo state of this chainstate (EvoDB staging plus the
     //! managers whose contents are a function of this chain).
@@ -535,22 +532,22 @@ public:
     explicit Chainstate(CTxMemPool* mempool,
                          node::BlockManager& blockman,
                          ChainstateManager& chainman,
-                         CEvoDB& evoDb,
                          const std::unique_ptr<CChainstateHelper>& chain_helper,
                          std::optional<uint256> from_snapshot_blockhash = std::nullopt);
     ~Chainstate();
 
     //! Attach or detach this chainstate's Evo state bundle.
     void InitEvoChainState(std::unique_ptr<EvoChainState> evo);
-    [[nodiscard]] std::unique_ptr<EvoChainState> DetachEvoChainState();
     void ResetEvoChainState();
     //! Drop the bundle's LLMQ-shell-referencing parts ahead of shell teardown.
     void DisconnectEvoLLMQ();
 
-    //! This chainstate's Evo state. Transitional: until every chainstate owns
-    //! a bundle, chainstates without one resolve the single shared bundle held
-    //! by the active chainstate.
-    EvoChainState& Evo();
+    //! This chainstate's Evo state.
+    EvoChainState& Evo()
+    {
+        assert(m_evo);
+        return *m_evo;
+    }
 
     /**
      * Initialize the CoinsViews UTXO set database management data structures. The in-memory
@@ -1005,7 +1002,6 @@ public:
     //! @param[in] mempool              The mempool to pass to the chainstate
     //                                  constructor
     Chainstate& InitializeChainstate(CTxMemPool* mempool,
-                                      CEvoDB& evoDb,
                                       const std::unique_ptr<CChainstateHelper>& chain_helper)
         LIFETIMEBOUND EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
@@ -1015,6 +1011,11 @@ public:
     //! Return the chainstate that owns `chain`, which must belong to one of
     //! this manager's chainstates.
     Chainstate& ChainstateForChain(const CChain& chain) const EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+
+    //! Builds a connected EvoChainState for the given chainstate. Set during
+    //! Dash chainstate setup; used for every chainstate created afterwards
+    //! (in particular snapshot activation).
+    std::function<std::unique_ptr<EvoChainState>(Chainstate&, bool wipe)> m_make_evo_chainstate;
 
     //! Construct and activate a Chainstate on the basis of UTXO snapshot data.
     //!

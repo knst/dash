@@ -434,7 +434,6 @@ void PrepareShutdown(NodeContext& node)
         DashChainstateSetupClose(*node.chainman, node.chain_helper, node.llmq_ctx,
                                  Assert(node.mempool.get()));
         node::ClearEvoViews(node);
-        node.evodb.reset();
     }
     for (const auto& client : node.chain_clients) {
         client->stop();
@@ -2078,7 +2077,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                                   *node.chainlocks,
                                   *node.mn_sync,
                                   node.chain_helper,
-                                  node.evodb,
                                   node.llmq_ctx,
                                   args.GetDataDirNet(),
                                   cache_sizes,
@@ -2091,7 +2089,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                            MIN_BLOCKS_TO_KEEP);
             }
             std::tie(status, error) = catch_exceptions([&] {
-                return VerifyLoadedChainstate(chainman, *Assert(node.evodb), options);
+                return VerifyLoadedChainstate(chainman, options);
             });
         }
         if (status == node::ChainstateLoadStatus::SUCCESS) {

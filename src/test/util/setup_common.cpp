@@ -148,7 +148,7 @@ void DashChainstateSetup(ChainstateManager& chainman,
                          bool llmq_dbs_wipe)
 {
     DashChainstateSetup(chainman, *Assert(node.mn_metaman.get()),
-                        *Assert(node.sporkman.get()), *Assert(node.chainlocks), *Assert(node.mn_sync), node.chain_helper, *node.evodb,
+                        *Assert(node.sporkman.get()), *Assert(node.chainlocks), *Assert(node.mn_sync), node.chain_helper,
                         node.llmq_ctx, Assert(node.mempool.get()), node.args->GetDataDirNet(), llmq_dbs_in_memory, llmq_dbs_wipe,
                         llmq::DEFAULT_BLSCHECK_THREADS, llmq::DEFAULT_WORKER_COUNT, llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE);
     node::BindActiveEvoViews(chainman, node);
@@ -245,7 +245,6 @@ BasicTestingSetup::BasicTestingSetup(const std::string& chainName, const std::ve
     m_node.netfulfilledman = std::make_unique<CNetFulfilledRequestManager>();
     m_node.sporkman = std::make_unique<CSporkManager>();
     m_node.chainlocks = std::make_unique<chainlock::Chainlocks>(*m_node.sporkman);
-    m_node.evodb = std::make_unique<CEvoDB>(util::DbWrapperParams{.path = m_node.args->GetDataDirNet(), .memory = true, .wipe = true});
 
     static bool noui_connected = false;
     if (!noui_connected) {
@@ -263,7 +262,6 @@ BasicTestingSetup::~BasicTestingSetup()
     fs::remove_all(m_path_root);
     gArgs.ClearArgs();
 
-    m_node.evodb.reset();
     m_node.sporkman.reset();
     m_node.netfulfilledman.reset();
     m_node.mn_metaman.reset();
@@ -345,7 +343,6 @@ void ChainTestingSetup::LoadVerifyActivateChainstate()
                                            *Assert(m_node.chainlocks.get()),
                                            *Assert(m_node.mn_sync.get()),
                                            m_node.chain_helper,
-                                           m_node.evodb,
                                            m_node.llmq_ctx,
                                            Assert(m_node.args)->GetDataDirNet(),
                                            m_cache_sizes,
@@ -355,7 +352,6 @@ void ChainTestingSetup::LoadVerifyActivateChainstate()
 
     std::tie(status, error) = VerifyLoadedChainstate(
         chainman,
-        *Assert(m_node.evodb.get()),
         options);
     assert(status == node::ChainstateLoadStatus::SUCCESS);
 

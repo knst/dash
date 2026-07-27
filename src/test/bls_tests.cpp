@@ -660,7 +660,7 @@ BOOST_AUTO_TEST_CASE(v19_boundary_validation_failure_restores_bls_scheme)
     {
         LOCK(cs_main);
         BlockValidationState state;
-        BOOST_CHECK(!TestBlockValidity(state, *Assert(setup.m_node.chainlocks), *Assert(setup.m_node.evodb), Params(),
+        BOOST_CHECK(!TestBlockValidity(state, *Assert(setup.m_node.chainlocks), Params(),
                                        chainman.ActiveChainstate(), proposal_block, chainman.ActiveChain().Tip(),
                                        /*fCheckPOW=*/true, /*fCheckMerkleRoot=*/true));
         BOOST_CHECK_EQUAL(state.GetRejectReason(), "bad-txns-inputs-missingorspent");

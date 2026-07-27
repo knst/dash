@@ -31,8 +31,8 @@ void CEvoDBScopedCommitter::Rollback()
     evoDB.RollbackCurTransaction();
 }
 
-CEvoDB::CEvoDB(const util::DbWrapperParams& db_params) :
-    db{util::MakeDbWrapper({db_params.path / "evodb", db_params.memory, db_params.wipe, /*cache_size=*/64 << 20})},
+CEvoDB::CEvoDB(const util::DbWrapperParams& db_params, const std::string& db_name) :
+    db{util::MakeDbWrapper({db_params.path / fs::u8path(db_name), db_params.memory, db_params.wipe, /*cache_size=*/64 << 20})},
     rootBatch{*db},
     rootDBTransaction{*db, rootBatch},
     curDBTransaction{rootDBTransaction, rootDBTransaction}

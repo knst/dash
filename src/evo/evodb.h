@@ -8,6 +8,8 @@
 #include <dbwrapper.h>
 #include <sync.h>
 
+#include <string>
+
 class uint256;
 namespace util {
 struct DbWrapperParams;
@@ -53,7 +55,7 @@ public:
     CEvoDB() = delete;
     CEvoDB(const CEvoDB&) = delete;
     CEvoDB& operator=(const CEvoDB&) = delete;
-    explicit CEvoDB(const util::DbWrapperParams& db_params);
+    explicit CEvoDB(const util::DbWrapperParams& db_params, const std::string& db_name = "evodb");
     ~CEvoDB();
 
     std::unique_ptr<CEvoDBScopedCommitter> BeginTransaction() EXCLUSIVE_LOCKS_REQUIRED(!cs)

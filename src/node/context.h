@@ -97,7 +97,7 @@ struct NodeContext {
     //! Dash managers
     std::unique_ptr<CJWalletManager> cj_walletman;
     std::unique_ptr<CDSTXManager> dstxman;
-    std::unique_ptr<CEvoDB> evodb;
+    CEvoDB* evodb{nullptr};
     std::unique_ptr<CChainstateHelper> chain_helper;
     //! Non-owning view of the active chainstate's Evo managers, bound after
     //! chainstate load; owned by Chainstate::m_evo.
