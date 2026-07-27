@@ -59,6 +59,9 @@ public:
 
     void ConnectLLMQ(llmq::CQuorumBlockProcessor& qblockman, const llmq::CQuorumManager& qman,
                      const chainlock::Chainlocks& chainlocks);
+    //! Drop the special-tx processor. Must run before the LLMQ shells it
+    //! references are destroyed; the rest of the bundle outlives them.
+    void DisconnectLLMQ();
 };
 
 #endif // BITCOIN_EVO_EVOCHAINSTATE_H

@@ -11,19 +11,16 @@
 
 class CBLSWorker;
 class ChainstateManager;
-class CDeterministicMNManager;
-class CEvoDB;
 class CSporkManager;
+class EvoChainState;
 class PeerManager;
 
 namespace llmq {
 class CInstantSendManager;
 class CQuorumBlockProcessor;
 class CQuorumManager;
-class CQuorumSnapshotManager;
 class CSigningManager;
-class MinedCommitmentsStore;
-class QuorumResolutionCache;
+
 } // namespace llmq
 namespace util {
 struct DbWrapperParams;
@@ -34,7 +31,7 @@ public:
     LLMQContext() = delete;
     LLMQContext(const LLMQContext&) = delete;
     LLMQContext& operator=(const LLMQContext&) = delete;
-    explicit LLMQContext(CDeterministicMNManager& dmnman, CEvoDB& evo_db, CSporkManager& sporkman,
+    explicit LLMQContext(EvoChainState& evo, CSporkManager& sporkman,
                          ChainstateManager& chainman, const util::DbWrapperParams& db_params, int8_t bls_threads,
                          int16_t worker_count, int64_t max_recsigs_age);
     ~LLMQContext();
@@ -46,10 +43,7 @@ public:
      *  For example, constructor `qman` requires `bls_worker`.
      */
     const std::shared_ptr<CBLSWorker> bls_worker;
-    const std::unique_ptr<llmq::CQuorumSnapshotManager> qsnapman;
-    const std::unique_ptr<llmq::MinedCommitmentsStore> commitments;
     const std::unique_ptr<llmq::CQuorumBlockProcessor> quorum_block_processor;
-    const std::unique_ptr<llmq::QuorumResolutionCache> qcache;
     const std::unique_ptr<llmq::CQuorumManager> qman;
     const std::unique_ptr<llmq::CSigningManager> sigman;
     const std::unique_ptr<llmq::CInstantSendManager> isman;

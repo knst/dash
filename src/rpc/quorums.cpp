@@ -298,7 +298,7 @@ static RPCHelpMan quorum_info()
         throw JSONRPCError(RPC_INVALID_PARAMETER, "quorum not found");
     }
 
-    return BuildQuorumInfo(*llmq_ctx.commitments, *quorum, true, includeSkShare);
+    return BuildQuorumInfo(*CHECK_NONFATAL(node.commitments), *quorum, true, includeSkShare);
 },
     };
 }
@@ -387,11 +387,11 @@ static RPCHelpMan quorum_dkgstatus()
                     obj.pushKV("pindexTip", pindexTip->nHeight);
 
                     auto allConnections = llmq::utils::GetQuorumConnections(llmq_params, *CHECK_NONFATAL(node.sporkman),
-                                                                            {*node.dmnman, *llmq_ctx.qsnapman, chainman,
+                                                                            {*node.dmnman, *CHECK_NONFATAL(node.qsnapman), chainman,
                                                                              pQuorumBaseBlockIndex},
                                                                             proTxHash, /*onlyOutbound=*/false);
                     auto outboundConnections = llmq::utils::GetQuorumConnections(llmq_params, *node.sporkman,
-                                                                                 {*node.dmnman, *llmq_ctx.qsnapman,
+                                                                                 {*node.dmnman, *CHECK_NONFATAL(node.qsnapman),
                                                                                   chainman, pQuorumBaseBlockIndex},
                                                                                  proTxHash, /*onlyOutbound=*/true);
                     std::map<uint256, CAddress> foundConnections;
@@ -491,7 +491,7 @@ static RPCHelpMan quorum_memberof()
         auto quorums = llmq_ctx.qman->ScanQuorums(llmq_params_opt->type, count);
         for (auto& quorum : quorums) {
             if (quorum->IsMember(dmn->proTxHash)) {
-                auto json = BuildQuorumInfo(*llmq_ctx.commitments, *quorum, false, false);
+                auto json = BuildQuorumInfo(*CHECK_NONFATAL(node.commitments), *quorum, false, false);
                 json.pushKV("isValidMember", quorum->IsValidMember(dmn->proTxHash));
                 json.pushKV("memberIndex", quorum->GetMemberIndex(dmn->proTxHash));
                 result.push_back(json);
@@ -982,8 +982,8 @@ static RPCHelpMan quorum_rotationinfo()
 
     LOCK(cs_main);
 
-    if (!BuildQuorumRotationInfo(*CHECK_NONFATAL(node.dmnman), *llmq_ctx.qsnapman, chainman, *llmq_ctx.qman,
-                                 *llmq_ctx.commitments, cmd, false, quorumRotationInfoRet, strError)) {
+    if (!BuildQuorumRotationInfo(*CHECK_NONFATAL(node.dmnman), *CHECK_NONFATAL(node.qsnapman), chainman, *llmq_ctx.qman,
+                                 *CHECK_NONFATAL(node.commitments), cmd, false, quorumRotationInfoRet, strError)) {
         throw JSONRPCError(RPC_INVALID_REQUEST, strError);
     }
 
@@ -1130,10 +1130,9 @@ static RPCHelpMan quorum_dkginfo()
                     continue;
                 }
 
-                const LLMQContext& llmq_ctx = EnsureLLMQContext(node);
                 const auto predicted_members = llmq::utils::ComputeQuorumMembersFromWorkBlock(
                     llmq_params.type,
-                    {*CHECK_NONFATAL(node.dmnman), *CHECK_NONFATAL(llmq_ctx.qsnapman), chainman, pindexTip},
+                    {*CHECK_NONFATAL(node.dmnman), *CHECK_NONFATAL(node.qsnapman), chainman, pindexTip},
                     pWorkBlockIndex, quorumHeight);
                 if (!predicted_members.has_value()) {
                     obj.pushKV("known", false);

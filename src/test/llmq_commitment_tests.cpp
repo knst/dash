@@ -160,7 +160,7 @@ BOOST_FIXTURE_TEST_CASE(commitment_check_undersized_bitset_debug_log_test, RegTe
     base_index.nHeight = 0;
 
     const llmq::UtilParameters util_params{*Assert(m_node.dmnman),
-                                           *Assert(m_node.llmq_ctx)->qsnapman,
+                                           *Assert(m_node.qsnapman),
                                            *Assert(m_node.chainman),
                                            &base_index};
 

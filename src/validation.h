@@ -542,7 +542,10 @@ public:
 
     //! Attach or detach this chainstate's Evo state bundle.
     void InitEvoChainState(std::unique_ptr<EvoChainState> evo);
+    [[nodiscard]] std::unique_ptr<EvoChainState> DetachEvoChainState();
     void ResetEvoChainState();
+    //! Drop the bundle's LLMQ-shell-referencing parts ahead of shell teardown.
+    void DisconnectEvoLLMQ();
 
     EvoChainState& Evo()
     {

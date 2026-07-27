@@ -17,7 +17,7 @@
 
 CDSNotificationInterface::CDSNotificationInterface(CConnman& connman, CDSTXManager& dstxman, CMasternodeSync& mn_sync,
                                                    CGovernanceManager& govman, const ChainstateManager& chainman,
-                                                   const std::unique_ptr<CDeterministicMNManager>& dmnman) :
+                                                   CDeterministicMNManager* const& dmnman) :
     m_connman{connman},
     m_dstxman{dstxman},
     m_mn_sync{mn_sync},

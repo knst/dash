@@ -11,6 +11,7 @@
 #include <deploymentstatus.h>
 #include <node/blockstorage.h>
 #include <node/caches.h>
+#include <node/context.h>
 #include <sync.h>
 #include <threadsafety.h>
 #include <tinyformat.h>
@@ -24,6 +25,7 @@
 #include <bls/bls.h>
 #include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
+#include <evo/evochainstate.h>
 #include <evo/evodb.h>
 #include <evo/mnhftx.h>
 #include <gsl/pointers.h>
@@ -41,7 +43,6 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
                                                      chainlock::Chainlocks& chainlocks,
                                                      const CMasternodeSync& mn_sync,
                                                      std::unique_ptr<CChainstateHelper>& chain_helper,
-                                                     std::unique_ptr<CDeterministicMNManager>& dmnman,
                                                      std::unique_ptr<CEvoDB>& evodb,
                                                      std::unique_ptr<LLMQContext>& llmq_ctx,
                                                      const fs::path& data_dir,
@@ -71,7 +72,7 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
     pblocktree.reset(new CBlockTreeDB(cache_sizes.block_tree_db, options.block_tree_db_in_memory, options.reindex));
 
     DashChainstateSetup(chainman, mn_metaman, sporkman, chainlocks, mn_sync, chain_helper,
-                        dmnman, *evodb, llmq_ctx, options.mempool, data_dir, options.dash_dbs_in_memory,
+                        *evodb, llmq_ctx, options.mempool, data_dir, options.dash_dbs_in_memory,
                         /*llmq_dbs_wipe=*/options.reindex || options.reindex_chainstate, options.bls_threads, options.worker_count,
                         options.max_recsigs_age);
 
@@ -178,7 +179,8 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
     }
 
     // Check if nVersion-first migration is needed and perform it
-    if (dmnman->IsMigrationRequired() && !dmnman->MigrateLegacyDiffs(chainman.ActiveChainstate().m_chain.Tip())) {
+    if (CDeterministicMNManager& dmnman = *chainman.ActiveChainstate().Evo().dmnman;
+        dmnman.IsMigrationRequired() && !dmnman.MigrateLegacyDiffs(chainman.ActiveChainstate().m_chain.Tip())) {
         return {ChainstateLoadStatus::FAILURE, _("Failed to upgrade Evo database")};
     }
 
@@ -196,7 +198,6 @@ void DashChainstateSetup(ChainstateManager& chainman,
                          chainlock::Chainlocks& chainlocks,
                          const CMasternodeSync& mn_sync,
                          std::unique_ptr<CChainstateHelper>& chain_helper,
-                         std::unique_ptr<CDeterministicMNManager>& dmnman,
                          CEvoDB& evodb,
                          std::unique_ptr<LLMQContext>& llmq_ctx,
                          CTxMemPool* mempool,
@@ -208,34 +209,65 @@ void DashChainstateSetup(ChainstateManager& chainman,
                          int64_t max_recsigs_age)
 {
     // Same logic as pblocktree
-    dmnman.reset();
-    dmnman = std::make_unique<CDeterministicMNManager>(evodb, mn_metaman);
+    WITH_LOCK(::cs_main, chainman.ActiveChainstate().ResetEvoChainState());
+    auto evo_state = std::make_unique<EvoChainState>(evodb, mn_metaman, chainman, chainman.GetConsensus());
 
     llmq_ctx.reset();
-    llmq_ctx = std::make_unique<LLMQContext>(*dmnman, evodb, sporkman, chainman,
+    llmq_ctx = std::make_unique<LLMQContext>(*evo_state, sporkman, chainman,
                                              util::DbWrapperParams{.path = data_dir, .memory = llmq_dbs_in_memory, .wipe = llmq_dbs_wipe},
                                              bls_threads, worker_count, max_recsigs_age);
+    evo_state->ConnectLLMQ(*(llmq_ctx->quorum_block_processor), *(llmq_ctx->qman), chainlocks);
     if (mempool) {
-        mempool->ConnectManagers(dmnman.get(), llmq_ctx->isman.get());
+        mempool->ConnectManagers(evo_state->dmnman.get(), llmq_ctx->isman.get());
     }
     chain_helper.reset();
-    chain_helper = std::make_unique<CChainstateHelper>(evodb, *dmnman, mn_sync, *(llmq_ctx->isman), *(llmq_ctx->quorum_block_processor),
-                                                       *(llmq_ctx->commitments), *(llmq_ctx->qsnapman), chainman,
-                                                       chainman.GetConsensus(), chainlocks, *(llmq_ctx->qman));
+    chain_helper = std::make_unique<CChainstateHelper>(*(evo_state->dmnman), mn_sync, *(llmq_ctx->isman), chainman,
+                                                       chainman.GetConsensus(), chainlocks);
+    WITH_LOCK(::cs_main, chainman.ActiveChainstate().InitEvoChainState(std::move(evo_state)));
 }
 
-void DashChainstateSetupClose(std::unique_ptr<CChainstateHelper>& chain_helper,
-                              std::unique_ptr<CDeterministicMNManager>& dmnman,
+void BindActiveEvoViews(ChainstateManager& chainman, NodeContext& node)
+{
+    LOCK(::cs_main);
+    EvoChainState& evo = chainman.ActiveChainstate().Evo();
+    node.dmnman = evo.dmnman.get();
+    node.qsnapman = evo.qsnapman.get();
+    node.commitments = evo.commitments.get();
+}
+
+void ClearEvoViews(NodeContext& node)
+{
+    node.dmnman = nullptr;
+    node.qsnapman = nullptr;
+    node.commitments = nullptr;
+}
+
+void DashChainstateSetupClose(ChainstateManager& chainman,
+                              std::unique_ptr<CChainstateHelper>& chain_helper,
                               std::unique_ptr<LLMQContext>& llmq_ctx,
                               CTxMemPool* mempool)
 
 {
     chain_helper.reset();
-    llmq_ctx.reset();
     if (mempool) {
         mempool->DisconnectManagers();
     }
-    dmnman.reset();
+    // The special-tx processor references the LLMQ shells and must go first;
+    // the shells' worker threads reference the rest of the bundle, so the
+    // bundle itself is torn down only after the shells are gone.
+    {
+        LOCK(::cs_main);
+        for (Chainstate* chainstate : chainman.GetAll()) {
+            chainstate->DisconnectEvoLLMQ();
+        }
+    }
+    llmq_ctx.reset();
+    {
+        LOCK(::cs_main);
+        for (Chainstate* chainstate : chainman.GetAll()) {
+            chainstate->ResetEvoChainState();
+        }
+    }
 }
 
 ChainstateLoadResult VerifyLoadedChainstate(ChainstateManager& chainman, CEvoDB& evodb,

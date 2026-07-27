@@ -94,7 +94,6 @@ int main(int argc, char* argv[])
 
     CMasternodeMetaMan metaman;
     std::unique_ptr<CEvoDB> evodb;
-    std::unique_ptr<CDeterministicMNManager> dmnman;
     CMasternodeSync mn_sync{std::make_unique<NullNodeSyncNotifier>()};
     CSporkManager sporkman;
     chainlock::Chainlocks chainlocks(sporkman);
@@ -116,7 +115,6 @@ int main(int argc, char* argv[])
                                    chainlocks,
                                    mn_sync,
                                    chain_helper,
-                                   dmnman,
                                    evodb,
                                    llmq_ctx,
                                    gArgs.GetDataDirNet(),
@@ -283,6 +281,6 @@ epilogue:
     }
     GetMainSignals().UnregisterBackgroundSignalScheduler();
     // Tear down Dash kernel objects before kernel::~Context().
-    node::DashChainstateSetupClose(chain_helper, dmnman, llmq_ctx, /*mempool=*/nullptr);
+    node::DashChainstateSetupClose(chainman, chain_helper, llmq_ctx, /*mempool=*/nullptr);
     evodb.reset();
 }

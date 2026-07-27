@@ -29,6 +29,7 @@ class path;
 } // namespace fs
 
 namespace node {
+struct NodeContext;
 struct CacheSizes;
 
 struct ChainstateLoadOptions {
@@ -77,7 +78,6 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
                                                      chainlock::Chainlocks& chainlocks,
                                                      const CMasternodeSync& mn_sync,
                                                      std::unique_ptr<CChainstateHelper>& chain_helper,
-                                                     std::unique_ptr<CDeterministicMNManager>& dmnman,
                                                      std::unique_ptr<CEvoDB>& evodb,
                                                      std::unique_ptr<LLMQContext>& llmq_ctx,
                                                      const fs::path& data_dir,
@@ -91,7 +91,6 @@ void DashChainstateSetup(ChainstateManager& chainman,
                          chainlock::Chainlocks& chainlocks,
                          const CMasternodeSync& mn_sync,
                          std::unique_ptr<CChainstateHelper>& chain_helper,
-                         std::unique_ptr<CDeterministicMNManager>& dmnman,
                          CEvoDB& evodb,
                          std::unique_ptr<LLMQContext>& llmq_ctx,
                          CTxMemPool* mempool,
@@ -102,8 +101,13 @@ void DashChainstateSetup(ChainstateManager& chainman,
                          int16_t worker_count,
                          int64_t max_recsigs_age);
 
-void DashChainstateSetupClose(std::unique_ptr<CChainstateHelper>& chain_helper,
-                              std::unique_ptr<CDeterministicMNManager>& dmnman,
+//! (Re)bind or clear NodeContext's non-owning views of the active
+//! chainstate's Evo managers.
+void BindActiveEvoViews(ChainstateManager& chainman, NodeContext& node);
+void ClearEvoViews(NodeContext& node);
+
+void DashChainstateSetupClose(ChainstateManager& chainman,
+                              std::unique_ptr<CChainstateHelper>& chain_helper,
                               std::unique_ptr<LLMQContext>& llmq_ctx,
                               CTxMemPool* mempool);
 

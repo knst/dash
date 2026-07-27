@@ -34,3 +34,8 @@ void EvoChainState::ConnectLLMQ(llmq::CQuorumBlockProcessor& qblockman, const ll
     special_tx = std::make_unique<CSpecialTxProcessor>(*cpoolman, *dmnman, *mnhfman, qblockman, *commitments, *qsnapman,
                                                        m_chainman, m_consensus_params, chainlocks, qman);
 }
+
+void EvoChainState::DisconnectLLMQ()
+{
+    special_tx.reset();
+}

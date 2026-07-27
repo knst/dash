@@ -4,6 +4,8 @@
 
 #include <evo/chainhelper.h>
 
+#include <evo/evochainstate.h>
+
 #include <chainlock/chainlock.h>
 #include <chainparams.h>
 #include <evo/creditpool.h>
@@ -15,25 +17,24 @@
 #include <logging.h>
 #include <masternode/payments.h>
 #include <masternode/sync.h>
+#include <validation.h>
 
-CChainstateHelper::CChainstateHelper(CEvoDB& evodb, CDeterministicMNManager& dmnman, const CMasternodeSync& mn_sync,
-                                     llmq::CInstantSendManager& isman, llmq::CQuorumBlockProcessor& qblockman,
-                                     const llmq::MinedCommitmentsStore& commitments,
-                                     llmq::CQuorumSnapshotManager& qsnapman, const ChainstateManager& chainman,
-                                     const Consensus::Params& consensus_params, const chainlock::Chainlocks& chainlocks,
-                                     const llmq::CQuorumManager& qman) :
+CChainstateHelper::CChainstateHelper(CDeterministicMNManager& dmnman, const CMasternodeSync& mn_sync,
+                                     llmq::CInstantSendManager& isman, const ChainstateManager& chainman,
+                                     const Consensus::Params& consensus_params, const chainlock::Chainlocks& chainlocks) :
     isman{isman},
     mn_sync{mn_sync},
-    credit_pool_manager{std::make_unique<CCreditPoolManager>(evodb, chainman)},
-    ehf_manager{std::make_unique<CMNHFManager>(evodb, chainman)},
-    special_tx{std::make_unique<CSpecialTxProcessor>(*credit_pool_manager, dmnman, *ehf_manager, qblockman, commitments, qsnapman,
-                                                     chainman, consensus_params, chainlocks, qman)},
+    m_chainman{chainman},
     m_chainlocks{chainlocks},
     superblocks{std::make_unique<governance::SuperblockManager>()},
     mn_payments{std::make_unique<CMNPaymentsProcessor>(dmnman, *superblocks, consensus_params)}
 {}
 
 CChainstateHelper::~CChainstateHelper() = default;
+
+CCreditPoolManager& CChainstateHelper::CreditPool() const { return *m_chainman.ActiveChainstate().Evo().cpoolman; }
+CMNHFManager& CChainstateHelper::Ehf() const { return *m_chainman.ActiveChainstate().Evo().mnhfman; }
+CSpecialTxProcessor& CChainstateHelper::SpecialTx() const { return *m_chainman.ActiveChainstate().Evo().special_tx; }
 
 bool CChainstateHelper::IsSuperblockValidationRequired(const CBlockIndex* const pindex)
 {
@@ -64,7 +65,7 @@ int32_t CChainstateHelper::GetBestChainLockHeight() const { return m_chainlocks.
 /** Passthrough functions to CCreditPoolManager */
 CCreditPool CChainstateHelper::GetCreditPool(const CBlockIndex* const pindex)
 {
-    return credit_pool_manager->GetCreditPool(pindex);
+    return CreditPool().GetCreditPool(pindex);
 }
 
 /** Passthrough functions to CInstantSendManager */
@@ -88,5 +89,5 @@ bool CChainstateHelper::RemoveConflictingISLockByTx(const CTransaction& tx)
 
 std::unordered_map<uint8_t, int> CChainstateHelper::GetSignalsStage(const CBlockIndex* const pindexPrev)
 {
-    return ehf_manager->GetSignalsStage(pindexPrev);
+    return Ehf().GetSignalsStage(pindexPrev);
 }

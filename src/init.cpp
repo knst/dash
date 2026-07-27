@@ -98,6 +98,7 @@
 #include <dsnotificationinterface.h>
 #include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
+#include <evo/evochainstate.h>
 #include <evo/evodb.h>
 #include <evo/specialtxman.h>
 #include <flat-database.h>
@@ -430,8 +431,9 @@ void PrepareShutdown(NodeContext& node)
                 chainstate->ResetCoinsViews();
             }
         }
-        DashChainstateSetupClose(node.chain_helper, node.dmnman, node.llmq_ctx,
+        DashChainstateSetupClose(*node.chainman, node.chain_helper, node.llmq_ctx,
                                  Assert(node.mempool.get()));
+        node::ClearEvoViews(node);
         node.evodb.reset();
     }
     for (const auto& client : node.chain_clients) {
@@ -2003,6 +2005,12 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     LogPrintf("* Using %.1f MiB for in-memory UTXO set (plus up to %.1f MiB of unused mempool space)\n", cache_sizes.coins * (1.0 / 1024 / 1024), mempool_opts.max_size_bytes * (1.0 / 1024 / 1024));
 
     for (bool fLoaded = false; !fLoaded && !ShutdownRequested();) {
+        if (node.chainman) {
+            // A previous attempt left managers referencing Evo state owned by
+            // the old chainstates; drop them before the chainman they feed on.
+            DashChainstateSetupClose(*node.chainman, node.chain_helper, node.llmq_ctx, node.mempool.get());
+            node::ClearEvoViews(node);
+        }
         node.mempool = std::make_unique<CTxMemPool>(mempool_opts);
 
         const ChainstateManager::Options chainman_opts{
@@ -2070,7 +2078,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                                   *node.chainlocks,
                                   *node.mn_sync,
                                   node.chain_helper,
-                                  node.dmnman,
                                   node.evodb,
                                   node.llmq_ctx,
                                   args.GetDataDirNet(),
@@ -2089,6 +2096,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         }
         if (status == node::ChainstateLoadStatus::SUCCESS) {
             fLoaded = true;
+            node::BindActiveEvoViews(chainman, node);
             LogPrintf(" block index %15dms\n", Ticks<std::chrono::milliseconds>(SteadyClock::now() - load_block_index_start_time));
         } else if (status == node::ChainstateLoadStatus::FAILURE_INCOMPATIBLE_DB) {
             return InitError(error);
@@ -2152,11 +2160,11 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         node.active_ctx = std::make_unique<ActiveContext>(*node.llmq_ctx->bls_worker, chainman, *node.connman, *node.dmnman,
                                                           *node.govman, *node.chain_helper->superblocks,
                                                           *node.sporkman, *node.chainlocks, *node.mempool, *node.clhandler, *node.llmq_ctx->isman,
-                                                          *node.llmq_ctx->qman, *node.llmq_ctx->qsnapman, *node.llmq_ctx->sigman,
+                                                          *node.llmq_ctx->qman, *node.qsnapman, *node.llmq_ctx->sigman,
                                                           *node.mn_sync, operator_sk, dash_db_params, quorums_watch);
         RegisterValidationInterface(node.active_ctx.get());
     } else if (quorums_watch) {
-        node.observer_ctx = std::make_unique<llmq::ObserverContext>(*node.dmnman, *node.llmq_ctx->qman, *node.llmq_ctx->qsnapman,
+        node.observer_ctx = std::make_unique<llmq::ObserverContext>(*node.dmnman, *node.llmq_ctx->qman, *node.qsnapman,
                                                                     chainman, *node.sporkman, dash_db_params);
         RegisterValidationInterface(node.observer_ctx.get());
     }
@@ -2184,7 +2192,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                                                         : static_cast<llmq::QuorumRole*>(node.observer_ctx.get());
         auto net_quorum = std::make_unique<llmq::NetQuorum>(
             node.peerman.get(), *node.llmq_ctx->bls_worker, *node.connman, *node.dmnman,
-            *node.llmq_ctx->qman, *node.llmq_ctx->qsnapman, chainman,
+            *node.llmq_ctx->qman, *node.qsnapman, chainman,
             *node.mn_sync, *node.sporkman, quorum_role,
             node.active_ctx ? node.active_ctx->nodeman.get() : nullptr,
             llmq::DEFAULT_WORKER_COUNT, sync_map, quorums_recovery);
@@ -2196,7 +2204,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
             node.peerman.get(), *node.sporkman, *node.active_ctx->qdkgsman, chainman, quorums_watch,
             *node.llmq_ctx->qman, *node.active_ctx,
             *node.llmq_ctx->bls_worker, *node.dmnman, *node.mn_metaman,
-            *node.active_ctx->dkgdbgman, *node.llmq_ctx->quorum_block_processor, *node.llmq_ctx->qsnapman,
+            *node.active_ctx->dkgdbgman, *node.llmq_ctx->quorum_block_processor, *node.qsnapman,
             *node.active_ctx->nodeman, *node.connman));
     } else if (node.observer_ctx) {
         node.peerman->AddExtraHandler(std::make_unique<llmq::NetDKG>(

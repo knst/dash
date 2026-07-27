@@ -54,6 +54,8 @@ class Loader;
 } // namespace interfaces
 
 namespace llmq {
+class CQuorumSnapshotManager;
+class MinedCommitmentsStore;
 struct ObserverContext;
 } // namespace llmq
 
@@ -97,7 +99,11 @@ struct NodeContext {
     std::unique_ptr<CDSTXManager> dstxman;
     std::unique_ptr<CEvoDB> evodb;
     std::unique_ptr<CChainstateHelper> chain_helper;
-    std::unique_ptr<CDeterministicMNManager> dmnman;
+    //! Non-owning view of the active chainstate's Evo managers, bound after
+    //! chainstate load; owned by Chainstate::m_evo.
+    CDeterministicMNManager* dmnman{nullptr};
+    llmq::CQuorumSnapshotManager* qsnapman{nullptr};
+    llmq::MinedCommitmentsStore* commitments{nullptr};
     std::unique_ptr<CGovernanceManager> govman;
     std::unique_ptr<CMasternodeMetaMan> mn_metaman;
     std::unique_ptr<CMasternodeSync> mn_sync;

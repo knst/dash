@@ -1758,7 +1758,7 @@ static RPCHelpMan protx_diff()
     CSimplifiedMNListDiff mnListDiff;
     std::string strError;
 
-    if (!BuildSimplifiedMNListDiff(dmnman, chainman, *llmq_ctx.commitments, *llmq_ctx.qman, baseBlockHash,
+    if (!BuildSimplifiedMNListDiff(dmnman, chainman, *CHECK_NONFATAL(node.commitments), *llmq_ctx.qman, baseBlockHash,
                                    blockHash, mnListDiff, strError, extended))
     {
         throw std::runtime_error(strError);

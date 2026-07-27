@@ -72,10 +72,15 @@ CreateAndActivateUTXOSnapshot(
             // preserves the block index.
             LOCK(::cs_main);
             uint256 gen_hash = node.chainman->ActiveChainstate().m_chain[0]->GetBlockHash();
+            // The managers (payments, mempool bindings, LLMQ shells) reference
+            // the Evo state owned by the chainstates being destroyed; tear the
+            // whole Dash stack down and rebuild it against the new chainstate.
+            DashChainstateSetupClose(node);
             node.chainman->ResetChainstates();
             node.chainman->InitializeChainstate(
                 node.mempool.get(), *Assert(node.evodb), node.chain_helper);
             Chainstate& chain = node.chainman->ActiveChainstate();
+            DashChainstateSetup(*node.chainman, node, /*llmq_dbs_in_memory=*/true, /*llmq_dbs_wipe=*/true);
             Assert(chain.LoadGenesisBlock());
             // These cache values will be corrected shortly in `MaybeRebalanceCaches`.
             chain.InitCoinsDB(1 << 20, true, false, "");

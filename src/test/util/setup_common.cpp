@@ -64,6 +64,7 @@
 #include <evo/cbtx.h>
 #include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
+#include <evo/evochainstate.h>
 #include <evo/evodb.h>
 #include <evo/simplifiedmns.h>
 #include <evo/specialtx.h>
@@ -147,15 +148,17 @@ void DashChainstateSetup(ChainstateManager& chainman,
                          bool llmq_dbs_wipe)
 {
     DashChainstateSetup(chainman, *Assert(node.mn_metaman.get()),
-                        *Assert(node.sporkman.get()), *Assert(node.chainlocks), *Assert(node.mn_sync), node.chain_helper, node.dmnman, *node.evodb,
+                        *Assert(node.sporkman.get()), *Assert(node.chainlocks), *Assert(node.mn_sync), node.chain_helper, *node.evodb,
                         node.llmq_ctx, Assert(node.mempool.get()), node.args->GetDataDirNet(), llmq_dbs_in_memory, llmq_dbs_wipe,
                         llmq::DEFAULT_BLSCHECK_THREADS, llmq::DEFAULT_WORKER_COUNT, llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE);
+    node::BindActiveEvoViews(chainman, node);
 }
 
 void DashChainstateSetupClose(NodeContext& node)
 {
-    DashChainstateSetupClose(node.chain_helper, node.dmnman, node.llmq_ctx,
+    DashChainstateSetupClose(*Assert(node.chainman.get()), node.chain_helper, node.llmq_ctx,
                              Assert(node.mempool.get()));
+    node::ClearEvoViews(node);
 }
 
 struct NetworkSetup
@@ -342,13 +345,13 @@ void ChainTestingSetup::LoadVerifyActivateChainstate()
                                            *Assert(m_node.chainlocks.get()),
                                            *Assert(m_node.mn_sync.get()),
                                            m_node.chain_helper,
-                                           m_node.dmnman,
                                            m_node.evodb,
                                            m_node.llmq_ctx,
                                            Assert(m_node.args)->GetDataDirNet(),
                                            m_cache_sizes,
                                            options);
     assert(status == node::ChainstateLoadStatus::SUCCESS);
+    node::BindActiveEvoViews(chainman, m_node);
 
     std::tie(status, error) = VerifyLoadedChainstate(
         chainman,
@@ -584,7 +587,7 @@ CBlock TestChainSetup::CreateBlock(
         if (!CalcCbTxMerkleRootMNList(cbTx->merkleRootMNList, mn_list.to_sml(), state)) {
             Assert(false);
         }
-        if (!CalcCbTxMerkleRootQuorums(block, chainstate.m_chain.Tip(), *m_node.llmq_ctx->commitments, cbTx->merkleRootQuorums, state)) {
+        if (!CalcCbTxMerkleRootQuorums(block, chainstate.m_chain.Tip(), *Assert(m_node.commitments), cbTx->merkleRootQuorums, state)) {
             Assert(false);
         }
         CMutableTransaction tmpTx{*block.vtx[0]};

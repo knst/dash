@@ -1621,7 +1621,12 @@ Chainstate::Chainstate(CTxMemPool* mempool,
       m_chainman(chainman),
       m_from_snapshot_blockhash(from_snapshot_blockhash) {}
 
-Chainstate::~Chainstate() = default;
+Chainstate::~Chainstate()
+{
+    // Consumers hold references into the bundle; destroying a chainstate that
+    // still owns one means those references were not torn down first.
+    assert(!m_evo);
+}
 
 void Chainstate::InitEvoChainState(std::unique_ptr<EvoChainState> evo)
 {
@@ -1629,9 +1634,19 @@ void Chainstate::InitEvoChainState(std::unique_ptr<EvoChainState> evo)
     m_evo = std::move(evo);
 }
 
+std::unique_ptr<EvoChainState> Chainstate::DetachEvoChainState()
+{
+    return std::move(m_evo);
+}
+
 void Chainstate::ResetEvoChainState()
 {
     m_evo.reset();
+}
+
+void Chainstate::DisconnectEvoLLMQ()
+{
+    if (m_evo) m_evo->DisconnectLLMQ();
 }
 
 void Chainstate::InitCoinsDB(
@@ -5519,6 +5534,11 @@ bool ChainstateManager::ActivateSnapshot(
         assert(chaintip_loaded);
 
         m_active_chainstate = m_snapshot_chainstate.get();
+        if (m_ibd_chainstate) {
+            // There is a single Evo state bundle and it serves the active
+            // chainstate; move it along with the activation.
+            m_snapshot_chainstate->InitEvoChainState(m_ibd_chainstate->DetachEvoChainState());
+        }
 
         LogPrintf("[snapshot] successfully activated snapshot %s\n", base_blockhash.ToString());
         LogPrintf("[snapshot] (%.2f MB)\n",

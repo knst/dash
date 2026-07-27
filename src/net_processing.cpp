@@ -46,6 +46,7 @@
 #include <coinjoin/coinjoin.h>
 #include <coinjoin/walletman.h>
 #include <evo/deterministicmns.h>
+#include <evo/evochainstate.h>
 #include <evo/mnauth.h>
 #include <evo/smldiff.h>
 #include <instantsend/instantsend.h>
@@ -528,7 +529,7 @@ public:
                     CSporkManager& sporkman, const chainlock::Chainlocks& chainlocks,
                     chainlock::ChainlockHandler& clhandler,
                     CActiveMasternodeManager* nodeman,
-                    const std::unique_ptr<CDeterministicMNManager>& dmnman,
+                    CDeterministicMNManager* const& dmnman,
                     const std::unique_ptr<CJWalletManager>& cj_walletman,
                     const std::unique_ptr<LLMQContext>& llmq_ctx, bool ignore_incoming_txs);
 
@@ -764,7 +765,7 @@ private:
     CTxMemPool& m_mempool;
     std::unique_ptr<TxReconciliationTracker> m_txreconciliation;
     CActiveMasternodeManager* const m_nodeman; //!< null if non-masternode mode; non-null implies masternode mode
-    const std::unique_ptr<CDeterministicMNManager>& m_dmnman;
+    CDeterministicMNManager* const& m_dmnman;
     const std::unique_ptr<CJWalletManager>& m_cj_walletman;
     const std::unique_ptr<LLMQContext>& m_llmq_ctx;
     CMasternodeMetaMan& m_mn_metaman;
@@ -1972,7 +1973,7 @@ std::unique_ptr<PeerManager> PeerManager::make(CConnman& connman, AddrMan& addrm
                                                CSporkManager& sporkman, const chainlock::Chainlocks& chainlocks,
                                                chainlock::ChainlockHandler& clhandler,
                                                CActiveMasternodeManager* nodeman,
-                                               const std::unique_ptr<CDeterministicMNManager>& dmnman,
+                                               CDeterministicMNManager* const& dmnman,
                                                const std::unique_ptr<CJWalletManager>& cj_walletman,
                                                const std::unique_ptr<LLMQContext>& llmq_ctx, bool ignore_incoming_txs)
 {
@@ -1986,7 +1987,7 @@ PeerManagerImpl::PeerManagerImpl(CConnman& connman, AddrMan& addrman, BanMan* ba
                                  const chainlock::Chainlocks& chainlocks,
                                  chainlock::ChainlockHandler& clhandler,
                                  CActiveMasternodeManager* nodeman,
-                                 const std::unique_ptr<CDeterministicMNManager>& dmnman,
+                                 CDeterministicMNManager* const& dmnman,
                                  const std::unique_ptr<CJWalletManager>& cj_walletman,
                                  const std::unique_ptr<LLMQContext>& llmq_ctx, bool ignore_incoming_txs)
     : m_chainparams(chainman.GetParams()),
@@ -5389,7 +5390,7 @@ void PeerManagerImpl::ProcessMessage(
 
         CSimplifiedMNListDiff mnListDiff;
         std::string strError;
-        if (BuildSimplifiedMNListDiff(*m_dmnman, m_chainman, *m_llmq_ctx->commitments, *m_llmq_ctx->qman,
+        if (BuildSimplifiedMNListDiff(*m_dmnman, m_chainman, *Assert(m_chainman.ActiveChainstate().Evo().commitments), *m_llmq_ctx->qman,
                                       cmd.baseBlockHash, cmd.blockHash, mnListDiff, strError))
         {
             m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::MNLISTDIFF, mnListDiff));
@@ -5439,7 +5440,7 @@ void PeerManagerImpl::ProcessMessage(
         llmq::CQuorumRotationInfo quorumRotationInfoRet;
         std::string strError;
         bool use_legacy_construction = pfrom.GetCommonVersion() < EFFICIENT_QRINFO_VERSION;;
-        if (BuildQuorumRotationInfo(*m_dmnman, *m_llmq_ctx->qsnapman, m_chainman, *m_llmq_ctx->qman, *m_llmq_ctx->commitments, cmd, use_legacy_construction, quorumRotationInfoRet, strError)) {
+        if (BuildQuorumRotationInfo(*m_dmnman, *Assert(m_chainman.ActiveChainstate().Evo().qsnapman), m_chainman, *m_llmq_ctx->qman, *Assert(m_chainman.ActiveChainstate().Evo().commitments), cmd, use_legacy_construction, quorumRotationInfoRet, strError)) {
             m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::QUORUMROTATIONINFO, quorumRotationInfoRet));
         } else {
             strError = strprintf("getquorumrotationinfo failed for size(baseBlockHashes)=%d, blockRequestHash=%s. error=%s", cmd.baseBlockHashes.size(), cmd.blockRequestHash.ToString(), strError);

@@ -80,7 +80,7 @@ BlockAssembler::BlockAssembler(Chainstate& chainstate, const NodeContext& node, 
       chainparams(chainstate.m_chainman.GetParams()),
       m_mempool(mempool),
       m_quorum_block_processor(*Assert(Assert(node.llmq_ctx)->quorum_block_processor)),
-      m_commitments(*Assert(Assert(node.llmq_ctx)->commitments)),
+      m_commitments(*Assert(node.commitments)),
       m_qman(*Assert(Assert(node.llmq_ctx)->qman))
 {
     blockMinFeeRate = options.blockMinFeeRate;

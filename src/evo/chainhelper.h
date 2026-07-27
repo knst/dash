@@ -34,7 +34,6 @@ struct Params;
 namespace llmq {
 class CInstantSendManager;
 class CQuorumBlockProcessor;
-class MinedCommitmentsStore;
 class CQuorumManager;
 class CQuorumSnapshotManager;
 } // namespace llmq
@@ -43,29 +42,24 @@ class CChainstateHelper
 private:
     llmq::CInstantSendManager& isman;
     const CMasternodeSync& mn_sync;
-    const std::unique_ptr<CCreditPoolManager> credit_pool_manager;
-    const std::unique_ptr<CMNHFManager> ehf_manager;
-    const std::unique_ptr<CSpecialTxProcessor> special_tx;
+    const ChainstateManager& m_chainman;
 
 public:
     const chainlock::Chainlocks& m_chainlocks;
     const std::unique_ptr<governance::SuperblockManager> superblocks;
     const std::unique_ptr<CMNPaymentsProcessor> mn_payments;
 
-    CCreditPoolManager& CreditPool() const { return *credit_pool_manager; }
-    CMNHFManager& Ehf() const { return *ehf_manager; }
-    CSpecialTxProcessor& SpecialTx() const { return *special_tx; }
+    CCreditPoolManager& CreditPool() const;
+    CMNHFManager& Ehf() const;
+    CSpecialTxProcessor& SpecialTx() const;
 
 public:
     CChainstateHelper() = delete;
     CChainstateHelper(const CChainstateHelper&) = delete;
     CChainstateHelper& operator=(const CChainstateHelper&) = delete;
-    explicit CChainstateHelper(CEvoDB& evodb, CDeterministicMNManager& dmnman, const CMasternodeSync& mn_sync,
-                               llmq::CInstantSendManager& isman, llmq::CQuorumBlockProcessor& qblockman,
-                               const llmq::MinedCommitmentsStore& commitments,
-                               llmq::CQuorumSnapshotManager& qsnapman, const ChainstateManager& chainman,
-                               const Consensus::Params& consensus_params, const chainlock::Chainlocks& chainlocks,
-                               const llmq::CQuorumManager& qman);
+    explicit CChainstateHelper(CDeterministicMNManager& dmnman, const CMasternodeSync& mn_sync,
+                               llmq::CInstantSendManager& isman, const ChainstateManager& chainman,
+                               const Consensus::Params& consensus_params, const chainlock::Chainlocks& chainlocks);
     ~CChainstateHelper();
 
     bool IsSuperblockValidationRequired(const CBlockIndex* const pindex);
