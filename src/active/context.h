@@ -19,6 +19,7 @@ class CActiveMasternodeManager;
 class CBLSWorker;
 class CCoinJoinServer;
 class CConnman;
+class CDeterministicMNManager;
 class CGovernanceManager;
 class CMasternodeSync;
 class CMNHFManager;

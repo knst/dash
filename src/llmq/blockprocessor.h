@@ -26,24 +26,19 @@ class CChain;
 class Chainstate;
 class ChainstateManager;
 class CDataStream;
-class CDeterministicMNManager;
 class CNode;
+class EvoChainState;
 
 extern RecursiveMutex cs_main; // NOLINT(readability-redundant-declaration)
 
 namespace llmq
 {
 class CFinalCommitment;
-class CQuorumSnapshotManager;
-class MinedCommitmentsStore;
 
 class CQuorumBlockProcessor
 {
 private:
     ChainstateManager& m_chainman;
-    CDeterministicMNManager& m_dmnman;
-    CQuorumSnapshotManager& m_qsnapman;
-    MinedCommitmentsStore& m_commitments;
 
     CCheckQueue<utils::BlsCheck> m_bls_queue{4};
 
@@ -55,9 +50,7 @@ public:
     CQuorumBlockProcessor() = delete;
     CQuorumBlockProcessor(const CQuorumBlockProcessor&) = delete;
     CQuorumBlockProcessor& operator=(const CQuorumBlockProcessor&) = delete;
-    explicit CQuorumBlockProcessor(ChainstateManager& chainman, CDeterministicMNManager& dmnman,
-                                   CQuorumSnapshotManager& qsnapman, MinedCommitmentsStore& commitments,
-                                   int8_t bls_threads);
+    explicit CQuorumBlockProcessor(ChainstateManager& chainman, int8_t bls_threads);
     ~CQuorumBlockProcessor();
 
     [[nodiscard]] MessageProcessingResult ProcessMessage(const CNode& peer, std::string_view msg_type, CDataStream& vRecv)
@@ -89,6 +82,7 @@ public:
         EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 private:
     static uint256 GetQuorumBlockHash(const Consensus::LLMQParams& llmqParams, const CChain& active_chain, int nHeight, int quorumIndex) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+    EvoChainState& ActiveEvo() const;
 };
 } // namespace llmq
 

@@ -6,6 +6,7 @@
 
 #include <evo/specialtx.h>
 #include <llmq/commitment.h>
+#include <evo/evochainstate.h>
 #include <llmq/quorumcache.h>
 #include <llmq/options.h>
 #include <llmq/utils.h>
@@ -39,13 +40,8 @@ static void PreComputeQuorumMembers(CDeterministicMNManager& dmnman, llmq::CQuor
 
 namespace llmq
 {
-CQuorumBlockProcessor::CQuorumBlockProcessor(ChainstateManager& chainman, CDeterministicMNManager& dmnman,
-                                             CQuorumSnapshotManager& qsnapman, MinedCommitmentsStore& commitments,
-                                             int8_t bls_threads) :
-    m_chainman{chainman},
-    m_dmnman{dmnman},
-    m_qsnapman{qsnapman},
-    m_commitments{commitments}
+CQuorumBlockProcessor::CQuorumBlockProcessor(ChainstateManager& chainman, int8_t bls_threads) :
+    m_chainman{chainman}
 {
     LogPrintf("BLS verification uses %d additional threads\n", bls_threads);
     m_bls_queue.StartWorkerThreads(bls_threads);
@@ -54,6 +50,11 @@ CQuorumBlockProcessor::CQuorumBlockProcessor(ChainstateManager& chainman, CDeter
 CQuorumBlockProcessor::~CQuorumBlockProcessor()
 {
     m_bls_queue.StopWorkerThreads();
+}
+
+EvoChainState& CQuorumBlockProcessor::ActiveEvo() const
+{
+    return m_chainman.ActiveChainstate().Evo();
 }
 
 MessageProcessingResult CQuorumBlockProcessor::ProcessMessage(const CNode& peer, std::string_view msg_type,
@@ -118,7 +119,7 @@ MessageProcessingResult CQuorumBlockProcessor::ProcessMessage(const CNode& peer,
             }
             return ret;
         }
-        if (m_commitments.HasMinedCommitment(type, qc.quorumHash)) {
+        if (ActiveEvo().commitments->HasMinedCommitment(type, qc.quorumHash)) {
             LogPrint(BCLog::LLMQ, "CQuorumBlockProcessor::%s -- commitment for quorum hash[%s], type[%d], quorumIndex[%d] is already mined, peer=%d\n",
                      __func__, qc.quorumHash.ToString(), std23::to_underlying(type), qc.quorumIndex, peer.GetId());
             // NOTE: do not punish here
@@ -140,7 +141,8 @@ MessageProcessingResult CQuorumBlockProcessor::ProcessMessage(const CNode& peer,
         }
     }
 
-    if (!qc.Verify({m_dmnman, m_qsnapman, m_chainman, pQuorumBaseBlockIndex}, /*checkSigs=*/true)) {
+    EvoChainState& evo = ActiveEvo();
+    if (!qc.Verify({*evo.dmnman, *evo.qsnapman, m_chainman, pQuorumBaseBlockIndex}, /*checkSigs=*/true)) {
         LogPrint(BCLog::LLMQ, "CQuorumBlockProcessor::%s -- commitment for quorum %s:%d is not valid quorumIndex[%d] nversion[%d], peer=%d\n",
                  __func__, qc.quorumHash.ToString(),
                  std23::to_underlying(qc.llmqType), qc.quorumIndex, qc.nVersion, peer.GetId());
@@ -163,12 +165,14 @@ bool CQuorumBlockProcessor::ProcessBlock(Chainstate& chainstate, const CBlock& b
 
     const auto blockHash = pindex->GetBlockHash();
 
+    EvoChainState& evo = chainstate.Evo();
+
     if (!DeploymentActiveAt(*pindex, m_chainman.GetConsensus(), Consensus::DEPLOYMENT_DIP0003)) {
-        m_commitments.WriteBestBlockUpgrade(blockHash);
+        evo.commitments->WriteBestBlockUpgrade(blockHash);
         return true;
     }
 
-    PreComputeQuorumMembers(m_dmnman, m_qsnapman, m_chainman, pindex, /*reset_cache=*/false);
+    PreComputeQuorumMembers(*evo.dmnman, *evo.qsnapman, m_chainman, pindex, /*reset_cache=*/false);
 
     std::multimap<Consensus::LLMQType, CFinalCommitment> qcs;
     if (!GetCommitmentsFromBlock(block, pindex, qcs, state)) {
@@ -210,7 +214,7 @@ bool CQuorumBlockProcessor::ProcessBlock(Chainstate& chainstate, const CBlock& b
                          pindex->nHeight, qc.quorumHash.ToString());
                 return false;
             }
-            qc.VerifySignatureAsync({m_dmnman, m_qsnapman, m_chainman, pQuorumBaseBlockIndex}, &queue_control);
+            qc.VerifySignatureAsync({*evo.dmnman, *evo.qsnapman, m_chainman, pQuorumBaseBlockIndex}, &queue_control);
         }
 
         if (!queue_control.Wait()) {
@@ -225,7 +229,7 @@ bool CQuorumBlockProcessor::ProcessBlock(Chainstate& chainstate, const CBlock& b
         }
     }
 
-    m_commitments.WriteBestBlockUpgrade(blockHash);
+    evo.commitments->WriteBestBlockUpgrade(blockHash);
 
     return true;
 }
@@ -300,7 +304,7 @@ bool CQuorumBlockProcessor::ProcessCommitment(Chainstate& chainstate, int nHeigh
         return true;
     }
 
-    if (m_commitments.HasMinedCommitment(llmq_params.type, quorumHash)) {
+    if (chainstate.Evo().commitments->HasMinedCommitment(llmq_params.type, quorumHash)) {
         // should not happen as it's already handled in ProcessBlock
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-qc-dup");
     }
@@ -318,7 +322,7 @@ bool CQuorumBlockProcessor::ProcessCommitment(Chainstate& chainstate, int nHeigh
     }
 
     // we don't validate signatures here; they already validated on previous step
-    if (!qc.Verify({m_dmnman, m_qsnapman, m_chainman, pQuorumBaseBlockIndex}, /*checksigs=*/false)) {
+    if (!qc.Verify({*chainstate.Evo().dmnman, *chainstate.Evo().qsnapman, m_chainman, pQuorumBaseBlockIndex}, /*checksigs=*/false)) {
         LogPrint(BCLog::LLMQ, /* Continued */
                  "%s -- height=%d, type=%d, quorumIndex=%d, quorumHash=%s, signers=%s, validMembers=%d, "
                  "quorumPublicKey=%s qc verify failed.\n",
@@ -339,7 +343,7 @@ bool CQuorumBlockProcessor::ProcessCommitment(Chainstate& chainstate, int nHeigh
     }
 
     // Store commitment in DB
-    m_commitments.WriteMinedCommitment(qc, blockHash, nHeight, pQuorumBaseBlockIndex->nHeight, rotation_enabled);
+    chainstate.Evo().commitments->WriteMinedCommitment(qc, blockHash, nHeight, pQuorumBaseBlockIndex->nHeight, rotation_enabled);
 
     {
         LOCK(minableCommitmentsCs);
@@ -357,7 +361,7 @@ bool CQuorumBlockProcessor::UndoBlock(Chainstate& chainstate, const CBlock& bloc
 {
     AssertLockHeld(::cs_main);
 
-    PreComputeQuorumMembers(m_dmnman, m_qsnapman, m_chainman, pindex, /*reset_cache=*/true);
+    PreComputeQuorumMembers(*chainstate.Evo().dmnman, *chainstate.Evo().qsnapman, m_chainman, pindex, /*reset_cache=*/true);
 
     std::multimap<Consensus::LLMQType, CFinalCommitment> qcs;
     if (BlockValidationState dummy; !GetCommitmentsFromBlock(block, pindex, qcs, dummy)) {
@@ -373,13 +377,13 @@ bool CQuorumBlockProcessor::UndoBlock(Chainstate& chainstate, const CBlock& bloc
         const auto& llmq_params_opt = Params().GetLLMQ(qc.llmqType);
         assert(llmq_params_opt.has_value());
 
-        m_commitments.EraseMinedCommitment(qc, pindex->nHeight, IsQuorumRotationEnabled(llmq_params_opt.value(), pindex));
+        chainstate.Evo().commitments->EraseMinedCommitment(qc, pindex->nHeight, IsQuorumRotationEnabled(llmq_params_opt.value(), pindex));
 
         // if a reorg happened, we should allow to mine this commitment later
         AddMineableCommitment(qc);
     }
 
-    m_commitments.WriteBestBlockUpgrade(pindex->pprev->GetBlockHash());
+    chainstate.Evo().commitments->WriteBestBlockUpgrade(pindex->pprev->GetBlockHash());
 
     return true;
 }
@@ -442,7 +446,10 @@ size_t CQuorumBlockProcessor::GetNumCommitmentsRequired(const Consensus::LLMQPar
 
     for (const auto quorumIndex : util::irange(quorums_num)) {
         uint256 quorumHash = GetQuorumBlockHash(llmqParams, chain, nHeight, quorumIndex);
-        if (!quorumHash.IsNull() && !m_commitments.HasMinedCommitment(llmqParams.type, quorumHash, chain)) ++ret;
+        if (!quorumHash.IsNull() &&
+            !m_chainman.ChainstateForChain(chain).Evo().commitments->HasMinedCommitment(llmqParams.type, quorumHash, chain)) {
+            ++ret;
+        }
     }
 
     return ret;
@@ -541,7 +548,7 @@ std::optional<std::vector<CFinalCommitment>> CQuorumBlockProcessor::GetMineableC
             break;
         }
 
-        if (m_commitments.HasMinedCommitment(llmqParams.type, quorumHash)) continue;
+        if (ActiveEvo().commitments->HasMinedCommitment(llmqParams.type, quorumHash)) continue;
 
         LOCK(minableCommitmentsCs);
 

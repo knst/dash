@@ -19,13 +19,12 @@ LLMQContext::LLMQContext(EvoChainState& evo, CSporkManager& sporkman,
                          ChainstateManager& chainman, const util::DbWrapperParams& db_params, int8_t bls_threads,
                          int16_t worker_count, int64_t max_recsigs_age) :
     bls_worker{std::make_shared<CBLSWorker>()},
-    quorum_block_processor{std::make_unique<llmq::CQuorumBlockProcessor>(chainman, *evo.dmnman, *evo.qsnapman,
-                                                                         *evo.commitments, bls_threads)},
-    qman{std::make_unique<llmq::CQuorumManager>(*bls_worker, *evo.dmnman, evo.evodb, *evo.commitments,
-                                                *evo.qsnapman, *evo.qcache, chainman, db_params)},
+    quorum_block_processor{std::make_unique<llmq::CQuorumBlockProcessor>(chainman, bls_threads)},
+    qman{std::make_unique<llmq::CQuorumManager>(*bls_worker, chainman, db_params)},
     sigman{std::make_unique<llmq::CSigningManager>(*qman, db_params, max_recsigs_age)},
     isman{std::make_unique<llmq::CInstantSendManager>(sporkman, db_params)}
 {
+    qman->MigrateOldQuorumDB(evo.evodb);
     // Have to start it early to let VerifyDB check ChainLock signatures in coinbase
     bls_worker->Start(worker_count);
 }

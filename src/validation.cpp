@@ -1634,6 +1634,12 @@ void Chainstate::InitEvoChainState(std::unique_ptr<EvoChainState> evo)
     m_evo = std::move(evo);
 }
 
+EvoChainState& Chainstate::Evo()
+{
+    if (m_evo) return *m_evo;
+    return *Assert(m_chainman.ActiveChainstate().m_evo);
+}
+
 std::unique_ptr<EvoChainState> Chainstate::DetachEvoChainState()
 {
     return std::move(m_evo);
@@ -5366,6 +5372,14 @@ std::vector<Chainstate*> ChainstateManager::GetAll()
     }
 
     return out;
+}
+
+Chainstate& ChainstateManager::ChainstateForChain(const CChain& chain) const
+{
+    AssertLockHeld(::cs_main);
+    if (m_ibd_chainstate && &m_ibd_chainstate->m_chain == &chain) return *m_ibd_chainstate;
+    if (m_snapshot_chainstate && &m_snapshot_chainstate->m_chain == &chain) return *m_snapshot_chainstate;
+    assert(false);
 }
 
 Chainstate& ChainstateManager::InitializeChainstate(CTxMemPool* mempool,

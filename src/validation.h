@@ -547,11 +547,10 @@ public:
     //! Drop the bundle's LLMQ-shell-referencing parts ahead of shell teardown.
     void DisconnectEvoLLMQ();
 
-    EvoChainState& Evo()
-    {
-        assert(m_evo);
-        return *m_evo;
-    }
+    //! This chainstate's Evo state. Transitional: until every chainstate owns
+    //! a bundle, chainstates without one resolve the single shared bundle held
+    //! by the active chainstate.
+    EvoChainState& Evo();
 
     /**
      * Initialize the CoinsViews UTXO set database management data structures. The in-memory
@@ -1012,6 +1011,10 @@ public:
 
     //! Get all chainstates currently being used.
     std::vector<Chainstate*> GetAll();
+
+    //! Return the chainstate that owns `chain`, which must belong to one of
+    //! this manager's chainstates.
+    Chainstate& ChainstateForChain(const CChain& chain) const EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     //! Construct and activate a Chainstate on the basis of UTXO snapshot data.
     //!
