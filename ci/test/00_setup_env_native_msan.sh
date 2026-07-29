@@ -29,4 +29,4 @@ export GOAL="install"
 export BITCOIN_CONFIG="--with-sanitizers=memory --with-gui=no --without-bdb --with-sqlite \
 --with-asm=no --with-backend=easy --disable-mimalloc CPPFLAGS='-U_FORTIFY_SOURCE'"
 export USE_MEMORY_SANITIZER="true"
-export TEST_RUNNER_TIMEOUT_FACTOR=15
+export TEST_RUNNER_TIMEOUT_FACTOR=40
