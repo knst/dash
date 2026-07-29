@@ -71,6 +71,12 @@ AC_ARG_ENABLE([bench],
   [use_bench=$enableval],
   [use_bench=yes])
 
+AC_ARG_ENABLE([mimalloc],
+  [AS_HELP_STRING([--enable-mimalloc],
+  [Use mimalloc as the secure allocator [default=yes]])],
+  [use_mimalloc=$enableval],
+  [use_mimalloc=yes])
+
 AC_ARG_ENABLE([hardening],
   [AS_HELP_STRING([--enable-hardening],
   [Enable hardening flags and arguments [default=auto]])],
@@ -863,6 +869,7 @@ AM_CONDITIONAL(WITH_FBX, test 1 -eq 1)
 
 AM_CONDITIONAL([USE_TESTS], [test x"$use_tests" = x"yes"])
 AM_CONDITIONAL([USE_BENCH], [test x"$use_bench" = x"yes"])
+AM_CONDITIONAL([USE_MIMALLOC], [test x"$use_mimalloc" = x"yes"])
 AM_CONDITIONAL([HARDEN], [test "$use_hardening" = "yes"])
 AM_CONDITIONAL([OPTIMIZE], [test "$use_optimizations" = "yes"])
 
