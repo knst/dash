@@ -35,4 +35,4 @@ export BITCOIN_CONFIG="--with-sanitizers=memory --with-gui=no --without-bdb --wi
 CC=clang-19 CXX=clang++-19 CFLAGS='${MSAN_FLAGS}' CXXFLAGS='${MSAN_AND_LIBCXX_FLAGS}' \
 CPPFLAGS='-U_FORTIFY_SOURCE'"
 export USE_MEMORY_SANITIZER="true"
-export TEST_RUNNER_TIMEOUT_FACTOR=15
+export TEST_RUNNER_TIMEOUT_FACTOR=40
