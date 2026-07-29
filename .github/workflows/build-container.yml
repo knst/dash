@@ -23,6 +23,11 @@ on:
         description: "Runner label to use for arm64 jobs"
         required: true
         type: string
+      build-arm64:
+        description: "Whether to also build an arm64 image"
+        required: false
+        type: boolean
+        default: true
     outputs:
       path:
         description: "Path to built container"
@@ -79,6 +84,7 @@ jobs:
 
   build-arm64:
     name: Build container (arm64)
+    if: ${{ inputs.build-arm64 }}
     runs-on: ${{ inputs.runs-on-arm64 }}
     outputs:
       digest: ${{ steps.build.outputs.digest }}
@@ -125,7 +131,12 @@ jobs:
 
   create-manifest:
     name: Create multi-arch manifest
-    runs-on: ${{ inputs.runs-on-arm64 }}
+    # build-arm64 is skipped when the arm64 image is not requested; the
+    # default success() condition would skip this job along with it.
+    if: |
+      !cancelled() && needs.build-amd64.result == 'success' &&
+      (needs.build-arm64.result == 'success' || needs.build-arm64.result == 'skipped')
+    runs-on: ${{ inputs.build-arm64 && inputs.runs-on-arm64 || inputs.runs-on-amd64 }}
     needs: [build-amd64, build-arm64]
     steps:
       - name: Checkout code
@@ -151,15 +162,14 @@ jobs:
           TAG="${{ needs.build-amd64.outputs.tag }}"
           HASH_TAG="${{ hashFiles(inputs.file) }}"
 
+          SOURCES=("${REPO}:${HASH_TAG}-amd64")
+          if [ "${{ inputs.build-arm64 }}" = "true" ]; then
+            SOURCES+=("${REPO}:${HASH_TAG}-arm64")
+          fi
+
           # Create manifest from arch-specific images
-          docker buildx imagetools create -t "${REPO}:${HASH_TAG}" \
-            "${REPO}:${HASH_TAG}-amd64" \
-            "${REPO}:${HASH_TAG}-arm64"
+          docker buildx imagetools create -t "${REPO}:${HASH_TAG}" "${SOURCES[@]}"
 
-          docker buildx imagetools create -t "${REPO}:${TAG}" \
-            "${REPO}:${HASH_TAG}-amd64" \
-            "${REPO}:${HASH_TAG}-arm64"
+          docker buildx imagetools create -t "${REPO}:${TAG}" "${SOURCES[@]}"
 
-          docker buildx imagetools create -t "${REPO}:latest" \
-            "${REPO}:${HASH_TAG}-amd64" \
-            "${REPO}:${HASH_TAG}-arm64"
+          docker buildx imagetools create -t "${REPO}:latest" "${SOURCES[@]}"

@@ -115,6 +115,21 @@ jobs:
       runs-on-amd64: ${{ needs.check-skip.outputs['runner-amd64'] }}
       runs-on-arm64: ${{ needs.check-skip.outputs['runner-arm64'] }}
 
+  container-msan:
+    name: Build msan container
+    needs: [check-skip]
+    if: ${{ needs.check-skip.outputs.skip == 'false' && vars.SKIP_LINUX64_MSAN == '' }}
+    uses: ./.github/workflows/build-container.yml
+    with:
+      context: ./contrib/containers/ci
+      file: ./contrib/containers/ci/ci-msan.Dockerfile
+      name: dashcore-ci-msan
+      runs-on-amd64: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      runs-on-arm64: ${{ needs.check-skip.outputs['runner-arm64'] }}
+      # All linux64_msan jobs are pinned to amd64 runners, so an arm64
+      # image (with its expensive MSan libc++ build) would go unused.
+      build-arm64: false
+
   depends-aarch64-linux:
     name: aarch64-linux-gnu
     uses: ./.github/workflows/build-depends.yml
@@ -138,6 +153,17 @@ jobs:
     with:
       build-target: linux64
       container-path: ${{ needs.container.outputs.path }}
+      base-image-digest: ${{ needs.check-skip.outputs.base-image-digest }}
+      runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+
+  depends-linux64_msan:
+    name: x86_64-pc-linux-gnu_msan
+    uses: ./.github/workflows/build-depends.yml
+    needs: [check-skip, container-msan, cache-sources]
+    if: ${{ vars.SKIP_LINUX64_MSAN == '' }}
+    with:
+      build-target: linux64_msan
+      container-path: ${{ needs.container-msan.outputs.path }}
       base-image-digest: ${{ needs.check-skip.outputs.base-image-digest }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
 
@@ -250,6 +276,20 @@ jobs:
       depends-artifact: ${{ needs.depends-linux64.outputs.built-artifact }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
 
+  src-linux64_msan:
+    name: linux64_msan-build
+    uses: ./.github/workflows/build-src.yml
+    needs: [check-skip, container-msan, depends-linux64_msan]
+    if: ${{ vars.SKIP_LINUX64_MSAN == '' }}
+    with:
+      build-target: linux64_msan
+      container-path: ${{ needs.container-msan.outputs.path }}
+      depends-key: ${{ needs.depends-linux64_msan.outputs.key }}
+      depends-host: ${{ needs.depends-linux64_msan.outputs.host }}
+      depends-dep-opts: ${{ needs.depends-linux64_msan.outputs.dep-opts }}
+      depends-artifact: ${{ needs.depends-linux64_msan.outputs.built-artifact }}
+      runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+
   src-linux64_multiprocess:
     name: linux64_multiprocess-build
     uses: ./.github/workflows/build-src.yml
@@ -350,6 +390,16 @@ jobs:
       bundle-key: ${{ needs.src-linux64_asan.outputs.key }}
       build-target: linux64_asan
       container-path: ${{ needs.container-slim.outputs.path }}
+      runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+
+  test-linux64_msan:
+    name: linux64_msan-test
+    uses: ./.github/workflows/test-src.yml
+    needs: [check-skip, container-msan, src-linux64_msan, lint]
+    with:
+      bundle-key: ${{ needs.src-linux64_msan.outputs.key }}
+      build-target: linux64_msan
+      container-path: ${{ needs.container-msan.outputs.path }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
 
   test-linux64_multiprocess:
