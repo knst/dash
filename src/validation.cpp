@@ -1611,7 +1611,7 @@ void CoinsViews::InitCache()
 Chainstate::Chainstate(CTxMemPool* mempool,
                          BlockManager& blockman,
                          ChainstateManager& chainman,
-                         const std::unique_ptr<CChainstateHelper>& chain_helper,
+                         CChainstateHelper& chain_helper,
                          std::optional<uint256> from_snapshot_blockhash)
     : m_mempool(mempool),
       m_chain_helper(chain_helper),
@@ -1980,7 +1980,6 @@ int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out)
 DisconnectResult Chainstate::DisconnectBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view)
 {
     AssertLockHeld(cs_main);
-    assert(m_chain_helper);
 
     bool fDIP0003Active = DeploymentActiveAt(*pindex, m_params.GetConsensus(), Consensus::DEPLOYMENT_DIP0003);
     if (fDIP0003Active && !Evo().evodb.VerifyBestBlock(pindex->GetBlockHash())) {
@@ -2005,7 +2004,7 @@ DisconnectResult Chainstate::DisconnectBlock(const CBlock& block, const CBlockIn
     }
 
     std::optional<MNListUpdates> mnlist_updates_opt{std::nullopt};
-    if (!m_chain_helper->SpecialTx().UndoSpecialTxsInBlock(*this, block, pindex, mnlist_updates_opt)) {
+    if (!m_chain_helper.SpecialTx().UndoSpecialTxsInBlock(*this, block, pindex, mnlist_updates_opt)) {
         error("DisconnectBlock(): UndoSpecialTxsInBlock failed");
         return DISCONNECT_FAILED;
     }
@@ -2177,7 +2176,6 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
     uint256 block_hash{block.GetHash()};
     assert(*pindex->phashBlock == block_hash);
 
-    assert(m_chain_helper);
 
     // Roll back any BLS scheme switch below unless we fully connect the block.
     ScopedBLSLegacyScheme bls_scheme_guard;
@@ -2204,7 +2202,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
         return error("%s: Consensus::CheckBlock: %s", __func__, state.ToString());
     }
 
-    if (pindex->pprev && pindex->phashBlock && m_chain_helper->HasConflictingChainLock(pindex->nHeight, pindex->GetBlockHash())) {
+    if (pindex->pprev && pindex->phashBlock && m_chain_helper.HasConflictingChainLock(pindex->nHeight, pindex->GetBlockHash())) {
         LogPrintf("ERROR: %s: conflicting with chainlock\n", __func__);
         return state.Invalid(BlockValidationResult::BLOCK_CHAINLOCK, "bad-chainlock");
     }
@@ -2340,7 +2338,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
 
     // MUST process special txes before updating UTXO to ensure consistency between mempool and block processing
     std::optional<MNListUpdates> mnlist_updates_opt{std::nullopt};
-    if (!m_chain_helper->SpecialTx().ProcessSpecialTxsInBlock(*this, block, pindex, view, fJustCheck, fScriptChecks, state, mnlist_updates_opt)) {
+    if (!m_chain_helper.SpecialTx().ProcessSpecialTxsInBlock(*this, block, pindex, view, fJustCheck, fScriptChecks, state, mnlist_updates_opt)) {
         return error("ConnectBlock(DASH): ProcessSpecialTxsInBlock for block %s failed with %s",
                      pindex->GetBlockHash().ToString(), state.ToString());
     }
@@ -2441,15 +2439,15 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
 
     if (!IsInitialBlockDownload()) {
         // Require other nodes to comply, send them some data in case they are missing it.
-        const bool has_chainlock = m_chain_helper->HasChainLock(pindex->nHeight, pindex->GetBlockHash());
+        const bool has_chainlock = m_chain_helper.HasChainLock(pindex->nHeight, pindex->GetBlockHash());
         for (const auto& tx : block.vtx) {
             // skip txes that have no inputs
             if (tx->vin.empty()) continue;
-            while (auto conflictLockOpt = m_chain_helper->ConflictingISLockIfAny(*tx)) {
+            while (auto conflictLockOpt = m_chain_helper.ConflictingISLockIfAny(*tx)) {
                 auto [conflict_islock_hash, conflict_txid] = conflictLockOpt.value();
                 if (has_chainlock) {
                     LogPrint(BCLog::ALL, "ConnectBlock(DASH): chain-locked transaction %s overrides islock %s\n", tx->GetHash().ToString(), conflict_islock_hash.ToString());
-                    m_chain_helper->RemoveConflictingISLockByTx(*tx);
+                    m_chain_helper.RemoveConflictingISLockByTx(*tx);
                 } else {
                     // The node which relayed this should switch to correct chain.
                     // TODO: relay instantsend data/proof.
@@ -2474,12 +2472,12 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
     LogPrint(BCLog::BENCHMARK, "      - GetBlockSubsidy: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime5_2 - nTime5_1), nTimeSubsidy * MICRO, nTimeSubsidy * MILLI / nBlocksTotal);
 
     const bool is_v24_active{DeploymentActiveAfter(pindex->pprev, m_chainman, Consensus::DEPLOYMENT_V24)};
-    const SuperBlockCheckType check_superblock = !m_chain_helper->IsSuperblockValidationRequired(pindex)
+    const SuperBlockCheckType check_superblock = !m_chain_helper.IsSuperblockValidationRequired(pindex)
         ? SuperBlockCheckType::NoCheck
         : is_v24_active ? SuperBlockCheckType::DisallowDuplicates : SuperBlockCheckType::AllowDuplicates;
 
 
-    if (!m_chain_helper->mn_payments->IsBlockValueValid(m_chainman.ActiveChain(), block, pindex->pprev, blockSubsidy + feeReward, strError, check_superblock)) {
+    if (!m_chain_helper.mn_payments->IsBlockValueValid(m_chainman.ActiveChain(), block, pindex->pprev, blockSubsidy + feeReward, strError, check_superblock)) {
         // NOTE: Do not punish, the node might be missing governance data
         LogPrintf("ERROR: ConnectBlock(DASH): %s\n", strError);
         return state.Invalid(BlockValidationResult::BLOCK_RESULT_UNSET, "bad-cb-amount");
@@ -2489,7 +2487,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
     LogPrint(BCLog::BENCHMARK, "      - IsBlockValueValid: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime5_3 - nTime5_2), nTimeValueValid * MICRO, nTimeValueValid * MILLI / nBlocksTotal);
 
     const MnRewardEra mn_reward_era{GetMnRewardEraAfter(pindex->pprev, m_chainman)};
-    if (!m_chain_helper->mn_payments->IsBlockPayeeValid(m_chainman.ActiveChain(), *block.vtx[0], pindex->pprev, blockSubsidy, feeReward, mn_reward_era, is_v24_active, check_superblock)) {
+    if (!m_chain_helper.mn_payments->IsBlockPayeeValid(m_chainman.ActiveChain(), *block.vtx[0], pindex->pprev, blockSubsidy, feeReward, mn_reward_era, is_v24_active, check_superblock)) {
         // NOTE: Do not punish, the node might be missing governance data
         LogPrintf("ERROR: ConnectBlock(DASH): couldn't find masternode or superblock payments\n");
         return state.Invalid(BlockValidationResult::BLOCK_RESULT_UNSET, "bad-cb-payee");
@@ -4172,7 +4170,7 @@ bool ChainstateManager::AcceptBlockHeader(const CBlockHeader& block, BlockValida
             }
         }
 
-        if (ActiveChainstate().m_chain_helper->HasConflictingChainLock(pindexPrev->nHeight + 1, hash)) {
+        if (ActiveChainstate().m_chain_helper.HasConflictingChainLock(pindexPrev->nHeight + 1, hash)) {
             if (miSelf == m_blockman.m_block_index.end()) {
                 m_blockman.AddToBlockIndex(block, hash, m_best_header, BLOCK_CONFLICT_CHAINLOCK);
             }
@@ -4619,7 +4617,6 @@ bool Chainstate::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& in
 {
     AssertLockHeld(cs_main);
 
-    assert(m_chain_helper);
 
     // TODO: merge with ConnectBlock
     CBlock block;
@@ -4630,7 +4627,7 @@ bool Chainstate::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& in
     // MUST process special txes before updating UTXO to ensure consistency between mempool and block processing
     BlockValidationState state;
     std::optional<MNListUpdates> mnlist_updates_opt{std::nullopt};
-    if (!m_chain_helper->SpecialTx().ProcessSpecialTxsInBlock(*this, block, pindex, inputs, false /*fJustCheck*/, false /*fScriptChecks*/, state, mnlist_updates_opt)) {
+    if (!m_chain_helper.SpecialTx().ProcessSpecialTxsInBlock(*this, block, pindex, inputs, false /*fJustCheck*/, false /*fScriptChecks*/, state, mnlist_updates_opt)) {
         return error("RollforwardBlock(DASH): ProcessSpecialTxsInBlock for block %s failed with %s",
             pindex->GetBlockHash().ToString(), state.ToString());
     }
@@ -5369,7 +5366,7 @@ Chainstate& ChainstateManager::ChainstateForChain(const CChain& chain) const
 }
 
 Chainstate& ChainstateManager::InitializeChainstate(CTxMemPool* mempool,
-                                                     const std::unique_ptr<CChainstateHelper>& chain_helper)
+                                                     CChainstateHelper& chain_helper)
 {
     AssertLockHeld(::cs_main);
     assert(!m_ibd_chainstate);

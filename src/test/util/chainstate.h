@@ -78,7 +78,8 @@ CreateAndActivateUTXOSnapshot(
             // whole Dash stack down and rebuild it against the new chainstate.
             node::DashChainstateSetupClose(node);
             node.chainman->ResetChainstates();
-            node.chainman->InitializeChainstate(node.mempool.get(), node.chain_helper);
+            RecreateDashKernelServices(node, *node.chainman, /*dash_dbs_in_memory=*/true, /*dash_dbs_wipe=*/true);
+            node.chainman->InitializeChainstate(node.mempool.get(), *Assert(node.chain_helper));
             Chainstate& chain = node.chainman->ActiveChainstate();
             DashChainstateSetup(*node.chainman, node, /*llmq_dbs_in_memory=*/true, /*llmq_dbs_wipe=*/true);
             Assert(chain.LoadGenesisBlock());

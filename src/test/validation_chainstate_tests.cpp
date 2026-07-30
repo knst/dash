@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE(validation_chainstate_resize_caches)
 {
     ChainstateManager& manager = *Assert(m_node.chainman);
     CTxMemPool& mempool = *Assert(m_node.mempool);
-    Chainstate& c1 = WITH_LOCK(cs_main, return manager.InitializeChainstate(&mempool, m_node.chain_helper));
+    Chainstate& c1 = WITH_LOCK(cs_main, return manager.InitializeChainstate(&mempool, *Assert(m_node.chain_helper)));
     DashChainstateSetup(manager, m_node, /*llmq_dbs_in_memory=*/true, /*llmq_dbs_wipe=*/false);
     c1.InitCoinsDB(
         /*cache_size_bytes=*/1 << 23, /*in_memory=*/true, /*should_wipe=*/false);

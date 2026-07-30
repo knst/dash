@@ -306,6 +306,8 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
 
     m_node.mn_sync = std::make_unique<CMasternodeSync>(std::make_unique<NodeSyncNotifierImpl>(*m_node.connman, *m_node.netfulfilledman));
 
+    RecreateDashKernelServices(m_node, *m_node.chainman, /*dash_dbs_in_memory=*/true, /*dash_dbs_wipe=*/false);
+
     m_node.clhandler = std::make_unique<chainlock::ChainlockHandler>(*m_node.chainlocks, *m_node.chainman, *m_node.mempool, *m_node.mn_sync);
 
     // Start script-checking threads. Set g_parallel_script_checks to true so they are used.

@@ -509,7 +509,7 @@ protected:
     std::unique_ptr<CoinsViews> m_coins_views;
 
     //! Dash
-    const std::unique_ptr<CChainstateHelper>& m_chain_helper;
+    CChainstateHelper& m_chain_helper;
 
     //! Chain-derived Evo state of this chainstate (EvoDB staging plus the
     //! managers whose contents are a function of this chain).
@@ -532,7 +532,7 @@ public:
     explicit Chainstate(CTxMemPool* mempool,
                          node::BlockManager& blockman,
                          ChainstateManager& chainman,
-                         const std::unique_ptr<CChainstateHelper>& chain_helper,
+                         CChainstateHelper& chain_helper,
                          std::optional<uint256> from_snapshot_blockhash = std::nullopt);
     ~Chainstate();
 
@@ -596,11 +596,7 @@ public:
      */
     std::set<CBlockIndex*, node::CBlockIndexWorkComparator> setBlockIndexCandidates;
 
-    CChainstateHelper& ChainHelper()
-    {
-        assert(m_chain_helper);
-        return *m_chain_helper;
-    }
+    CChainstateHelper& ChainHelper() { return m_chain_helper; }
 
     //! @returns A reference to the in-memory cache of the UTXO set.
     CCoinsViewCache& CoinsTip() EXCLUSIVE_LOCKS_REQUIRED(::cs_main)
@@ -1002,7 +998,7 @@ public:
     //! @param[in] mempool              The mempool to pass to the chainstate
     //                                  constructor
     Chainstate& InitializeChainstate(CTxMemPool* mempool,
-                                      const std::unique_ptr<CChainstateHelper>& chain_helper)
+                                      CChainstateHelper& chain_helper)
         LIFETIMEBOUND EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     //! Get all chainstates currently being used.
