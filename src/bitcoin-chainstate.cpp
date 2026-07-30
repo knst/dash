@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
     auto [status, error] = node::LoadChainstate(chainman,
                                    metaman,
                                    chainlocks,
-                                   chain_helper,
+                                   *chain_helper,
                                    *llmq_ctx,
                                    gArgs.GetDataDirNet(),
                                    cache_sizes,

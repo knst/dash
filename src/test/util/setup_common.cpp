@@ -322,6 +322,10 @@ ChainTestingSetup::~ChainTestingSetup()
     StopScriptCheckWorkerThreads();
     GetMainSignals().FlushBackgroundCallbacks();
     GetMainSignals().UnregisterBackgroundSignalScheduler();
+    // Idempotent: drops the chain helper and LLMQ context (which reference
+    // mn_sync/chainman) in the required order for tests that never tore the
+    // Dash stack down themselves.
+    node::DashChainstateSetupClose(m_node);
     m_node.mn_sync.reset();
     m_node.chainman.reset();
     m_node.mempool.reset();
@@ -354,7 +358,7 @@ void ChainTestingSetup::LoadVerifyActivateChainstate()
     auto [status, error] = LoadChainstate(chainman,
                                            *Assert(m_node.mn_metaman.get()),
                                            *Assert(m_node.chainlocks.get()),
-                                           m_node.chain_helper,
+                                           *m_node.chain_helper,
                                            *m_node.llmq_ctx,
                                            Assert(m_node.args)->GetDataDirNet(),
                                            m_cache_sizes,

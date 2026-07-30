@@ -2084,7 +2084,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
             return LoadChainstate(chainman,
                                   *node.mn_metaman,
                                   *node.chainlocks,
-                                  node.chain_helper,
+                                  *node.chain_helper,
                                   *node.llmq_ctx,
                                   args.GetDataDirNet(),
                                   cache_sizes,

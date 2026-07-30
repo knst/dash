@@ -75,7 +75,7 @@ using ChainstateLoadResult = std::tuple<ChainstateLoadStatus, bilingual_str>;
 ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
                                                      CMasternodeMetaMan& mn_metaman,
                                                      chainlock::Chainlocks& chainlocks,
-                                                     const std::unique_ptr<CChainstateHelper>& chain_helper,
+                                                     CChainstateHelper& chain_helper,
                                                      LLMQContext& llmq_ctx,
                                                      const fs::path& data_dir,
                                                      const CacheSizes& cache_sizes,

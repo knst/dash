@@ -42,7 +42,7 @@ namespace node {
 ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
                                                      CMasternodeMetaMan& mn_metaman,
                                                      chainlock::Chainlocks& chainlocks,
-                                                     const std::unique_ptr<CChainstateHelper>& chain_helper,
+                                                     CChainstateHelper& chain_helper,
                                                      LLMQContext& llmq_ctx,
                                                      const fs::path& data_dir,
                                                      const CacheSizes& cache_sizes,
@@ -57,7 +57,7 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
     chainman.m_total_coinsdb_cache = cache_sizes.coins_db;
 
     // Load the fully validated chainstate.
-    chainman.InitializeChainstate(options.mempool, *Assert(chain_helper));
+    chainman.InitializeChainstate(options.mempool, chain_helper);
 
     // Load a chain created from a UTXO snapshot, if any exist.
     chainman.DetectSnapshotChainstate(options.mempool);
