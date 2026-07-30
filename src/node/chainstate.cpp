@@ -242,7 +242,7 @@ void DashChainstateSetup(ChainstateManager& chainman,
         mempool->ConnectManagers(active_evo.dmnman.get(), llmq_ctx->isman.get());
     }
     chain_helper.reset();
-    chain_helper = std::make_unique<CChainstateHelper>(*active_evo.dmnman, mn_sync, *(llmq_ctx->isman), chainman,
+    chain_helper = std::make_unique<CChainstateHelper>(mn_sync, *(llmq_ctx->isman), chainman,
                                                        chainman.GetConsensus(), chainlocks);
 }
 

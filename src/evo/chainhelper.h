@@ -57,9 +57,9 @@ public:
     CChainstateHelper() = delete;
     CChainstateHelper(const CChainstateHelper&) = delete;
     CChainstateHelper& operator=(const CChainstateHelper&) = delete;
-    explicit CChainstateHelper(CDeterministicMNManager& dmnman, const CMasternodeSync& mn_sync,
-                               llmq::CInstantSendManager& isman, const ChainstateManager& chainman,
-                               const Consensus::Params& consensus_params, const chainlock::Chainlocks& chainlocks);
+    explicit CChainstateHelper(const CMasternodeSync& mn_sync, llmq::CInstantSendManager& isman,
+                               const ChainstateManager& chainman, const Consensus::Params& consensus_params,
+                               const chainlock::Chainlocks& chainlocks);
     ~CChainstateHelper();
 
     bool IsSuperblockValidationRequired(const CBlockIndex* const pindex);

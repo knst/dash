@@ -14,6 +14,7 @@ class CBlock;
 class CBlockIndex;
 class CChain;
 class CDeterministicMNManager;
+class ChainstateManager;
 class CTransaction;
 class CTxOut;
 
@@ -74,7 +75,7 @@ CAmount GetMasternodePayment(int nHeight, CAmount blockValue, const Consensus::P
 class CMNPaymentsProcessor
 {
 private:
-    CDeterministicMNManager& m_dmnman;
+    const ChainstateManager& m_chainman;
     governance::SuperblockManager& m_superblocks;
     const Consensus::Params& m_consensus_params;
 
@@ -88,9 +89,9 @@ private:
     [[nodiscard]] bool IsOldBudgetBlockValueValid(const CBlock& block, const int nBlockHeight, const CAmount blockReward, std::string& strErrorRet);
 
 public:
-    explicit CMNPaymentsProcessor(CDeterministicMNManager& dmnman, governance::SuperblockManager& superblocks,
+    explicit CMNPaymentsProcessor(const ChainstateManager& chainman, governance::SuperblockManager& superblocks,
                                   const Consensus::Params& consensus_params) :
-        m_dmnman{dmnman},
+        m_chainman{chainman},
         m_superblocks{superblocks},
         m_consensus_params{consensus_params}
     {

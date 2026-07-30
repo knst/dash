@@ -19,15 +19,15 @@
 #include <masternode/sync.h>
 #include <validation.h>
 
-CChainstateHelper::CChainstateHelper(CDeterministicMNManager& dmnman, const CMasternodeSync& mn_sync,
-                                     llmq::CInstantSendManager& isman, const ChainstateManager& chainman,
-                                     const Consensus::Params& consensus_params, const chainlock::Chainlocks& chainlocks) :
+CChainstateHelper::CChainstateHelper(const CMasternodeSync& mn_sync, llmq::CInstantSendManager& isman,
+                                     const ChainstateManager& chainman, const Consensus::Params& consensus_params,
+                                     const chainlock::Chainlocks& chainlocks) :
     isman{isman},
     mn_sync{mn_sync},
     m_chainman{chainman},
     m_chainlocks{chainlocks},
     superblocks{std::make_unique<governance::SuperblockManager>()},
-    mn_payments{std::make_unique<CMNPaymentsProcessor>(dmnman, *superblocks, consensus_params)}
+    mn_payments{std::make_unique<CMNPaymentsProcessor>(chainman, *superblocks, consensus_params)}
 {}
 
 CChainstateHelper::~CChainstateHelper() = default;
