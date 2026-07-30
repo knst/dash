@@ -388,6 +388,8 @@ void PrepareShutdown(NodeContext& node)
     node.observer_ctx.reset();
     node.active_ctx.reset();
     node.govman.reset();
+    // The chain helper references mn_sync; it must not outlive it.
+    node.chain_helper.reset();
     node.mn_sync.reset();
     node.sporkman.reset();
     node.netfulfilledman.reset();
@@ -431,9 +433,7 @@ void PrepareShutdown(NodeContext& node)
                 chainstate->ResetCoinsViews();
             }
         }
-        DashChainstateSetupClose(*node.chainman, node.chain_helper, node.llmq_ctx,
-                                 Assert(node.mempool.get()));
-        node::ClearEvoViews(node);
+        DashChainstateSetupClose(node);
     }
     for (const auto& client : node.chain_clients) {
         client->stop();
@@ -2006,9 +2006,10 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     for (bool fLoaded = false; !fLoaded && !ShutdownRequested();) {
         if (node.chainman) {
             // A previous attempt left managers referencing Evo state owned by
-            // the old chainstates; drop them before the chainman they feed on.
-            DashChainstateSetupClose(*node.chainman, node.chain_helper, node.llmq_ctx, node.mempool.get());
-            node::ClearEvoViews(node);
+            // the old chainstates; drop them, then the chainstates that still
+            // hold a reference to the destroyed helper.
+            DashChainstateSetupClose(node);
+            node.chainman.reset();
         }
         node.mempool = std::make_unique<CTxMemPool>(mempool_opts);
 
@@ -2060,6 +2061,15 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
             LogPrintf("%s: bls_legacy_scheme=%d\n", __func__, bls_state);
         };
 
+        node.llmq_ctx = std::make_unique<LLMQContext>(
+            *node.sporkman, chainman,
+            util::DbWrapperParams{.path = args.GetDataDirNet(),
+                                  .memory = options.dash_dbs_in_memory,
+                                  .wipe = options.reindex || options.reindex_chainstate},
+            options.bls_threads, options.worker_count, options.max_recsigs_age);
+        node.chain_helper = std::make_unique<CChainstateHelper>(*node.mn_sync, *node.llmq_ctx->isman, chainman,
+                                                                chainman.GetConsensus(), *node.chainlocks);
+
         uiInterface.InitMessage(_("Loading block index…").translated);
         const auto load_block_index_start_time{SteadyClock::now()};
         auto catch_exceptions = [](auto&& fn) -> node::ChainstateLoadResult {
@@ -2073,11 +2083,9 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         auto [status, error] = catch_exceptions([&] {
             return LoadChainstate(chainman,
                                   *node.mn_metaman,
-                                  *node.sporkman,
                                   *node.chainlocks,
-                                  *node.mn_sync,
                                   node.chain_helper,
-                                  node.llmq_ctx,
+                                  *node.llmq_ctx,
                                   args.GetDataDirNet(),
                                   cache_sizes,
                                   options);

@@ -84,11 +84,13 @@ std::unique_ptr<PeerManager> MakePeerManager(CConnman& connman,
                                              node::NodeContext& node,
                                              BanMan* banman,
                                              bool ignore_incoming_txs);
+/** Create the node's LLMQContext and CChainstateHelper with test defaults. */
+void RecreateDashKernelServices(node::NodeContext& node, ChainstateManager& chainman, bool dash_dbs_in_memory,
+                                bool dash_dbs_wipe);
 void DashChainstateSetup(ChainstateManager& chainman,
                          node::NodeContext& node,
                          bool llmq_dbs_in_memory,
                          bool llmq_dbs_wipe);
-void DashChainstateSetupClose(node::NodeContext& node);
 
 /** Basic testing setup.
  * This just configures logging, data dir and chain parameters.

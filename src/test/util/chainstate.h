@@ -7,6 +7,7 @@
 
 #include <clientversion.h>
 #include <logging.h>
+#include <node/chainstate.h>
 #include <node/context.h>
 #include <node/utxo_snapshot.h>
 #include <rpc/blockchain.h>
@@ -75,7 +76,7 @@ CreateAndActivateUTXOSnapshot(
             // The managers (payments, mempool bindings, LLMQ shells) reference
             // the Evo state owned by the chainstates being destroyed; tear the
             // whole Dash stack down and rebuild it against the new chainstate.
-            DashChainstateSetupClose(node);
+            node::DashChainstateSetupClose(node);
             node.chainman->ResetChainstates();
             node.chainman->InitializeChainstate(node.mempool.get(), node.chain_helper);
             Chainstate& chain = node.chainman->ActiveChainstate();

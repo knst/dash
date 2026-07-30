@@ -142,23 +142,32 @@ std::unique_ptr<PeerManager> MakePeerManager(CConnman& connman,
                              node.llmq_ctx, ignore_incoming_txs);
 }
 
+void RecreateDashKernelServices(NodeContext& node, ChainstateManager& chainman, bool dash_dbs_in_memory,
+                                bool dash_dbs_wipe)
+{
+    node.chain_helper.reset();
+    node.llmq_ctx.reset();
+    node.llmq_ctx = std::make_unique<LLMQContext>(
+        *Assert(node.sporkman.get()), chainman,
+        util::DbWrapperParams{.path = node.args->GetDataDirNet(), .memory = dash_dbs_in_memory, .wipe = dash_dbs_wipe},
+        llmq::DEFAULT_BLSCHECK_THREADS, llmq::DEFAULT_WORKER_COUNT, llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE);
+    node.chain_helper = std::make_unique<CChainstateHelper>(*Assert(node.mn_sync.get()), *node.llmq_ctx->isman,
+                                                            chainman, chainman.GetConsensus(),
+                                                            *Assert(node.chainlocks.get()));
+}
+
 void DashChainstateSetup(ChainstateManager& chainman,
                          NodeContext& node,
                          bool llmq_dbs_in_memory,
                          bool llmq_dbs_wipe)
 {
-    DashChainstateSetup(chainman, *Assert(node.mn_metaman.get()),
-                        *Assert(node.sporkman.get()), *Assert(node.chainlocks), *Assert(node.mn_sync), node.chain_helper,
-                        node.llmq_ctx, Assert(node.mempool.get()), node.args->GetDataDirNet(), llmq_dbs_in_memory, llmq_dbs_wipe,
-                        llmq::DEFAULT_BLSCHECK_THREADS, llmq::DEFAULT_WORKER_COUNT, llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE);
+    if (!node.llmq_ctx) {
+        RecreateDashKernelServices(node, chainman, llmq_dbs_in_memory, llmq_dbs_wipe);
+    }
+    node::DashChainstateSetup(chainman, *Assert(node.mn_metaman.get()), *Assert(node.chainlocks.get()),
+                              *node.llmq_ctx, Assert(node.mempool.get()), node.args->GetDataDirNet(),
+                              llmq_dbs_in_memory, llmq_dbs_wipe);
     node::BindActiveEvoViews(chainman, node);
-}
-
-void DashChainstateSetupClose(NodeContext& node)
-{
-    DashChainstateSetupClose(*Assert(node.chainman.get()), node.chain_helper, node.llmq_ctx,
-                             Assert(node.mempool.get()));
-    node::ClearEvoViews(node);
 }
 
 struct NetworkSetup
@@ -337,13 +346,14 @@ void ChainTestingSetup::LoadVerifyActivateChainstate()
     options.notify_bls_state = [](bool bls_state) {
         LogPrintf("%s: bls_legacy_scheme=%d\n", __func__, bls_state);
     };
+    DashChainstateSetupClose(m_node);
+    RecreateDashKernelServices(m_node, chainman, options.dash_dbs_in_memory,
+                               /*dash_dbs_wipe=*/options.reindex || options.reindex_chainstate);
     auto [status, error] = LoadChainstate(chainman,
                                            *Assert(m_node.mn_metaman.get()),
-                                           *Assert(m_node.sporkman.get()),
                                            *Assert(m_node.chainlocks.get()),
-                                           *Assert(m_node.mn_sync.get()),
                                            m_node.chain_helper,
-                                           m_node.llmq_ctx,
+                                           *m_node.llmq_ctx,
                                            Assert(m_node.args)->GetDataDirNet(),
                                            m_cache_sizes,
                                            options);

@@ -41,11 +41,9 @@
 namespace node {
 ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
                                                      CMasternodeMetaMan& mn_metaman,
-                                                     CSporkManager& sporkman,
                                                      chainlock::Chainlocks& chainlocks,
-                                                     const CMasternodeSync& mn_sync,
-                                                     std::unique_ptr<CChainstateHelper>& chain_helper,
-                                                     std::unique_ptr<LLMQContext>& llmq_ctx,
+                                                     const std::unique_ptr<CChainstateHelper>& chain_helper,
+                                                     LLMQContext& llmq_ctx,
                                                      const fs::path& data_dir,
                                                      const CacheSizes& cache_sizes,
                                                      const ChainstateLoadOptions& options)
@@ -77,10 +75,9 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
     pblocktree.reset();
     pblocktree.reset(new CBlockTreeDB(cache_sizes.block_tree_db, options.block_tree_db_in_memory, options.reindex));
 
-    DashChainstateSetup(chainman, mn_metaman, sporkman, chainlocks, mn_sync, chain_helper,
-                        llmq_ctx, options.mempool, data_dir, options.dash_dbs_in_memory,
-                        /*dash_dbs_wipe=*/options.reindex || options.reindex_chainstate, options.bls_threads, options.worker_count,
-                        options.max_recsigs_age);
+    DashChainstateSetup(chainman, mn_metaman, chainlocks, llmq_ctx, options.mempool, data_dir,
+                        options.dash_dbs_in_memory,
+                        /*dash_dbs_wipe=*/options.reindex || options.reindex_chainstate);
 
     if (options.reindex) {
         pblocktree->WriteReindexing(true);
@@ -177,7 +174,7 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
         }
     }
 
-    if (!chain_helper->Ehf().ForceSignalDBUpdate()) {
+    if (!chainman.ActiveChainstate().Evo().mnhfman->ForceSignalDBUpdate()) {
         return {ChainstateLoadStatus::FAILURE, _("Error upgrading evo database for EHF")};
     }
 
@@ -197,28 +194,16 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
 
 void DashChainstateSetup(ChainstateManager& chainman,
                          CMasternodeMetaMan& mn_metaman,
-                         CSporkManager& sporkman,
                          chainlock::Chainlocks& chainlocks,
-                         const CMasternodeSync& mn_sync,
-                         std::unique_ptr<CChainstateHelper>& chain_helper,
-                         std::unique_ptr<LLMQContext>& llmq_ctx,
+                         LLMQContext& llmq_ctx,
                          CTxMemPool* mempool,
                          const fs::path& data_dir,
                          bool dash_dbs_in_memory,
-                         bool dash_dbs_wipe,
-                         int8_t bls_threads,
-                         int16_t worker_count,
-                         int64_t max_recsigs_age)
+                         bool dash_dbs_wipe)
 {
-    // Same logic as pblocktree
-    llmq_ctx.reset();
-    llmq_ctx = std::make_unique<LLMQContext>(sporkman, chainman,
-                                             util::DbWrapperParams{.path = data_dir, .memory = dash_dbs_in_memory, .wipe = dash_dbs_wipe},
-                                             bls_threads, worker_count, max_recsigs_age);
-
     chainman.m_make_evo_chainstate = [&chainman, &mn_metaman, &chainlocks,
-                                      cpool = llmq_ctx->commitment_pool.get(),
-                                      qman = llmq_ctx->qman.get(), data_dir,
+                                      cpool = llmq_ctx.commitment_pool.get(),
+                                      qman = llmq_ctx.qman.get(), data_dir,
                                       dash_dbs_in_memory](Chainstate& chainstate, bool wipe) {
         auto evo_state = std::make_unique<EvoChainState>(
             util::DbWrapperParams{.path = data_dir, .memory = dash_dbs_in_memory, .wipe = wipe},
@@ -232,18 +217,17 @@ void DashChainstateSetup(ChainstateManager& chainman,
         for (Chainstate* chainstate : chainman.GetAll()) {
             chainstate->ResetEvoChainState();
             chainstate->InitEvoChainState(chainman.m_make_evo_chainstate(*chainstate, dash_dbs_wipe));
-            llmq_ctx->qman->MigrateOldQuorumDB(chainstate->Evo().evodb);
+            llmq_ctx.qman->MigrateOldQuorumDB(chainstate->Evo().evodb);
         }
     }
 
     EvoChainState& active_evo = WITH_LOCK(::cs_main, return chainman.ActiveChainstate().Evo());
     AbstractEHFManager::RegisterInstance(active_evo.mnhfman.get());
     if (mempool) {
-        mempool->ConnectManagers(active_evo.dmnman.get(), llmq_ctx->isman.get());
+        // Disconnect first so re-running setup rebinds to the new active bundle.
+        mempool->DisconnectManagers();
+        mempool->ConnectManagers(active_evo.dmnman.get(), llmq_ctx.isman.get());
     }
-    chain_helper.reset();
-    chain_helper = std::make_unique<CChainstateHelper>(mn_sync, *(llmq_ctx->isman), chainman,
-                                                       chainman.GetConsensus(), chainlocks);
 }
 
 void BindActiveEvoViews(ChainstateManager& chainman, NodeContext& node)
@@ -283,6 +267,7 @@ void DashChainstateSetupClose(ChainstateManager& chainman,
             chainstate->DisconnectEvoLLMQ();
         }
     }
+    chainman.m_make_evo_chainstate = nullptr;
     llmq_ctx.reset();
     {
         LOCK(::cs_main);
@@ -290,8 +275,15 @@ void DashChainstateSetupClose(ChainstateManager& chainman,
             chainstate->ResetEvoChainState();
         }
     }
-    chainman.m_make_evo_chainstate = nullptr;
     AbstractEHFManager::RegisterInstance(nullptr);
+}
+
+void DashChainstateSetupClose(NodeContext& node)
+{
+    if (node.chainman) {
+        DashChainstateSetupClose(*node.chainman, node.chain_helper, node.llmq_ctx, node.mempool.get());
+    }
+    ClearEvoViews(node);
 }
 
 ChainstateLoadResult VerifyLoadedChainstate(ChainstateManager& chainman,

@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(validation_chainstate_resize_caches)
         BOOST_CHECK(!c1.CoinsTip().HaveCoinInCache(outpoint));
     }
 
-    DashChainstateSetupClose(m_node);
+    node::DashChainstateSetupClose(m_node);
 }
 
 //! Test UpdateTip behavior for both active and background chainstates.

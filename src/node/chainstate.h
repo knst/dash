@@ -74,40 +74,38 @@ using ChainstateLoadResult = std::tuple<ChainstateLoadStatus, bilingual_str>;
  */
 ChainstateLoadResult LoadChainstate(ChainstateManager& chainman,
                                                      CMasternodeMetaMan& mn_metaman,
-                                                     CSporkManager& sporkman,
                                                      chainlock::Chainlocks& chainlocks,
-                                                     const CMasternodeSync& mn_sync,
-                                                     std::unique_ptr<CChainstateHelper>& chain_helper,
-                                                     std::unique_ptr<LLMQContext>& llmq_ctx,
+                                                     const std::unique_ptr<CChainstateHelper>& chain_helper,
+                                                     LLMQContext& llmq_ctx,
                                                      const fs::path& data_dir,
                                                      const CacheSizes& cache_sizes,
                                                      const ChainstateLoadOptions& options);
 
-/** Initialize Dash-specific components during chainstate initialization */
+/** Attach per-chainstate Evo state and bind the node-global managers to it.
+ *  Constructs nothing that outlives it: LLMQContext and CChainstateHelper are
+ *  created by the caller before any chainstate exists. */
 void DashChainstateSetup(ChainstateManager& chainman,
                          CMasternodeMetaMan& mn_metaman,
-                         CSporkManager& sporkman,
                          chainlock::Chainlocks& chainlocks,
-                         const CMasternodeSync& mn_sync,
-                         std::unique_ptr<CChainstateHelper>& chain_helper,
-                         std::unique_ptr<LLMQContext>& llmq_ctx,
+                         LLMQContext& llmq_ctx,
                          CTxMemPool* mempool,
                          const fs::path& data_dir,
                          bool dash_dbs_in_memory,
-                         bool dash_dbs_wipe,
-                         int8_t bls_threads,
-                         int16_t worker_count,
-                         int64_t max_recsigs_age);
+                         bool dash_dbs_wipe);
 
 //! (Re)bind or clear NodeContext's non-owning views of the active
 //! chainstate's Evo managers.
 void BindActiveEvoViews(ChainstateManager& chainman, NodeContext& node);
 void ClearEvoViews(NodeContext& node);
 
+/** Ordered Dash teardown. llmq_ctx must be destroyed strictly between
+ *  DisconnectEvoLLMQ and ResetEvoChainState, which is why this takes the
+ *  owning pointers: the ordering invariant lives here and nowhere else. */
 void DashChainstateSetupClose(ChainstateManager& chainman,
                               std::unique_ptr<CChainstateHelper>& chain_helper,
                               std::unique_ptr<LLMQContext>& llmq_ctx,
                               CTxMemPool* mempool);
+void DashChainstateSetupClose(NodeContext& node);
 
 ChainstateLoadResult VerifyLoadedChainstate(ChainstateManager& chainman,
                                             const ChainstateLoadOptions& options);

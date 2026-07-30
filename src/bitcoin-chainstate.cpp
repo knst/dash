@@ -97,8 +97,6 @@ int main(int argc, char* argv[])
     CSporkManager sporkman;
     chainlock::Chainlocks chainlocks(sporkman);
 
-    std::unique_ptr<LLMQContext> llmq_ctx;
-    std::unique_ptr<CChainstateHelper> chain_helper;
     node::CacheSizes cache_sizes;
     cache_sizes.block_tree_db = 2 << 20;
     cache_sizes.coins_db = 2 << 22;
@@ -108,13 +106,16 @@ int main(int argc, char* argv[])
     options.worker_count = 1;
     options.max_recsigs_age = 1;
     options.check_interrupt = [] { return false; };
+    auto llmq_ctx = std::make_unique<LLMQContext>(
+        sporkman, chainman, util::DbWrapperParams{.path = gArgs.GetDataDirNet(), .memory = false, .wipe = false},
+        options.bls_threads, options.worker_count, options.max_recsigs_age);
+    auto chain_helper = std::make_unique<CChainstateHelper>(mn_sync, *llmq_ctx->isman, chainman,
+                                                            chainman.GetConsensus(), chainlocks);
     auto [status, error] = node::LoadChainstate(chainman,
                                    metaman,
-                                   sporkman,
                                    chainlocks,
-                                   mn_sync,
                                    chain_helper,
-                                   llmq_ctx,
+                                   *llmq_ctx,
                                    gArgs.GetDataDirNet(),
                                    cache_sizes,
                                    options);
