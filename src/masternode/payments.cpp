@@ -5,7 +5,6 @@
 #include <masternode/payments.h>
 
 #include <evo/deterministicmns.h>
-#include <evo/evochainstate.h>
 #include <governance/superblock.h>
 #include <masternode/sync.h>
 
@@ -16,7 +15,6 @@
 #include <logging.h>
 #include <primitives/block.h>
 #include <script/standard.h>
-#include <validation.h>
 #include <tinyformat.h>
 
 #include <cassert>
@@ -151,7 +149,7 @@ CAmount GetMasternodePayment(int nHeight, CAmount blockValue, const Consensus::P
         LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- MN reward %lld reallocated to credit pool\n", __func__, platformReward);
         voutMasternodePaymentsRet.emplace_back(platformReward, CScript() << OP_RETURN);
     }
-    const auto mnList = m_chainman.ActiveChainstate().Evo().dmnman->GetListForBlock(pindexPrev);
+    const auto mnList = ActiveChainstateDmnman(m_chainman).GetListForBlock(pindexPrev);
     if (mnList.GetCounts().total() == 0) {
         LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- no masternode registered to receive a payment\n", __func__);
         return true;
@@ -348,7 +346,7 @@ bool CMNPaymentsProcessor::IsBlockValueValid(const CChain& active_chain, const C
 
     // we are synced and possibly on a superblock now
 
-    const auto tip_mn_list = m_chainman.ActiveChainstate().Evo().dmnman->GetListAtChainTip();
+    const auto tip_mn_list = ActiveChainstateDmnman(m_chainman).GetListAtChainTip();
 
     if (!m_superblocks.IsSuperblockTriggered(tip_mn_list, nBlockHeight)) {
         // we are on a valid superblock height but a superblock was not triggered
@@ -405,7 +403,7 @@ bool CMNPaymentsProcessor::IsBlockPayeeValid(const CChain& active_chain, const C
     // superblocks started
     if (check_superblock == SuperBlockCheckType::NoCheck) return true;
 
-    const auto tip_mn_list = m_chainman.ActiveChainstate().Evo().dmnman->GetListAtChainTip();
+    const auto tip_mn_list = ActiveChainstateDmnman(m_chainman).GetListAtChainTip();
     const bool is_v24{check_superblock == SuperBlockCheckType::DisallowDuplicates};
     if (m_superblocks.IsSuperblockTriggered(tip_mn_list, nBlockHeight)) {
         if (m_superblocks.IsValidSuperblock(active_chain, tip_mn_list, txNew, nBlockHeight,
@@ -432,7 +430,7 @@ void CMNPaymentsProcessor::FillBlockPayments(CMutableTransaction& txNew, const C
     int nBlockHeight = pindexPrev == nullptr ? 0 : pindexPrev->nHeight + 1;
 
     // Only create superblocks when one is actually triggered.
-    const auto tip_mn_list = m_chainman.ActiveChainstate().Evo().dmnman->GetListAtChainTip();
+    const auto tip_mn_list = ActiveChainstateDmnman(m_chainman).GetListAtChainTip();
     if (m_superblocks.IsSuperblockTriggered(tip_mn_list, nBlockHeight)) {
         LogPrint(BCLog::GOBJECT, "CMNPaymentsProcessor::%s -- Triggered superblock creation at height %d\n", __func__, nBlockHeight);
         m_superblocks.GetSuperblockPayments(tip_mn_list, nBlockHeight, voutSuperblockPaymentsRet);

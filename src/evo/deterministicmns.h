@@ -772,4 +772,8 @@ private:
     void WriteRepairedDiffs(const std::vector<std::pair<uint256, CDeterministicMNListDiff>>& recalculated_diffs,
                             RecalcDiffsResult& result) EXCLUSIVE_LOCKS_REQUIRED(!cs);
 };
+//! Resolve the active chainstate's deterministic MN manager. Defined in
+//! validation.cpp so consumers need not include validation.h.
+CDeterministicMNManager& ActiveChainstateDmnman(const ChainstateManager& chainman);
+
 #endif // BITCOIN_EVO_DETERMINISTICMNS_H

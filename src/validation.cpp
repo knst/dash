@@ -58,7 +58,6 @@
 #include <evo/deterministicmns.h>
 #include <evo/evochainstate.h>
 #include <evo/evodb.h>
-#include <evo/mnhftx.h>
 #include <evo/specialtx.h>
 #include <evo/specialtxman.h>
 #include <masternode/payments.h>
@@ -1619,6 +1618,16 @@ Chainstate::Chainstate(CTxMemPool* mempool,
       m_params(chainman.GetParams()),
       m_chainman(chainman),
       m_from_snapshot_blockhash(from_snapshot_blockhash) {}
+
+EvoChainState& ActiveEvoChainState(const ChainstateManager& chainman)
+{
+    return chainman.ActiveChainstate().Evo();
+}
+
+CDeterministicMNManager& ActiveChainstateDmnman(const ChainstateManager& chainman)
+{
+    return *chainman.ActiveChainstate().Evo().dmnman;
+}
 
 Chainstate::~Chainstate()
 {
@@ -5533,7 +5542,7 @@ bool ChainstateManager::ActivateSnapshot(
         assert(chaintip_loaded);
 
         m_active_chainstate = m_snapshot_chainstate.get();
-        AbstractEHFManager::RegisterInstance(m_snapshot_chainstate->Evo().mnhfman.get());
+        AbstractEHFManager::RegisterInstance(&m_snapshot_chainstate->Evo().EhfManager());
 
         LogPrintf("[snapshot] successfully activated snapshot %s\n", base_blockhash.ToString());
         LogPrintf("[snapshot] (%.2f MB)\n",

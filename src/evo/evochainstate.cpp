@@ -51,3 +51,8 @@ void EvoChainState::DisconnectLLMQ()
 {
     special_tx.reset();
 }
+
+AbstractEHFManager& EvoChainState::EhfManager() const
+{
+    return *mnhfman;
+}

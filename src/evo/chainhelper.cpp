@@ -17,7 +17,6 @@
 #include <logging.h>
 #include <masternode/payments.h>
 #include <masternode/sync.h>
-#include <validation.h>
 
 CChainstateHelper::CChainstateHelper(const CMasternodeSync& mn_sync, llmq::CInstantSendManager& isman,
                                      const ChainstateManager& chainman, const Consensus::Params& consensus_params,
@@ -32,9 +31,9 @@ CChainstateHelper::CChainstateHelper(const CMasternodeSync& mn_sync, llmq::CInst
 
 CChainstateHelper::~CChainstateHelper() = default;
 
-CCreditPoolManager& CChainstateHelper::CreditPool() const { return *m_chainman.ActiveChainstate().Evo().cpoolman; }
-CMNHFManager& CChainstateHelper::Ehf() const { return *m_chainman.ActiveChainstate().Evo().mnhfman; }
-CSpecialTxProcessor& CChainstateHelper::SpecialTx() const { return *m_chainman.ActiveChainstate().Evo().special_tx; }
+CCreditPoolManager& CChainstateHelper::CreditPool() const { return *ActiveEvoChainState(m_chainman).cpoolman; }
+CMNHFManager& CChainstateHelper::Ehf() const { return *ActiveEvoChainState(m_chainman).mnhfman; }
+CSpecialTxProcessor& CChainstateHelper::SpecialTx() const { return *ActiveEvoChainState(m_chainman).special_tx; }
 
 bool CChainstateHelper::IsSuperblockValidationRequired(const CBlockIndex* const pindex)
 {

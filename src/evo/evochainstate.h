@@ -8,6 +8,7 @@
 #include <memory>
 #include <optional>
 
+class AbstractEHFManager;
 class CCreditPoolManager;
 class uint256;
 class CDeterministicMNManager;
@@ -72,6 +73,14 @@ public:
     //! Drop the special-tx processor. Must run before the LLMQ shells it
     //! references are destroyed; the rest of the bundle outlives them.
     void DisconnectLLMQ();
+
+    //! The EHF manager through its versionbits-facing base, so registration
+    //! sites need not see the concrete CMNHFManager.
+    AbstractEHFManager& EhfManager() const;
 };
+
+//! Resolve the active chainstate's Evo state. Defined in validation.cpp so
+//! consumers of chain-derived managers need not include validation.h.
+EvoChainState& ActiveEvoChainState(const ChainstateManager& chainman);
 
 #endif // BITCOIN_EVO_EVOCHAINSTATE_H
