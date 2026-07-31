@@ -44,16 +44,19 @@ libdashbls_la_SOURCES = \
 
 libdashbls_la_SOURCES += \
 	$(DASHBLS_H) \
+	$(MIMALLOC_H) \
 	$(RELIC_H)
 
+# LIBMIMALLOC and MIMALLOC_H expand to nothing when Makefile.mimalloc.include
+# is not pulled in, so these stay unconditional. Listing LIBMIMALLOC anywhere
+# other than first changes static link order, which decides whether an object
+# resolves malloc to mimalloc or to libc; mixing the two aborts the process
+# with "free(): invalid size" as soon as anything allocated by one is released
+# by the other.
 libdashbls_la_LIBADD = \
+	$(LIBMIMALLOC) \
 	$(LIBRELIC) \
 	$(GMP_LIBS)
-
-if USE_MIMALLOC
-libdashbls_la_SOURCES += $(MIMALLOC_H)
-libdashbls_la_LIBADD += $(LIBMIMALLOC)
-endif
 
 libdashbls_la_CPPFLAGS = $(AM_CPPFLAGS) $(RELIC_INCLUDES) $(MIMALLOC_INCLUDES) $(DASHBLS_INCLUDES) $(DASHBLS_CPPFLAGS)
 libdashbls_la_CXXFLAGS = $(AM_CXXFLAGS)
