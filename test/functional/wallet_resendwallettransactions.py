@@ -83,22 +83,14 @@ class ResendWalletTransactionsTest(BitcoinTestFramework):
         # in mapWallet positioned before the parent. We cannot predict the position in mapWallet,
         # but we can observe it using listreceivedbyaddress and other related RPCs.
         #
-        # So we will create the child transaction, use listreceivedbyaddress to see what the
-        # ordering of mapWallet is, if the child is not before the parent, we will create a new
-        # child (via bumpfee) and remove the old child (via removeprunedfunds) until we get the
-        # ordering of child before parent.
+        # So we will create the child transaction, then use listreceivedbyaddress to see what the
+        # ordering of mapWallet is. mapWallet hashes txids with a salt drawn at random every time
+        # the wallet is loaded, so reloading the wallet reshuffles its iteration order while
+        # leaving the transactions themselves untouched. Reload until the child comes first.
         child_txid = node.send(outputs=[{addr: 0.5}], options={"inputs": [{"txid":txid, "vout":0}]})["txid"]
-        while True:
-            txids = node.listreceivedbyaddress(minconf=0, address_filter=addr)[0]["txids"]
-            if txids == [child_txid, txid]:
-                break
-            bumped = node.bumpfee(child_txid)
-            # The scheduler queue creates a copy of the added tx after
-            # send/bumpfee and re-adds it to the wallet (undoing the next
-            # removeprunedfunds). So empty the scheduler queue:
-            node.syncwithvalidationinterfacequeue()
-            node.removeprunedfunds(child_txid)
-            child_txid = bumped["txid"]
+        while node.listreceivedbyaddress(minconf=0, address_filter=addr)[0]["txids"] != [child_txid, txid]:
+            node.unloadwallet(self.default_wallet_name)
+            node.loadwallet(self.default_wallet_name)
         entry_time = node.getmempoolentry(child_txid)["time"]
 
         block_time = entry_time + 6 * 60
