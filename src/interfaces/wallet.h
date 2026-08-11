@@ -511,7 +511,9 @@ struct WalletBalances
         return balance != prev.balance || unconfirmed_balance != prev.unconfirmed_balance ||  anonymized_balance != prev.anonymized_balance ||
                immature_balance != prev.immature_balance || watch_only_balance != prev.watch_only_balance ||
                unconfirmed_watch_only_balance != prev.unconfirmed_watch_only_balance ||
-               immature_watch_only_balance != prev.immature_watch_only_balance;
+               immature_watch_only_balance != prev.immature_watch_only_balance ||
+               denominated_untrusted_pending != prev.denominated_untrusted_pending ||
+               denominated_trusted != prev.denominated_trusted;
     }
 };
 

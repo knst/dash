@@ -650,6 +650,9 @@ CAmount WalletModel::getAvailableBalance(const CCoinControl* control)
     // No selected coins, return the cached balance
     if (!control || !control->HasSelected()) {
         const interfaces::WalletBalances& balances = getCachedBalance();
+        if (control && control->IsUsingCoinJoin()) {
+            return balances.anonymized_balance;
+        }
         CAmount available_balance = balances.balance;
         // if wallet private keys are disabled, this is a watch-only wallet
         // so, let's include the watch-only balance.
