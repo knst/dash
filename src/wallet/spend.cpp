@@ -567,7 +567,7 @@ std::optional<SelectionResult> SelectCoins(const CWallet& wallet, CoinsResult& a
     }
 
     // coin control -> return all selected outputs (we want all selected to go into the transaction for sure)
-    if (!coin_control.m_allow_other_inputs) {
+    if (coin_control.HasSelected() && !coin_control.m_allow_other_inputs) {
         SelectionResult result(nTargetValue, SelectionAlgorithm::MANUAL);
         bool all_inputs{coin_control.fRequireAllInputs};
         if (!all_inputs) {
@@ -951,18 +951,14 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
         return util::Error{_("Transaction requires one destination of non-0 value, a non-0 feerate, or a pre-selected input")};
     }
 
-    // Fetch wallet available coins if "other inputs" are
-    // allowed (coins automatically selected by the wallet)
-    CoinsResult available_coins;
-    if (coin_control.m_allow_other_inputs) {
-        available_coins = AvailableCoins(wallet,
-                                         &coin_control,
-                                         coin_selection_params.m_effective_feerate,
-                                         1,            /*nMinimumAmount*/
-                                         MAX_MONEY,    /*nMaximumAmount*/
-                                         MAX_MONEY,    /*nMinimumSumAmount*/
-                                         0);           /*nMaximumCount*/
-    }
+    // Get available coins
+    auto available_coins = AvailableCoins(wallet,
+                                              &coin_control,
+                                              coin_selection_params.m_effective_feerate,
+                                              1,            /*nMinimumAmount*/
+                                              MAX_MONEY,    /*nMaximumAmount*/
+                                              MAX_MONEY,    /*nMinimumSumAmount*/
+                                              0);           /*nMaximumCount*/
 
     // Choose coins to use
     std::optional<SelectionResult> result = SelectCoins(wallet, available_coins, /*nTargetValue=*/selection_target, coin_control, coin_selection_params);
