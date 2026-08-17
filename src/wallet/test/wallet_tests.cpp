@@ -28,8 +28,8 @@
 #include <wallet/receive.h>
 #include <wallet/spend.h>
 #include <wallet/test/util.h>
-#include <wallet/walletdb.h>
 #include <wallet/test/wallet_test_fixture.h>
+#include <wallet/walletdb.h>
 
 #include <boost/test/unit_test.hpp>
 #include <univalue.h>
@@ -50,56 +50,6 @@ extern RPCHelpMan addmultisigaddress();
 // as the default levels for node policy.
 static_assert(DEFAULT_TRANSACTION_MINFEE >= DEFAULT_MIN_RELAY_TX_FEE, "wallet minimum fee is smaller than default relay fee");
 
-namespace {
-//! Database whose writes can be toggled to fail, to prove that a failed
-//! persistent coin-lock acquisition leaves the caller owning no lock.
-class ToggleFailBatch final : public DatabaseBatch
-{
-private:
-    bool& m_write_success;
-    bool ReadKey(CDataStream&&, CDataStream&) override { return false; }
-    bool WriteKey(CDataStream&&, CDataStream&&, bool) override { return m_write_success; }
-    bool EraseKey(CDataStream&&) override { return m_write_success; }
-    bool HasKey(CDataStream&&) override { return false; }
-    bool ErasePrefix(Span<const std::byte>) override { return m_write_success; }
-
-public:
-    explicit ToggleFailBatch(bool& write_success) : m_write_success(write_success) {}
-    void Flush() override {}
-    void Close() override {}
-    bool StartCursor() override { return true; }
-    bool ReadAtCursor(CDataStream&, CDataStream&, bool& complete) override
-    {
-        complete = true;
-        return true;
-    }
-    void CloseCursor() override {}
-    bool TxnBegin() override { return true; }
-    bool TxnCommit() override { return true; }
-    bool TxnAbort() override { return true; }
-};
-
-class ToggleFailDatabase final : public WalletDatabase
-{
-public:
-    bool write_success{true};
-
-    void Open() override {}
-    void AddRef() override {}
-    void RemoveRef() override {}
-    bool Rewrite(const char*) override { return true; }
-    bool Backup(const std::string&) const override { return true; }
-    void Flush() override {}
-    void Close() override {}
-    bool PeriodicFlush() override { return true; }
-    void IncrementUpdateCounter() override { ++nUpdateCounter; }
-    void ReloadDbEnv() override {}
-    std::string Filename() override { return "toggle-fail"; }
-    std::string Format() override { return "toggle-fail"; }
-    std::unique_ptr<DatabaseBatch> MakeBatch(bool) override { return std::make_unique<ToggleFailBatch>(write_success); }
-};
-} // namespace
-
 BOOST_FIXTURE_TEST_SUITE(wallet_tests, WalletTestingSetup)
 
 BOOST_AUTO_TEST_CASE(interface_coin_lock_ownership)
@@ -114,29 +64,6 @@ BOOST_AUTO_TEST_CASE(interface_coin_lock_ownership)
     BOOST_CHECK(wallet_interface->unlockCoin(outpoint));
     BOOST_CHECK(wallet_interface->acquireCoinLock(outpoint, /*write_to_db=*/false) == interfaces::CoinLockResult::ACQUIRED);
     BOOST_CHECK(wallet_interface->unlockCoin(outpoint));
-}
-
-BOOST_AUTO_TEST_CASE(interface_coin_lock_failed_persist)
-{
-    auto database{std::make_unique<ToggleFailDatabase>()};
-    auto* database_ptr{database.get()};
-    auto wallet{std::make_shared<CWallet>(m_node.chain.get(), m_coinjoin_loader.get(), "", m_args,
-                                          std::move(database))};
-    BOOST_REQUIRE(wallet->LoadWallet() == DBErrors::LOAD_OK);
-    auto wallet_interface{interfaces::MakeWallet(*m_wallet_loader->context(), wallet)};
-    const COutPoint outpoint{uint256::ONE, 0};
-
-    // FAILED must mean no lock was acquired: the in-memory insertion is rolled
-    // back when the persistent write fails.
-    database_ptr->write_success = false;
-    BOOST_CHECK(wallet_interface->acquireCoinLock(outpoint, /*write_to_db=*/true) ==
-                interfaces::CoinLockResult::FAILED);
-    BOOST_CHECK(!wallet_interface->isLockedCoin(outpoint));
-
-    database_ptr->write_success = true;
-    BOOST_CHECK(wallet_interface->acquireCoinLock(outpoint, /*write_to_db=*/true) ==
-                interfaces::CoinLockResult::ACQUIRED);
-    BOOST_CHECK(wallet_interface->isLockedCoin(outpoint));
 }
 
 static std::shared_ptr<CWallet> TestLoadWallet(WalletContext& context)
@@ -1636,7 +1563,7 @@ public:
     void Close() override {}
 
     bool StartCursor() override { return true; }
-    bool ReadAtCursor(CDataStream& ssKey, CDataStream& ssValue, bool& complete) override { return false; }
+    bool ReadAtCursor(CDataStream& ssKey, CDataStream& ssValue, bool& complete) override { complete = m_pass; return m_pass; }
     void CloseCursor() override {}
     bool TxnBegin() override { return false; }
     bool TxnCommit() override { return false; }
@@ -1723,6 +1650,27 @@ BOOST_FIXTURE_TEST_CASE(wallet_sync_tx_invalid_state_test, TestChain100Setup)
     BOOST_CHECK_EXCEPTION(wallet.transactionAddedToMempool(MakeTransactionRef(mtx), 0),
                           std::runtime_error,
                           HasReason("DB error adding transaction to wallet, write failed"));
+}
+
+BOOST_AUTO_TEST_CASE(interface_coin_lock_failed_persist)
+{
+    auto wallet{std::make_shared<CWallet>(m_node.chain.get(), m_coinjoin_loader.get(), "", m_args,
+                                          std::make_unique<FailDatabase>())};
+    BOOST_REQUIRE(wallet->LoadWallet() == DBErrors::LOAD_OK);
+    auto wallet_interface{interfaces::MakeWallet(*m_wallet_loader->context(), wallet)};
+    const COutPoint outpoint{uint256::ONE, 0};
+
+    // FAILED must mean no lock was acquired: the in-memory insertion is rolled
+    // back when the persistent write fails.
+    static_cast<FailDatabase&>(wallet->GetDatabase()).m_pass = false;
+    BOOST_CHECK(wallet_interface->acquireCoinLock(outpoint, /*write_to_db=*/true) ==
+                interfaces::CoinLockResult::FAILED);
+    BOOST_CHECK(!wallet_interface->isLockedCoin(outpoint));
+
+    static_cast<FailDatabase&>(wallet->GetDatabase()).m_pass = true;
+    BOOST_CHECK(wallet_interface->acquireCoinLock(outpoint, /*write_to_db=*/true) ==
+                interfaces::CoinLockResult::ACQUIRED);
+    BOOST_CHECK(wallet_interface->isLockedCoin(outpoint));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
