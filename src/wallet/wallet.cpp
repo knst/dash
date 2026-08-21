@@ -2750,7 +2750,9 @@ bool CWallet::DisplayAddress(const CTxDestination& dest)
 bool CWallet::LockCoin(const COutPoint& output, WalletBatch* batch)
 {
     AssertLockHeld(cs_wallet);
-    setLockedCoins.insert(output);
+    if (setLockedCoins.insert(output).second) {
+        NotifyLockedCoinsChanged();
+    }
     RecalculateMixedCredit(output.hash);
     if (batch) {
         return batch->WriteLockedUTXO(output);
@@ -2762,6 +2764,9 @@ bool CWallet::UnlockCoin(const COutPoint& output, WalletBatch* batch)
 {
     AssertLockHeld(cs_wallet);
     bool was_locked = setLockedCoins.erase(output);
+    if (was_locked) {
+        NotifyLockedCoinsChanged();
+    }
     RecalculateMixedCredit(output.hash);
     if (batch && was_locked) {
         return batch->EraseLockedUTXO(output);
@@ -2777,7 +2782,10 @@ bool CWallet::UnlockAllCoins()
     for (auto it = setLockedCoins.begin(); it != setLockedCoins.end(); ++it) {
         success &= batch.EraseLockedUTXO(*it);
     }
-    setLockedCoins.clear();
+    if (!setLockedCoins.empty()) {
+        setLockedCoins.clear();
+        NotifyLockedCoinsChanged();
+    }
     return success;
 }
 

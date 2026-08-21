@@ -161,6 +161,12 @@ void WalletModel::updateTransaction()
     fForceCheckBalanceChanged = true;
 }
 
+void WalletModel::updateLockedCoins()
+{
+    // Locked share of the balance changed
+    fForceCheckBalanceChanged = true;
+}
+
 void WalletModel::lockExistingDustOutputs()
 {
     if (!optionsModel) return;
@@ -527,6 +533,12 @@ static void NotifyCanGetAddressesChanged(WalletModel* walletmodel)
     assert(invoked);
 }
 
+static void NotifyLockedCoinsChanged(WalletModel* walletmodel)
+{
+    bool invoked = QMetaObject::invokeMethod(walletmodel, "updateLockedCoins", Qt::QueuedConnection);
+    assert(invoked);
+}
+
 void WalletModel::subscribeToCoreSignals()
 {
     // Connect signals to wallet
@@ -539,6 +551,7 @@ void WalletModel::subscribeToCoreSignals()
     m_handler_show_progress = m_wallet->handleShowProgress(std::bind(ShowProgress, this, std::placeholders::_1, std::placeholders::_2));
     m_handler_watch_only_changed = m_wallet->handleWatchOnlyChanged(std::bind(NotifyWatchonlyChanged, this, std::placeholders::_1));
     m_handler_can_get_addrs_changed = m_wallet->handleCanGetAddressesChanged(std::bind(NotifyCanGetAddressesChanged, this));
+    m_handler_locked_coins_changed = m_wallet->handleLockedCoinsChanged(std::bind(NotifyLockedCoinsChanged, this));
 }
 
 void WalletModel::unsubscribeFromCoreSignals()
@@ -553,6 +566,7 @@ void WalletModel::unsubscribeFromCoreSignals()
     m_handler_show_progress->disconnect();
     m_handler_watch_only_changed->disconnect();
     m_handler_can_get_addrs_changed->disconnect();
+    m_handler_locked_coins_changed->disconnect();
 }
 
 // WalletModel::UnlockContext implementation
@@ -656,11 +670,12 @@ CAmount WalletModel::getAvailableBalance(const CCoinControl* control)
         if (control && control->IsUsingCoinJoin()) {
             return balances.anonymized_balance;
         }
-        CAmount available_balance = balances.balance;
+        // Coin selection cannot spend locked coins, so keep the locked share out
+        CAmount available_balance = balances.balance - balances.locked_balance;
         // if wallet private keys are disabled, this is a watch-only wallet
         // so, let's include the watch-only balance.
         if (balances.have_watch_only && m_wallet->privateKeysDisabled()) {
-            available_balance += balances.watch_only_balance;
+            available_balance += balances.watch_only_balance - balances.locked_watch_only_balance;
         }
         return available_balance;
     }
