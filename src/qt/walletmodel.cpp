@@ -63,6 +63,9 @@ WalletModel::WalletModel(std::unique_ptr<interfaces::Wallet> wallet, ClientModel
         connect(optionsModel, &OptionsModel::dustProtectionChanged, this, &WalletModel::lockExistingDustOutputs);
         // Lock existing dust on startup if dust protection is enabled
         lockExistingDustOutputs();
+        // CoinJoin balances are calculated only while CoinJoin is enabled,
+        // so the cached balance must be recalculated when it is toggled
+        connect(optionsModel, &OptionsModel::showCoinJoinChanged, this, [this] { fForceCheckBalanceChanged = true; });
     }
 }
 
