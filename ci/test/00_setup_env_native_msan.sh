@@ -36,3 +36,6 @@ CC=clang-19 CXX=clang++-19 CFLAGS='${MSAN_FLAGS}' CXXFLAGS='${MSAN_AND_LIBCXX_FL
 CPPFLAGS='-U_FORTIFY_SOURCE'"
 export USE_MEMORY_SANITIZER="true"
 export TEST_RUNNER_TIMEOUT_FACTOR=40
+# MSan maps shadow and, with track-origins=2, origin memory alongside the
+# application. The asan job already needs -j2 to stay inside a 16 GiB runner.
+export TEST_RUNNER_EXTRA="-j1"
