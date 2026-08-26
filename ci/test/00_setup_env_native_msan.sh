@@ -19,14 +19,20 @@ export MSAN_AND_LIBCXX_FLAGS="${MSAN_FLAGS} ${LIBCXX_FLAGS}"
 # BDB generates false-positives and will be removed in future
 export DEP_OPTS="DEBUG=1 NO_BDB=1 NO_QT=1 NO_UPNP=1 NO_NATPMP=1 CC=clang-19 CXX=clang++-19 CFLAGS='${MSAN_FLAGS}' CXXFLAGS='${MSAN_AND_LIBCXX_FLAGS}'"
 export GOAL="install"
-# No CC/CXX/CFLAGS/CXXFLAGS here: depends writes them into config.site, which
-# configure reads through --prefix.
+# CC/CXX/CFLAGS/CXXFLAGS are repeated here rather than left to depends'
+# config.site. Upstream dropped them in bitcoin#29800 because its
+# ci/test/03_test_script.sh sets CONFIG_SITE explicitly (bitcoin#26683);
+# ci/dash/build_src.sh still uses the older --prefix form, and this is the only
+# target whose compiler differs from the system default, so nothing else in
+# Dash's CI exercises that hand-off.
 # _FORTIFY_SOURCE is not compatible with MSAN.
 # --with-asm=no and --with-backend=easy keep secp256k1 and relic off
 # hand-written assembly, which MSan cannot see through.
 # --disable-mimalloc selects the plain malloc secure allocator; mimalloc seeds
 # itself with a raw getrandom syscall before main(), which MSan cannot track.
 export BITCOIN_CONFIG="--with-sanitizers=memory --with-gui=no --without-bdb --with-sqlite \
---with-asm=no --with-backend=easy --disable-mimalloc CPPFLAGS='-U_FORTIFY_SOURCE'"
+--with-asm=no --with-backend=easy --disable-mimalloc \
+CC=clang-19 CXX=clang++-19 CFLAGS='${MSAN_FLAGS}' CXXFLAGS='${MSAN_AND_LIBCXX_FLAGS}' \
+CPPFLAGS='-U_FORTIFY_SOURCE'"
 export USE_MEMORY_SANITIZER="true"
 export TEST_RUNNER_TIMEOUT_FACTOR=40
