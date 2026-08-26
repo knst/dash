@@ -126,6 +126,9 @@ jobs:
       name: dashcore-ci-msan
       runs-on-amd64: ${{ needs.check-skip.outputs['runner-amd64'] }}
       runs-on-arm64: ${{ needs.check-skip.outputs['runner-arm64'] }}
+      # All linux64_msan jobs are pinned to amd64 runners, so an arm64
+      # image (with its expensive MSan libc++ build) would go unused.
+      build-arm64: false
 
   depends-aarch64-linux:
     name: aarch64-linux-gnu
