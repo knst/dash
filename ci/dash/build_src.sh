@@ -11,6 +11,17 @@ set -e
 
 source ./ci/dash/matrix.sh
 
+# MemorySanitizer maps its shadow at fixed addresses and fails to start when
+# the kernel hands out mappings with more entropy than it expects. Upstream
+# lowers vm.mmap_rnd_bits on the runner before starting the container; here
+# every step already runs inside the job container and that sysctl is not
+# namespaced, so set the process personality instead. It is inherited by
+# configure's test programs and by the compiler.
+if [ "$USE_MEMORY_SANITIZER" = "true" ] && [ -z "$CI_ADDR_NO_RANDOMIZE" ]; then
+  export CI_ADDR_NO_RANDOMIZE=1
+  exec setarch "$(uname -m)" -R "$0" "$@"
+fi
+
 unset CC CXX DISPLAY;
 
 ccache --zero-stats
