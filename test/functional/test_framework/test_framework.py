@@ -1562,7 +1562,6 @@ class DashTestFramework(BitcoinTestFramework):
 
         # disable spork17 while mining blocks to activate "name" to prevent accidental quorum formation
         spork17_value = self.nodes[0].spork('show')['SPORK_17_QUORUM_DKG_ENABLED']
-        self.bump_mocktime(1)
         self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 4070908800)
         self.wait_for_sporks_same()
 
@@ -1593,7 +1592,6 @@ class DashTestFramework(BitcoinTestFramework):
         assert softfork_active(self.nodes[0], name)
 
         # revert spork17 changes
-        self.bump_mocktime(1)
         self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", spork17_value)
         self.wait_for_sporks_same()
 
@@ -1645,7 +1643,6 @@ class DashTestFramework(BitcoinTestFramework):
                 mn_info.set_node(mn_idx)
 
         self.connect_nodes(mn_idx, 0)
-
         self.wait_for_sporks_same()
         self.sync_blocks()
         force_finish_mnsync(self.nodes[mn_idx])
@@ -1910,7 +1907,6 @@ class DashTestFramework(BitcoinTestFramework):
         self.nodes[0].sporkupdate("SPORK_2_INSTANTSEND_ENABLED", 0)
         self.nodes[0].sporkupdate("SPORK_19_CHAINLOCKS_ENABLED", 0)
         self.wait_for_sporks_same()
-        self.bump_mocktime(1)
 
         mn_info = self.nodes[0].masternodelist("status")
         assert len(mn_info) == self.mn_count
@@ -2048,10 +2044,15 @@ class DashTestFramework(BitcoinTestFramework):
 
     def wait_for_sporks_same(self, timeout=30):
         def check_sporks_same():
-            self.bump_mocktime(1)
+            self.bump_mocktime(1, update_schedulers=False)
             sporks = self.nodes[0].spork('show')
             return all(node.spork('show') == sporks for node in self.nodes[1:])
-        self.wait_until(check_sporks_same, timeout=timeout, sleep=1)
+
+        # A fresh node requests sporks from the sync tick, which first fires
+        # MASTERNODE_SYNC_TICK_SECONDS (6) of mocktime after startup; skip that wait without
+        # advancing the schedulers, which would also push ChainLock signing forward.
+        self.bump_mocktime(6, update_schedulers=False)
+        self.wait_until(check_sporks_same, timeout=timeout)
 
     def wait_for_quorum_connections(self, quorum_hash, expected_connections, mninfos, llmq_type_name="llmq_test", timeout = 60, wait_proc=None):
         def check_quorum_connections():
