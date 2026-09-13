@@ -1683,7 +1683,7 @@ if test "$use_zmq" = "yes"; then
   esac
 fi
 
-dnl blst (BLS12-381 backend of src/dashbls), provided by depends or the system
+dnl blst (BLS12-381 backend of src/bls), provided by depends or the system
 AC_CHECK_HEADER([blst.h],, AC_MSG_ERROR([blst headers missing]))
 AC_CHECK_LIB([blst], [blst_p1_compress], [BLST_LIBS=-lblst], AC_MSG_ERROR([libblst missing]))
 

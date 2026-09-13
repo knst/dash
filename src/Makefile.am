@@ -46,7 +46,7 @@ endif # ENABLE_CRASH_HOOKS
 endif # ENABLE_STACKTRACES
 
 BITCOIN_INCLUDES=-I$(builddir) -I$(srcdir)/$(MINISKETCH_INCLUDE_DIR_INT) -I$(srcdir)/secp256k1/include -I$(srcdir)/$(UNIVALUE_INCLUDE_DIR_INT) $(LEVELDB_CPPFLAGS)
-BITCOIN_INCLUDES+=$(DASHBLS_CPPFLAGS)
+BITCOIN_INCLUDES+=$(MIMALLOC_CPPFLAGS)
 BITCOIN_INCLUDES+=-isystem$(srcdir)/immer
 
 LIBBITCOIN_NODE=libbitcoin_node.a
@@ -921,6 +921,8 @@ libbitcoin_consensus_a_SOURCES = \
   arith_uint256.h \
   bls/bls.cpp \
   bls/bls.h \
+  bls/bls_legacy.cpp \
+  bls/bls_legacy.h \
   consensus/amount.h \
   consensus/merkle.cpp \
   consensus/merkle.h \
@@ -1094,7 +1096,7 @@ bitcoin_bin_ldadd = \
   $(LIBBITCOIN_ZMQ) \
   $(LIBBITCOIN_CONSENSUS) \
   $(LIBBITCOIN_CRYPTO) \
-  $(LIBDASHBLS) \
+  $(BLS_LIBS) \
   $(LIBLEVELDB) \
   $(LIBMEMENV) \
   $(LIBSECP256K1)
@@ -1148,7 +1150,7 @@ dash_tx_LDADD = \
   $(LIBBITCOIN_UTIL) \
   $(LIBBITCOIN_CONSENSUS) \
   $(LIBBITCOIN_CRYPTO) \
-  $(LIBDASHBLS) \
+  $(BLS_LIBS) \
   $(LIBSECP256K1)
 
 dash_tx_LDADD += $(BACKTRACE_LIBS)
@@ -1168,7 +1170,7 @@ dash_wallet_LDADD = \
   $(LIBUNIVALUE) \
   $(LIBBITCOIN_CONSENSUS) \
   $(LIBBITCOIN_CRYPTO) \
-  $(LIBDASHBLS) \
+  $(BLS_LIBS) \
   $(LIBSECP256K1) \
   $(BACKTRACE_LIBS) \
   $(BOOST_LIBS) \
@@ -1218,8 +1220,8 @@ if BUILD_BITCOIN_KERNEL_LIB
 lib_LTLIBRARIES += $(LIBBITCOINKERNEL)
 
 libdashkernel_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined $(RELDFLAGS) $(PTHREAD_FLAGS)
-libdashkernel_la_LIBADD = $(LIBBITCOIN_CRYPTO) $(LIBUNIVALUE) $(LIBLEVELDB) $(LIBMEMENV) $(LIBSECP256K1) $(LIBDASHBLS)
-libdashkernel_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(builddir)/obj -I$(srcdir)/secp256k1/include -DBUILD_BITCOIN_INTERNAL $(DASHBLS_CPPFLAGS) -isystem$(srcdir)/immer $(BOOST_CPPFLAGS) $(LEVELDB_CPPFLAGS) -I$(srcdir)/$(UNIVALUE_INCLUDE_DIR_INT)
+libdashkernel_la_LIBADD = $(LIBBITCOIN_CRYPTO) $(LIBUNIVALUE) $(LIBLEVELDB) $(LIBMEMENV) $(LIBSECP256K1) $(BLS_LIBS)
+libdashkernel_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(builddir)/obj -I$(srcdir)/secp256k1/include -DBUILD_BITCOIN_INTERNAL $(MIMALLOC_CPPFLAGS) -isystem$(srcdir)/immer $(BOOST_CPPFLAGS) $(LEVELDB_CPPFLAGS) -I$(srcdir)/$(UNIVALUE_INCLUDE_DIR_INT)
 
 # libdashkernel requires default symbol visibility, explicitly specify that
 # here so that things still work even when user configures with
@@ -1250,6 +1252,7 @@ libdashkernel_la_SOURCES = \
   bech32.cpp \
   blockfilter.cpp \
   bls/bls.cpp \
+  bls/bls_legacy.cpp \
   bls/bls_worker.cpp \
   chain.cpp \
   chainlock/chainlock.cpp \
@@ -1403,9 +1406,9 @@ include_HEADERS = script/bitcoinconsensus.h
 libdashconsensus_la_SOURCES = support/cleanse.cpp $(crypto_libbitcoin_crypto_base_la_SOURCES) $(crypto_libbitcoin_crypto_sph_la_SOURCES) $(libbitcoin_consensus_a_SOURCES)
 
 libdashconsensus_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined $(RELDFLAGS)
-libdashconsensus_la_LIBADD = $(LIBDASHBLS) $(LIBSECP256K1)
+libdashconsensus_la_LIBADD = $(BLS_LIBS) $(LIBSECP256K1)
 libdashconsensus_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(builddir)/obj -I$(srcdir)/secp256k1/include -DBUILD_BITCOIN_INTERNAL -DDISABLE_OPTIMIZED_SHA256
-libdashconsensus_la_CPPFLAGS += $(DASHBLS_CPPFLAGS)
+libdashconsensus_la_CPPFLAGS += $(MIMALLOC_CPPFLAGS)
 libdashconsensus_la_CPPFLAGS += -isystem$(srcdir)/immer
 libdashconsensus_la_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 
@@ -1438,16 +1441,14 @@ CLEANFILES += util/*.gcda util/*.gcno
 CLEANFILES += wallet/*.gcda wallet/*.gcno
 CLEANFILES += wallet/test/*.gcda wallet/test/*.gcno
 CLEANFILES += zmq/*.gcda zmq/*.gcno
-CLEANFILES += dashbls/src/*.gcda dashbls/src/*.gcno dashbls/depends/mimalloc/src/*.gcda dashbls/depends/mimalloc/src/*.gcno
+CLEANFILES += mimalloc/src/*.gcda mimalloc/src/*.gcno mimalloc/src/prim/*.gcda mimalloc/src/prim/*.gcno
 CLEANFILES += obj/build.h
 
 IMMER_DIST = immer/immer
-LIBDASHBLS_DIST = dashbls
 
 EXTRA_DIST = \
   $(CTAES_DIST)   \
-  $(IMMER_DIST)   \
-  $(LIBDASHBLS_DIST)
+  $(IMMER_DIST)
 
 config/bitcoin-config.h: config/stamp-h1
 	@$(MAKE) -C $(top_builddir) $(subdir)/$(@)
@@ -1534,7 +1535,7 @@ include Makefile.minisketch.include
 
 include Makefile.crc32c.include
 include Makefile.leveldb.include
-include Makefile.dashbls.include
+include Makefile.mimalloc.include
 
 include Makefile.test_util.include
 include Makefile.test_fuzz.include
