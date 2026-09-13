@@ -883,18 +883,6 @@ case $host in
            export PKG_CONFIG_PATH="$($BREW --prefix qt@5 2>/dev/null)/lib/pkgconfig:$PKG_CONFIG_PATH"
          fi
 
-        gmp_prefix=$($BREW --prefix gmp 2>/dev/null)
-        if test "$gmp_prefix" != ""; then
-          if test "$suppress_external_warnings" != "no"; then
-            GMP_CPPFLAGS="-isystem $gmp_prefix/include"
-          else
-            GMP_CPPFLAGS="-I$gmp_prefix/include"
-          fi
-          GMP_LDFLAGS="-L$gmp_prefix/lib"
-          CORE_CPPFLAGS="$CORE_CPPFLAGS $GMP_CPPFLAGS"
-          CORE_LDFLAGS="$CORE_LDFLAGS $GMP_LDFLAGS"
-        fi
-
          case $host in
            *aarch64*)
              dnl The preferred Homebrew prefix for Apple Silicon is /opt/homebrew.
@@ -1695,16 +1683,6 @@ if test "$use_zmq" = "yes"; then
   esac
 fi
 
-dnl check if libgmp is present
-TEMP_CPPFLAGS="$CPPFLAGS"
-TEMP_LDFLAGS="$LDFLAGS"
-CPPFLAGS="$CPPFLAGS $GMP_CPPFLAGS"
-LDFLAGS="$LDFLAGS $GMP_LDFLAGS"
-AC_CHECK_HEADER([gmp.h],, AC_MSG_ERROR(libgmp headers missing))
-AC_CHECK_LIB([gmp],  [__gmpz_init],GMP_LIBS=-lgmp, AC_MSG_ERROR(libgmp missing))
-CPPFLAGS="$TEMP_CPPFLAGS"
-LDFLAGS="$TEMP_LDFLAGS"
-
 dnl blst (BLS12-381 backend of src/dashbls), provided by depends or the system
 AC_CHECK_HEADER([blst.h],, AC_MSG_ERROR([blst headers missing]))
 AC_CHECK_LIB([blst], [blst_p1_compress], [BLST_LIBS=-lblst], AC_MSG_ERROR([libblst missing]))
@@ -2044,7 +2022,6 @@ AC_SUBST(MINIUPNPC_LIBS)
 AC_SUBST(BACKTRACE_FLAGS)
 AC_SUBST(BACKTRACE_LDFLAGS)
 AC_SUBST(BACKTRACE_LIBS)
-AC_SUBST(GMP_LIBS)
 AC_SUBST(BLST_LIBS)
 AC_SUBST(NATPMP_CPPFLAGS)
 AC_SUBST(NATPMP_LIBS)
