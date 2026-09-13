@@ -886,7 +886,7 @@ BOOST_FIXTURE_TEST_CASE(bounded_readers_reject_claimed_sizes_first, BasicTesting
     WriteCompactSize(signals, 0);
     WriteCompactSize(signals, 0);
     signals << CCreditPool{};
-    WriteCompactSize(signals, Consensus::MAX_VERSION_BITS_DEPLOYMENTS + 1);
+    WriteCompactSize(signals, VERSIONBITS_NUM_BITS + 1);
     BOOST_CHECK_THROW(signals >> decoded, std::ios_base::failure);
 
     CDataStream ranges{SER_DISK, CLIENT_VERSION};
@@ -1159,6 +1159,24 @@ BOOST_FIXTURE_TEST_CASE(mnhf_signal_wire_order_is_canonical, BasicTestingSetup)
     BOOST_CHECK_EQUAL(decoded.mnhf_signals.size(), 2U);
     expect_noncanonical(with_signals({{9, 30}, {2, 12}}));
     expect_noncanonical(with_signals({{2, 12}, {2, 30}}));
+}
+
+BOOST_FIXTURE_TEST_CASE(mnhf_signals_outnumbering_deployments_are_valid, BasicTestingSetup)
+{
+    // CMNHFManager drops a signal only when a current deployment reuses its
+    // bit, so signals of buried EHF forks (MN_RR bit 10, WITHDRAWALS bit 11)
+    // stay in the map alongside V24's bit 12.
+    auto snapshot{SyntheticSnapshot()};
+    snapshot.mnhf_signals = {{10, 100}, {11, 200}, {12, 300}};
+    BOOST_REQUIRE_GT(snapshot.mnhf_signals.size(), size_t{Consensus::MAX_VERSION_BITS_DEPLOYMENTS});
+
+    BOOST_CHECK_NO_THROW(snapshot.Validate());
+    BOOST_CHECK_NO_THROW(GetEvoSnapshotHash(snapshot));
+
+    CDataStream stream{SerializeSnapshot(snapshot)};
+    evo::EvoSnapshot decoded;
+    BOOST_CHECK_NO_THROW(stream >> decoded);
+    BOOST_CHECK(decoded.mnhf_signals == snapshot.mnhf_signals);
 }
 
 BOOST_FIXTURE_TEST_CASE(unserialize_replaces_previous_contents, BasicTestingSetup)

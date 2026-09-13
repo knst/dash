@@ -230,7 +230,7 @@ void EvoSnapshot::Validate(bool require_canonical_order) const
     if (quorums.size() > Consensus::available_llmqs.size() ||
         historical_mn_list_diffs.size() > EvoSnapshotMaxHistoricalMNLists() ||
         quorum_modifiers.size() > EVO_SNAPSHOT_MAX_MODIFIERS ||
-        mnhf_signals.size() > Consensus::MAX_VERSION_BITS_DEPLOYMENTS) {
+        mnhf_signals.size() > VERSIONBITS_NUM_BITS) {
         throw std::ios_base::failure("oversized evo snapshot collection");
     }
     // Unserialize() charges the same amounts against the cumulative decode

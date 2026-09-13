@@ -702,7 +702,7 @@ void EvoSnapshot::Unserialize(Stream& s)
     }
     s >> credit_pool.locked >> credit_pool.currentLimit >> credit_pool.latelyUnlocked;
     credit_pool.indexes.UnserializeBounded(s, EVO_SNAPSHOT_MAX_RANGES);
-    const size_t signal_count{ReadBoundedCompactSize(s, Consensus::MAX_VERSION_BITS_DEPLOYMENTS, "MNHF signals")};
+    const size_t signal_count{ReadBoundedCompactSize(s, VERSIONBITS_NUM_BITS, "MNHF signals")};
     // The signal map normalizes iteration order, so wire order is observable
     // only here: require the strictly ascending bit order the serializer
     // emits, which also rejects duplicate bits.
