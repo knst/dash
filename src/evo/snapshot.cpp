@@ -207,7 +207,7 @@ bool ReconstructHistoricalMNLists(const EvoSnapshot& snapshot, std::map<uint256,
             if (CanonicalMNListHash(current) != entry.canonical_list_hash) {
                 throw std::ios_base::failure("historical MN-list diff hash mismatch");
             }
-            lists.emplace(entry.block_hash, current);
+            Assume(lists.emplace(entry.block_hash, current).second);
             previous_hash = entry.block_hash;
             previous_height = entry.height;
         }
