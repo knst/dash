@@ -17,6 +17,7 @@ FUZZ_BINARY=test/fuzz/fuzz$(EXEEXT)
 
 JSON_TEST_FILES = \
   test/data/blockfilters.json \
+  test/data/bls_reference_vectors.json \
   test/data/base58_encode_decode.json \
   test/data/bip39_vectors.json \
   test/data/key_io_valid.json \
@@ -92,6 +93,7 @@ BITCOIN_TESTS =\
   test/blockmanager_tests.cpp \
   test/bloom_tests.cpp \
   test/bls_tests.cpp \
+  test/bls_reference_vectors_tests.cpp \
   test/bswap_tests.cpp \
   test/checkdatasig_tests.cpp \
   test/checkqueue_tests.cpp \
