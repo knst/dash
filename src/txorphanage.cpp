@@ -204,7 +204,7 @@ void TxOrphanage::SetCandidatesByBlock(const CBlock& block)
     // NodeId -1 for this reason and need to flush the last set before processing this one.
     WITH_LOCK(m_mutex, m_peer_work_set.try_emplace(NodeId{-1}).first->second.clear());
     for (const auto& ptx : block.vtx) {
-        AddChildrenToWorkSet(*ptx, /*peer=*/-1);
+        AddChildrenToWorkSet(*ptx);
     }
 }
 
