@@ -1529,6 +1529,32 @@ PackageMempoolAcceptResult MemPoolAccept::AcceptPackage(const Package& package, 
     LOCK(m_pool.cs);
     // Stores final results that won't change
     std::map<const uint256, const MempoolAcceptResult> results_final;
+    // A fresher asset unlock replaces the held claimant for its withdrawal index. If a package
+    // also spends an output of that claimant, submitting the replacement first would remove the
+    // output before the child reaches ConsensusScriptChecks. Reject the package before any
+    // individual submission can evict the validated parent.
+    std::unordered_set<uint256, SaltedTxidHasher> package_txids;
+    package_txids.reserve(package.size());
+    for (const auto& tx : package) package_txids.emplace(tx->GetHash());
+    std::unordered_set<uint256, SaltedTxidHasher> evicted_txids;
+    for (const auto& tx : package) {
+        if (!tx->IsPlatformTransfer()) continue;
+        const auto payload = GetTxPayload<CAssetUnlockPayload>(*tx);
+        if (!payload) continue;
+        for (const uint256& held_txid : m_pool.GetAssetUnlockTxidsByIndex(payload->getIndex())) {
+            if (held_txid != tx->GetHash() && package_txids.contains(held_txid)) {
+                evicted_txids.emplace(held_txid);
+            }
+        }
+    }
+    for (const auto& tx : package) {
+        if (std::any_of(tx->vin.cbegin(), tx->vin.cend(), [&evicted_txids](const CTxIn& txin) {
+                return evicted_txids.contains(txin.prevout.hash);
+            })) {
+            package_state_quit_early.Invalid(PackageValidationResult::PCKG_POLICY, "assetunlock-conflicting-package");
+            return PackageMempoolAcceptResult(package_state_quit_early, {});
+        }
+    }
     // Node operators are free to set their mempool policies however they please, nodes may receive
     // transactions in different orders, and malicious counterparties may try to take advantage of
     // policy differences to pin or delay propagation of transactions. As such, it's possible for
