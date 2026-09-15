@@ -25,7 +25,10 @@ class QuorumProofChainTest(BitcoinTestFramework):
         assert_raises_rpc_error(-8, "height must be non-negative", node.cli.getchainlockbyheight, -1)
         assert_raises_rpc_error(-8, "height must be non-negative", node.cli.getchainlockbyheight, height=-1)
         assert_raises_rpc_error(-1, "No archived certificate", node.cli.getquorumproofchain,
-                                checkpoint_hash=node.getbestblockhash(), height=0, llmq_type=0, node_count=4)
+                                checkpoint_hash=node.getbestblockhash(), height=0, quorum_hash="ab" * 32,
+                                llmq_type=106, node_count=4)
+        assert_raises_rpc_error(-1, "No archived certificate", node.cli.getquorumproofchain,
+                                node.getbestblockhash(), 0, "ab" * 32, 106)
         assert_equal(node.cli.verifyquorumproofchain(checkpoint=anchor, proof_hex=proof, minimum_height=0), result)
 
         # An unavailable archive request must not prevent independent verification

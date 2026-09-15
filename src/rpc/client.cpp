@@ -332,7 +332,6 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "protx update_service_evo", 9, "submit" },
     { "getchainlockbyheight", 0, "height" },
     { "getquorumproofchain", 1, "height" },
-    { "getquorumproofchain", 2, "quorum_hash" },
     { "getquorumproofchain", 3, "llmq_type" },
     { "getquorumproofchain", 4, "node_count" },
     { "quorum dkgsimerror", 2, "rate" },
