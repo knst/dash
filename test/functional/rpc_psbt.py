@@ -83,16 +83,17 @@ class PSBTTest(BitcoinTestFramework):
         assert txid1 in mempool
 
         self.log.info("Fail to craft a new PSBT that sends more funds with add_inputs = False")
-        assert_raises_rpc_error(-4, "The preselected coins total amount does not cover the transaction target. Please allow other inputs to be automatically selected or include more coins manually", wallet.walletcreatefundedpsbt, [{'txid': utxo1['txid'], 'vout': utxo1['vout']}], {target_address: 1}, 0, {'add_inputs': False})
+        # TODO: expect the more specific "preselected coins total amount" error once bitcoin#26661 is backported
+        assert_raises_rpc_error(-4, "Insufficient funds", wallet.walletcreatefundedpsbt, [{'txid': utxo1['txid'], 'vout': utxo1['vout']}], {target_address: 1}, 0, {'add_inputs': False})
 
         self.log.info("Fail to craft a new PSBT with minconf above highest one")
         assert_raises_rpc_error(-4, "Insufficient funds", wallet.walletcreatefundedpsbt, [{'txid': utxo1['txid'], 'vout': utxo1['vout']}], {target_address: 1}, 0, {'add_inputs': True, 'minconf': 3, 'fee_rate': 10})
 
-        self.log.info("Fail to broadcast a new PSBT with maxconf 0 due to BIP125 rules to verify it actually chose unconfirmed outputs")
+        self.log.info("Fail to broadcast a new PSBT with maxconf 0 due to a mempool conflict to verify it actually chose unconfirmed outputs")
         psbt_invalid = wallet.walletcreatefundedpsbt([{'txid': utxo1['txid'], 'vout': utxo1['vout']}], {target_address: 1}, 0, {'add_inputs': True, 'maxconf': 0, 'fee_rate': 10})['psbt']
         signed_invalid = wallet.walletprocesspsbt(psbt_invalid)['psbt']
         final_invalid = wallet.finalizepsbt(signed_invalid)['hex']
-        assert_raises_rpc_error(-26, "bad-txns-spends-conflicting-tx", self.nodes[0].sendrawtransaction, final_invalid)
+        assert_raises_rpc_error(-26, "txn-mempool-conflict", self.nodes[0].sendrawtransaction, final_invalid)
 
         self.log.info("Craft a replacement adding inputs with highest confs possible")
         psbtx2 = wallet.walletcreatefundedpsbt([{'txid': utxo1['txid'], 'vout': utxo1['vout']}], {target_address: 1}, 0, {'add_inputs': True, 'minconf': 2, 'fee_rate': 10})['psbt']
@@ -104,11 +105,11 @@ class PSBTTest(BitcoinTestFramework):
 
         signed_tx2 = wallet.walletprocesspsbt(psbtx2)['psbt']
         final_tx2 = wallet.finalizepsbt(signed_tx2)['hex']
-        txid2 = self.nodes[0].sendrawtransaction(final_tx2)
+        # Dash has no RBF, so the replacement still conflicts with txid1 in the mempool
+        assert_raises_rpc_error(-26, "txn-mempool-conflict", self.nodes[0].sendrawtransaction, final_tx2)
 
         mempool = self.nodes[0].getrawmempool()
-        assert txid1 not in mempool
-        assert txid2 in mempool
+        assert txid1 in mempool
 
         wallet.unloadwallet()
 
