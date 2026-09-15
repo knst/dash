@@ -200,11 +200,23 @@ CTransactionRef TxOrphanage::GetTxToReconsider(NodeId peer)
 void TxOrphanage::SetCandidatesByBlock(const CBlock& block)
 {
     AssertLockNotHeld(m_mutex);
-    // As these candidates are generated from a block, they have no peer to attribute it to. We use
-    // NodeId -1 for this reason and need to flush the last set before processing this one.
-    WITH_LOCK(m_mutex, m_peer_work_set.try_emplace(NodeId{-1}).first->second.clear());
+    LOCK(m_mutex);
+    // Clear previous block-based candidates (attributed to peer -1).
+    // As these candidates are generated from a block, they have no peer to attribute it to,
+    // so we use NodeId -1 for this reason.
+    m_peer_work_set.try_emplace(NodeId{-1}).first->second.clear();
+
+    // Find all orphans that depend on transactions in this block
     for (const auto& ptx : block.vtx) {
-        AddChildrenToWorkSet(*ptx);
+        for (unsigned int i = 0; i < ptx->vout.size(); i++) {
+            const auto it_by_prev = m_outpoint_to_orphan_it.find(COutPoint(ptx->GetHash(), i));
+            if (it_by_prev != m_outpoint_to_orphan_it.end()) {
+                for (const auto& elem : it_by_prev->second) {
+                    // Add to block's work set (peer -1), not the originating peer's queue
+                    m_peer_work_set[NodeId{-1}].insert(elem->first);
+                }
+            }
+        }
     }
 }
 
