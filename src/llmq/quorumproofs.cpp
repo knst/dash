@@ -126,26 +126,29 @@ template <typename T> static std::vector<unsigned char> ConsensusBytes(const T& 
     return {UCharCast(out.data()), UCharCast(out.data()) + out.size()};
 }
 
-static CFinalCommitment ParseCommitment(const std::vector<unsigned char>& bytes)
+static CFinalCommitment ParseCommitment(const std::vector<unsigned char>& bytes, Consensus::LLMQType expectedType)
 {
     Require(bytes.size() <= 1024, "commitment size");
     static ProofCache<CFinalCommitment, 4096> cache;
     const auto key = Hash(bytes);
     CFinalCommitment commitment;
-    if (cache.Get(key, commitment)) return commitment;
-    CDataStream in(bytes, SER_NETWORK, PROTOCOL_VERSION);
-    in >> commitment;
-    Require(in.empty() && (commitment.nVersion == 3 || commitment.nVersion == 4) &&
-            !commitment.IsNull() && commitment.quorumPublicKey.IsValid() &&
-            !commitment.quorumHash.IsNull(), "invalid Basic BLS commitment");
-    const auto params = Params().GetLLMQ(commitment.llmqType);
-    Require(params.has_value(), "unsupported quorum type");
-    Require((commitment.nVersion == 4) == (int(commitment.llmqType) == 5) &&
-            commitment.quorumIndex >= 0 && commitment.quorumIndex < 32 &&
-            commitment.signers.size() == size_t(params->size) && commitment.validMembers.size() == size_t(params->size) &&
-            commitment.CountSigners() >= params->threshold && commitment.CountValidMembers() >= params->threshold &&
-            ConsensusBytes(commitment) == bytes, "noncanonical or undersized commitment");
-    cache.Insert(key, commitment);
+    if (!cache.Get(key, commitment)) {
+        CDataStream in(bytes, SER_NETWORK, PROTOCOL_VERSION);
+        in >> commitment;
+        Require(in.empty() && (commitment.nVersion == 3 || commitment.nVersion == 4) &&
+                !commitment.IsNull() && commitment.quorumPublicKey.IsValid() &&
+                !commitment.quorumHash.IsNull(), "invalid Basic BLS commitment");
+        const auto params = std::find_if(Consensus::available_llmqs.begin(), Consensus::available_llmqs.end(),
+                                         [&](const Consensus::LLMQParams& item) { return item.type == commitment.llmqType; });
+        Require(params != Consensus::available_llmqs.end(), "unsupported quorum type");
+        Require((commitment.nVersion == 4) == (int(commitment.llmqType) == 5) &&
+                commitment.quorumIndex >= 0 && commitment.quorumIndex < 32 &&
+                commitment.signers.size() == size_t(params->size) && commitment.validMembers.size() == size_t(params->size) &&
+                commitment.CountSigners() >= params->threshold && commitment.CountValidMembers() >= params->threshold &&
+                ConsensusBytes(commitment) == bytes, "noncanonical or undersized commitment");
+        cache.Insert(key, commitment);
+    }
+    Require(commitment.llmqType == expectedType, "unexpected quorum type");
     return commitment;
 }
 
@@ -305,7 +308,7 @@ ProofState QuorumProofChain::Verify(const ProofState& trusted) const
     // The application fixes the network and initial roots; the relay cannot choose them.
     Require(anchor.network <= 1, "unsupported proof network");
     const auto kind = anchor.network == 0 ? Consensus::LLMQType::LLMQ_400_60 : Consensus::LLMQType::LLMQ_50_60;
-    auto signer = ParseCommitment(seed);
+    auto signer = ParseCommitment(seed, kind);
     Require(seedPath.Verify(Hash(seed), anchor.quorumRoot), "seed membership");
     Require(links.size() < MAX_PROOF_CERTIFICATES, "certificate limit");
     uint32_t height = anchor.height;
@@ -325,7 +328,7 @@ ProofState QuorumProofChain::Verify(const ProofState& trusted) const
                 tx->vin.empty() && tx->vout.empty() && tx->nLockTime == 0, "quorum transaction envelope");
         auto payload = GetTxPayload<CFinalCommitmentTxPayload>(*tx);
         Require(payload && payload->nVersion == 1 && payload->nHeight == link.certificate.height - link.ancestors.size(), "quorum mining height");
-        auto next = ParseCommitment(ConsensusBytes(payload->commitment));
+        auto next = ParseCommitment(ConsensusBytes(payload->commitment), kind);
         Require(next.quorumHash != signer.quorumHash, "redundant signer");
         signer = std::move(next);
         height = link.certificate.height;

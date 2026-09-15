@@ -1,6 +1,7 @@
 // Copyright (c) 2025-2026 The Dash Core developers
 // Distributed under the MIT software license, see the accompanying file COPYING.
 #include <boost/test/unit_test.hpp>
+#include <chainparamsbase.h>
 #include <future>
 #include <hash.h>
 #include <llmq/quorumproofs.h>
@@ -81,7 +82,11 @@ static const char* TESTNET_PROOF =
     "0400000002b3336e59b1bc4bdccc3397c24a85c882184d2fb8d6f0a563d19100cadc53bdeb4d864dd73362cbcda1ec96a3f3"
     "3ad9678edcd1ff85bb3f2581b8d54d57685615"
 ;
-BOOST_FIXTURE_TEST_SUITE(quorum_proofs_tests, BasicTestingSetup)
+struct QuorumProofsRegtestSetup : BasicTestingSetup {
+    QuorumProofsRegtestSetup() : BasicTestingSetup(CBaseChainParams::REGTEST) {}
+};
+
+BOOST_FIXTURE_TEST_SUITE(quorum_proofs_tests, QuorumProofsRegtestSetup)
 BOOST_AUTO_TEST_CASE(real_testnet_wire_and_crypto) {
     auto bytes = ParseHex(TESTNET_PROOF);
     auto proof = llmq::QuorumProofChain::Decode(bytes);
