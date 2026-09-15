@@ -36,14 +36,12 @@ struct CoinbaseChainLock {
  */
 class CoinbaseChainLockReader
 {
-    const CChain& m_chain;
+    const CBlockIndex* m_tip;
     std::map<int, std::optional<CoinbaseChainLock>> m_cache;
 
 public:
-    explicit CoinbaseChainLockReader(const CChain& chain) :
-        m_chain(chain)
-    {
-    }
+    explicit CoinbaseChainLockReader(const CChain& chain);
+    explicit CoinbaseChainLockReader(const CBlockIndex* tip) : m_tip(tip) {}
     std::optional<CoinbaseChainLock> Read(int carrier_height);
     /** First certificate at or above minimum_height, limited by maximum_height. */
     std::optional<CoinbaseChainLock> Find(int minimum_height, int maximum_height);

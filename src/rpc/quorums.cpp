@@ -41,10 +41,30 @@
 #include <validation.h>
 
 #include <iomanip>
+#include <memory>
+#include <mutex>
 #include <optional>
 
 using node::GetTransaction;
 using node::NodeContext;
+
+namespace {
+std::mutex g_proof_chain_mutex;
+std::shared_ptr<const CChain> g_proof_chain_snapshot;
+const CBlockIndex* g_proof_chain_tip{nullptr};
+
+std::shared_ptr<const CChain> GetProofChainSnapshot(CBlockIndex* tip)
+{
+    std::lock_guard lock(g_proof_chain_mutex);
+    if (!g_proof_chain_snapshot || g_proof_chain_tip != tip) {
+        auto snapshot = std::make_shared<CChain>();
+        snapshot->SetTip(*tip);
+        g_proof_chain_snapshot = std::move(snapshot);
+        g_proof_chain_tip = tip;
+    }
+    return g_proof_chain_snapshot;
+}
+} // namespace
 
 static RPCHelpMan quorum_list()
 {
@@ -1419,12 +1439,10 @@ static RPCHelpMan getchainlockbyheight()
 
             const NodeContext& node = EnsureAnyNodeContext(request.context);
             const ChainstateManager& chainman = EnsureChainman(node);
-            CChain chain;
             CBlockIndex* tip = WITH_LOCK(cs_main, return chainman.ActiveChain().Tip());
             CHECK_NONFATAL(tip != nullptr);
-            chain.SetTip(*tip);
             try {
-                chainlock::CoinbaseChainLockReader reader(chain);
+                chainlock::CoinbaseChainLockReader reader(tip);
                 const auto entry = reader.Find(height, height);
                 if (!entry) throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Chainlock not found for height");
                 {
@@ -1481,11 +1499,11 @@ static RPCHelpMan getquorumproofchain()
                 (quorumText.empty() != (type == 0)) || (!quorumText.empty() && (quorumText.size() != 64 || !IsHex(quorumText)))) {
                 throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid proof request");
             }
-            CChain chain;
             const CBlockIndex* checkpoint;
             CBlockIndex* tip = WITH_LOCK(cs_main, return chainman.ActiveChain().Tip());
             CHECK_NONFATAL(tip != nullptr);
-            chain.SetTip(*tip);
+            const auto chain_snapshot = GetProofChainSnapshot(tip);
+            const CChain& chain = *chain_snapshot;
             {
                 LOCK(cs_main);
                 checkpoint = chainman.m_blockman.LookupBlockIndex(anchorHash);

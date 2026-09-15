@@ -21,9 +21,14 @@ namespace chainlock {
 static constexpr std::string_view CLSIG_REQUESTID_PREFIX{"clsig"};
 static constexpr size_t MAX_HISTORICAL_CARRIER_READS{16384};
 
+CoinbaseChainLockReader::CoinbaseChainLockReader(const CChain& chain) :
+    m_tip(chain.Tip())
+{
+}
+
 std::optional<CoinbaseChainLock> CoinbaseChainLockReader::Read(int carrier_height)
 {
-    const auto* carrier = m_chain[carrier_height];
+    const auto* carrier = m_tip ? m_tip->GetAncestor(carrier_height) : nullptr;
     if (!carrier || carrier_height < Params().GetConsensus().V20Height) return std::nullopt;
     if (const auto it = m_cache.find(carrier_height); it != m_cache.end()) return it->second;
     if (ShutdownRequested()) throw std::runtime_error("ChainLock lookup interrupted");
@@ -46,18 +51,20 @@ std::optional<CoinbaseChainLock> CoinbaseChainLockReader::Read(int carrier_heigh
         return m_cache.emplace(carrier_height, std::nullopt).first->second;
     }
     const int height = carrier_height - int(chainlock->second) - 1;
+    const auto* signed_block = m_tip->GetAncestor(height);
+    if (!signed_block) throw std::runtime_error("Invalid historical ChainLock block height");
     return m_cache
         .emplace(carrier_height,
-                 CoinbaseChainLock{ChainLockSig{height, m_chain[height]->GetBlockHash(), chainlock->first}, carrier})
+                 CoinbaseChainLock{ChainLockSig{height, signed_block->GetBlockHash(), chainlock->first}, carrier})
         .first->second;
 }
 
 std::optional<CoinbaseChainLock> CoinbaseChainLockReader::Find(int minimum_height, int maximum_height)
 {
-    if (minimum_height < 0 || minimum_height > maximum_height || minimum_height >= m_chain.Height())
+    const int tip_height = m_tip ? m_tip->nHeight : -1;
+    if (minimum_height < 0 || minimum_height > maximum_height || minimum_height >= tip_height)
         return std::nullopt;
     const int first_carrier = std::max(minimum_height + 1, Params().GetConsensus().V20Height);
-    const int tip_height = m_chain.Height();
     if (first_carrier > tip_height) return std::nullopt;
 
     // Empty carriers are possible, so the predicate used by a binary search is
