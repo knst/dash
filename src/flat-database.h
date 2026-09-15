@@ -53,7 +53,8 @@ private:
         FILE *file = fsbridge::fopen(pathDB, "wb");
         AutoFile fileout{file};
         if (fileout.IsNull()) {
-            return error("%s: Failed to open file %s", __func__, fs::PathToString(pathDB));
+            LogError("%s: Failed to open file %s\n", __func__, fs::PathToString(pathDB));
+            return false;
         }
 
         // Write and commit header, data
@@ -61,7 +62,8 @@ private:
             fileout << ssObj;
         }
         catch (std::exception &e) {
-            return error("%s: Serialize or I/O error - %s", __func__, e.what());
+            LogError("%s: Serialize or I/O error - %s\n", __func__, e.what());
+            return false;
         }
         fileout.fclose();
 
@@ -100,7 +102,7 @@ private:
             filein >> hashIn;
         }
         catch (std::exception &e) {
-            error("%s: Deserialize or I/O error - %s", __func__, e.what());
+            LogError("%s: Deserialize or I/O error - %s\n", __func__, e.what());
             return ReadResult::HashReadError;
         }
         filein.fclose();
@@ -111,7 +113,7 @@ private:
         uint256 hashTmp = Hash(ssObj);
         if (hashIn != hashTmp)
         {
-            error("%s: Checksum mismatch, data corrupted", __func__);
+            LogError("%s: Checksum mismatch, data corrupted\n", __func__);
             return ReadResult::IncorrectHash;
         }
 
@@ -125,7 +127,7 @@ private:
             // ... verify the message matches predefined one
             if (strMagicMessage != strMagicMessageTmp)
             {
-                error("%s: Invalid magic message", __func__);
+                LogError("%s: Invalid magic message\n", __func__);
                 return ReadResult::IncorrectMagicMessage;
             }
 
@@ -136,7 +138,7 @@ private:
             // ... verify the network matches ours
             if (memcmp(pchMsgTmp, Params().MessageStart(), sizeof(pchMsgTmp)))
             {
-                error("%s: Invalid network magic number", __func__);
+                LogError("%s: Invalid network magic number\n", __func__);
                 return ReadResult::IncorrectMagicNumber;
             }
 
@@ -145,7 +147,7 @@ private:
         }
         catch (std::exception &e) {
             objToLoad.Clear();
-            error("%s: Deserialize or I/O error - %s", __func__, e.what());
+            LogError("%s: Deserialize or I/O error - %s\n", __func__, e.what());
             return ReadResult::IncorrectFormat;
         }
 

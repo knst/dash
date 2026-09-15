@@ -244,19 +244,6 @@ static inline bool LogAcceptDebug(BCLog::LogFlags category)
 /** Return true if str parses as a log category and set the flag */
 bool GetLogCategory(BCLog::LogFlags& flag, const std::string& str);
 
-/** Formats a string without throwing exceptions. Instead, it'll return an error string instead of formatted string. */
-template<typename... Args>
-std::string SafeStringFormat(const std::string& fmt, const Args&... args)
-{
-    try {
-        return tinyformat::format(fmt, args...);
-    } catch (std::runtime_error& fmterr) {
-        std::string message = tinyformat::format("\n****TINYFORMAT ERROR****\n    err=\"%s\"\n    fmt=\"%s\"\n", fmterr.what(), fmt);
-        tfm::format(std::cerr, "%s", message);
-        return message;
-    }
-}
-
 // Be conservative when using functions that
 // unconditionally log to debug.log! It should not be the case that an inbound
 // peer can fill up a user's disk with debug.log entries.
