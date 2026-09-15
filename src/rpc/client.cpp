@@ -330,6 +330,11 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "protx update_service_evo", 5, "platformP2PAddrs", true },
     { "protx update_service_evo", 6, "platformHTTPSAddrs", true },
     { "protx update_service_evo", 9, "submit" },
+    { "getchainlockbyheight", 0, "height" },
+    { "getquorumproofchain", 1, "height" },
+    { "getquorumproofchain", 2, "quorum_hash" },
+    { "getquorumproofchain", 3, "llmq_type" },
+    { "getquorumproofchain", 4, "node_count" },
     { "quorum dkgsimerror", 2, "rate" },
     { "quorum dkgstatus", 1, "detail_level" },
     { "quorum getdata", 1, "nodeId" },
@@ -351,6 +356,8 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "quorum sign", 5, "submit" },
     { "quorum verify", 1, "llmqType" },
     { "quorum verify", 6, "signHeight" },
+    { "verifyquorumproofchain", 0, "checkpoint" },
+    { "verifyquorumproofchain", 2, "minimum_height" },
 };
 // clang-format on
 
