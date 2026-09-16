@@ -426,7 +426,8 @@ public:
     void ApplyDiff(gsl::not_null<const CBlockIndex*> pindex, const CDeterministicMNListDiff& diff)
         EXCLUSIVE_LOCKS_REQUIRED(!m_cached_sml_mutex);
 
-    /** Apply a snapshot-local historical diff without dereferencing block data. */
+    /** Reconstruct an older MN list referenced by quorum/rotation data, starting from the snapshot's full base list
+     *  or a previously reconstructed historical list, without dereferencing block data. */
     void ApplyDiffForSnapshot(const uint256& block_hash, int height, uint32_t total_registered_count,
                               const CDeterministicMNListDiff& diff)
         EXCLUSIVE_LOCKS_REQUIRED(!m_cached_sml_mutex);

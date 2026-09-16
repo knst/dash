@@ -398,6 +398,11 @@ void CDeterministicMNList::ApplyDiffForSnapshot(const uint256& block_hash, int h
                                                 const CDeterministicMNListDiff& diff)
 {
     if (height < 0) throw std::runtime_error("negative historical MN-list height");
+    for (const auto& dmn : diff.addedMNs) {
+        if (GetMNByInternalId(dmn->GetInternalId()) || GetMN(dmn->proTxHash)) {
+            throw std::runtime_error("historical MN-diff addition reuses an existing identity");
+        }
+    }
     blockHash = block_hash;
     nHeight = height;
 

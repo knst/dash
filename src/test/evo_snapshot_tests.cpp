@@ -478,6 +478,34 @@ BOOST_FIXTURE_TEST_CASE(historical_diff_applies_exchanged_unique_properties, Bas
     BOOST_CHECK(evo::CanonicalMNListHash(lists.begin()->second) == evo::CanonicalMNListHash(older));
 }
 
+BOOST_FIXTURE_TEST_CASE(historical_diff_additions_require_new_identities, BasicTestingSetup)
+{
+    const auto original{MNList(H(11), 101, false)};
+    const auto original_hash{evo::CanonicalMNListHash(original)};
+    const auto existing{original.GetMNByInternalId(2)};
+    auto same_hash{std::make_shared<CDeterministicMN>(*MN(8, 8, MnType::Regular, ProTxVersion::LegacyBLS, 8))};
+    same_hash->proTxHash = existing->proTxHash;
+    const std::vector<CDeterministicMNCPtr> additions{
+        existing,
+        MN(2, 8, MnType::Regular, ProTxVersion::LegacyBLS, 8),
+        same_hash,
+    };
+    for (const bool remove_existing : {false, true}) {
+        for (const auto& addition : additions) {
+            auto list{original};
+            CDeterministicMNListDiff diff;
+            if (remove_existing) diff.removedMns.emplace(existing->GetInternalId());
+            diff.addedMNs.push_back(addition);
+            BOOST_CHECK_EXCEPTION(list.ApplyDiffForSnapshot(H(10), 100, original.GetTotalRegisteredCount(), diff),
+                                  std::runtime_error, [](const auto& e) {
+                                      return std::string{e.what()} ==
+                                             "historical MN-diff addition reuses an existing identity";
+                                  });
+            BOOST_CHECK(evo::CanonicalMNListHash(list) == original_hash);
+        }
+    }
+}
+
 BOOST_FIXTURE_TEST_CASE(malformed_lazy_operator_keys_are_rejected, BasicTestingSetup)
 {
     const auto noncanonical = [](const auto& e) {
