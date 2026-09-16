@@ -51,15 +51,17 @@ using node::NodeContext;
 namespace {
 std::mutex g_proof_chain_mutex;
 std::shared_ptr<const CChain> g_proof_chain_snapshot;
+const ChainstateManager* g_proof_chain_owner{nullptr};
 const CBlockIndex* g_proof_chain_tip{nullptr};
 
-std::shared_ptr<const CChain> GetProofChainSnapshot(CBlockIndex* tip)
+std::shared_ptr<const CChain> GetProofChainSnapshot(const ChainstateManager& chainman, CBlockIndex* tip)
 {
     std::lock_guard lock(g_proof_chain_mutex);
-    if (!g_proof_chain_snapshot || g_proof_chain_tip != tip) {
+    if (!g_proof_chain_snapshot || g_proof_chain_owner != &chainman || g_proof_chain_tip != tip) {
         auto snapshot = std::make_shared<CChain>();
         snapshot->SetTip(*tip);
         g_proof_chain_snapshot = std::move(snapshot);
+        g_proof_chain_owner = &chainman;
         g_proof_chain_tip = tip;
     }
     return g_proof_chain_snapshot;
@@ -1502,7 +1504,7 @@ static RPCHelpMan getquorumproofchain()
             const CBlockIndex* checkpoint;
             CBlockIndex* tip = WITH_LOCK(cs_main, return chainman.ActiveChain().Tip());
             CHECK_NONFATAL(tip != nullptr);
-            const auto chain_snapshot = GetProofChainSnapshot(tip);
+            const auto chain_snapshot = GetProofChainSnapshot(chainman, tip);
             const CChain& chain = *chain_snapshot;
             {
                 LOCK(cs_main);
