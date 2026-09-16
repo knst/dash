@@ -54,18 +54,20 @@ BOOST_FIXTURE_TEST_CASE(historical_coinbase_lookup_from_disk, RegTestingSetup)
     std::deque<uint256> hashes;
     std::deque<CBlockIndex> indexes;
     CChain chain;
-    for (int height = 0; height <= activation + 128; ++height) {
+    for (int height = 0; height <= activation + 17000; ++height) {
         CCbTx payload;
         payload.nVersion = CCbTx::Version::CLSIG_AND_BALANCE;
         payload.nHeight = height;
-        if (height == activation + 20 || height == activation + 80 || height == activation + 110) {
+        if (height >= activation + 20) {
             int certified;
-            if (height == activation + 20) {
+            if (height < activation + 80) {
                 certified = activation + 1;
-            } else if (height == activation + 80) {
+            } else if (height < activation + 110) {
                 certified = activation + 65;
-            } else {
+            } else if (height < activation + 17000) {
                 certified = activation + 99;
+            } else {
+                certified = activation + 16999;
             }
             payload.bestCLSignature = signature;
             payload.bestCLHeightDiff = height - certified - 1;
@@ -126,6 +128,14 @@ BOOST_FIXTURE_TEST_CASE(historical_coinbase_lookup_from_disk, RegTestingSetup)
         BOOST_CHECK_EQUAL(entry->carrier->nHeight, carrier);
         BOOST_CHECK(!reader.Find(minimum, expected - 1));
     }
+    // A repeated certificate spanning more than the request's disk-read budget
+    // must still allow finding the next certificate (or reporting its absence).
+    chainlock::CoinbaseChainLockReader long_gap(chain);
+    const auto late = long_gap.Find(activation + 100, activation + 16999);
+    BOOST_REQUIRE(late);
+    BOOST_CHECK_EQUAL(late->carrier->nHeight, activation + 17000);
+    BOOST_CHECK_EQUAL(late->clsig.getHeight(), activation + 16999);
+    BOOST_CHECK(!long_gap.Find(activation + 100, activation + 16998));
     // A new request on a shorter chain must not reuse the old request's cache.
     CChain shorter;
     shorter.SetTip(*chain[activation + 66]);

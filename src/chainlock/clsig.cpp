@@ -67,20 +67,31 @@ std::optional<CoinbaseChainLock> CoinbaseChainLockReader::Find(int minimum_heigh
     const int first_carrier = std::max(minimum_height + 1, Params().GetConsensus().V20Height);
     if (first_carrier > tip_height) return std::nullopt;
 
-    // Empty carriers are possible, so the predicate used by a binary search is
-    // not monotonic. Scan the bounded carrier range instead; Read() keeps the
-    // request-local disk-read budget and cache. Valid certificates are ordered
-    // by signed height, so a certificate above the requested maximum ends the
-    // search.
-    for (int carrier_height = first_carrier;; ++carrier_height) {
-        auto entry = Read(carrier_height);
-        if (entry) {
-            if (entry->clsig.getHeight() > maximum_height) return std::nullopt;
-            if (entry->clsig.getHeight() >= minimum_height) return entry;
-        }
-        if (carrier_height == tip_height) break;
+    // CheckCbTxBestChainlock enforces nondecreasing certified heights and
+    // forbids null signatures after the first certificate on a validated chain.
+    auto below_minimum = [&](int height) {
+        const auto entry = Read(height);
+        return !entry || entry->clsig.getHeight() < minimum_height;
+    };
+    int low = first_carrier;
+    int high = first_carrier;
+    int64_t step = 1;
+    while (below_minimum(high)) {
+        if (high == tip_height) return std::nullopt;
+        low = high + 1;
+        high = int(std::min<int64_t>(tip_height, int64_t(high) + step));
+        step *= 2;
     }
-    return std::nullopt;
+    while (low < high) {
+        const int middle = low + (high - low) / 2;
+        if (below_minimum(middle)) {
+            low = middle + 1;
+        } else {
+            high = middle;
+        }
+    }
+    const auto entry = Read(low);
+    return entry && entry->clsig.getHeight() <= maximum_height ? entry : std::nullopt;
 }
 
 uint256 GenSigRequestId(const int32_t nHeight)
