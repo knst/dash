@@ -1513,37 +1513,49 @@ static RPCHelpMan getquorumproofchain()
             try {
                 chainlock::CoinbaseChainLockReader reader(chain);
                 const int64_t start = std::max<int64_t>(minimum, int64_t(checkpoint->nHeight) + 1);
-                std::optional<chainlock::CoinbaseChainLock> target_chainlock;
-                if (minimum == 0) {
-                    target_chainlock = reader.Read(chain.Height());
-                } else if (start <= chain.Height()) {
-                    target_chainlock = reader.Find(int(start), int(std::min<int64_t>(chain.Height(),
-                                                                                     start + int64_t(llmq::MAX_PROOF_HEADERS))));
-                }
-                chainlock::ChainLockSig target_signature;
+                if (start > chain.Height()) throw std::runtime_error("No archived certificate within search budget");
+                const int maximum = int(std::min<int64_t>(chain.Height(), start + int64_t(llmq::MAX_PROOF_HEADERS)));
                 const CBlockIndex* target_guard{nullptr};
-                if (target_chainlock) {
-                    target_signature = target_chainlock->clsig;
-                    target_guard = target_chainlock->carrier;
-                }
-                // Platform can already reference a tip ChainLock before another
-                // block embeds it. The existing manager supplies the same final
-                // certificate; historical handoffs still come from disk.
-                if (minimum == 0 || !target_chainlock) {
-                    const auto live = CHECK_NONFATAL(node.chainlocks)->GetBestChainLock();
-                    const auto* live_index = chain[live.getHeight()];
-                    if (live_index && live_index->GetBlockHash() == live.getBlockHash() && live.getHeight() >= start &&
-                        live.getHeight() > target_signature.getHeight() &&
-                        (minimum == 0 || int64_t(live.getHeight()) <= start + int64_t(llmq::MAX_PROOF_HEADERS))) {
-                        target_signature = live;
-                        target_guard = live_index;
-                    }
-                }
-                if (!target_guard || target_signature.getHeight() <= checkpoint->nHeight)
-                    throw std::runtime_error("No archived certificate within search budget");
-                const auto* target = chain[target_signature.getHeight()];
+                const CBlockIndex* target{nullptr};
                 llmq::QuorumProofBuilder builder(*ctx.quorum_block_processor, *ctx.qman, chain, chainman, reader);
-                auto proof = builder.Build(checkpoint, target_signature);
+                std::optional<llmq::QuorumProofChain> proof;
+                // At a quorum-mining boundary, the signing offset can select a
+                // retired quorum absent from the checkpoint root. Height is a
+                // minimum, so try later certificates within the original budget.
+                for (int64_t next = start; next <= maximum;) {
+                    target_guard = nullptr;
+                    std::optional<chainlock::CoinbaseChainLock> target_chainlock;
+                    if (minimum == 0) {
+                        target_chainlock = reader.Read(chain.Height());
+                    } else {
+                        target_chainlock = reader.Find(int(next), maximum);
+                    }
+                    chainlock::ChainLockSig target_signature;
+                    if (target_chainlock) {
+                        target_signature = target_chainlock->clsig;
+                        target_guard = target_chainlock->carrier;
+                    }
+                    // Platform can already reference a tip ChainLock before another
+                    // block embeds it. The existing manager supplies the same final
+                    // certificate; historical handoffs still come from disk.
+                    if (minimum == 0 || !target_chainlock) {
+                        const auto live = CHECK_NONFATAL(node.chainlocks)->GetBestChainLock();
+                        const auto* live_index = chain[live.getHeight()];
+                        if (live_index && live_index->GetBlockHash() == live.getBlockHash() &&
+                            live.getHeight() >= next && live.getHeight() > target_signature.getHeight() &&
+                            (minimum == 0 || live.getHeight() <= maximum)) {
+                            target_signature = live;
+                            target_guard = live_index;
+                        }
+                    }
+                    if (!target_guard || target_signature.getHeight() <= checkpoint->nHeight)
+                        throw std::runtime_error("No archived certificate within search budget");
+                    target = chain[target_signature.getHeight()];
+                    proof = builder.Build(checkpoint, target_signature);
+                    if (proof || minimum == 0) break;
+                    next = int64_t(target_signature.getHeight()) + 1;
+                }
+                if (!proof) throw std::runtime_error("No bridge to snapshot within search budget");
                 std::vector<llmq::ProofProjection> records;
                 if (!quorumText.empty()) {
                     const auto hash = uint256S(quorumText);
@@ -1587,9 +1599,9 @@ static RPCHelpMan getquorumproofchain()
                         throw std::runtime_error("Chain changed during proof construction; retry");
                 }
                 UniValue result(UniValue::VOBJ);
-                result.pushKV("proof_hex", HexStr(proof.Encode()));
-                result.pushKV("bootstrap_hex", records.empty() ? "" : HexStr(llmq::EncodeBootstrap(proof, records)));
-                result.pushKV("target", proof.Verify(proof.anchor).ToJson());
+                result.pushKV("proof_hex", HexStr(proof->Encode()));
+                result.pushKV("bootstrap_hex", records.empty() ? "" : HexStr(llmq::EncodeBootstrap(*proof, records)));
+                result.pushKV("target", proof->Verify(proof->anchor).ToJson());
                 return result;
             } catch (const std::exception& e) {
                 throw JSONRPCError(RPC_MISC_ERROR, e.what());

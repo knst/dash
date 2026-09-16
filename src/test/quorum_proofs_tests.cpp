@@ -1,12 +1,26 @@
 // Copyright (c) 2025-2026 The Dash Core developers
 // Distributed under the MIT software license, see the accompanying file COPYING.
 #include <boost/test/unit_test.hpp>
+#include <chainlock/clsig.h>
 #include <chainparamsbase.h>
+#include <consensus/merkle.h>
+#include <context.h>
+#include <evo/cbtx.h>
+#include <evo/evodb.h>
+#include <evo/specialtx.h>
 #include <future>
 #include <hash.h>
+#include <llmq/blockprocessor.h>
+#include <llmq/context.h>
 #include <llmq/quorumproofs.h>
+#include <llmq/quorumsman.h>
+#include <llmq/signhash.h>
+#include <node/blockstorage.h>
+#include <pow.h>
+#include <rpc/server.h>
 #include <streams.h>
 #include <test/util/setup_common.h>
+#include <validation.h>
 
 // Actual testnet archive proof, heights 1548500 -> 1549547. Independently
 // verified by the Rust BLS/X11 implementation; includes 0, 1 and 4 ancestors.
@@ -86,7 +100,179 @@ struct QuorumProofsRegtestSetup : BasicTestingSetup {
     QuorumProofsRegtestSetup() : BasicTestingSetup(CBaseChainParams::REGTEST) {}
 };
 
+// Use a single active quorum to deterministically exercise retirement at a
+// mining boundary. The production selector, disk reader, builder and RPC run
+// unchanged; only PoW difficulty and the active-set size are reduced.
+struct QuorumProofGenerationSetup : TestingSetup {
+    Consensus::Params saved_consensus;
+    CBlockIndex* saved_tip;
+    int checkpoint_height;
+    std::vector<llmq::CFinalCommitment> commitments;
+    std::vector<CBLSSecretKey> keys;
+
+    QuorumProofGenerationSetup() :
+        TestingSetup(CBaseChainParams::TESTNET),
+        saved_consensus(Params().GetConsensus()),
+        saved_tip(WITH_LOCK(cs_main, return m_node.chainman->ActiveChain().Tip()))
+    {
+        auto& consensus = const_cast<Consensus::Params&>(Params().GetConsensus());
+        consensus.powLimit = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        for (auto& params : consensus.llmqs) {
+            if (params.type == consensus.llmqTypeChainLocks) params.signingActiveQuorumCount = 1;
+        }
+        const auto params = *Params().GetLLMQ(consensus.llmqTypeChainLocks);
+        checkpoint_height = ((consensus.V20Height + 2 * params.dkgInterval) / params.dkgInterval) * params.dkgInterval +
+                            params.dkgMiningWindowStart;
+    }
+
+    ~QuorumProofGenerationSetup()
+    {
+        WITH_LOCK(cs_main, m_node.chainman->ActiveChain().SetTip(*saved_tip));
+        const_cast<Consensus::Params&>(Params().GetConsensus()) = saved_consensus;
+    }
+
+    void CreateHistory()
+    {
+        const auto& consensus = Params().GetConsensus();
+        const auto params = *Params().GetLLMQ(consensus.llmqTypeChainLocks);
+        auto& chainman = *m_node.chainman;
+        auto& chain = *WITH_LOCK(cs_main, return &chainman.ActiveChain());
+        int first_height = checkpoint_height;
+        for (const auto& quorum_params : consensus.llmqs) {
+            first_height = std::min(first_height, checkpoint_height - 2 * quorum_params.dkgInterval);
+        }
+        CBlockIndex* previous{nullptr};
+        for (int height = first_height; height <= checkpoint_height + llmq::SIGN_HEIGHT_OFFSET + 1; ++height) {
+            CCbTx payload;
+            payload.nVersion = CCbTx::Version::CLSIG_AND_BALANCE;
+            payload.nHeight = height;
+            if (!commitments.empty()) payload.merkleRootQuorums = SerializeHash(commitments.back());
+            if (height > checkpoint_height + 1) {
+                const auto signer = llmq::SelectCommitmentForSigning(params, chain, *m_node.llmq_ctx->qman,
+                                                                     chainlock::GenSigRequestId(height - 1), height - 1,
+                                                                     llmq::SIGN_HEIGHT_OFFSET);
+                BOOST_REQUIRE(signer);
+                const size_t key = signer->quorumHash == commitments.front().quorumHash ? 0 : 1;
+                payload.bestCLSignature = keys[key].Sign(llmq::SignHash{params.type, signer->quorumHash,
+                                                                        chainlock::GenSigRequestId(height - 1),
+                                                                        previous->GetBlockHash()}
+                                                             .Get(),
+                                                         false);
+            }
+            const bool mining = height == checkpoint_height - params.dkgInterval || height == checkpoint_height;
+            if (mining) {
+                keys.emplace_back();
+                keys.back().MakeNewKey();
+                llmq::CFinalCommitment commitment;
+                commitment.nVersion = llmq::CFinalCommitment::BASIC_BLS_NON_INDEXED_QUORUM_VERSION;
+                commitment.llmqType = params.type;
+                commitment.quorumHash = previous->GetAncestor(height - params.dkgMiningWindowStart)->GetBlockHash();
+                commitment.quorumPublicKey = keys.back().GetPublicKey();
+                commitment.signers.assign(params.size, true);
+                commitment.validMembers.assign(params.size, true);
+                commitments.push_back(commitment);
+                payload.merkleRootQuorums = SerializeHash(commitment);
+            }
+            CMutableTransaction coinbase;
+            coinbase.nVersion = 3;
+            coinbase.nType = TRANSACTION_COINBASE;
+            coinbase.vin.resize(1);
+            coinbase.vin[0].scriptSig = CScript() << height << OP_0;
+            coinbase.vout.emplace_back(0, CScript() << OP_TRUE);
+            SetTxPayload(coinbase, payload);
+            CBlock block;
+            block.nVersion = 1;
+            block.hashPrevBlock = previous ? previous->GetBlockHash() : uint256{};
+            block.nBits = 0x207fffff;
+            block.nTime = Params().GenesisBlock().nTime + height;
+            block.vtx = {MakeTransactionRef(coinbase)};
+            if (mining) {
+                CMutableTransaction tx;
+                tx.nVersion = 3;
+                tx.nType = TRANSACTION_QUORUM_COMMITMENT;
+                llmq::CFinalCommitmentTxPayload qc;
+                qc.nHeight = height;
+                qc.commitment = commitments.back();
+                SetTxPayload(tx, qc);
+                block.vtx.push_back(MakeTransactionRef(tx));
+            }
+            block.hashMerkleRoot = BlockMerkleRoot(block);
+            while (!CheckProofOfWork(block.GetHash(), block.nBits, consensus))
+                ++block.nNonce;
+            const auto pos = chainman.m_blockman.SaveBlockToDisk(block, height, nullptr);
+            BOOST_REQUIRE(!pos.IsNull());
+            LOCK(cs_main);
+            auto* index = chainman.m_blockman.InsertBlockIndex(block.GetHash());
+            index->nVersion = block.nVersion;
+            index->hashMerkleRoot = block.hashMerkleRoot;
+            index->nTime = block.nTime;
+            index->nBits = block.nBits;
+            index->nNonce = block.nNonce;
+            index->pprev = previous;
+            index->nHeight = height;
+            index->nFile = pos.nFile;
+            index->nDataPos = pos.nPos;
+            index->nStatus = BLOCK_HAVE_DATA;
+            chain.SetTip(*index);
+            previous = index;
+            if (mining) {
+                const auto& qc = commitments.back();
+                m_node.evodb->Write(std::make_pair(std::string{"q_mc"}, std::make_pair(params.type, qc.quorumHash)),
+                                    std::make_pair(qc, block.GetHash()));
+                m_node.evodb->Write(std::make_tuple(std::string{"q_mcih"}, params.type,
+                                                    htobe32_internal(UINT32_MAX - height)),
+                                    height - params.dkgMiningWindowStart);
+            }
+        }
+    }
+
+    UniValue Generate(int minimum)
+    {
+        JSONRPCRequest request;
+        request.context = CoreContext{m_node};
+        request.strMethod = "getquorumproofchain";
+        request.params = UniValue{UniValue::VARR};
+        request.params.push_back(
+            WITH_LOCK(cs_main, return m_node.chainman->ActiveChain()[checkpoint_height]->GetBlockHash().ToString()));
+        request.params.push_back(minimum);
+        if (RPCIsInWarmup(nullptr)) SetRPCWarmupFinished();
+        return tableRPC.execute(request);
+    }
+};
+
 BOOST_FIXTURE_TEST_SUITE(quorum_proofs_tests, QuorumProofsRegtestSetup)
+BOOST_FIXTURE_TEST_CASE(generation_retries_retired_checkpoint_signer, QuorumProofGenerationSetup)
+{
+    CreateHistory();
+    auto& chain = *WITH_LOCK(cs_main, return &m_node.chainman->ActiveChain());
+    const auto* checkpoint = chain[checkpoint_height];
+    chainlock::CoinbaseChainLockReader reader(chain);
+    llmq::QuorumProofBuilder builder(*m_node.llmq_ctx->quorum_block_processor, *m_node.llmq_ctx->qman, chain,
+                                     *m_node.chainman, reader);
+    const auto first = reader.Find(checkpoint_height + 1, chain.Height());
+    BOOST_REQUIRE(first);
+    BOOST_CHECK_EQUAL(first->clsig.getHeight(), checkpoint_height + 1);
+    BOOST_CHECK(!builder.Build(checkpoint, first->clsig));
+
+    const auto result = Generate(checkpoint_height + 1);
+    const auto proof = llmq::QuorumProofChain::Decode(ParseHex(result["proof_hex"].get_str()));
+    BOOST_CHECK_EQUAL(proof.Verify(llmq::QuorumProofBuilder::StateAt(checkpoint)).height,
+                      checkpoint_height + llmq::SIGN_HEIGHT_OFFSET);
+    BOOST_CHECK(proof.links.empty());
+
+    // A later certificate is required; exhaustion must not return the unbound target.
+    auto* tip = chain.Tip();
+    WITH_LOCK(cs_main, chain.SetTip(*chain[checkpoint_height + 2]));
+    BOOST_CHECK_THROW(Generate(checkpoint_height + 1), UniValue);
+    BOOST_CHECK_THROW(Generate(0), UniValue);
+    WITH_LOCK(cs_main, chain.SetTip(*tip));
+
+    // Missing history is a hard error, not a reason to skip to another target.
+    WITH_LOCK(cs_main, chain[checkpoint_height]->nStatus &= ~BLOCK_HAVE_DATA);
+    BOOST_CHECK_EXCEPTION(Generate(checkpoint_height + 1), UniValue, [](const UniValue& error) {
+        return error["message"].get_str().find("historical block unavailable") != std::string::npos;
+    });
+}
 BOOST_AUTO_TEST_CASE(real_testnet_wire_and_crypto) {
     auto bytes = ParseHex(TESTNET_PROOF);
     auto proof = llmq::QuorumProofChain::Decode(bytes);

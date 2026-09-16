@@ -462,7 +462,8 @@ static const CBlockIndex* MinedCommitmentBlock(const CQuorumBlockProcessor& proc
     return mined;
 }
 
-QuorumProofChain QuorumProofBuilder::Build(const CBlockIndex* checkpoint, const chainlock::ChainLockSig& target) const
+std::optional<QuorumProofChain> QuorumProofBuilder::Build(const CBlockIndex* checkpoint,
+                                                          const chainlock::ChainLockSig& target) const
 {
     const auto& chain = m_chain;
     const auto& blocks = m_chainman.m_blockman;
@@ -493,7 +494,8 @@ QuorumProofChain QuorumProofBuilder::Build(const CBlockIndex* checkpoint, const 
         Require(proof.links.size() < MAX_PROOF_CERTIFICATES - 1, "certificate budget exhausted");
         Require(!ShutdownRequested(), "proof construction interrupted");
         const auto* mined = MinedCommitmentBlock(m_quorum_block_processor, chain, blocks, kind, needed->quorumHash);
-        Require(mined && mined->nHeight > checkpoint->nHeight, "no bridge to snapshot");
+        Require(mined != nullptr, "mining block unavailable");
+        if (mined->nHeight <= checkpoint->nHeight) return std::nullopt;
         CBlock block;
         Require(node::ReadBlockFromDisk(block, mined, Params().GetConsensus()), "mining block unavailable");
         std::optional<ProofTransaction> mining;

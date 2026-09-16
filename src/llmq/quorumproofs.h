@@ -77,7 +77,8 @@ public:
     }
     std::vector<CFinalCommitment> ActiveCommitments(const CBlockIndex* index) const;
     static ProofState StateAt(const CBlockIndex* index);
-    QuorumProofChain Build(const CBlockIndex* checkpoint, const chainlock::ChainLockSig& target) const;
+    /** No value when the target requires a retired checkpoint quorum; other failures throw. */
+    std::optional<QuorumProofChain> Build(const CBlockIndex* checkpoint, const chainlock::ChainLockSig& target) const;
 };
 } // namespace llmq
 #endif // BITCOIN_LLMQ_QUORUMPROOFS_H
