@@ -712,7 +712,7 @@ void setFont(const std::vector<QWidget*>& vecWidgets, const QString& font, FontW
 {
     const FontAttrib font_attrib{font, weight, point_size, is_italic};
     for (auto it : vecWidgets) {
-        auto itFontUpdate = mapFontUpdates.emplace(std::make_pair(it, font_attrib));
+        auto itFontUpdate = mapFontUpdates.emplace(it, font_attrib);
         if (!itFontUpdate.second) {
             itFontUpdate.first->second = font_attrib;
         }

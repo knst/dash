@@ -1266,7 +1266,7 @@ public:
                 // Skip the change output to only return the requested coins
                 continue;
             }
-            vecOutpoints.push_back(COutPoint(tx->GetHash(), n));
+            vecOutpoints.emplace_back(tx->GetHash(), n);
         }
         assert(vecOutpoints.size() == vecEntries.size());
         return vecOutpoints;
@@ -1539,7 +1539,7 @@ BOOST_FIXTURE_TEST_CASE(CreateTransactionTest, CreateTransactionTestSetup)
         BOOST_CHECK(CreateTransaction({{546, true}}, strTooSmallAfterFee, false));
 
         createOutputEntries(100);
-        vecOutputEntries.push_back({600, true});
+        vecOutputEntries.emplace_back(600, true);
         BOOST_CHECK(CreateTransaction(vecOutputEntries, strTooSmallToPayFee, false));
         vecOutputEntries.pop_back();
 
