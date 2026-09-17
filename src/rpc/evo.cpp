@@ -1695,7 +1695,9 @@ static RPCHelpMan protx_shared_dissolve()
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY,
                            "private key for the actor share's owner address not found in this wallet");
     }
-    ptx.vchSigs = {vchSig};
+    CompactSignature sig;
+    std::copy(vchSig.begin(), vchSig.end(), sig.begin());
+    ptx.vchSigs = {sig};
     SetTxPayload(tx, ptx);
 
     if (!fSubmit) {
@@ -1845,7 +1847,7 @@ static RPCHelpMan protx_shared_update_registrar_prepare()
     tx.nType = TRANSACTION_PROVIDER_UPDATE_SHARED_REGISTRAR;
 
     // make sure we get enough fees added: one signature per share
-    ptx.vchSigs.assign(dmn->pdmnState->shares.size(), std::vector<unsigned char>(CPubKey::COMPACT_SIGNATURE_SIZE, 0));
+    ptx.vchSigs.assign(dmn->pdmnState->shares.size(), CompactSignature{});
 
     FundSpecialTx(*pwallet, tx, ptx, feeSourceDest);
     UpdateSpecialTxInputsHash(tx, ptx);
@@ -1896,14 +1898,16 @@ static RPCHelpMan protx_shared_combine()
     }
 
     // Collect (shareIndex, signature) pairs
-    std::map<size_t, std::vector<unsigned char>> sigs;
+    std::map<size_t, CompactSignature> sigs;
     for (const auto& entry : request.params[1].get_array().getValues()) {
         const int64_t index{entry.find_value("shareIndex").getInt<int64_t>()};
         auto opt_sig = DecodeBase64(entry.find_value("signature").get_str());
         if (index < 0 || !opt_sig.has_value() || opt_sig->size() != CPubKey::COMPACT_SIGNATURE_SIZE) {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "invalid signature entry");
         }
-        if (!sigs.emplace(static_cast<size_t>(index), *opt_sig).second) {
+        CompactSignature sig;
+        std::copy(opt_sig->begin(), opt_sig->end(), sig.begin());
+        if (!sigs.emplace(static_cast<size_t>(index), sig).second) {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "duplicate shareIndex");
         }
     }
@@ -2704,7 +2708,7 @@ static RPCHelpMan protx_shared_register_prepare()
     ptx.collateralOutpoint = COutPoint(uint256(), static_cast<uint32_t>(tx.vout.size() - 1));
 
     // Placeholder consent signatures; filled in by "protx shared_combine"
-    ptx.vchJoinSigs.assign(ptx.shares.size(), std::vector<unsigned char>(CPubKey::COMPACT_SIGNATURE_SIZE, 0));
+    ptx.vchJoinSigs.assign(ptx.shares.size(), CompactSignature{});
 
     UpdateSpecialTxInputsHash(tx, ptx);
 

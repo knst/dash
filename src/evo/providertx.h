@@ -21,6 +21,7 @@
 #include <gsl/pointers.h>
 #include <univalue.h>
 
+#include <array>
 #include <limits>
 #include <vector>
 
@@ -47,23 +48,8 @@ public:
 
 using MasternodePayoutShares = std::vector<MasternodePayoutShare>;
 
-/** Serializes a 65-byte compact recoverable ECDSA signature without a length prefix */
-struct CompactSignatureFormatter {
-    template <typename Stream, typename V>
-    static void Ser(Stream& s, const V& v)
-    {
-        if (v.size() != CPubKey::COMPACT_SIGNATURE_SIZE) {
-            throw std::ios_base::failure("compact signature size mismatch");
-        }
-        s.write(AsBytes(Span{v}));
-    }
-    template <typename Stream, typename V>
-    static void Unser(Stream& s, V& v)
-    {
-        v.resize(CPubKey::COMPACT_SIGNATURE_SIZE);
-        s.read(AsWritableBytes(Span{v}));
-    }
-};
+/** A 65-byte compact recoverable ECDSA signature; serializes as raw bytes without a length prefix */
+using CompactSignature = std::array<unsigned char, CPubKey::COMPACT_SIGNATURE_SIZE>;
 
 /** One participant's contribution to a shared masternode collateral */
 class CCollateralShare
@@ -125,10 +111,9 @@ template<class T>
                                               uint16_t platform_http_port, bool allow_empty, TxValidationState& state);
 
 [[nodiscard]] bool IsShareListTriviallyValid(const CollateralShares& shares,
-                                             const std::vector<std::vector<unsigned char>>& join_sigs,
-                                             uint32_t early_period_blocks, CAmount early_penalty,
-                                             CAmount required_collateral, const CKeyID& keyIDVoting,
-                                             TxValidationState& state);
+                                             const std::vector<CompactSignature>& join_sigs, uint32_t early_period_blocks,
+                                             CAmount early_penalty, CAmount required_collateral,
+                                             const CKeyID& keyIDVoting, TxValidationState& state);
 /** Whether no share refund or effective reward script pays the voting key's P2PKH destination,
  *  the registration-time separation rule that voting-key and reward-script updates must preserve */
 [[nodiscard]] bool IsShareListVotingKeySafe(const CollateralShares& shares, const CKeyID& keyIDVoting);
@@ -166,7 +151,7 @@ public:
     CScript scriptPayout;
     MasternodePayoutShares payouts;
     CollateralShares shares;                            // non-empty = shared masternode registration
-    std::vector<std::vector<unsigned char>> vchJoinSigs; // one consent signature per share, in share order
+    std::vector<CompactSignature> vchJoinSigs;          // one consent signature per share, in share order
     uint32_t nEarlyPeriodBlocks{0};
     CAmount nEarlyPenalty{0};
     uint256 inputsHash; // replay protection
@@ -204,7 +189,7 @@ public:
             }
             uint8_t shares_count{0};
             // One join signature per share: a mismatched in-memory object cannot round-trip, so
-            // fail the write up front like CompactSignatureFormatter does for a malformed signature
+            // fail the write up front
             SER_WRITE(obj, if (obj.vchJoinSigs.size() != obj.shares.size()) {
                 throw std::ios_base::failure("join signature count mismatch");
             });
@@ -221,7 +206,7 @@ public:
             }
             SER_READ(obj, obj.vchJoinSigs.resize(shares_count));
             for (auto& sig : obj.vchJoinSigs) {
-                READWRITE(Using<CompactSignatureFormatter>(sig));
+                READWRITE(sig);
             }
             READWRITE(obj.nEarlyPeriodBlocks, obj.nEarlyPenalty);
         } else {
@@ -465,7 +450,7 @@ public:
     uint16_t actorIndex{0};
     // Exactly one signature (unilateral, by shares[actorIndex]) or one per share in share order
     // (unanimous); the signature count defines the mode
-    std::vector<std::vector<unsigned char>> vchSigs;
+    std::vector<CompactSignature> vchSigs;
 
     SERIALIZE_METHODS(CProDisTx, obj)
     {
@@ -478,7 +463,7 @@ public:
         READWRITE(sig_count);
         SER_READ(obj, obj.vchSigs.resize(sig_count));
         for (auto& sig : obj.vchSigs) {
-            READWRITE(Using<CompactSignatureFormatter>(sig));
+            READWRITE(sig);
         }
     }
 
@@ -547,7 +532,7 @@ public:
     CKeyID keyIDVoting;
     uint256 inputsHash; // replay protection
     // One signature per share, in share order; a shared registrar update requires unanimity
-    std::vector<std::vector<unsigned char>> vchSigs;
+    std::vector<CompactSignature> vchSigs;
 
     SERIALIZE_METHODS(CProUpSharedRegTx, obj)
     {
@@ -563,7 +548,7 @@ public:
             READWRITE(sig_count);
             SER_READ(obj, obj.vchSigs.resize(sig_count));
             for (auto& sig : obj.vchSigs) {
-                READWRITE(Using<CompactSignatureFormatter>(sig));
+                READWRITE(sig);
             }
         }
     }

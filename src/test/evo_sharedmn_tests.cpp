@@ -29,6 +29,7 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <algorithm>
 #include <optional>
 
 BOOST_FIXTURE_TEST_SUITE(evo_sharedmn_tests, BasicTestingSetup)
@@ -82,12 +83,9 @@ static CCollateralShare NewShare(CAmount amount, CKey& refund_key, CKey& owner_k
     return {amount, NewP2PKHScript(refund_key), CScript(), owner_key.GetPubKey().GetID()};
 }
 
-static std::vector<std::vector<unsigned char>> DummyJoinSigs(size_t count)
-{
-    return {count, std::vector<unsigned char>(CPubKey::COMPACT_SIGNATURE_SIZE, 0)};
-}
+static std::vector<CompactSignature> DummyJoinSigs(size_t count) { return std::vector<CompactSignature>(count); }
 
-static void CheckShares(const CollateralShares& shares, const std::vector<std::vector<unsigned char>>& join_sigs,
+static void CheckShares(const CollateralShares& shares, const std::vector<CompactSignature>& join_sigs,
                         uint32_t early_period_blocks, CAmount early_penalty, const CKeyID& voting,
                         const std::optional<std::string>& expected_error)
 {
@@ -128,14 +126,9 @@ BOOST_AUTO_TEST_CASE(share_list_validation)
         CheckShares(nine_shares, DummyJoinSigs(9), 0, 0, voting_id, "bad-protx-shares-count");
     }
 
-    // One join signature per share, each 65 bytes
+    // One join signature per share
     CheckShares(two_shares, DummyJoinSigs(1), 0, 0, voting_id, "bad-protx-shares-sig-count");
     CheckShares(two_shares, DummyJoinSigs(3), 0, 0, voting_id, "bad-protx-shares-sig-count");
-    {
-        auto bad_sigs = DummyJoinSigs(2);
-        bad_sigs[1].resize(64);
-        CheckShares(two_shares, bad_sigs, 0, 0, voting_id, "bad-protx-shares-sig-size");
-    }
 
     // Early period cap and penalty bounds
     CheckShares(two_shares, DummyJoinSigs(2), CProRegTx::MAX_EARLY_PERIOD_BLOCKS + 1, 0, voting_id,
@@ -749,6 +742,15 @@ struct ProDisTestSetup {
         return tx;
     }
 
+    static CompactSignature SignCompact(const uint256& hash, const CKey& key)
+    {
+        std::vector<unsigned char> vchSig;
+        BOOST_REQUIRE(CHashSigner::SignHash(hash, key, vchSig));
+        CompactSignature sig;
+        std::copy(vchSig.begin(), vchSig.end(), sig.begin());
+        return sig;
+    }
+
     void Sign(const CMutableTransaction& tx, CProDisTx& ptx, bool unanimous) const
     {
         const uint8_t sig_count{unanimous ? static_cast<uint8_t>(std::size(owner_keys)) : uint8_t{1}};
@@ -756,14 +758,10 @@ struct ProDisTestSetup {
         ptx.vchSigs.clear();
         if (unanimous) {
             for (const auto& key : owner_keys) {
-                std::vector<unsigned char> sig;
-                BOOST_REQUIRE(CHashSigner::SignHash(hash, key, sig));
-                ptx.vchSigs.push_back(sig);
+                ptx.vchSigs.push_back(SignCompact(hash, key));
             }
         } else {
-            std::vector<unsigned char> sig;
-            BOOST_REQUIRE(CHashSigner::SignHash(hash, owner_keys[ptx.actorIndex], sig));
-            ptx.vchSigs.push_back(sig);
+            ptx.vchSigs.push_back(SignCompact(hash, owner_keys[ptx.actorIndex]));
         }
     }
 
@@ -892,9 +890,7 @@ BOOST_AUTO_TEST_CASE(prodis_validation)
     {
         CProDisTx ptx;
         auto tx = t.BuildTx(2, ProDisTestSetup::PENALTY, false, ptx);
-        std::vector<unsigned char> sig;
-        BOOST_REQUIRE(CHashSigner::SignHash(ptx.MakeSignHash(CTransaction(tx), /*sig_count=*/1), t.owner_keys[0], sig));
-        ptx.vchSigs = {sig};
+        ptx.vchSigs = {t.SignCompact(ptx.MakeSignHash(CTransaction(tx), /*sig_count=*/1), t.owner_keys[0])};
         t.Check(tx, ptx, IN_EARLY, "bad-prodis-sig");
     }
     // Unanimous signatures out of share order
