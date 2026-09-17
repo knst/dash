@@ -233,6 +233,7 @@ constexpr std::array<std::string_view, 1> vecIgnoreObjects{
 //! Weights considered when testing for weights supported by a font
 const auto vecWeightConsider = []() {
     std::vector<QFont::Weight> ret;
+    ret.reserve(mapWeightArgs.second.size());
     for (const auto& [key, _] : mapWeightArgs.second) {
         ret.push_back(key);
     }

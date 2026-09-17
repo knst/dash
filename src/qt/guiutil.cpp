@@ -834,6 +834,7 @@ bool isStyleSheetDirectoryCustom()
 std::vector<QString> listStyleSheets()
 {
     std::vector<QString> vecStylesheets;
+    vecStylesheets.reserve(mapThemeToStyle.size());
     for (const auto& it : mapThemeToStyle) {
         vecStylesheets.push_back(it.second);
     }

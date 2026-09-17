@@ -423,6 +423,7 @@ static RPCHelpMan getaddressmempool()
     }
 
     std::vector<CMempoolAddressDeltaKey> input_addresses;
+    input_addresses.reserve(addresses.size());
     std::vector<CMempoolAddressDeltaEntry> indexes;
     for (const auto& [hash, type] : addresses) {
         input_addresses.emplace_back(type, hash);
