@@ -126,15 +126,65 @@ the same change. Most source/test files need `src/Makefile.am` or
 `src/Makefile.test.include` updates, and new Dash-specific files must also be
 appended to `test/util/data/non-backported.txt`.
 
+## Writing Tests
+
+Pick the test type by what it can observe, not by where it is easiest to
+write.
+
+- A unit test (`src/test/`, `src/wallet/test/`, Boost; `src/qt/test/`, QTest) isolates
+  one function or class. Every input is named in the test and every assertion
+  checks its documented return value or state. Prefer standard fixtures
+  (`TestingSetup`, `BasicTestingSetup`) over injected internal state, `friend`
+  declarations, or explanations of how a private method computes its
+  precondition; if the behavior under test cannot be observed without deep
+  private-state surgery, extract the logic into a directly testable function
+  or write a functional test.
+- A functional test (`test/functional/`, Python) proves a user-visible outcome
+  through RPC or P2P: a block is accepted, a lock appears, a peer is or is not
+  banned. It is the right home for anything that depends on quorums, signing,
+  sync state, or several subsystems together.
+- A regression test, of either kind, must fail without the fix and pass with
+  it, and it must observe the behavior the change claims. Asserting on a
+  cache entry, a seen-set size, or a returned container because the real
+  outcome is unreachable in the fixture is not coverage. If the real outcome
+  cannot be observed at that layer, test at the layer where it can.
+- One scenario per test case, or a table of inputs with the expected value
+  beside each. Do not chain unrelated scenarios in one case with a single
+  trailing assertion; a failure must point at the scenario that broke.
+  Assertions inside a shared lambda hide which call failed.
+- Prefer existing suites and files; each new file adds setup and compile
+  time. A new file is justified only by a self-contained feature with its
+  own setup, or when a separate file yields clearly better isolation or
+  parallelism, not by a new variant of a scenario a neighbouring test
+  already covers. Name tests after the invariant they check, not after the
+  PR or a vague adjective.
+- Every scenario the code special-cases needs its own negative case. Ten
+  gates checked by one "nothing changed" comparison at the end is one test,
+  not ten.
+- A PR may claim only the verification that was actually run. Mutation checks
+  and "fails without the fix" claims belong in the PR only when they were
+  performed and can be reproduced from the description.
+- Some changes cannot be tested honestly at either level: performance work,
+  races and other multi-threading bugs, timing- or scheduler-dependent
+  behavior, anything whose failure is non-deterministic. A test that needs
+  sleeps, retries, or a harness more intricate than the fix itself is not
+  worth its upkeep. Say in the PR how the change was verified instead of
+  faking a test.
+- Some changes need no test because the diff is the proof: passing by
+  reference instead of by value, a typo or a stray or missing newline in a
+  log line, a wrong log category, a misspelled RPC help string, a missing
+  `const`, a renamed local, an include reordering. Do not write a test whose
+  only purpose is to satisfy the checklist.
+- Every line of test code is a maintenance obligation for as long as the
+  test exists. Keep tests compact, drive them through public interfaces and
+  observable outcomes rather than internal structures or private members,
+  and add one only when catching a regression is worth carrying that test
+  for years. When it is not, leave it out and say so.
+
 ## Test Commands
 
 Choose tests based on the files touched. Do not claim broad validation if only a
-targeted test was run. Prefer adding test cases to existing files over creating a
-new unit or functional test file. Only create a new test file when the additions
-would make an existing file overly complicated, when a separate file yields
-clearly improved performance (e.g. parallel execution or isolation), or when the
-subject being tested is distinctly separate and does not logically belong in an
-existing file. Fewer files reduce test setup overhead and compilation time.
+targeted test was run.
 
 ```bash
 # All unit tests
