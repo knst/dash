@@ -60,15 +60,11 @@ bool IsPayoutListTriviallyValid(const MasternodePayoutShares& payouts, const CKe
     return true;
 }
 
-bool IsShareListTriviallyValid(const CollateralShares& shares, const std::vector<CompactSignature>& join_sigs,
-                               uint32_t early_period_blocks, CAmount early_penalty, CAmount required_collateral,
-                               const CKeyID& keyIDVoting, TxValidationState& state)
+bool IsShareListTriviallyValid(const CollateralShares& shares, uint32_t early_period_blocks, CAmount early_penalty,
+                               CAmount required_collateral, const CKeyID& keyIDVoting, TxValidationState& state)
 {
     if (shares.size() < CProRegTx::MIN_SHARES || shares.size() > CProRegTx::MAX_SHARES) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-count");
-    }
-    if (join_sigs.size() != shares.size()) {
-        return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-sig-count");
     }
     if (early_period_blocks > CProRegTx::MAX_EARLY_PERIOD_BLOCKS) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-early-period");
@@ -282,9 +278,6 @@ bool CProRegTx::IsTriviallyValid(TxValidationState& state) const
     }
 
     if (IsShared()) {
-        if (nVersion < ProTxVersion::ExtAddr) {
-            return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-version");
-        }
         if (nType != MnType::Regular) {
             return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-evo");
         }
@@ -300,7 +293,7 @@ bool CProRegTx::IsTriviallyValid(TxValidationState& state) const
             return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-payouts");
         }
     } else {
-        if (!vchJoinSigs.empty() || nEarlyPeriodBlocks != 0 || nEarlyPenalty != 0) {
+        if (nEarlyPeriodBlocks != 0 || nEarlyPenalty != 0) {
             return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-empty-fields");
         }
         if (keyIDOwner.IsNull()) {
@@ -314,8 +307,8 @@ bool CProRegTx::IsTriviallyValid(TxValidationState& state) const
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-operator-pubkey");
     }
     if (IsShared()) {
-        if (!IsShareListTriviallyValid(shares, vchJoinSigs, nEarlyPeriodBlocks, nEarlyPenalty,
-                                       GetMnType(nType).collat_amount, keyIDVoting, state)) {
+        if (!IsShareListTriviallyValid(shares, nEarlyPeriodBlocks, nEarlyPenalty, GetMnType(nType).collat_amount,
+                                       keyIDVoting, state)) {
             return false;
         }
     } else {

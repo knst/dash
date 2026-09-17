@@ -110,8 +110,7 @@ template<class T>
                                               uint16_t version, const uint160* platform_node_id, uint16_t platform_p2p_port,
                                               uint16_t platform_http_port, bool allow_empty, TxValidationState& state);
 
-[[nodiscard]] bool IsShareListTriviallyValid(const CollateralShares& shares,
-                                             const std::vector<CompactSignature>& join_sigs, uint32_t early_period_blocks,
+[[nodiscard]] bool IsShareListTriviallyValid(const CollateralShares& shares, uint32_t early_period_blocks,
                                              CAmount early_penalty, CAmount required_collateral,
                                              const CKeyID& keyIDVoting, TxValidationState& state);
 /** Whether no share refund or effective reward script pays the voting key's P2PKH destination,
@@ -195,11 +194,6 @@ public:
             // fail the write up front
             SER_WRITE(obj, if (obj.vchJoinSigs.size() != obj.shares.size()) {
                 throw std::ios_base::failure("join signature count mismatch");
-            });
-            // A count above the one-byte wire field would truncate (256 shares would serialize as
-            // a non-shared registration whose digest nobody signed), so fail loudly instead
-            SER_WRITE(obj, if (obj.shares.size() > CProRegTx::MAX_SHARES) {
-                throw std::ios_base::failure("share count exceeds the wire limit");
             });
             SER_WRITE(obj, shares_count = static_cast<uint8_t>(obj.shares.size()));
             READWRITE(shares_count);
@@ -459,9 +453,6 @@ public:
     {
         READWRITE(obj.nVersion, obj.proTxHash, obj.actorIndex);
         uint8_t sig_count{0};
-        SER_WRITE(obj, if (obj.vchSigs.size() > CProRegTx::MAX_SHARES) {
-            throw std::ios_base::failure("signature count exceeds the wire limit");
-        });
         SER_WRITE(obj, sig_count = static_cast<uint8_t>(obj.vchSigs.size()));
         READWRITE(sig_count);
         SER_READ(obj, obj.vchSigs.resize(sig_count));
@@ -544,9 +535,6 @@ public:
                   obj.keyIDVoting, obj.inputsHash);
         if (!(s.GetType() & SER_GETHASH)) {
             uint8_t sig_count{0};
-            SER_WRITE(obj, if (obj.vchSigs.size() > CProRegTx::MAX_SHARES) {
-                throw std::ios_base::failure("signature count exceeds the wire limit");
-            });
             SER_WRITE(obj, sig_count = static_cast<uint8_t>(obj.vchSigs.size()));
             READWRITE(sig_count);
             SER_READ(obj, obj.vchSigs.resize(sig_count));
