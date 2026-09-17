@@ -120,6 +120,9 @@ template<class T>
 [[nodiscard]] std::string PayoutListToString(const CollateralShares& shares, uint32_t early_period_blocks,
                                             CAmount early_penalty);
 [[nodiscard]] UniValue ShareListToJson(const CollateralShares& shares);
+/** floor(total * weight / weight_total) without 64-bit overflow: the pro-rata portion DIP-0026's
+ *  rounding convention gives every entry but the last */
+[[nodiscard]] CAmount ProRataFloor(CAmount total, CAmount weight, CAmount weight_total);
 /** Split an amount across shares proportionally to their collateral amounts: sequential floor,
  *  remainder to the last entry. The result always sums to total exactly. */
 [[nodiscard]] std::vector<CAmount> SplitAmountByShares(CAmount total, const CollateralShares& shares);
