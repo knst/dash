@@ -180,20 +180,13 @@ BOOST_AUTO_TEST_CASE(share_list_validation)
         CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, "bad-protx-shares-key-null");
     }
 
-    // Script type restrictions: template, non-standard, P2SH allowed
+    // Script type restrictions: non-standard rejected, P2SH allowed
     {
         CollateralShares shares{two_shares};
-        shares[0].scriptReward = SharedCollateralScript();
-        CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, "bad-protx-shares-payee-template");
         shares[0].scriptReward = CScript() << OP_TRUE;
         CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, "bad-protx-shares-payee");
         shares[0].scriptReward = GetScriptForDestination(ScriptHash(CScript() << OP_TRUE));
         CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, std::nullopt);
-    }
-    {
-        CollateralShares shares{two_shares};
-        shares[0].scriptRefund = SharedCollateralScript();
-        CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, "bad-protx-shares-payee-template");
     }
 
     // Refund/reward scripts must not pay any table owner key or the voting key
@@ -286,7 +279,7 @@ BOOST_AUTO_TEST_CASE(proupshare_sig_size)
     BOOST_CHECK(ptx.IsTriviallyValid(state));
     ptx.scriptReward.clear();
     BOOST_CHECK(!ptx.IsTriviallyValid(state));
-    BOOST_CHECK_EQUAL(state.GetRejectReason(), "bad-proupshare-payee-empty");
+    BOOST_CHECK_EQUAL(state.GetRejectReason(), "bad-proupshare-payee");
 }
 
 BOOST_AUTO_TEST_CASE(shared_proregtx_serialization)
