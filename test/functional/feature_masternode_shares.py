@@ -570,7 +570,7 @@ class MasternodeSharesTest(DashTestFramework):
             TRANSACTION_PROVIDER_UPDATE_SHARE,
             struct.pack("<H", 1) + b"\x00" * 32 + struct.pack("<H", 0) + b"\x00" + b"\x00" * 32 +
             bytes([65]) + b"\x00" * 65)
-        assert_raises_rpc_error(-25, "bad-proupshare-payee-empty", self.generateblock, node, pre_miner,
+        assert_raises_rpc_error(-25, "bad-proupshare-payee", self.generateblock, node, pre_miner,
                                 [upshare_empty_hex], sync_fun=self.no_op)
         upsharedreg_hex = self.build_lifecycle_tx(
             TRANSACTION_PROVIDER_UPDATE_SHARED_REGISTRAR,

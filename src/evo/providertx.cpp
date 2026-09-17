@@ -5,7 +5,6 @@
 #include <evo/providertx.h>
 
 #include <evo/dmn_types.h>
-#include <evo/sharedcollateral.h>
 #include <util/std23.h>
 
 #include <chainparams.h>
@@ -101,9 +100,6 @@ bool IsShareListTriviallyValid(const CollateralShares& shares, const std::vector
             if (script == &share.scriptReward && script->empty()) {
                 // An empty reward script means "use the refund script"
                 continue;
-            }
-            if (IsSharedCollateralScript(*script)) {
-                return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-payee-template");
             }
             if (!IsValidPayoutScript(*script)) {
                 return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-payee");
@@ -567,12 +563,6 @@ bool CProUpShareTx::IsTriviallyValid(TxValidationState& state) const
     }
     if (vchSig.size() != CPubKey::COMPACT_SIGNATURE_SIZE) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-proupshare-sig-size");
-    }
-    if (scriptReward.empty()) {
-        return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-proupshare-payee-empty");
-    }
-    if (IsSharedCollateralScript(scriptReward)) {
-        return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-proupshare-payee-template");
     }
     if (!IsValidPayoutScript(scriptReward)) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-proupshare-payee");
