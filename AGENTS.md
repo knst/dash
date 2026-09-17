@@ -46,11 +46,10 @@ Short version, in order of preference:
   `obj = *Assert(ptr);`
 - `CHECK_NONFATAL(cond)` / `NONFATAL_UNREACHABLE()` for internal logic bugs on
   a path with a caller to report to. Required in RPC code, enforced
-  (best-effort) by `test/lint/lint-assertions.py` for `src/rpc/` and
-  `src/wallet/rpc*`.
+  (best-effort) for `src/rpc/` and `src/wallet/rpc*`.
 
 The production-crash guidance above does not apply to C++ regression and
-unit-test sources under `src/test/` and `src/wallet/test/`. They compile into test
+unit-test sources under `src/test/`, `src/qt/test/`, `src/wallet/test/`. They compile into test
 binaries, not user-facing `dashd` or `dash-qt`; `assert`, `Assert`, `Assume`,
 and related fatal test checks are all acceptable. Do not flag the choice among
 them as a production-crash risk.
@@ -70,7 +69,7 @@ not checks at all: return an error, `AbortNode()`, or `InitError()`.
 - `src/llmq/`, `src/masternode/`, `src/evo/`, `src/governance/`,
   `src/coinjoin/`, `src/instantsend/`, `src/spork*` - Dash-specific systems.
 - `src/test/`, `src/wallet/test/`, `src/qt/test/` - C++ unit tests.
-- `test/functional/` - Python functional tests for `dashd` and `dash-qt`.
+- `test/functional/` - Python functional tests for `dashd`.
 - `test/lint/` - static checks.
 - `depends/` - dependency build system.
 - `ci/`, `.github/` - CI entry points and GitHub workflows.
@@ -119,18 +118,13 @@ Useful developer configure flags:
             --enable-werror
 ```
 
-Generate `compile_commands.json`:
-
-```bash
-JOBS="$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu)"
-JOBS="$(( JOBS > 1 ? JOBS - 1 : 1 ))"
-bear -- make -j"$JOBS"
-```
+To generate `compile_commands.json` or run clang-tidy, see
+`doc/developer-notes.md` under "Running clang-tidy".
 
 When adding, removing, or renaming C++ source files, update the build system in
 the same change. Most source/test files need `src/Makefile.am` or
-`src/Makefile.test.include` updates, and some backports also require matching
-CI/lint list changes.
+`src/Makefile.test.include` updates, and new Dash-specific files must also be
+appended to `test/util/data/non-backported.txt`.
 
 ## Test Commands
 
