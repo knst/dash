@@ -61,8 +61,7 @@ bool IsPayoutListTriviallyValid(const MasternodePayoutShares& payouts, const CKe
     return true;
 }
 
-bool IsShareListTriviallyValid(const CollateralShares& shares,
-                               const std::vector<std::vector<unsigned char>>& join_sigs,
+bool IsShareListTriviallyValid(const CollateralShares& shares, const std::vector<CompactSignature>& join_sigs,
                                uint32_t early_period_blocks, CAmount early_penalty, CAmount required_collateral,
                                const CKeyID& keyIDVoting, TxValidationState& state)
 {
@@ -71,11 +70,6 @@ bool IsShareListTriviallyValid(const CollateralShares& shares,
     }
     if (join_sigs.size() != shares.size()) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-sig-count");
-    }
-    for (const auto& sig : join_sigs) {
-        if (sig.size() != CPubKey::COMPACT_SIGNATURE_SIZE) {
-            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-sig-size");
-        }
     }
     if (early_period_blocks > CProRegTx::MAX_EARLY_PERIOD_BLOCKS) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-early-period");
@@ -557,11 +551,6 @@ bool CProDisTx::IsTriviallyValid(TxValidationState& state) const
     if (vchSigs.empty() || vchSigs.size() > CProRegTx::MAX_SHARES) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-prodis-sig-count");
     }
-    for (const auto& sig : vchSigs) {
-        if (sig.size() != CPubKey::COMPACT_SIGNATURE_SIZE) {
-            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-prodis-sig-size");
-        }
-    }
     return true;
 }
 
@@ -612,11 +601,6 @@ bool CProUpSharedRegTx::IsTriviallyValid(TxValidationState& state) const
     }
     if (vchSigs.empty() || vchSigs.size() > CProRegTx::MAX_SHARES) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-proupsharedreg-sig-count");
-    }
-    for (const auto& sig : vchSigs) {
-        if (sig.size() != CPubKey::COMPACT_SIGNATURE_SIZE) {
-            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-proupsharedreg-sig-size");
-        }
     }
     return true;
 }
