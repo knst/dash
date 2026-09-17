@@ -1444,7 +1444,7 @@ BOOST_FIXTURE_TEST_CASE(CreateTransactionTest, CreateTransactionTestSetup)
         // Lock all other coins which were already in the wallet
         {
             LOCK(wallet->cs_wallet);
-            for (auto coin : AvailableCoinsListUnspent(*wallet).All()) {
+            for (const auto& coin : AvailableCoinsListUnspent(*wallet).All()) {
                 if (std::find(setCoins.begin(), setCoins.end(), coin.outpoint) == setCoins.end()) {
                     wallet->LockCoin(coin.outpoint);
                 }
@@ -1500,7 +1500,7 @@ BOOST_FIXTURE_TEST_CASE(CreateTransactionTest, CreateTransactionTestSetup)
             // Lock all other coins
             {
                 LOCK(wallet->cs_wallet);
-                for (auto coin : AvailableCoinsListUnspent(*wallet).All()) {
+                for (const auto& coin : AvailableCoinsListUnspent(*wallet).All()) {
                     wallet->LockCoin(coin.outpoint);
                 }
             }
