@@ -81,6 +81,7 @@
 #include <governance/governance.h>
 #include <instantsend/instantsend.h>
 #include <llmq/context.h>
+#include <llmq/options.h>
 #include <llmq/signing.h>
 #include <masternode/meta.h>
 #include <masternode/sync.h>
@@ -298,7 +299,6 @@ node::ChainstateLoadOptions ChainTestingSetup::ChainstateLoadOptionsForTest()
     options.mempool = Assert(m_node.mempool.get());
     options.isman = Assert(m_node.isman.get());
     options.chainlocks = Assert(m_node.chainlocks.get());
-    options.mn_sync = Assert(m_node.mn_sync.get());
     options.data_dir = Assert(m_node.args)->GetDataDirNet();
     options.block_tree_db_in_memory = m_block_tree_db_in_memory;
     options.coins_db_in_memory = m_coins_db_in_memory;
@@ -312,6 +312,22 @@ node::ChainstateLoadOptions ChainTestingSetup::ChainstateLoadOptionsForTest()
     options.check_interrupt = [] { return false; };
     options.coins_error_cb = [] {};
     return options;
+}
+
+void ChainTestingSetup::MakeDashChainContexts(const bool llmq_dbs_wipe)
+{
+    auto& chainman{*Assert(m_node.chainman)};
+
+    LOCK(::cs_main);
+    m_node.chain_helper.reset();
+    m_node.llmq_ctx.reset();
+    m_node.llmq_ctx = std::make_unique<LLMQContext>(*m_node.dmnman, *m_node.evodb, chainman,
+                                                    util::DbWrapperParams{.path = m_node.args->GetDataDirNet(), .memory = m_dash_dbs_in_memory, .wipe = llmq_dbs_wipe},
+                                                    llmq::DEFAULT_BLSCHECK_THREADS, llmq::DEFAULT_WORKER_COUNT, llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE);
+    m_node.chain_helper = std::make_unique<CChainstateHelper>(*m_node.evodb, *m_node.dmnman, *Assert(m_node.mn_sync), *Assert(m_node.isman),
+                                                              *m_node.llmq_ctx->quorum_block_processor, *m_node.llmq_ctx->qsnapman,
+                                                              chainman, chainman.m_blockman, chainman.GetConsensus(),
+                                                              *Assert(m_node.chainlocks), *m_node.llmq_ctx->qman);
 }
 
 void ChainTestingSetup::LoadVerifyActivateChainstate()
@@ -342,6 +358,8 @@ void ChainTestingSetup::LoadVerifyActivateChainstate()
         // here, including the chainlock handler that references the mempool.
         m_node.clhandler.reset();
         m_node.mempool.reset();
+        m_node.chain_helper.reset();
+        m_node.llmq_ctx.reset();
         m_node.isman.reset();
         m_node.dmnman.reset();
         m_node.evodb.reset();
@@ -350,11 +368,13 @@ void ChainTestingSetup::LoadVerifyActivateChainstate()
         m_node.isman = std::make_unique<llmq::CInstantSendManager>(*m_node.sporkman, util::DbWrapperParams{.path = m_node.args->GetDataDirNet(), .memory = m_dash_dbs_in_memory, .wipe = true});
         m_node.mempool = std::make_unique<CTxMemPool>(MemPoolOptionsForTest(m_node));
         m_node.clhandler = std::make_unique<chainlock::ChainlockHandler>(*m_node.chainlocks, chainman, *m_node.mempool, *m_node.mn_sync);
+        MakeDashChainContexts(/*llmq_dbs_wipe=*/true);
         options = ChainstateLoadOptionsForTest();
+    } else {
+        MakeDashChainContexts(/*llmq_dbs_wipe=*/false);
     }
 
-    auto [status, error] = LoadChainstate(chainman, m_cache_sizes, options, *m_node.evodb, *m_node.dmnman, m_node.llmq_ctx,
-                                          m_node.chain_helper);
+    auto [status, error] = LoadChainstate(chainman, m_cache_sizes, options, *m_node.evodb, *m_node.dmnman, m_node.chain_helper);
     assert(status == node::ChainstateLoadStatus::SUCCESS);
 
     std::tie(status, error) = VerifyLoadedChainstate(chainman, options, *Assert(m_node.evodb), [](bool bls_state) {

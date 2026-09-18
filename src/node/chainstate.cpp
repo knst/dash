@@ -30,7 +30,6 @@
 #include <evo/evodb.h>
 #include <evo/mnhftx.h>
 #include <gsl/pointers.h>
-#include <llmq/context.h>
 
 #include <atomic>
 #include <cassert>
@@ -142,29 +141,14 @@ static bool RecoverSnapshotCleanup(CEvoDB& evodb, const fs::path& data_dir, bili
 static ChainstateLoadResult CompleteChainstateInitialization(ChainstateManager& chainman, const CacheSizes& cache_sizes,
                                                              const ChainstateLoadOptions& options, CEvoDB& evodb,
                                                              CDeterministicMNManager& dmnman,
-                                                             std::unique_ptr<LLMQContext>& llmq_ctx,
-                                                             std::unique_ptr<CChainstateHelper>& chain_helper)
+                                                             const std::unique_ptr<CChainstateHelper>& chain_helper)
     EXCLUSIVE_LOCKS_REQUIRED(::cs_main)
 {
-    const bool to_wipe_data = options.reindex || options.reindex_chainstate;
-
     auto& pblocktree{chainman.m_blockman.m_block_tree_db};
     // new CBlockTreeDB tries to delete the existing file, which
     // fails if it's still open from the previous loop. Close it first:
     pblocktree.reset();
     pblocktree.reset(new CBlockTreeDB(cache_sizes.block_tree_db, options.block_tree_db_in_memory, options.reindex));
-
-    // Initialize llmq_ctx
-    llmq_ctx.reset();
-    llmq_ctx = std::make_unique<LLMQContext>(dmnman, evodb, chainman,
-                                             util::DbWrapperParams{.path = options.data_dir, .memory = options.dash_dbs_in_memory, .wipe = to_wipe_data},
-                                             options.bls_threads, options.worker_count, options.max_recsigs_age);
-
-    // Initialize chain_helper
-    chain_helper.reset();
-    chain_helper = std::make_unique<CChainstateHelper>(evodb, dmnman, *options.mn_sync, *options.isman, *(llmq_ctx->quorum_block_processor),
-                                                       *(llmq_ctx->qsnapman), chainman, chainman.m_blockman, chainman.GetConsensus(),
-                                                       *options.chainlocks, *(llmq_ctx->qman));
 
     if (options.reindex) {
         pblocktree->WriteReindexing(true);
@@ -297,12 +281,11 @@ static ChainstateLoadResult CompleteChainstateInitialization(ChainstateManager& 
 
 ChainstateLoadResult LoadChainstate(ChainstateManager& chainman, const CacheSizes& cache_sizes,
                                     const ChainstateLoadOptions& options, CEvoDB& evodb,
-                                    CDeterministicMNManager& dmnman, std::unique_ptr<LLMQContext>& llmq_ctx,
-                                    std::unique_ptr<CChainstateHelper>& chain_helper)
+                                    CDeterministicMNManager& dmnman, const std::unique_ptr<CChainstateHelper>& chain_helper)
 {
     assert(options.isman);
     assert(options.chainlocks);
-    assert(options.mn_sync);
+    assert(chain_helper);
 
     if (!chainman.AssumedValidBlock().IsNull()) {
         LogPrintf("Assuming ancestors of block %s have valid signatures.\n", chainman.AssumedValidBlock().GetHex());
@@ -350,7 +333,7 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman, const CacheSize
     }
 
     auto [init_status, init_error] = CompleteChainstateInitialization(chainman, cache_sizes, options, evodb, dmnman,
-                                                                      llmq_ctx, chain_helper);
+                                                                      chain_helper);
     if (init_status != ChainstateLoadStatus::SUCCESS) {
         return {init_status, init_error};
     }
@@ -369,8 +352,6 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman, const CacheSize
         // Do nothing; expected case.
     } else if (snapshot_completion == SnapshotCompletionResult::SUCCESS) {
         LogPrintf("[snapshot] cleaning up unneeded background chainstate, then reinitializing\n");
-        chain_helper.reset();
-        llmq_ctx.reset();
         if (!chainman.ValidatedSnapshotCleanup()) {
             return {ChainstateLoadStatus::FAILURE_FATAL, Untranslated("Background chainstate cleanup failed unexpectedly.")};
         }
@@ -389,7 +370,7 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman, const CacheSize
         chainman.ActiveChainstate().ClearBlockIndexCandidates();
 
         std::tie(init_status, init_error) = CompleteChainstateInitialization(chainman, cache_sizes, options, evodb,
-                                                                             dmnman, llmq_ctx, chain_helper);
+                                                                             dmnman, chain_helper);
         if (init_status != ChainstateLoadStatus::SUCCESS) {
             return {init_status, init_error};
         }

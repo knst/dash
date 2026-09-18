@@ -25,6 +25,7 @@
 #include <init/common.h>
 #include <instantsend/instantsend.h>
 #include <llmq/context.h>
+#include <llmq/options.h>
 #include <masternode/meta.h>
 #include <masternode/sync.h>
 #include <node/blockstorage.h>
@@ -104,8 +105,13 @@ int main(int argc, char* argv[])
     // TODO: remove isman from bitcoin-chainstate and make it nullable for node::ChainstateLoadOptions same as mempool
     llmq::CInstantSendManager isman{sporkman, util::DbWrapperParams{.path = gArgs.GetDataDirNet(), .memory = false, .wipe = false}};
 
-    std::unique_ptr<LLMQContext> llmq_ctx;
-    std::unique_ptr<CChainstateHelper> chain_helper;
+    auto llmq_ctx = WITH_LOCK(::cs_main, return std::make_unique<LLMQContext>(dmnman, evodb, chainman,
+                                                                              util::DbWrapperParams{.path = gArgs.GetDataDirNet(), .memory = false, .wipe = false},
+                                                                              llmq::DEFAULT_BLSCHECK_THREADS, llmq::DEFAULT_WORKER_COUNT, llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE));
+    auto chain_helper = std::make_unique<CChainstateHelper>(evodb, dmnman, mn_sync, isman,
+                                                            *llmq_ctx->quorum_block_processor, *llmq_ctx->qsnapman,
+                                                            chainman, chainman.m_blockman, chainman.GetConsensus(),
+                                                            chainlocks, *llmq_ctx->qman);
 
     node::CacheSizes cache_sizes;
     cache_sizes.block_tree_db = 2 << 20;
@@ -114,11 +120,10 @@ int main(int argc, char* argv[])
     node::ChainstateLoadOptions options;
     options.isman = &isman;
     options.chainlocks = &chainlocks;
-    options.mn_sync = &mn_sync;
     options.data_dir = gArgs.GetDataDirNet();
     options.check_interrupt = [] { return false; };
     options.coins_error_cb = [] {};
-    auto [status, error] = node::LoadChainstate(chainman, cache_sizes, options, evodb, dmnman, llmq_ctx, chain_helper);
+    auto [status, error] = node::LoadChainstate(chainman, cache_sizes, options, evodb, dmnman, chain_helper);
     if (status != node::ChainstateLoadStatus::SUCCESS) {
         std::cerr << "Failed to load Chain state from your datadir." << std::endl;
         goto epilogue;

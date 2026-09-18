@@ -5,7 +5,6 @@
 #ifndef BITCOIN_NODE_CHAINSTATE_H
 #define BITCOIN_NODE_CHAINSTATE_H
 
-#include <llmq/options.h>
 #include <util/fs.h>
 #include <validation.h>
 
@@ -20,9 +19,7 @@ class CChainstateHelper;
 class CDeterministicMNManager;
 class CEvoDB;
 class ChainstateManager;
-class CMasternodeSync;
 class CTxMemPool;
-struct LLMQContext;
 
 namespace chainlock { class Chainlocks; }
 namespace llmq { class CInstantSendManager; }
@@ -35,7 +32,6 @@ struct ChainstateLoadOptions {
     CTxMemPool* mempool{nullptr};
     llmq::CInstantSendManager* isman{nullptr};
     chainlock::Chainlocks* chainlocks{nullptr};
-    const CMasternodeSync* mn_sync{nullptr};
     fs::path data_dir;
 
     bool block_tree_db_in_memory{false};
@@ -44,9 +40,6 @@ struct ChainstateLoadOptions {
     bool reindex{false};
     bool reindex_chainstate{false};
     bool prune{false};
-    int8_t bls_threads{llmq::DEFAULT_BLSCHECK_THREADS};
-    int16_t worker_count{llmq::DEFAULT_WORKER_COUNT};
-    int64_t max_recsigs_age{llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE};
     //! Setting require_full_verification to true will require all checks at
     //! check_level (below) to succeed for loading to succeed. Setting it to
     //! false will skip checks if cache is not big enough to run them, so may be
@@ -86,14 +79,10 @@ using ChainstateLoadResult = std::tuple<ChainstateLoadStatus, bilingual_str>;
  *    - a failure that definitively cannot be recovered from with a reindex
  *
  *  LoadChainstate returns a (status code, error string) tuple.
- *
- *  The llmq_ctx and chain_helper arguments are outputs: any instance they hold
- *  is destroyed and replaced with a freshly constructed one.
  */
 ChainstateLoadResult LoadChainstate(ChainstateManager& chainman, const CacheSizes& cache_sizes,
                                     const ChainstateLoadOptions& options, CEvoDB& evodb,
-                                    CDeterministicMNManager& dmnman, std::unique_ptr<LLMQContext>& llmq_ctx,
-                                    std::unique_ptr<CChainstateHelper>& chain_helper);
+                                    CDeterministicMNManager& dmnman, const std::unique_ptr<CChainstateHelper>& chain_helper);
 ChainstateLoadResult VerifyLoadedChainstate(ChainstateManager& chainman, const ChainstateLoadOptions& options, CEvoDB& evodb,
                                             std::function<void(bool)> notify_bls_state = nullptr);
 } // namespace node

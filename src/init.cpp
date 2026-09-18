@@ -2026,6 +2026,8 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         // On a retry iteration the previous instances still hold the on-disk
         // database locks, so release them before opening the databases again.
         node.mempool.reset();
+        node.chain_helper.reset();
+        node.llmq_ctx.reset();
         node.isman.reset();
         node.dmnman.reset();
         node.evodb.reset();
@@ -2063,12 +2065,11 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
 
         node::ChainstateLoadOptions options;
         options.chainlocks = Assert(node.chainlocks.get());
-        options.mn_sync = Assert(node.mn_sync.get());
         options.data_dir = args.GetDataDirNet();
         options.reindex = node::fReindex;
         options.reindex_chainstate = fReindexChainState;
         options.prune = chainman.m_blockman.IsPruneMode();
-        options.bls_threads = [&args]() -> int8_t {
+        const int8_t bls_threads = [&args]() -> int8_t {
             int64_t threads = args.GetIntArg("-parbls", llmq::DEFAULT_BLSCHECK_THREADS);
             if (threads <= 0) {
                 // -parbls=0 means autodetect (number of cores - 1 validator threads)
@@ -2079,7 +2080,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
             const int64_t adjusted_threads = std::clamp<int64_t>(threads, 1, int64_t{llmq::MAX_BLSCHECK_THREADS} + 1) - 1;
             return static_cast<int8_t>(adjusted_threads);
         }();
-        options.max_recsigs_age = args.GetIntArg("-maxrecsigsage", llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE);
+        const int64_t max_recsigs_age = args.GetIntArg("-maxrecsigsage", llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE);
         options.check_blocks = args.GetIntArg("-checkblocks", DEFAULT_CHECKBLOCKS);
         options.check_level = args.GetIntArg("-checklevel", DEFAULT_CHECKLEVEL);
         options.require_full_verification = args.IsArgSet("-checkblocks") || args.IsArgSet("-checklevel");
@@ -2095,7 +2096,16 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         if (status == node::ChainstateLoadStatus::SUCCESS) {
             options.mempool = Assert(node.mempool.get());
             options.isman = Assert(node.isman.get());
-            std::tie(status, error) = catch_exceptions([&]{ return LoadChainstate(chainman, cache_sizes, options, *node.evodb, *node.dmnman, node.llmq_ctx, node.chain_helper); });
+            std::tie(status, error) = catch_exceptions([&]() -> node::ChainstateLoadResult {
+                WITH_LOCK(::cs_main, node.llmq_ctx = std::make_unique<LLMQContext>(*node.dmnman, *node.evodb, chainman,
+                                                                                   util::DbWrapperParams{.path = args.GetDataDirNet(), .memory = false, .wipe = node::fReindex || fReindexChainState},
+                                                                                   bls_threads, llmq::DEFAULT_WORKER_COUNT, max_recsigs_age));
+                node.chain_helper = std::make_unique<CChainstateHelper>(*node.evodb, *node.dmnman, *node.mn_sync, *node.isman,
+                                                                        *node.llmq_ctx->quorum_block_processor, *node.llmq_ctx->qsnapman,
+                                                                        chainman, chainman.m_blockman, chainman.GetConsensus(),
+                                                                        *node.chainlocks, *node.llmq_ctx->qman);
+                return LoadChainstate(chainman, cache_sizes, options, *node.evodb, *node.dmnman, node.chain_helper);
+            });
         }
         if (status == node::ChainstateLoadStatus::SUCCESS) {
             uiInterface.InitMessage(_("Verifying blocks…").translated);
