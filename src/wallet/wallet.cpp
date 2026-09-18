@@ -14,6 +14,7 @@
 #include <crypto/common.h>
 #include <external_signer.h>
 #include <interfaces/chain.h>
+#include <interfaces/coinjoin.h>
 #include <interfaces/wallet.h>
 #include <key.h>
 #include <key_io.h>
@@ -137,8 +138,8 @@ bool AddWallet(WalletContext& context, const std::shared_ptr<CWallet>& wallet)
         if (i != context.wallets.end()) return false;
         context.wallets.push_back(wallet);
     }
-    if (wallet->coinjoin_available()) {
-        wallet->coinjoin_loader().AddWallet(wallet);
+    if (auto* coinjoin_loader = wallet->chain().coinJoinLoader()) {
+        coinjoin_loader->AddWallet(wallet);
     }
     wallet->ConnectScriptPubKeyManNotifiers();
     wallet->AutoLockMasternodeCollaterals();
@@ -162,8 +163,8 @@ bool RemoveWallet(WalletContext& context, const std::shared_ptr<CWallet>& wallet
         context.wallets.erase(i);
     }
 
-    if (wallet->coinjoin_available()) {
-        wallet->coinjoin_loader().RemoveWallet(name);
+    if (auto* coinjoin_loader = chain.coinJoinLoader()) {
+        coinjoin_loader->RemoveWallet(name);
     }
 
     // Write the wallet setting

@@ -47,6 +47,9 @@ namespace interfaces {
 
 class Wallet;
 class Handler;
+namespace CoinJoin {
+class Loader;
+} // namespace CoinJoin
 
 //! Hash/height pair to help track and identify blocks.
 struct BlockKey {
@@ -176,6 +179,10 @@ public:
 
     //! Return list of MN Collateral from outputs
     virtual std::vector<COutPoint> listMNCollaterials(const std::vector<std::pair<const CTransactionRef&, uint32_t>>& outputs) = 0;
+
+    //! Return the loader that registers wallets with the node's CoinJoin
+    //! client manager, or nullptr when the node runs without one.
+    virtual CoinJoin::Loader* coinJoinLoader() = 0;
 
     //! Return whether node has the block and optionally return block metadata
     //! or contents.

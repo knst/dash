@@ -1408,6 +1408,7 @@ public:
         }
         return listRet;
     }
+    interfaces::CoinJoin::Loader* coinJoinLoader() override { return m_node.coinjoin_loader.get(); }
     bool findBlock(const uint256& hash, const FoundBlock& block) override
     {
         WAIT_LOCK(cs_main, lock);
