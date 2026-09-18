@@ -1294,11 +1294,6 @@ libdashkernel_la_SOURCES = \
   evo/specialtx_filter.cpp \
   evo/specialtxman.cpp \
   flatfile.cpp \
-  governance/common.cpp \
-  governance/object.cpp \
-  governance/superblock.cpp \
-  governance/vote.cpp \
-  governance/votedb.cpp \
   gsl/assert.cpp \
   hash.cpp \
   index/addressindex.cpp \
