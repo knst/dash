@@ -149,10 +149,6 @@ static std::shared_ptr<CWallet> TestLoadWallet(WalletContext& context)
     std::vector<bilingual_str> warnings;
     auto database = MakeWalletDatabase("", options, status, error);
     auto wallet = CWallet::Create(context, "", std::move(database), options.create_flags, error, warnings);
-    if (context.coinjoin_loader) {
-        // TODO: see CreateWalletWithoutChain
-        AddWallet(context, wallet);
-    }
     NotifyWalletLoaded(context, wallet);
     return wallet;
 }
