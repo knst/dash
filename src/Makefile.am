@@ -1296,12 +1296,8 @@ libdashkernel_la_SOURCES = \
   flatfile.cpp \
   gsl/assert.cpp \
   hash.cpp \
-  index/addressindex.cpp \
   index/addressindex_util.cpp \
   index/base.cpp \
-  index/blockfilterindex.cpp \
-  index/coinstatsindex.cpp \
-  index/spentindex.cpp \
   index/txindex.cpp \
   init/common.cpp \
   instantsend/db.cpp \
@@ -1318,9 +1314,6 @@ libdashkernel_la_SOURCES = \
   llmq/blockprocessor.cpp \
   llmq/commitment.cpp \
   llmq/context.cpp \
-  llmq/debug.cpp \
-  llmq/dkgsession.cpp \
-  llmq/dkgsessionhandler.cpp \
   llmq/dkgsessionmgr.cpp \
   llmq/options.cpp \
   llmq/quorums.cpp \
