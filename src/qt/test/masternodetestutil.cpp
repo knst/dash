@@ -74,8 +74,7 @@ struct WalletOptions {
 std::shared_ptr<CWallet> MakeWallet(interfaces::Node& node, WalletContext& context, const std::string& name,
                                     const WalletOptions& options)
 {
-    auto wallet{std::make_shared<CWallet>(node.context()->chain.get(), node.context()->coinjoin_loader.get(), name,
-                                          gArgs, CreateMockWalletDatabase())};
+    auto wallet{std::make_shared<CWallet>(node.context()->chain.get(), name, gArgs, CreateMockWalletDatabase())};
     wallet->LoadWallet();
     wallet->SetWalletFlag(WALLET_FLAG_DESCRIPTORS);
     const CBlockIndex* const tip{options.setup == nullptr

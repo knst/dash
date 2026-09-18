@@ -220,8 +220,8 @@ void ProviderTransactionTests::providerTransactionHistory()
     m_node.setContext(&test.m_node);
 
     WalletContext& context{*m_node.walletLoader().context()};
-    std::shared_ptr<CWallet> wallet{std::make_shared<CWallet>(test.m_node.chain.get(), test.m_node.coinjoin_loader.get(),
-                                                              "", test.m_args, CreateMockWalletDatabase())};
+    std::shared_ptr<CWallet> wallet{
+        std::make_shared<CWallet>(test.m_node.chain.get(), "", test.m_args, CreateMockWalletDatabase())};
     wallet->LoadWallet();
     wallet->SetWalletFlag(WALLET_FLAG_DESCRIPTORS);
     {

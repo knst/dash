@@ -18,9 +18,6 @@ class CKey;
 enum class OutputType;
 namespace interfaces {
 class Chain;
-namespace CoinJoin {
-class Loader;
-} // namespace CoinJoin
 } // namespace interfaces
 
 namespace wallet {
@@ -28,7 +25,7 @@ class CWallet;
 struct DatabaseOptions;
 class WalletDatabase;
 
-std::unique_ptr<CWallet> CreateSyncedWallet(interfaces::Chain& chain, interfaces::CoinJoin::Loader& coinjoin_loader, ChainstateManager& chainman, ArgsManager& args, const CKey& key);
+std::unique_ptr<CWallet> CreateSyncedWallet(interfaces::Chain& chain, ChainstateManager& chainman, ArgsManager& args, const CKey& key);
 
 // Creates a copy of the provided database
 std::unique_ptr<WalletDatabase> DuplicateMockDatabase(WalletDatabase& database, DatabaseOptions& options);
