@@ -311,6 +311,9 @@ static CBLSSecretKey ParseBLSSecretKey(const std::string& hexKey, const std::str
 }
 
 #ifdef ENABLE_WALLET
+static constexpr std::string_view ZERO_PENALTY_WARNING{
+    "earlyPenalty is zero: any participant can force an early exit at no cost beyond the transaction fee"};
+
 // The shared-masternode helpers and RPCs below all feed into wallet-gated signing (protx
 // shared_sign / shared_dissolve), so they are only compiled with wallet support.
 
@@ -1475,12 +1478,18 @@ static RPCHelpMan protx_shared_sign()
             {"tx", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The serialized transaction in hex format."},
             {"allowTimeLocks", RPCArg::Type::BOOL, RPCArg::Default{false}, "Sign a registration or dissolution carrying an unsatisfied lock time or a relative (BIP68) input lock. The signed digest commits to these fields, so a lock a co-signer failed to notice delays when the transaction can confirm."},
         },
-        RPCResult{RPCResult::Type::ARR, "", "",
+        RPCResult{RPCResult::Type::OBJ, "", "",
         {
-            {RPCResult::Type::OBJ, "", "",
+            {RPCResult::Type::STR, "type", "What is being signed: \"registration\", \"dissolution\" or \"registrarUpdate\""},
+            {RPCResult::Type::OBJ, "terms", "The decoded payload being consented to (see the matching special transaction JSON)", {}, /*skip_type_check=*/true},
+            {RPCResult::Type::STR, "warning", /*optional=*/true, "Present for a registration whose earlyPenalty is zero: any participant can force an early exit at no cost beyond the transaction fee"},
+            {RPCResult::Type::ARR, "signatures", "One entry per share owner key this wallet holds",
             {
-                {RPCResult::Type::NUM, "shareIndex", "Index into the share table"},
-                {RPCResult::Type::STR, "signature", "Base64-encoded signature by this share's owner key"},
+                {RPCResult::Type::OBJ, "", "",
+                {
+                    {RPCResult::Type::NUM, "shareIndex", "Index into the share table"},
+                    {RPCResult::Type::STR, "signature", "Base64-encoded signature by this share's owner key"},
+                }},
             }},
         }},
         RPCExamples{HelpExampleCli("protx", "shared_sign \"tx\"")},
@@ -1527,9 +1536,11 @@ static RPCHelpMan protx_shared_sign()
         }
     };
 
-    // Resolve the share table and the digest to sign from the transaction type
+    // Resolve the share table and the digest to sign from the transaction type, and a readable
+    // summary of the terms so a co-signer can review what the signature commits to
     CollateralShares shares;
     uint256 sign_hash;
+    UniValue ret(UniValue::VOBJ);
     if (tx.nType == TRANSACTION_PROVIDER_REGISTER) {
         const auto opt_ptx = GetTxPayload<CProRegTx>(tx);
         if (!opt_ptx || !opt_ptx->IsShared()) {
@@ -1538,6 +1549,11 @@ static RPCHelpMan protx_shared_sign()
         require_no_time_lock("registration");
         shares = opt_ptx->shares;
         sign_hash = opt_ptx->MakeSharedRegConsentHash(CTransaction(tx));
+        ret.pushKV("type", "registration");
+        ret.pushKV("terms", opt_ptx->ToJson());
+        if (opt_ptx->nEarlyPenalty == 0) {
+            ret.pushKV("warning", std::string{ZERO_PENALTY_WARNING});
+        }
     } else if (tx.nType == TRANSACTION_PROVIDER_DISSOLVE) {
         const auto opt_ptx = GetTxPayload<CProDisTx>(tx);
         if (!opt_ptx) {
@@ -1560,6 +1576,19 @@ static RPCHelpMan protx_shared_sign()
         require_no_time_lock("dissolution");
         shares = dmn->pdmnState->shares;
         sign_hash = opt_ptx->MakeSignHash(CTransaction(tx), static_cast<uint8_t>(shares.size()));
+        ret.pushKV("type", "dissolution");
+        // The digest covers the outputs directly, so show them with the payload
+        UniValue terms{opt_ptx->ToJson()};
+        UniValue outputs(UniValue::VARR);
+        for (const auto& out : tx.vout) {
+            UniValue o(UniValue::VOBJ);
+            CTxDestination dest;
+            o.pushKV("address", ExtractDestination(out.scriptPubKey, dest) ? EncodeDestination(dest) : HexStr(out.scriptPubKey));
+            o.pushKV("amount", ValueFromAmount(out.nValue));
+            outputs.push_back(o);
+        }
+        terms.pushKV("outputs", outputs);
+        ret.pushKV("terms", terms);
     } else if (tx.nType == TRANSACTION_PROVIDER_UPDATE_SHARED_REGISTRAR) {
         const auto opt_ptx = GetTxPayload<CProUpSharedRegTx>(tx);
         if (!opt_ptx) {
@@ -1571,11 +1600,13 @@ static RPCHelpMan protx_shared_sign()
         }
         shares = dmn->pdmnState->shares;
         sign_hash = ::SerializeHash(*opt_ptx);
+        ret.pushKV("type", "registrarUpdate");
+        ret.pushKV("terms", opt_ptx->ToJson());
     } else {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "transaction is not a shared masternode transaction");
     }
 
-    UniValue ret(UniValue::VARR);
+    UniValue signatures(UniValue::VARR);
     for (size_t i = 0; i < shares.size(); i++) {
         std::vector<unsigned char> vchSig;
         if (!pwallet->SignSpecialTxPayload(sign_hash, shares[i].keyIDOwner, vchSig)) {
@@ -1584,11 +1615,12 @@ static RPCHelpMan protx_shared_sign()
         UniValue entry(UniValue::VOBJ);
         entry.pushKV("shareIndex", static_cast<uint64_t>(i));
         entry.pushKV("signature", EncodeBase64(vchSig));
-        ret.push_back(entry);
+        signatures.push_back(entry);
     }
-    if (ret.empty()) {
+    if (signatures.empty()) {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "none of the share owner keys were found in this wallet");
     }
+    ret.pushKV("signatures", signatures);
     return ret;
 },
     };
@@ -2611,6 +2643,8 @@ static RPCHelpMan protx_shared_register_prepare()
             {RPCResult::Type::STR_HEX, "tx", "The serialized unsigned shared ProRegTx"},
             {RPCResult::Type::NUM, "collateralIndex", "Output index of the shared collateral"},
             {RPCResult::Type::STR_HEX, "consentHash", "The consent digest every share owner must sign"},
+            CProRegTx::GetJsonHelp("terms", /*optional=*/false),
+            {RPCResult::Type::STR, "warning", /*optional=*/true, "Present when earlyPenalty is zero: any participant can force an early exit at no cost beyond the transaction fee"},
         }},
         RPCExamples{HelpExampleCli("protx", "shared_register_prepare \"fundingTx\" \"[...]\" \"1.2.3.4:1234\" \"operatorPubKey\" \"" + EXAMPLE_ADDRESS[1] + "\" 0 10000 5000000000")},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
@@ -2688,6 +2722,10 @@ static RPCHelpMan protx_shared_register_prepare()
     ret.pushKV("tx", EncodeHexTx(CTransaction(tx)));
     ret.pushKV("collateralIndex", static_cast<uint64_t>(ptx.collateralOutpoint.n));
     ret.pushKV("consentHash", ptx.MakeSharedRegConsentHash(CTransaction(tx)).ToString());
+    ret.pushKV("terms", ptx.ToJson());
+    if (ptx.nEarlyPenalty == 0) {
+        ret.pushKV("warning", std::string{ZERO_PENALTY_WARNING});
+    }
     return ret;
 },
     };

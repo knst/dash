@@ -47,11 +47,16 @@ together with DIP-0026 multi-party payouts as part of the v24 hard fork
 ## New RPCs
 
 - `protx shared_register_prepare` builds an unsigned shared registration from a
-  caller-supplied funding transaction.
+  caller-supplied funding transaction. The result echoes the decoded terms and
+  carries a `warning` when `earlyPenalty` is zero, since any participant can
+  then force an early exit at no cost beyond the transaction fee.
 - `protx shared_sign` signs a shared registration, dissolution or shared
-  registrar update with every share owner key the wallet holds. It refuses a
-  registration or dissolution carrying an unsatisfied lock time or a relative
-  input lock unless `allowTimeLocks` is set.
+  registrar update with every share owner key the wallet holds. It returns the
+  decoded terms being consented to (for a dissolution, including the outputs)
+  alongside the signatures, and repeats the zero-penalty warning for a
+  registration. It refuses a registration or dissolution carrying an
+  unsatisfied lock time or a relative input lock unless `allowTimeLocks` is
+  set.
 - `protx shared_combine` combines collected signatures and optionally submits.
   A dissolution combined here requires a signature from every share; unilateral
   dissolutions come fully signed from `protx shared_dissolve`.

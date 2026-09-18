@@ -75,7 +75,12 @@ class MasternodeSharesTest(DashTestFramework):
             operator_key, voting_address, 0, early_period_blocks, early_penalty)
         assert_equal(len(prepared["consentHash"]), 64)
 
-        sigs = node.protx("shared_sign", prepared["tx"])
+        signed_terms = node.protx("shared_sign", prepared["tx"])
+        assert_equal(signed_terms["type"], "registration")
+        assert_equal(signed_terms["terms"]["earlyPenalty"], early_penalty)
+        assert_equal(len(signed_terms["terms"]["shares"]), len(shares))
+        assert_equal("warning" in signed_terms, early_penalty == 0)
+        sigs = signed_terms["signatures"]
         assert_equal(sorted(s["shareIndex"] for s in sigs), list(range(len(shares))))
         combined = node.protx("shared_combine", prepared["tx"], sigs)
 
@@ -170,7 +175,7 @@ class MasternodeSharesTest(DashTestFramework):
 
         def sign_unanimous(tx):
             raw = tx.serialize().hex()
-            sigs = [wallet.protx("shared_sign", raw)[0] for wallet in wallets]
+            sigs = [wallet.protx("shared_sign", raw)["signatures"][0] for wallet in wallets]
             return tx_from_hex(miner.protx("shared_combine", raw, sigs))
 
         unsigned = tx_from_hex(prepared["tx"])
@@ -266,7 +271,7 @@ class MasternodeSharesTest(DashTestFramework):
         transactions = []
         for operator, fee in ((pending_operator, pending_fee), (mined_operator, mined_fee)):
             prepared = node.protx("shared_update_registrar_prepare", protx_hash, operator, "", fee)
-            sigs = node.protx("shared_sign", prepared["tx"])
+            sigs = node.protx("shared_sign", prepared["tx"])["signatures"]
             transactions.append(node.protx("shared_combine", prepared["tx"], sigs))
 
         self.connect_nodes(0, 1)
@@ -307,7 +312,8 @@ class MasternodeSharesTest(DashTestFramework):
             voting = node.getnewaddress()
             registrar_fee, share_fee = fee_addresses.pop(), fee_addresses.pop()
             prepared = node.protx("shared_update_registrar_prepare", protx_hash, "", voting, registrar_fee)
-            registrar = node.protx("shared_combine", prepared["tx"], node.protx("shared_sign", prepared["tx"]))
+            registrar_sigs = node.protx("shared_sign", prepared["tx"])["signatures"]
+            registrar = node.protx("shared_combine", prepared["tx"], registrar_sigs)
             share_update = node.protx("shared_update_share", protx_hash, 0, voting, share_fee, False)
             pending, confirmed = (share_update, registrar) if confirm_registrar else (registrar, share_update)
             self.sync_all()
@@ -371,7 +377,7 @@ class MasternodeSharesTest(DashTestFramework):
                                "12.50", 100, 10 * COIN)
         signatures = []
         for i, wallet in enumerate(wallets):
-            sig, = wallet.protx("shared_sign", prepared["tx"])
+            sig, = wallet.protx("shared_sign", prepared["tx"])["signatures"]
             assert_equal(sig["shareIndex"], i)
             signatures.append(sig)
         assert_raises_rpc_error(-5, "none of the share owner keys", miner.protx,
@@ -412,7 +418,7 @@ class MasternodeSharesTest(DashTestFramework):
         update = wallets[0].protx("shared_update_share", protx_hash, 0, common_reward, change_addresses[0], False)
         prepared_registrar = wallets[0].protx("shared_update_registrar_prepare", protx_hash,
                                              "", "", change_addresses[0])
-        sigs = [wallet.protx("shared_sign", prepared_registrar["tx"])[0] for wallet in wallets]
+        sigs = [wallet.protx("shared_sign", prepared_registrar["tx"])["signatures"][0] for wallet in wallets]
         registrar = wallets[0].protx("shared_combine", prepared_registrar["tx"], sigs)
         shared_dissolve = wallets[0].protx("shared_dissolve", protx_hash, 0, DISSOLVE_FEE, False)
         node.invalidateblock(registration_block)
@@ -471,7 +477,7 @@ class MasternodeSharesTest(DashTestFramework):
         voting = miner.getnewaddress()
         prepared_update = wallets[0].protx("shared_update_registrar_prepare", protx_hash,
                                            "", voting, change_addresses[0])
-        signatures = [wallet.protx("shared_sign", prepared_update["tx"])[0] for wallet in wallets]
+        signatures = [wallet.protx("shared_sign", prepared_update["tx"])["signatures"][0] for wallet in wallets]
         assert_raises_rpc_error(-4, "transaction inputs could not be fully signed", wallets[1].protx,
                                 "shared_combine", prepared_update["tx"], signatures, True)
 
@@ -491,7 +497,7 @@ class MasternodeSharesTest(DashTestFramework):
 
         self.log.info("A pre-signed unanimous dissolution survives reindex and pays spendable refunds")
         prepared_dissolve = miner.protx("shared_dissolve_prepare", protx_hash, 7, DISSOLVE_FEE)
-        signatures = [wallet.protx("shared_sign", prepared_dissolve["tx"])[0] for wallet in wallets]
+        signatures = [wallet.protx("shared_sign", prepared_dissolve["tx"])["signatures"][0] for wallet in wallets]
         dissolution = miner.protx("shared_combine", prepared_dissolve["tx"], signatures)
         state = miner.protx("info", protx_hash)["state"]
         tip = node.getbestblockhash()
@@ -704,8 +710,8 @@ class MasternodeSharesTest(DashTestFramework):
         locked_reg.vin[0].nSequence = 10
         assert_raises_rpc_error(-8, "registration carries a lock time", node.protx, "shared_sign",
                                 locked_reg.serialize().hex())
-        assert_equal(len(node.protx("shared_sign", locked_reg.serialize().hex(), True)), 2)
-        sigtest_sigs = node.protx("shared_sign", sigtest_prepared["tx"])
+        assert_equal(len(node.protx("shared_sign", locked_reg.serialize().hex(), True)["signatures"]), 2)
+        sigtest_sigs = node.protx("shared_sign", sigtest_prepared["tx"])["signatures"]
         assert_equal(sorted(s["shareIndex"] for s in sigtest_sigs), [0, 1])
 
         def submit_with_sigs(sigs):
@@ -831,7 +837,7 @@ class MasternodeSharesTest(DashTestFramework):
         self.generate(node, 1, sync_fun=self.no_op)
         new_voting = node.getnewaddress()
         prepared = node.protx("shared_update_registrar_prepare", protx_hash, "", new_voting, fee_addr)
-        sigs = node.protx("shared_sign", prepared["tx"])
+        sigs = node.protx("shared_sign", prepared["tx"])["signatures"]
         assert_equal(len(sigs), 2)
         node.protx("shared_combine", prepared["tx"], sigs, True)
         self.bump_mocktime(10 * 60 + 1)
@@ -845,7 +851,7 @@ class MasternodeSharesTest(DashTestFramework):
         node.sendtoaddress(fee_addr, 1)
         self.generate(node, 1, sync_fun=self.no_op)
         prepared = node.protx("shared_update_registrar_prepare", protx_hash, "", node.getnewaddress(), fee_addr)
-        sigs = node.protx("shared_sign", prepared["tx"])
+        sigs = node.protx("shared_sign", prepared["tx"])["signatures"]
         assert_equal(sorted(s["shareIndex"] for s in sigs), [0, 1])
         swapped = [
             {"shareIndex": 0, "signature": sigs[1]["signature"]},
@@ -858,7 +864,7 @@ class MasternodeSharesTest(DashTestFramework):
         node.sendtoaddress(fee_addr, 1)
         self.generate(node, 1, sync_fun=self.no_op)
         prepared = node.protx("shared_update_registrar_prepare", protx_hash, "", reward1, fee_addr)
-        sigs = node.protx("shared_sign", prepared["tx"])
+        sigs = node.protx("shared_sign", prepared["tx"])["signatures"]
         assert_raises_rpc_error(None, "bad-proupsharedreg-payee-reuse", node.protx,
                                 "shared_combine", prepared["tx"], sigs, True)
 
@@ -867,7 +873,7 @@ class MasternodeSharesTest(DashTestFramework):
         self.generate(node, 1, sync_fun=self.no_op)
         pair_addr = node.getnewaddress()
         prepared = node.protx("shared_update_registrar_prepare", protx_hash, "", pair_addr, fee_addr)
-        sigs = node.protx("shared_sign", prepared["tx"])
+        sigs = node.protx("shared_sign", prepared["tx"])["signatures"]
         node.protx("shared_combine", prepared["tx"], sigs, True)
         # both pass tip-level checks individually, so only the mempool pair guard keeps an honest
         # miner from assembling a block that consensus would then reject
@@ -882,7 +888,7 @@ class MasternodeSharesTest(DashTestFramework):
         rev_addr = node.getnewaddress()
         node.protx("shared_update_share", protx_hash, 0, rev_addr, fee_addr)
         prepared = node.protx("shared_update_registrar_prepare", protx_hash, "", rev_addr, fee_addr)
-        sigs = node.protx("shared_sign", prepared["tx"])
+        sigs = node.protx("shared_sign", prepared["tx"])["signatures"]
         assert_raises_rpc_error(None, "protx-dup", node.protx,
                                 "shared_combine", prepared["tx"], sigs, True)
         self.bump_mocktime(10 * 60 + 1)
@@ -901,7 +907,7 @@ class MasternodeSharesTest(DashTestFramework):
         self.generate(node, 1, sync_fun=self.no_op)
         new_operator = node.bls("generate")
         prepared = node.protx("shared_update_registrar_prepare", protx_hash, new_operator["public"], "", fee_addr)
-        sigs = node.protx("shared_sign", prepared["tx"])
+        sigs = node.protx("shared_sign", prepared["tx"])["signatures"]
         node.protx("shared_combine", prepared["tx"], sigs, True)
         self.bump_mocktime(10 * 60 + 1)
         self.generate(node, 1, sync_fun=self.no_op)
@@ -992,13 +998,13 @@ class MasternodeSharesTest(DashTestFramework):
         locked_tx.vin[0].nSequence = 0xfffffffe
         assert_raises_rpc_error(-8, "pass allowTimeLocks=true", node.protx, "shared_sign",
                                 locked_tx.serialize().hex())
-        assert_equal(len(node.protx("shared_sign", locked_tx.serialize().hex(), True)), 2)
+        assert_equal(len(node.protx("shared_sign", locked_tx.serialize().hex(), True)["signatures"]), 2)
         # a relative (BIP68) lock on the collateral input is refused the same way
         relative_tx = tx_from_hex(prepared["tx"])
         relative_tx.vin[0].nSequence = 10
         assert_raises_rpc_error(-8, "pass allowTimeLocks=true", node.protx, "shared_sign",
                                 relative_tx.serialize().hex())
-        sigs = node.protx("shared_sign", prepared["tx"])
+        sigs = node.protx("shared_sign", prepared["tx"])["signatures"]
         assert_equal(len(sigs), 2)
         # shared_sign signatures cover the unanimous digest, so combining only the actor's
         # signature could never produce a valid one-signature transaction: it is rejected
