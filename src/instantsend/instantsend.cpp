@@ -441,6 +441,22 @@ instantsend::InstantSendLockPtr CInstantSendManager::GetConflictingLock(const CT
     return nullptr;
 }
 
+std::optional<std::pair</*islock_hash=*/uint256, /*txid=*/uint256>> CInstantSendManager::ConflictingISLockIfAny(
+    const CTransaction& tx) const
+{
+    const auto islock = GetConflictingLock(tx);
+    if (!islock) return std::nullopt;
+    return std::make_pair(::SerializeHash(*islock), islock->txid);
+}
+
+bool CInstantSendManager::RemoveConflictingISLockByTx(const CTransaction& tx)
+{
+    const auto islock = GetConflictingLock(tx);
+    if (!islock) return false;
+    RemoveConflictingLock(::SerializeHash(*islock), *islock);
+    return true;
+}
+
 size_t CInstantSendManager::GetInstantSendLockCount() const
 {
     return db.GetInstantSendLockCount();

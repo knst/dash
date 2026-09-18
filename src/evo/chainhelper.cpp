@@ -12,7 +12,6 @@
 #include <evo/specialtxman.h>
 #include <hash.h>
 #include <instantsend/instantsend.h>
-#include <instantsend/lock.h>
 #include <logging.h>
 #include <util/check.h>
 
@@ -60,9 +59,7 @@ CCreditPool CChainstateHelper::GetCreditPool(const CBlockIndex* const pindex)
 std::optional<std::pair</*islock_hash=*/uint256, /*txid=*/uint256>> CChainstateHelper::ConflictingISLockIfAny(
     const CTransaction& tx) const
 {
-    const auto islock = isman.GetConflictingLock(tx);
-    if (!islock) return std::nullopt;
-    return std::make_pair(::SerializeHash(*islock), islock->txid);
+    return isman.ConflictingISLockIfAny(tx);
 }
 
 bool CChainstateHelper::IsInstantSendEnabled() const { return isman.IsInstantSendEnabled(); }
@@ -73,10 +70,7 @@ bool CChainstateHelper::IsInstantSendWaitingForTx(const uint256& hash) const { r
 
 bool CChainstateHelper::RemoveConflictingISLockByTx(const CTransaction& tx)
 {
-    const auto islock = isman.GetConflictingLock(tx);
-    if (!islock) return false;
-    isman.RemoveConflictingLock(::SerializeHash(*islock), *islock);
-    return true;
+    return isman.RemoveConflictingISLockByTx(tx);
 }
 
 std::map<uint8_t, int> CChainstateHelper::GetSignalsStage(const CBlockIndex* const pindexPrev)
