@@ -61,6 +61,7 @@ src/qt/proposalmodel.*
 src/qt/proposalresume.*
 src/qt/proposalvotedialog.*
 src/qt/test/proposalvotetests.*
+src/qt/sharedmncreatedialog.*
 src/qt/sharedmnrpc.h
 src/qt/sharedmnwidgets.*
 src/rpc/coinjoin.cpp
