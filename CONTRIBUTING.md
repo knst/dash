@@ -481,33 +481,35 @@ To pull the most up-to-date merges first make sure bitcoin is up-to-date:
 
 ```
 git fetch bitcoin
+git fetch --no-tags bitcoin 'refs/tags/v*:refs/tags/bitcoin/v*'
 ```
 
 To create a text file with all the merges between two versions, use:
 
 ```
-git log --first-parent --oneline bitcoin/<version_start>..bitcoin/<version_end> >> <filename>.txt
+git log --first-parent --oneline bitcoin/v<version_start>..bitcoin/v<version_end> >> <filename>.txt
 ```
 
 This will pull all the backports for `<version_start>` up until `<version_end>`.
 `<filename>` will be the name of the file the where all the merges are written to.
+Release tags are named `v0.21.0` and earlier, `v22.0` and later.
 
 #### For example
 
 The command
 
 ```
-git log --first-parent --oneline bitcoin/0.14..bitcoin/0.15 >> backports_0.14-0.15.txt
+git log --first-parent --oneline bitcoin/v28.0..bitcoin/v29.0 >> backports_28-29.txt
 ```
 
-will pull all merges made to Bitcoin version 0.14 until the start of version 15 and write to `backports_0.14-0.15.txt`.
+will pull all merges made to Bitcoin between the releases of version 28.0 and version 29.0 and write to `backports_28-29.txt`.
 
 #### NOTE:
 
 In order to pull the most recent merges, that is, for a version that is not yet released, run:
 
 ```
-git log --first-parent --oneline bitcoin/<cur_ver>..bitcoin/master >> <filename>.txt
+git log --first-parent --oneline bitcoin/v<cur_ver>..bitcoin/master >> <filename>.txt
 ```
 
 this will pull all the merges made to Bitcoin since the release of the current version.
