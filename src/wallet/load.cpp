@@ -134,8 +134,8 @@ bool LoadWallets(WalletContext& context)
                 return false;
             }
 
-            NotifyWalletLoaded(context, pwallet);
             AddWallet(context, pwallet);
+            NotifyWalletLoaded(context, pwallet);
         }
         return true;
     } catch (const std::runtime_error& e) {

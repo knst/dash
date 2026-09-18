@@ -130,11 +130,11 @@ bool AddWallet(WalletContext& context, const std::shared_ptr<CWallet>& wallet)
         if (i != context.wallets.end()) return false;
         context.wallets.push_back(wallet);
     }
-    wallet->ConnectScriptPubKeyManNotifiers();
-    wallet->AutoLockMasternodeCollaterals();
     if (wallet->coinjoin_available()) {
         wallet->coinjoin_loader().AddWallet(wallet);
     }
+    wallet->ConnectScriptPubKeyManNotifiers();
+    wallet->AutoLockMasternodeCollaterals();
     wallet->NotifyCanGetAddressesChanged();
     return true;
 }
@@ -289,8 +289,8 @@ std::shared_ptr<CWallet> LoadWalletInternal(WalletContext& context, const std::s
             return nullptr;
         }
 
-        NotifyWalletLoaded(context, wallet);
         AddWallet(context, wallet);
+        NotifyWalletLoaded(context, wallet);
         wallet->postInitProcess();
 
         // Write the wallet setting
@@ -483,8 +483,8 @@ std::shared_ptr<CWallet> CreateWallet(WalletContext& context, const std::string&
         }
     }
 
-    NotifyWalletLoaded(context, wallet);
     AddWallet(context, wallet);
+    NotifyWalletLoaded(context, wallet);
     wallet->postInitProcess();
 
     // Write the wallet settings
@@ -3525,10 +3525,6 @@ std::shared_ptr<CWallet> CWallet::Create(WalletContext& context, const std::stri
     if (chain && !AttachChain(walletInstance, *chain, rescan_required, error, warnings)) {
         walletInstance->m_chain_notifications_handler.reset(); // Reset this pointer so that the wallet will actually be unloaded
         return nullptr;
-    }
-
-    if (coinjoin_loader) {
-        coinjoin_loader->AddWallet(walletInstance);
     }
 
     {
