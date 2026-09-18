@@ -15,6 +15,9 @@
 #include <llmq/dkgsession.h>
 #include <llmq/observer.h>
 #include <llmq/options.h>
+#include <llmq/quorumproofs.h>
+#include <evo/simplifiedmns.h>
+#include <clientversion.h>
 #include <llmq/quorumsman.h>
 #include <llmq/signhash.h>
 #include <llmq/signing.h>
@@ -38,10 +41,32 @@
 #include <validation.h>
 
 #include <iomanip>
+#include <memory>
+#include <mutex>
 #include <optional>
 
 using node::GetTransaction;
 using node::NodeContext;
+
+namespace {
+std::mutex g_proof_chain_mutex;
+std::shared_ptr<const CChain> g_proof_chain_snapshot;
+const ChainstateManager* g_proof_chain_owner{nullptr};
+const CBlockIndex* g_proof_chain_tip{nullptr};
+
+std::shared_ptr<const CChain> GetProofChainSnapshot(const ChainstateManager& chainman, CBlockIndex* tip)
+{
+    std::lock_guard lock(g_proof_chain_mutex);
+    if (!g_proof_chain_snapshot || g_proof_chain_owner != &chainman || g_proof_chain_tip != tip) {
+        auto snapshot = std::make_shared<CChain>();
+        snapshot->SetTip(*tip);
+        g_proof_chain_snapshot = std::move(snapshot);
+        g_proof_chain_owner = &chainman;
+        g_proof_chain_tip = tip;
+    }
+    return g_proof_chain_snapshot;
+}
+} // namespace
 
 static RPCHelpMan quorum_list()
 {
@@ -1390,6 +1415,253 @@ static RPCHelpMan submitchainlock()
 }
 
 
+static RPCHelpMan getchainlockbyheight()
+{
+    return RPCHelpMan{
+        "getchainlockbyheight",
+        "Read a historical ChainLock from coinbases on disk.\n",
+        {
+            {"height", RPCArg::Type::NUM, RPCArg::Optional::NO, "Block height"},
+        },
+        RPCResult{RPCResult::Type::OBJ,
+                  "",
+                  "",
+                  {
+                      {RPCResult::Type::NUM, "height", "Chainlocked height"},
+                      {RPCResult::Type::STR_HEX, "blockhash", "Block hash"},
+                      {RPCResult::Type::STR_HEX, "signature", "BLS signature"},
+                      {RPCResult::Type::NUM, "cbtx_height", "Height where CL was embedded"},
+                  }},
+        RPCExamples{HelpExampleCli("getchainlockbyheight", "100") + HelpExampleRpc("getchainlockbyheight", "100")},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue {
+            const int height = request.params[0].getInt<int>();
+            if (height < 0) {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "height must be non-negative");
+            }
+
+            const NodeContext& node = EnsureAnyNodeContext(request.context);
+            const ChainstateManager& chainman = EnsureChainman(node);
+            CBlockIndex* tip = WITH_LOCK(cs_main, return chainman.ActiveChain().Tip());
+            CHECK_NONFATAL(tip != nullptr);
+            try {
+                chainlock::CoinbaseChainLockReader reader(tip);
+                const auto entry = reader.Find(height, height);
+                if (!entry) throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Chainlock not found for height");
+                {
+                    LOCK(cs_main);
+                    if (!chainman.ActiveChain().Contains(entry->carrier))
+                        throw JSONRPCError(RPC_MISC_ERROR, "Chain changed during ChainLock lookup; retry");
+                }
+                UniValue result(UniValue::VOBJ);
+                result.pushKV("height", height);
+                result.pushKV("blockhash", entry->clsig.getBlockHash().ToString());
+                result.pushKV("signature", entry->clsig.getSig().ToString());
+                result.pushKV("cbtx_height", entry->carrier->nHeight);
+                return result;
+            } catch (const std::exception& e) {
+                throw JSONRPCError(RPC_MISC_ERROR, e.what());
+            }
+        },
+    };
+}
+
+static RPCHelpMan getquorumproofchain()
+{
+    return RPCHelpMan{
+        "getquorumproofchain",
+        "Generate a DASHNC02 mining-transaction proof and authenticated record openings. Reads required historical "
+        "blocks on demand.\n",
+        {
+            {"checkpoint_hash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Release checkpoint block hash"},
+            {"height", RPCArg::Type::NUM, RPCArg::Default{0},
+             "Minimum certified target height; zero selects the latest available ChainLock"},
+            {"quorum_hash", RPCArg::Type::STR, RPCArg::Default{""}, "Optional Platform quorum hash to open"},
+            {"llmq_type", RPCArg::Type::NUM, RPCArg::Default{0}, "Required with quorum_hash"},
+            {"node_count", RPCArg::Type::NUM, RPCArg::Default{0}, "Number of eligible EvoNode records (0..15)"},
+        },
+        RPCResult{RPCResult::Type::OBJ,
+                  "",
+                  "",
+                  {
+                      {RPCResult::Type::STR_HEX, "proof_hex", "DASHNC02 bytes"},
+                      {RPCResult::Type::STR_HEX, "bootstrap_hex", "Proof and record openings; empty when no records requested"},
+                      {RPCResult::Type::OBJ, "target", "Authenticated target state", {{RPCResult::Type::ELISION, "", ""}}},
+                  }},
+        RPCExamples{HelpExampleCli("getquorumproofchain", "\"checkpoint_hash\"")},
+        [&](const RPCHelpMan&, const JSONRPCRequest& request) -> UniValue {
+            const auto& node = EnsureAnyNodeContext(request.context);
+            const auto& ctx = EnsureLLMQContext(node);
+            const auto& chainman = EnsureChainman(node);
+            const auto anchorHash = ParseHashV(request.params[0], "checkpoint_hash");
+            const int32_t minimum = request.params[1].isNull() ? 0 : request.params[1].getInt<int32_t>();
+            const auto quorumText = request.params[2].isNull() ? std::string{} : request.params[2].get_str();
+            const int type = request.params[3].isNull() ? 0 : request.params[3].getInt<int>();
+            const int nodeCount = request.params[4].isNull() ? 0 : request.params[4].getInt<int>();
+            if (minimum < 0 || type < 0 || type > 255 || nodeCount < 0 || nodeCount > 15 ||
+                (quorumText.empty() != (type == 0)) || (!quorumText.empty() && (quorumText.size() != 64 || !IsHex(quorumText)))) {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid proof request");
+            }
+            const CBlockIndex* checkpoint;
+            CBlockIndex* tip = WITH_LOCK(cs_main, return chainman.ActiveChain().Tip());
+            CHECK_NONFATAL(tip != nullptr);
+            const auto chain_snapshot = GetProofChainSnapshot(chainman, tip);
+            const CChain& chain = *chain_snapshot;
+            {
+                LOCK(cs_main);
+                checkpoint = chainman.m_blockman.LookupBlockIndex(anchorHash);
+                if (!checkpoint || !chain.Contains(checkpoint))
+                    throw JSONRPCError(RPC_INVALID_PARAMETER, "Checkpoint is not on the active chain");
+            }
+            try {
+                chainlock::CoinbaseChainLockReader reader(chain);
+                const int64_t start = std::max<int64_t>(minimum, int64_t(checkpoint->nHeight) + 1);
+                if (start > chain.Height()) throw std::runtime_error("No archived certificate within search budget");
+                const int maximum = int(std::min<int64_t>(chain.Height(), start + int64_t(llmq::MAX_PROOF_HEADERS)));
+                const CBlockIndex* target_guard{nullptr};
+                const CBlockIndex* target{nullptr};
+                llmq::QuorumProofBuilder builder(*ctx.quorum_block_processor, *ctx.qman, chain, chainman, reader);
+                std::optional<llmq::QuorumProofChain> proof;
+                // At a quorum-mining boundary, the signing offset can select a
+                // retired quorum absent from the checkpoint root. Height is a
+                // minimum, so try later certificates within the original budget.
+                for (int64_t next = start; next <= maximum;) {
+                    target_guard = nullptr;
+                    std::optional<chainlock::CoinbaseChainLock> target_chainlock;
+                    if (minimum == 0) {
+                        target_chainlock = reader.Read(chain.Height());
+                    } else {
+                        target_chainlock = reader.Find(int(next), maximum);
+                    }
+                    chainlock::ChainLockSig target_signature;
+                    if (target_chainlock) {
+                        target_signature = target_chainlock->clsig;
+                        target_guard = target_chainlock->carrier;
+                    }
+                    // Platform can already reference a tip ChainLock before another
+                    // block embeds it. The existing manager supplies the same final
+                    // certificate; historical handoffs still come from disk.
+                    if (minimum == 0 || !target_chainlock) {
+                        const auto live = CHECK_NONFATAL(node.chainlocks)->GetBestChainLock();
+                        const auto* live_index = chain[live.getHeight()];
+                        if (live_index && live_index->GetBlockHash() == live.getBlockHash() &&
+                            live.getHeight() >= next && live.getHeight() > target_signature.getHeight() &&
+                            (minimum == 0 || live.getHeight() <= maximum)) {
+                            target_signature = live;
+                            target_guard = live_index;
+                        }
+                    }
+                    if (!target_guard || target_signature.getHeight() <= checkpoint->nHeight)
+                        throw std::runtime_error("No archived certificate within search budget");
+                    target = chain[target_signature.getHeight()];
+                    proof = builder.Build(checkpoint, target_signature);
+                    if (proof || minimum == 0) break;
+                    next = int64_t(target_signature.getHeight()) + 1;
+                }
+                if (!proof) throw std::runtime_error("No bridge to snapshot within search budget");
+                std::vector<llmq::ProofProjection> records;
+                if (!quorumText.empty()) {
+                    const auto hash = uint256S(quorumText);
+                    const auto commitments = builder.ActiveCommitments(target);
+                    std::vector<uint256> leaves;
+                    for (const auto& commitment : commitments)
+                        leaves.push_back(SerializeHash(commitment));
+                    bool found = false;
+                    for (size_t i = 0; i < commitments.size(); ++i) {
+                        const auto& commitment = commitments[i];
+                        if (commitment.quorumHash != hash || int(commitment.llmqType) != type) continue;
+                        CDataStream raw(SER_NETWORK, PROTOCOL_VERSION);
+                        raw << commitment;
+                        records.push_back({0, {UCharCast(raw.data()), UCharCast(raw.data()) + raw.size()}, llmq::ProofMerklePath::Build(leaves, i)});
+                        found = true;
+                        break;
+                    }
+                    if (!found) throw std::runtime_error("Requested quorum is not in the target root");
+                }
+                if (nodeCount > 0) {
+                    const auto list = WITH_LOCK(cs_main, return CHECK_NONFATAL(node.dmnman)->GetListForBlock(target));
+                    const auto sml = list.to_sml();
+                    std::vector<uint256> leaves;
+                    for (const auto& entry : sml->mnList)
+                        leaves.push_back(entry->CalcHash());
+                    int included = 0;
+                    for (size_t i = 0; i < sml->mnList.size() && included < nodeCount; ++i) {
+                        const auto& entry = *sml->mnList[i];
+                        if (!entry.isValid || entry.confirmedHash.IsNull() || entry.nType != MnType::Evo) continue;
+                        // Exactly CalcHash's serialization, without the network-only version prefix.
+                        CDataStream raw(SER_GETHASH, CLIENT_VERSION);
+                        raw << entry;
+                        records.push_back({1, {UCharCast(raw.data()), UCharCast(raw.data()) + raw.size()}, llmq::ProofMerklePath::Build(leaves, i)});
+                        ++included;
+                    }
+                    if (included == 0) throw std::runtime_error("No eligible EvoNode records at target");
+                }
+                {
+                    LOCK(cs_main);
+                    if (!chainman.ActiveChain().Contains(target_guard))
+                        throw std::runtime_error("Chain changed during proof construction; retry");
+                }
+                UniValue result(UniValue::VOBJ);
+                result.pushKV("proof_hex", HexStr(proof->Encode()));
+                result.pushKV("bootstrap_hex", records.empty() ? "" : HexStr(llmq::EncodeBootstrap(*proof, records)));
+                result.pushKV("target", proof->Verify(proof->anchor).ToJson());
+                return result;
+            } catch (const std::exception& e) {
+                throw JSONRPCError(RPC_MISC_ERROR, e.what());
+            }
+        }};
+}
+
+static RPCHelpMan verifyquorumproofchain()
+{
+    return RPCHelpMan{"verifyquorumproofchain",
+        "Verify DASHNC02 against an independently trusted full snapshot. Never obtains trust roots from proof data.\n",
+        {
+            {"checkpoint", RPCArg::Type::OBJ, RPCArg::Optional::NO, "Trusted snapshot", {
+                {"network", RPCArg::Type::NUM, RPCArg::Optional::NO, "0 mainnet, 1 testnet"},
+                {"height", RPCArg::Type::NUM, RPCArg::Optional::NO, "Snapshot height"},
+                {"block_hash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Snapshot hash"},
+                {"masternode_root", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Masternode root"},
+                {"quorum_root", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "Quorum root"},
+            }},
+            {"proof_hex", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "DASHNC02 proof"},
+            {"minimum_height", RPCArg::Type::NUM, RPCArg::Default{0}, "Caller freshness policy"},
+        },
+        RPCResult{RPCResult::Type::OBJ, "", "", {
+            {RPCResult::Type::BOOL, "valid", "Whether verification succeeded"},
+            {RPCResult::Type::OBJ, "target", true, "Authenticated target", {{RPCResult::Type::ELISION, "", ""}}},
+            {RPCResult::Type::STR, "error", true, "Verification error"},
+        }},
+        RPCExamples{HelpExampleCli("verifyquorumproofchain", "'{\"network\":0,\"height\":1987776,\"block_hash\":\"<hash>\",\"masternode_root\":\"<hash>\",\"quorum_root\":\"<hash>\"}' \"<proof_hex>\"")},
+        [&](const RPCHelpMan&, const JSONRPCRequest& request) -> UniValue {
+            llmq::ProofState trusted;
+            std::string text;
+            uint32_t minimum{0};
+            try {
+                trusted = llmq::ProofState::FromJson(request.params[0]);
+                text = request.params[1].get_str();
+                minimum = request.params[2].isNull() ? 0 : request.params[2].getInt<uint32_t>();
+            } catch (const std::exception& e) {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, e.what());
+            }
+            if (text.size() > llmq::MAX_PROOF_BYTES * 2 || !IsHex(text)) {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Proof hex size/encoding");
+            }
+
+            UniValue result(UniValue::VOBJ);
+            try {
+                auto proof = llmq::QuorumProofChain::Decode(ParseHex(text));
+                auto target = proof.Verify(trusted);
+                if (target.height < minimum) throw std::runtime_error("Stale proof target");
+                result.pushKV("valid", true);
+                result.pushKV("target", target.ToJson());
+            } catch (const std::exception& e) {
+                result.pushKV("valid", false);
+                result.pushKV("error", e.what());
+            }
+            return result;
+        }};
+}
+
 void RegisterQuorumsRPCCommands(CRPCTable& t)
 {
     static const CRPCCommand commands[]{
@@ -1413,6 +1685,9 @@ void RegisterQuorumsRPCCommands(CRPCTable& t)
         {"evo", &submitchainlock},
         {"evo", &verifychainlock},
         {"evo", &verifyislock},
+        {"evo", &getchainlockbyheight},
+        {"evo", &getquorumproofchain},
+        {"evo", &verifyquorumproofchain},
     };
     for (const auto& command : commands) {
         t.appendCommand(command.name, &command);

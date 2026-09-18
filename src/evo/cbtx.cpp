@@ -170,16 +170,18 @@ std::optional<std::pair<CBLSSignature, uint32_t>> GetNonNullCoinbaseChainlock(co
         return std::nullopt;
     }
 
-    const CTransactionRef cbTx = block.vtx[0];
-    const auto opt_cbtx = GetTxPayload<CCbTx>(*cbTx);
+    return GetNonNullCoinbaseChainlock(block, pindex->nHeight);
+}
 
-    if (!opt_cbtx.has_value()) {
+std::optional<std::pair<CBLSSignature, uint32_t>> GetNonNullCoinbaseChainlock(const CBlock& block, int32_t height)
+{
+    if (block.vtx.empty() || !block.vtx[0]->IsCoinBase() || block.vtx[0]->nType != TRANSACTION_COINBASE) {
         return std::nullopt;
     }
-
-    if (!opt_cbtx->bestCLSignature.IsValid()) {
+    const auto payload = GetTxPayload<CCbTx>(*block.vtx[0]);
+    if (!payload || payload->nVersion < CCbTx::Version::CLSIG_AND_BALANCE || payload->nHeight != height ||
+        !payload->bestCLSignature.IsValid() || payload->bestCLHeightDiff >= uint32_t(height)) {
         return std::nullopt;
     }
-
-    return std::make_pair(opt_cbtx->bestCLSignature, opt_cbtx->bestCLHeightDiff);
+    return std::make_pair(payload->bestCLSignature, payload->bestCLHeightDiff);
 }
