@@ -41,8 +41,8 @@ struct ChainstateManagerOpts {
     //! Dash: governance's superblock status for a block height, consulted by
     //! block validation and the miner. Unset means superblock validation is disabled.
     std::function<SuperblockStatus(const CDeterministicMNList& mn_list, int nBlockHeight)> superblock_status{};
-    //! Dash: sync state gating superblock enforcement; must outlive the
-    //! ChainstateManager and be set by any manager that connects blocks.
+    //! Dash: sync state gating superblock enforcement; must stay valid while
+    //! blocks are connected. Unset counts as not synced, so nothing is enforced.
     const CMasternodeSync* mn_sync{nullptr};
 };
 

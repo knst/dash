@@ -1325,7 +1325,6 @@ libdashkernel_la_SOURCES = \
   logging.cpp \
   masternode/meta.cpp \
   masternode/payments.cpp \
-  masternode/sync.cpp \
   merkleblock.cpp \
   messagesigner.cpp \
   netaddress.cpp \

@@ -2493,7 +2493,7 @@ bool Chainstate::IsSuperblockValidationRequired(const CBlockIndex* const pindex)
         LogPrint(BCLog::MNPAYMENTS, "%s -- validation of chainlocked block=%s is skipped\n", __func__, pindex->GetBlockHash().ToString());
         return false;
     }
-    if (!Assert(m_chainman.m_options.mn_sync)->IsSynced()) {
+    if (!m_chainman.m_options.mn_sync || !m_chainman.m_options.mn_sync->IsSynced()) {
         LogPrint(BCLog::MNPAYMENTS, "%s -- WARNING! Node is not fully synced, checked superblock for block=%s max bounds only\n", __func__, pindex->GetBlockHash().ToString());
         return false;
     }

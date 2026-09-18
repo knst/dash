@@ -26,7 +26,6 @@
 #include <llmq/context.h>
 #include <llmq/options.h>
 #include <masternode/meta.h>
-#include <masternode/sync.h>
 #include <node/blockstorage.h>
 #include <node/caches.h>
 #include <node/chainstate.h>
@@ -90,10 +89,8 @@ int main(int argc, char* argv[])
 
 
     // SETUP: Chainstate
-    CMasternodeSync mn_sync{std::make_unique<NullNodeSyncNotifier>()};
     const ChainstateManager::Options chainman_opts{
         .chainparams = chainparams,
-        .mn_sync = &mn_sync,
     };
     ChainstateManager chainman{chainman_opts};
 
