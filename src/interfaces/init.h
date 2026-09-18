@@ -34,7 +34,7 @@ public:
     virtual std::unique_ptr<Node> makeNode() { return nullptr; }
     virtual std::unique_ptr<Chain> makeChain() { return nullptr; }
     virtual std::unique_ptr<CoinJoin::Loader> makeCoinJoinLoader() { return nullptr; }
-    virtual std::unique_ptr<interfaces::WalletLoader> makeWalletLoader(interfaces::Chain&, CoinJoin::Loader&) { return nullptr; }
+    virtual std::unique_ptr<interfaces::WalletLoader> makeWalletLoader(interfaces::Chain&) { return nullptr; }
     virtual std::unique_ptr<Echo> makeEcho() { return nullptr; }
     virtual Ipc* ipc() { return nullptr; }
 };

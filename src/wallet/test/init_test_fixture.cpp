@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <univalue.h>
-#include <util/check.h>
 #include <util/fs.h>
 #include <util/system.h>
 
@@ -15,8 +14,7 @@
 namespace wallet {
 InitWalletDirTestingSetup::InitWalletDirTestingSetup(const std::string& chainName) : BasicTestingSetup(chainName)
 {
-    m_coinjoin_loader = interfaces::MakeCoinJoinLoader(m_node);
-    m_wallet_loader = MakeWalletLoader(*m_node.chain, m_args, m_node, *Assert(m_coinjoin_loader));
+    m_wallet_loader = MakeWalletLoader(*m_node.chain, m_args, m_node);
 
     const auto sep = fs::path::preferred_separator;
 

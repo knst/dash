@@ -9,7 +9,6 @@
 #include <coinjoin/client.h>
 #include <consensus/amount.h>
 #include <interfaces/chain.h>
-#include <interfaces/coinjoin.h>
 #include <interfaces/handler.h>
 #include <policy/fees.h>
 #include <primitives/transaction.h>
@@ -903,13 +902,11 @@ private:
     }
 
 public:
-    WalletLoaderImpl(Chain& chain, ArgsManager& args, NodeContext& node_context,
-                     interfaces::CoinJoin::Loader& coinjoin_loader)
+    WalletLoaderImpl(Chain& chain, ArgsManager& args, NodeContext& node_context)
     {
         m_context.chain = &chain;
         m_context.args = &args;
         m_context.node_context = &node_context;
-        m_context.coinjoin_loader = &coinjoin_loader;
     }
     ~WalletLoaderImpl() override { UnloadWallets(m_context); }
 
@@ -1023,9 +1020,8 @@ public:
 
 namespace interfaces {
 std::unique_ptr<Wallet> MakeWallet(wallet::WalletContext& context, const std::shared_ptr<wallet::CWallet>& wallet) { return wallet ? std::make_unique<wallet::WalletImpl>(context, wallet) : nullptr; }
-std::unique_ptr<WalletLoader> MakeWalletLoader(Chain& chain, ArgsManager& args, NodeContext& node_context,
-                                               interfaces::CoinJoin::Loader& coinjoin_loader)
+std::unique_ptr<WalletLoader> MakeWalletLoader(Chain& chain, ArgsManager& args, NodeContext& node_context)
 {
-    return std::make_unique<wallet::WalletLoaderImpl>(chain, args, node_context, coinjoin_loader);
+    return std::make_unique<wallet::WalletLoaderImpl>(chain, args, node_context);
 }
 } // namespace interfaces

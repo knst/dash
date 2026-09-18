@@ -413,7 +413,7 @@ TestingSetup::TestingSetup(
     // WalletTestingSetup
     m_node.coinjoin_loader = interfaces::MakeCoinJoinLoader(m_node);
 
-    auto wallet_loader = interfaces::MakeWalletLoader(*m_node.chain, *m_node.args, m_node, *m_node.coinjoin_loader);
+    auto wallet_loader = interfaces::MakeWalletLoader(*m_node.chain, *m_node.args, m_node);
     m_node.wallet_loader = wallet_loader.get();
     m_node.chain_clients.emplace_back(std::move(wallet_loader));
 #endif // ENABLE_WALLET

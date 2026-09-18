@@ -12,7 +12,6 @@
 
 #include <coinjoin/client.h>
 #include <interfaces/chain.h>
-#include <interfaces/coinjoin.h>
 #include <key_io.h>
 #include <node/blockstorage.h>
 #include <policy/policy.h>
@@ -866,7 +865,6 @@ BOOST_FIXTURE_TEST_CASE(CreateWallet, TestChain100Setup)
     WalletContext context;
     context.args = &m_args;
     context.chain = m_node.chain.get();
-    context.coinjoin_loader = m_node.coinjoin_loader.get();
     auto wallet = TestLoadWallet(context);
     CKey key = GenerateRandomKey();
     AddKey(*wallet, key);
@@ -959,7 +957,6 @@ BOOST_FIXTURE_TEST_CASE(CreateWalletWithoutChain, BasicTestingSetup)
 {
     WalletContext context;
     context.args = &m_args;
-    context.coinjoin_loader = nullptr; // TODO: FIX FIX FIX
     auto wallet = TestLoadWallet(context);
     BOOST_CHECK(wallet);
     UnloadWallet(std::move(wallet));
@@ -971,7 +968,6 @@ BOOST_FIXTURE_TEST_CASE(ZapSelectTx, TestChain100Setup)
     WalletContext context;
     context.args = &m_args;
     context.chain = m_node.chain.get();
-    context.coinjoin_loader = m_node.coinjoin_loader.get();
     auto wallet = TestLoadWallet(context);
     CKey key = GenerateRandomKey();
     AddKey(*wallet, key);
@@ -1019,7 +1015,6 @@ BOOST_FIXTURE_TEST_CASE(rpc_getaddressinfo, TestChain100Setup)
     WalletContext context;
     context.args = &m_args;
     context.chain = m_node.chain.get();
-    context.coinjoin_loader = m_node.coinjoin_loader.get();
     const std::shared_ptr<CWallet> wallet = std::make_shared<CWallet>(m_node.chain.get(), "", m_args, CreateMockWalletDatabase());
     wallet->SetupLegacyScriptPubKeyMan();
     AddWallet(context, wallet);
@@ -1121,7 +1116,6 @@ public:
     {
         context.args = &m_args;
         context.chain = m_node.chain.get();
-        context.coinjoin_loader = m_node.coinjoin_loader.get();
         CreateAndProcessBlock({}, GetScriptForRawPubKey(coinbaseKey.GetPubKey()));
         wallet->LoadWallet();
         AddWallet(context, wallet);

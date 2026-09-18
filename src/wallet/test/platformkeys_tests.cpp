@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <chainparams.h>
-#include <interfaces/coinjoin.h>
 #include <interfaces/wallet.h>
 #include <key.h>
 #include <key_io.h>
@@ -220,7 +219,6 @@ struct FriendshipWalletSetup : public TestChain100Setup {
     {
         m_context.args = &m_args;
         m_context.chain = m_node.chain.get();
-        m_context.coinjoin_loader = m_node.coinjoin_loader.get();
         std::tie(m_wallet, m_iface) = MakeSeededWallet(mnemonic);
     }
 
