@@ -166,9 +166,9 @@ static CCbTx Coinbase(const ProofTransaction& proof, const ProofCertificate& cer
 {
     Require(proof.path.index == 0 && proof.Verify(cert.header), "coinbase inclusion");
     const auto tx = ParseTransaction(proof.transaction);
-    Require(tx->IsCoinBase() && tx->nVersion == 3 && tx->nType == TRANSACTION_COINBASE &&
-            !tx->vin[0].scriptSig.empty() && tx->vin[0].scriptSig.size() <= 100 &&
-            !tx->vout.empty() && tx->vout.size() <= 4096, "coinbase envelope");
+    Require(tx->IsCoinBase() && tx->IsSpecialTxVersion() && tx->nType == TRANSACTION_COINBASE &&
+            !tx->vin[0].scriptSig.empty() && tx->vin[0].scriptSig.size() <= 100 && !tx->vout.empty(),
+            "coinbase envelope");
     auto payload = GetTxPayload<CCbTx>(*tx);
     Require(payload && payload->nVersion >= CCbTx::Version::CLSIG_AND_BALANCE &&
             payload->nHeight == int64_t(cert.height) && payload->bestCLHeightDiff < cert.height &&
@@ -324,8 +324,8 @@ ProofState QuorumProofChain::Verify(const ProofState& trusted) const
         }
         Require(link.mining.path.index != 0 && link.mining.Verify(*descendant), "mining inclusion");
         auto tx = ParseTransaction(link.mining.transaction);
-        Require(tx->nVersion == 3 && tx->nType == TRANSACTION_QUORUM_COMMITMENT &&
-                tx->vin.empty() && tx->vout.empty() && tx->nLockTime == 0, "quorum transaction envelope");
+        Require(tx->IsSpecialTxVersion() && tx->nType == TRANSACTION_QUORUM_COMMITMENT,
+                "quorum transaction envelope");
         auto payload = GetTxPayload<CFinalCommitmentTxPayload>(*tx);
         Require(payload && payload->nVersion == 1 && payload->nHeight == link.certificate.height - link.ancestors.size(), "quorum mining height");
         auto next = ParseCommitment(ConsensusBytes(payload->commitment), kind);

@@ -1,6 +1,7 @@
 // Copyright (c) 2025-2026 The Dash Core developers
 // Distributed under the MIT software license, see the accompanying file COPYING.
 #include <boost/test/unit_test.hpp>
+#include <algorithm>
 #include <chainlock/clsig.h>
 #include <chainparamsbase.h>
 #include <consensus/merkle.h>
@@ -107,6 +108,8 @@ struct QuorumProofGenerationSetup : TestingSetup {
     Consensus::Params saved_consensus;
     CBlockIndex* saved_tip;
     int checkpoint_height;
+    int handoff_height{0};
+    bool mine_nonstandard_handoff{false};
     std::vector<llmq::CFinalCommitment> commitments;
     std::vector<CBLSSecretKey> keys;
 
@@ -141,8 +144,11 @@ struct QuorumProofGenerationSetup : TestingSetup {
         for (const auto& quorum_params : consensus.llmqs) {
             first_height = std::min(first_height, checkpoint_height - 2 * quorum_params.dkgInterval);
         }
+        handoff_height = checkpoint_height + params.dkgInterval;
+        const int last_height = (mine_nonstandard_handoff ? handoff_height : checkpoint_height) +
+                                llmq::SIGN_HEIGHT_OFFSET + 1;
         CBlockIndex* previous{nullptr};
-        for (int height = first_height; height <= checkpoint_height + llmq::SIGN_HEIGHT_OFFSET + 1; ++height) {
+        for (int height = first_height; height <= last_height; ++height) {
             CCbTx payload;
             payload.nVersion = CCbTx::Version::CLSIG_AND_BALANCE;
             payload.nHeight = height;
@@ -152,14 +158,19 @@ struct QuorumProofGenerationSetup : TestingSetup {
                                                                      chainlock::GenSigRequestId(height - 1), height - 1,
                                                                      llmq::SIGN_HEIGHT_OFFSET);
                 BOOST_REQUIRE(signer);
-                const size_t key = signer->quorumHash == commitments.front().quorumHash ? 0 : 1;
+                const auto match = std::find_if(commitments.begin(), commitments.end(), [&](const auto& entry) {
+                    return entry.quorumHash == signer->quorumHash;
+                });
+                BOOST_REQUIRE(match != commitments.end());
+                const size_t key = size_t(match - commitments.begin());
                 payload.bestCLSignature = keys[key].Sign(llmq::SignHash{params.type, signer->quorumHash,
                                                                         chainlock::GenSigRequestId(height - 1),
                                                                         previous->GetBlockHash()}
                                                              .Get(),
                                                          false);
             }
-            const bool mining = height == checkpoint_height - params.dkgInterval || height == checkpoint_height;
+            const bool mining = height == checkpoint_height - params.dkgInterval || height == checkpoint_height ||
+                                (mine_nonstandard_handoff && height == handoff_height);
             if (mining) {
                 keys.emplace_back();
                 keys.back().MakeNewKey();
@@ -179,6 +190,10 @@ struct QuorumProofGenerationSetup : TestingSetup {
             coinbase.vin.resize(1);
             coinbase.vin[0].scriptSig = CScript() << height << OP_0;
             coinbase.vout.emplace_back(0, CScript() << OP_TRUE);
+            if (mine_nonstandard_handoff && height > checkpoint_height) {
+                // Consensus bounds a coinbase by transaction size alone.
+                coinbase.vout.resize(4097, CTxOut(0, CScript() << OP_TRUE));
+            }
             SetTxPayload(coinbase, payload);
             CBlock block;
             block.nVersion = 1;
@@ -190,6 +205,15 @@ struct QuorumProofGenerationSetup : TestingSetup {
                 CMutableTransaction tx;
                 tx.nVersion = 3;
                 tx.nType = TRANSACTION_QUORUM_COMMITMENT;
+                if (mine_nonstandard_handoff && height == handoff_height) {
+                    // Consensus permits any special version here, allows rather
+                    // than requires empty inputs and outputs, and never reads
+                    // the lock time of a mined commitment.
+                    tx.nVersion = 4;
+                    tx.nLockTime = 1;
+                    tx.vin.emplace_back(COutPoint(uint256::ONE, 0));
+                    tx.vout.emplace_back(0, CScript() << OP_TRUE);
+                }
                 llmq::CFinalCommitmentTxPayload qc;
                 qc.nHeight = height;
                 qc.commitment = commitments.back();
@@ -272,6 +296,36 @@ BOOST_FIXTURE_TEST_CASE(generation_retries_retired_checkpoint_signer, QuorumProo
     BOOST_CHECK_EXCEPTION(Generate(checkpoint_height + 1), UniValue, [](const UniValue& error) {
         return error["message"].get_str().find("historical block unavailable") != std::string::npos;
     });
+}
+BOOST_FIXTURE_TEST_CASE(consensus_valid_envelopes_are_provable, QuorumProofGenerationSetup)
+{
+    // A handoff must stay provable whatever shape the miner gave the mined
+    // commitment, otherwise one block mined by custom software permanently
+    // removes that quorum's key from every proof.
+    mine_nonstandard_handoff = true;
+    CreateHistory();
+    auto& chain = *WITH_LOCK(cs_main, return &m_node.chainman->ActiveChain());
+    const auto* checkpoint = chain[checkpoint_height];
+    chainlock::CoinbaseChainLockReader reader(chain);
+    llmq::QuorumProofBuilder builder(*m_node.llmq_ctx->quorum_block_processor, *m_node.llmq_ctx->qman, chain,
+                                     *m_node.chainman, reader);
+    const auto entry = reader.Find(handoff_height + llmq::SIGN_HEIGHT_OFFSET, chain.Height());
+    BOOST_REQUIRE(entry);
+    const auto proof = builder.Build(checkpoint, entry->clsig);
+    BOOST_REQUIRE(proof);
+    BOOST_REQUIRE_EQUAL(proof->links.size(), 1U);
+
+    CDataStream stream(proof->links[0].mining.transaction, SER_NETWORK, PROTOCOL_VERSION);
+    CMutableTransaction mining;
+    stream >> mining;
+    BOOST_CHECK_EQUAL(mining.nVersion, 4);
+    BOOST_CHECK_EQUAL(mining.nLockTime, 1U);
+    BOOST_CHECK(!mining.vin.empty());
+    BOOST_CHECK(!mining.vout.empty());
+
+    const auto state = proof->Verify(llmq::QuorumProofBuilder::StateAt(checkpoint));
+    BOOST_CHECK_EQUAL(state.height, uint32_t(entry->clsig.getHeight()));
+    BOOST_CHECK(state.blockHash == proof->target.header.GetHash());
 }
 BOOST_AUTO_TEST_CASE(real_testnet_wire_and_crypto) {
     auto bytes = ParseHex(TESTNET_PROOF);
