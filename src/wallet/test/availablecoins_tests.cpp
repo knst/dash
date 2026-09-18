@@ -27,7 +27,7 @@ public:
     AvailableCoinsTestingSetup()
     {
         CreateAndProcessBlock({}, {});
-        wallet = CreateSyncedWallet(*m_node.chain, *m_node.coinjoin_loader, *m_node.chainman, m_args, coinbaseKey);
+        wallet = CreateSyncedWallet(*m_node.chain, *m_node.chainman, m_args, coinbaseKey);
     }
 
     ~AvailableCoinsTestingSetup()

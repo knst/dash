@@ -10,7 +10,6 @@
 #include <consensus/amount.h>
 #include <governance/common.h>
 #include <interfaces/chain.h>
-#include <interfaces/coinjoin.h>
 #include <interfaces/handler.h>
 #include <policy/feerate.h>
 #include <psbt.h>
@@ -418,9 +417,6 @@ private:
     /** Interface for accessing chain state. */
     interfaces::Chain* m_chain;
 
-    /** Interface for accessing CoinJoin state. */
-    interfaces::CoinJoin::Loader* m_coinjoin_loader;
-
     /** Wallet name: relative directory name or "" for default wallet. */
     std::string m_name;
 
@@ -527,10 +523,9 @@ public:
     unsigned int nMasterKeyMaxID = 0;
 
     /** Construct wallet with specified name and database implementation. */
-    CWallet(interfaces::Chain* chain, interfaces::CoinJoin::Loader* coinjoin_loader, const std::string& name, const ArgsManager& args, std::unique_ptr<WalletDatabase> database)
+    CWallet(interfaces::Chain* chain, const std::string& name, const ArgsManager& args, std::unique_ptr<WalletDatabase> database)
         : m_args(args),
           m_chain(chain),
-          m_coinjoin_loader(coinjoin_loader),
           m_name(name),
           m_database(std::move(database))
     {
@@ -578,11 +573,6 @@ public:
 
     /** Interface for accessing chain state. */
     interfaces::Chain& chain() const { assert(m_chain); return *m_chain; }
-
-    /** Interface for accessing CoinJoin state. */
-    interfaces::CoinJoin::Loader& coinjoin_loader() { assert(m_coinjoin_loader); return *m_coinjoin_loader; }
-    /** Interface for availability status of CoinJoin. */
-    bool coinjoin_available() { return m_coinjoin_loader != nullptr; }
 
     const CWalletTx* GetWalletTx(const uint256& hash) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
 

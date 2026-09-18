@@ -118,7 +118,7 @@ static DBErrors LoadWithCorruptPlatformRecord(const node::NodeContext& node, con
                                               const std::string& record_key,
                                               std::map<std::string, std::vector<unsigned char>>& platform_data_out)
 {
-    CWallet wallet(node.chain.get(), node.coinjoin_loader.get(), "", args, CreateMockWalletDatabase());
+    CWallet wallet(node.chain.get(), "", args, CreateMockWalletDatabase());
     const std::vector<unsigned char> truncated{0x05};
     const std::vector<unsigned char> intact_value{0x01, 0x02};
     {

@@ -3167,14 +3167,13 @@ std::unique_ptr<WalletDatabase> MakeWalletDatabase(const std::string& name, cons
 std::shared_ptr<CWallet> CWallet::Create(WalletContext& context, const std::string& name, std::unique_ptr<WalletDatabase> database, uint64_t wallet_creation_flags, bilingual_str& error, std::vector<bilingual_str>& warnings)
 {
     interfaces::Chain* chain = context.chain;
-    interfaces::CoinJoin::Loader* coinjoin_loader = context.coinjoin_loader;
     ArgsManager& args = *Assert(context.args);
     const std::string& walletFile = database->Filename();
 
     const auto start{SteadyClock::now()};
     // TODO: Can't use std::make_shared because we need a custom deleter but
     // should be possible to use std::allocate_shared.
-    std::shared_ptr<CWallet> walletInstance(new CWallet(chain, coinjoin_loader, name, args, std::move(database)), ReleaseWallet);
+    std::shared_ptr<CWallet> walletInstance(new CWallet(chain, name, args, std::move(database)), ReleaseWallet);
     // TODO: refactor this condition: validation of error looks like workaround
     if (!walletInstance->AutoBackupWallet(fs::PathFromString(walletFile), error, warnings) && !error.original.empty()) {
         return nullptr;

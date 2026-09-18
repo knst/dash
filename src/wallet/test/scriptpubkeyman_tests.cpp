@@ -22,7 +22,7 @@ BOOST_AUTO_TEST_CASE(CanProvide)
     // Set up wallet and keyman variables.
     NodeContext node;
     std::unique_ptr<interfaces::Chain> chain = interfaces::MakeChain(node);
-    CWallet wallet(chain.get(), /*coinjoin_loader=*/nullptr, "", m_args, CreateDummyWalletDatabase());
+    CWallet wallet(chain.get(), "", m_args, CreateDummyWalletDatabase());
     LegacyScriptPubKeyMan& keyman = *wallet.GetOrCreateLegacyScriptPubKeyMan();
 
     // Make a 1 of 2 multisig script
