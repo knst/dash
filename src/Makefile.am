@@ -236,6 +236,7 @@ BITCOIN_CORE_H = \
   evo/sharedcollateral.h \
   evo/simplifiedmns.h \
   evo/smldiff.h \
+  evo/snapshot.h \
   evo/specialtx.h \
   evo/specialtx_filter.h \
   evo/specialtxman.h \
@@ -556,6 +557,7 @@ libbitcoin_node_a_SOURCES = \
   evo/providertx_service.cpp \
   evo/simplifiedmns.cpp \
   evo/smldiff.cpp \
+  evo/snapshot.cpp \
   evo/specialtx.cpp \
   evo/specialtx_filter.cpp \
   evo/specialtxman.cpp \
