@@ -23,15 +23,15 @@ CChainstateHelper::CChainstateHelper(CEvoDB& evodb, CDeterministicMNManager& dmn
                                      llmq::CInstantSendManager& isman, llmq::CQuorumBlockProcessor& qblockman,
                                      llmq::CQuorumSnapshotManager& qsnapman, const ChainstateManager& chainman,
                                      const node::BlockManager& blockman, const Consensus::Params& consensus_params,
-                                     const chainlock::Chainlocks& chainlocks, const llmq::CQuorumManager& qman) :
+                                     const chainlock::Chainlocks& chainlocks, const llmq::CQuorumManager& qman,
+                                     governance::SuperblockManager& sbman) :
     isman{isman},
     mn_sync{mn_sync},
     m_dmnman{dmnman},
     credit_pool_manager{std::make_unique<CCreditPoolManager>(evodb, chainman)},
     m_chainlocks{chainlocks},
     ehf_manager{std::make_unique<CMNHFManager>(evodb, consensus_params)},
-    superblocks{std::make_unique<governance::SuperblockManager>()},
-    mn_payments{std::make_unique<CMNPaymentsProcessor>(dmnman, *superblocks, consensus_params)},
+    mn_payments{std::make_unique<CMNPaymentsProcessor>(dmnman, sbman, consensus_params)},
     special_tx{std::make_unique<CSpecialTxProcessor>(*credit_pool_manager, dmnman, *ehf_manager, qblockman, qsnapman,
                                                      chainman, blockman, consensus_params, chainlocks, qman)}
 {}

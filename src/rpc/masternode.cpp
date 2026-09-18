@@ -330,7 +330,7 @@ static RPCHelpMan masternode_winners()
         const CBlockIndex* pIndex = pindexTip->GetAncestor(h - 1);
         auto payee = node.dmnman->GetListForBlock(pIndex).GetMNPayee(pIndex);
         if (payee) {
-            std::string strPayments = GetRequiredPaymentsString(*CHECK_NONFATAL(node.chain_helper)->superblocks,
+            std::string strPayments = GetRequiredPaymentsString(*CHECK_NONFATAL(node.sbman),
                                                                 tip_mn_list, h, payee);
             if (!strFilter.empty() && strPayments.find(strFilter) == std::string::npos) continue;
             obj.pushKV(strprintf("%d", h), strPayments);
@@ -340,7 +340,7 @@ static RPCHelpMan masternode_winners()
     auto projection = node.dmnman->GetListForBlock(pindexTip).GetProjectedMNPayees(pindexTip, /*nCount=*/20);
     for (size_t i = 0; i < projection.size(); i++) {
         int h = nChainTipHeight + 1 + i;
-        std::string strPayments = GetRequiredPaymentsString(*node.chain_helper->superblocks, tip_mn_list, h, projection[i]);
+        std::string strPayments = GetRequiredPaymentsString(*node.sbman, tip_mn_list, h, projection[i]);
         if (!strFilter.empty() && strPayments.find(strFilter) == std::string::npos) continue;
         obj.pushKV(strprintf("%d", h), strPayments);
     }

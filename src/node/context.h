@@ -47,6 +47,10 @@ class Chainlocks;
 class ChainlockHandler;
 } // namespace chainlock
 
+namespace governance {
+class SuperblockManager;
+} // namespace governance
+
 namespace interfaces {
 class Chain;
 class ChainClient;
@@ -108,6 +112,7 @@ struct NodeContext {
     std::unique_ptr<CMasternodeMetaMan> mn_metaman;
     std::unique_ptr<CMasternodeSync> mn_sync;
     std::unique_ptr<CNetFulfilledRequestManager> netfulfilledman;
+    std::unique_ptr<governance::SuperblockManager> sbman;
     std::unique_ptr<CSporkManager> sporkman;
     std::unique_ptr<chainlock::Chainlocks> chainlocks;
     std::unique_ptr<chainlock::ChainlockHandler> clhandler;

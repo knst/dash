@@ -88,7 +88,7 @@ CGovernanceManager::CGovernanceManager(CMasternodeMetaMan& mn_metaman, const Cha
 CGovernanceManager::~CGovernanceManager()
 {
     // Reset the paired SuperblockManager so its loaded-flag and trigger map don't
-    // outlive us. chain_helper (its owner) must outlive govman -- see PrepareShutdown
+    // outlive us. node.sbman (its owner) must outlive govman -- see PrepareShutdown
     // in init.cpp and the test teardown ordering.
     m_superblocks.Clear();
     if (!is_loaded) return;

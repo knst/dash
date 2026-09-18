@@ -108,6 +108,7 @@
 #include <evo/specialtxman.h>
 #include <flat-database.h>
 #include <governance/governance.h>
+#include <governance/superblock.h>
 #include <governance/net_governance.h>
 #include <instantsend/instantsend.h>
 #include <instantsend/net_instantsend.h>
@@ -1742,6 +1743,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     assert(!node.sporkman);
     node.sporkman = std::make_unique<CSporkManager>();
     node.chainlocks = std::make_unique<chainlock::Chainlocks>(*node.sporkman);
+    node.sbman = std::make_unique<governance::SuperblockManager>();
 
     const std::string spork_address{args.GetArg("-sporkaddr", chainparams.SporkAddress())};
     if (args.GetArgs("-sporkaddr").size() > 1) {
@@ -2103,7 +2105,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                 node.chain_helper = std::make_unique<CChainstateHelper>(*node.evodb, *node.dmnman, *node.mn_sync, *node.isman,
                                                                         *node.llmq_ctx->quorum_block_processor, *node.llmq_ctx->qsnapman,
                                                                         chainman, chainman.m_blockman, chainman.GetConsensus(),
-                                                                        *node.chainlocks, *node.llmq_ctx->qman);
+                                                                        *node.chainlocks, *node.llmq_ctx->qman, *node.sbman);
                 return LoadChainstate(chainman, cache_sizes, options, *node.evodb, *node.dmnman, node.chain_helper);
             });
         }
@@ -2163,7 +2165,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     RegisterValidationInterface(node.clhandler.get());
 
     assert(!node.govman);
-    node.govman = std::make_unique<CGovernanceManager>(*node.mn_metaman, *node.chainman, *node.chain_helper->superblocks, *node.dmnman, *node.mn_sync);
+    node.govman = std::make_unique<CGovernanceManager>(*node.mn_metaman, *node.chainman, *node.sbman, *node.dmnman, *node.mn_sync);
 
     // ********************************************************* Step 7c: Setup masternode mode or watch-only mode
     assert(!node.active_ctx);
@@ -2180,7 +2182,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         }
         // Will init later in ThreadImport
         node.active_ctx = std::make_unique<ActiveContext>(*node.llmq_ctx->bls_worker, chainman, *node.connman, *node.dmnman,
-                                                          *node.govman, *node.chain_helper->superblocks,
+                                                          *node.govman, *node.sbman,
                                                           *node.sporkman, *node.chainlocks, *node.mempool, *node.clhandler, *node.isman,
                                                           *node.llmq_ctx->qman, *node.llmq_ctx->qsnapman, *node.llmq_ctx->sigman,
                                                           *node.mn_sync, operator_sk, dash_db_params, quorums_watch);

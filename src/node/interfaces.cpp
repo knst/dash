@@ -447,7 +447,7 @@ public:
     {
         if (context().chain_helper != nullptr && context().chainman != nullptr) {
             const int32_t nTipHeight = WITH_LOCK(::cs_main, return context().chainman->ActiveHeight());
-            for (const auto& trigger : context().chain_helper->superblocks->GetActiveTriggers()) {
+            for (const auto& trigger : context().sbman->GetActiveTriggers()) {
                 if (!trigger || trigger->GetBlockHeight() > nTipHeight) continue;
                 for (const auto& hash : trigger->GetProposalHashes()) {
                     if (hash == proposal_hash) {

@@ -79,6 +79,7 @@
 #include <evo/specialtxman.h>
 #include <flat-database.h>
 #include <governance/governance.h>
+#include <governance/superblock.h>
 #include <instantsend/instantsend.h>
 #include <llmq/context.h>
 #include <llmq/options.h>
@@ -213,6 +214,7 @@ BasicTestingSetup::BasicTestingSetup(const std::string& chainName, const std::ve
     m_node.netfulfilledman = std::make_unique<CNetFulfilledRequestManager>();
     m_node.sporkman = std::make_unique<CSporkManager>();
     m_node.chainlocks = std::make_unique<chainlock::Chainlocks>(*m_node.sporkman);
+    m_node.sbman = std::make_unique<governance::SuperblockManager>();
     m_node.evodb = std::make_unique<CEvoDB>(util::DbWrapperParams{.path = m_node.args->GetDataDirNet(), .memory = m_dash_dbs_in_memory, .wipe = true});
     m_node.dmnman = std::make_unique<CDeterministicMNManager>(*m_node.evodb, *m_node.mn_metaman);
     m_node.isman = std::make_unique<llmq::CInstantSendManager>(*m_node.sporkman, util::DbWrapperParams{.path = m_node.args->GetDataDirNet(), .memory = m_dash_dbs_in_memory, .wipe = true});
@@ -327,7 +329,7 @@ void ChainTestingSetup::MakeDashChainContexts(const bool llmq_dbs_wipe)
     m_node.chain_helper = std::make_unique<CChainstateHelper>(*m_node.evodb, *m_node.dmnman, *Assert(m_node.mn_sync), *Assert(m_node.isman),
                                                               *m_node.llmq_ctx->quorum_block_processor, *m_node.llmq_ctx->qsnapman,
                                                               chainman, chainman.m_blockman, chainman.GetConsensus(),
-                                                              *Assert(m_node.chainlocks), *m_node.llmq_ctx->qman);
+                                                              *Assert(m_node.chainlocks), *m_node.llmq_ctx->qman, *Assert(m_node.sbman));
 }
 
 void ChainTestingSetup::LoadVerifyActivateChainstate()
@@ -454,9 +456,9 @@ TestingSetup::~TestingSetup()
         m_node.connman->Stop();
     }
 
-    // govman holds a reference to chain_helper->superblocks, so it must be
-    // reset before chain_helper is destroyed (matches PrepareShutdown ordering
-    // in init.cpp). Keep this defensive for fixtures that construct govman.
+    // govman holds a reference to node.sbman, which NodeContext destroys
+    // last, but reset it here anyway to match PrepareShutdown ordering in
+    // init.cpp for fixtures that construct govman.
     m_node.govman.reset();
 
     m_node.chain_helper.reset();

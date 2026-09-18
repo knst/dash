@@ -32,6 +32,7 @@
 #include <evo/evodb.h>
 #include <evo/mnhftx.h>
 #include <governance/governance.h>
+#include <governance/superblock.h>
 #include <instantsend/instantsend.h>
 #include <interfaces/coinjoin.h>
 #include <llmq/context.h>
