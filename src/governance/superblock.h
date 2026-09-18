@@ -18,7 +18,6 @@
 #include <string>
 #include <vector>
 
-class CChain;
 class CDeterministicMNList;
 class CTransaction;
 class CTxOut;
@@ -86,7 +85,7 @@ public:
 
     static bool IsValidBlockHeight(int nBlockHeight);
     static void GetNearestSuperblocksHeights(int nBlockHeight, int& nLastSuperblockRet, int& nNextSuperblockRet);
-    static CAmount GetPaymentsLimit(const CChain& active_chain, int nBlockHeight);
+    static CAmount GetPaymentsLimit(int nBlockHeight);
 
     SeenObjectStatus GetStatus() const { return nStatus; }
     void SetStatus(SeenObjectStatus nStatusIn) { nStatus = nStatusIn; }
@@ -107,7 +106,7 @@ public:
     bool GetPayment(int nPaymentIndex, CGovernancePayment& paymentRet);
     CAmount GetPaymentsTotalAmount();
 
-    bool IsValid(const CChain& active_chain, const CTransaction& txNew, int block_height, CAmount blockReward, bool is_v24);
+    bool IsValid(const CTransaction& txNew, int block_height, CAmount blockReward, bool is_v24);
     bool IsExpired(int heightToTest) const;
 
     std::vector<uint256> GetProposalHashes() const;
@@ -157,8 +156,8 @@ public:
 
     bool IsSuperblockTriggered(const CDeterministicMNList& tip_mn_list, int nBlockHeight) EXCLUSIVE_LOCKS_REQUIRED(!cs_sb);
 
-    bool IsValidSuperblock(const CChain& active_chain, const CDeterministicMNList& tip_mn_list, const CTransaction& txNew,
-                           int nBlockHeight, CAmount blockReward, bool is_v24) const EXCLUSIVE_LOCKS_REQUIRED(!cs_sb);
+    bool IsValidSuperblock(const CDeterministicMNList& tip_mn_list, const CTransaction& txNew, int nBlockHeight,
+                           CAmount blockReward, bool is_v24) const EXCLUSIVE_LOCKS_REQUIRED(!cs_sb);
 
     bool GetSuperblockPayments(const CDeterministicMNList& tip_mn_list, int nBlockHeight,
                                std::vector<CTxOut>& voutSuperblockRet) const EXCLUSIVE_LOCKS_REQUIRED(!cs_sb);

@@ -430,7 +430,7 @@ public:
             const Consensus::Params& consensusParams = context().chainman->GetConsensus();
             LOCK(::cs_main);
             CSuperblock::GetNearestSuperblocksHeights(context().chainman->ActiveHeight(), info.lastsuperblock, info.nextsuperblock);
-            info.governancebudget = CSuperblock::GetPaymentsLimit(context().chainman->ActiveChain(), info.nextsuperblock);
+            info.governancebudget = CSuperblock::GetPaymentsLimit(info.nextsuperblock);
             if (context().dmnman) {
                 info.fundingthreshold = static_cast<int>(context().dmnman->GetListAtChainTip().GetCounts().m_valid_weighted / 10);
             }
@@ -469,7 +469,7 @@ public:
                 {
                     LOCK(::cs_main);
                     CSuperblock::GetNearestSuperblocksHeights(context().chainman->ActiveHeight(), last_sb, next_sb);
-                    budget = CSuperblock::GetPaymentsLimit(context().chainman->ActiveChain(), next_sb);
+                    budget = CSuperblock::GetPaymentsLimit(next_sb);
                 }
                 for (const auto& proposal : proposals) {
                     UniValue json = proposal->GetJSONObject();

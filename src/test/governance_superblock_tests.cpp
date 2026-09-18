@@ -2,7 +2,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <chain.h>
 #include <chainparams.h>
 #include <consensus/amount.h>
 #include <governance/superblock.h>
@@ -54,7 +53,6 @@ BOOST_AUTO_TEST_CASE(isvalid_duplicate_payments_require_distinct_outputs)
 
     const CScript scriptMinerOrMN = CScript() << OP_RETURN;
     const CAmount blockReward = 500 * COIN;
-    CChain dummy_chain;
 
     // Case 1 (regression, V24): coinbase carries only ONE output matching the
     // duplicate expected payment. With the buggy forward scan that restarted
@@ -66,7 +64,7 @@ BOOST_AUTO_TEST_CASE(isvalid_duplicate_payments_require_distinct_outputs)
         CMutableTransaction txNew;
         txNew.vout.emplace_back(blockReward - nPayAmount, scriptMinerOrMN);
         txNew.vout.emplace_back(nPayAmount, scriptPayee); // single matching output
-        BOOST_CHECK(!sb.IsValid(dummy_chain, CTransaction(txNew), nBlockHeight, blockReward, /*is_v24=*/true));
+        BOOST_CHECK(!sb.IsValid(CTransaction(txNew), nBlockHeight, blockReward, /*is_v24=*/true));
     }
 
     // Case 2 (V24): coinbase carries TWO outputs matching the duplicate expected
@@ -76,7 +74,7 @@ BOOST_AUTO_TEST_CASE(isvalid_duplicate_payments_require_distinct_outputs)
         txNew.vout.emplace_back(blockReward - 2 * nPayAmount, scriptMinerOrMN);
         txNew.vout.emplace_back(nPayAmount, scriptPayee);
         txNew.vout.emplace_back(nPayAmount, scriptPayee);
-        BOOST_CHECK(sb.IsValid(dummy_chain, CTransaction(txNew), nBlockHeight, blockReward, /*is_v24=*/true));
+        BOOST_CHECK(sb.IsValid(CTransaction(txNew), nBlockHeight, blockReward, /*is_v24=*/true));
     }
 
     // Case 3 (pre-V24): the stricter distinct-output rule is gated behind V24.
@@ -87,7 +85,7 @@ BOOST_AUTO_TEST_CASE(isvalid_duplicate_payments_require_distinct_outputs)
         CMutableTransaction txNew;
         txNew.vout.emplace_back(blockReward - nPayAmount, scriptMinerOrMN);
         txNew.vout.emplace_back(nPayAmount, scriptPayee); // single matching output
-        BOOST_CHECK(sb.IsValid(dummy_chain, CTransaction(txNew), nBlockHeight, blockReward, /*is_v24=*/false));
+        BOOST_CHECK(sb.IsValid(CTransaction(txNew), nBlockHeight, blockReward, /*is_v24=*/false));
     }
 }
 

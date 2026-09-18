@@ -142,7 +142,7 @@ void CSuperblock::GetNearestSuperblocksHeights(int nBlockHeight, int& nLastSuper
     }
 }
 
-CAmount CSuperblock::GetPaymentsLimit(const CChain& active_chain, int nBlockHeight)
+CAmount CSuperblock::GetPaymentsLimit(int nBlockHeight)
 {
     const Consensus::Params& consensusParams = Params().GetConsensus();
 
@@ -245,7 +245,7 @@ CAmount CSuperblock::GetPaymentsTotalAmount()
 *   - Does this transaction match the superblock?
 */
 
-bool CSuperblock::IsValid(const CChain& active_chain, const CTransaction& txNew, int block_height, CAmount blockReward, bool is_v24)
+bool CSuperblock::IsValid(const CTransaction& txNew, int block_height, CAmount blockReward, bool is_v24)
 {
     // TODO : LOCK(cs);
     // No reason for a lock here now since this method only accesses data
@@ -279,7 +279,7 @@ bool CSuperblock::IsValid(const CChain& active_chain, const CTransaction& txNew,
 
     // payments should not exceed limit
     CAmount nPaymentsTotalAmount = GetPaymentsTotalAmount();
-    CAmount nPaymentsLimit = GetPaymentsLimit(active_chain, block_height);
+    CAmount nPaymentsLimit = GetPaymentsLimit(block_height);
     if (nPaymentsTotalAmount > nPaymentsLimit) {
         LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, payments limit exceeded: payments %lld, limit %lld\n", nPaymentsTotalAmount, nPaymentsLimit);
         return false;
@@ -619,13 +619,13 @@ bool SuperblockManager::IsSuperblockTriggered(const CDeterministicMNList& tip_mn
     return false;
 }
 
-bool SuperblockManager::IsValidSuperblock(const CChain& active_chain, const CDeterministicMNList& tip_mn_list,
-                                          const CTransaction& txNew, int nBlockHeight, CAmount blockReward, bool is_v24) const
+bool SuperblockManager::IsValidSuperblock(const CDeterministicMNList& tip_mn_list, const CTransaction& txNew,
+                                          int nBlockHeight, CAmount blockReward, bool is_v24) const
 {
     LOCK(cs_sb);
     CSuperblock_sptr pSuperblock;
     if (GetBestSuperblockInternal(tip_mn_list, pSuperblock, nBlockHeight)) {
-        return pSuperblock->IsValid(active_chain, txNew, nBlockHeight, blockReward, is_v24);
+        return pSuperblock->IsValid(txNew, nBlockHeight, blockReward, is_v24);
     }
     return false;
 }

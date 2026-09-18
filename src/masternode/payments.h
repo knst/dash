@@ -12,7 +12,6 @@
 
 class CBlock;
 class CBlockIndex;
-class CChain;
 class CDeterministicMNManager;
 class CTransaction;
 class CTxOut;
@@ -96,8 +95,8 @@ public:
     {
     }
 
-    bool IsBlockValueValid(const CChain& active_chain, const CBlock& block, const CBlockIndex* pindexPrev, const CAmount blockReward, std::string& strErrorRet, SuperBlockCheckType check_superblock);
-    bool IsBlockPayeeValid(const CChain& active_chain, const CTransaction& txNew, const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward, MnRewardEra era, bool strict_multiplicity, SuperBlockCheckType check_superblock);
+    bool IsBlockValueValid(const CBlock& block, const CBlockIndex* pindexPrev, const CAmount blockReward, std::string& strErrorRet, SuperBlockCheckType check_superblock);
+    bool IsBlockPayeeValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward, MnRewardEra era, bool strict_multiplicity, SuperBlockCheckType check_superblock);
     void FillBlockPayments(CMutableTransaction& txNew, const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward,
                            MnRewardEra era, std::vector<CTxOut>& voutMasternodePaymentsRet, std::vector<CTxOut>& voutSuperblockPaymentsRet);
 };

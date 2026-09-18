@@ -310,7 +310,7 @@ CAmount GetMasternodePayment(int nHeight, CAmount blockValue, const Consensus::P
 *   - Other blocks are 10% lower in outgoing value, so in total, no extra coins are created
 *   - When non-superblocks are detected, the normal schedule should be maintained
 */
-bool CMNPaymentsProcessor::IsBlockValueValid(const CChain& active_chain, const CBlock& block, const CBlockIndex* pindexPrev, const CAmount blockReward, std::string& strErrorRet, SuperBlockCheckType check_superblock)
+bool CMNPaymentsProcessor::IsBlockValueValid(const CBlock& block, const CBlockIndex* pindexPrev, const CAmount blockReward, std::string& strErrorRet, SuperBlockCheckType check_superblock)
 {
     const int nBlockHeight = pindexPrev == nullptr ? 0 : pindexPrev->nHeight + 1;
     bool isBlockRewardValueMet = (block.vtx[0]->GetValueOut() <= blockReward);
@@ -331,7 +331,7 @@ bool CMNPaymentsProcessor::IsBlockValueValid(const CChain& active_chain, const C
 
     LogPrint(BCLog::MNPAYMENTS, "block.vtx[0]->GetValueOut() %lld <= blockReward %lld\n", block.vtx[0]->GetValueOut(), blockReward);
 
-    CAmount nSuperblockMaxValue =  blockReward + CSuperblock::GetPaymentsLimit(active_chain, nBlockHeight);
+    CAmount nSuperblockMaxValue =  blockReward + CSuperblock::GetPaymentsLimit(nBlockHeight);
     bool isSuperblockMaxValueMet = (block.vtx[0]->GetValueOut() <= nSuperblockMaxValue);
 
     LogPrint(BCLog::GOBJECT, "block.vtx[0]->GetValueOut() %lld <= nSuperblockMaxValue %lld\n", block.vtx[0]->GetValueOut(), nSuperblockMaxValue);
@@ -377,7 +377,7 @@ bool CMNPaymentsProcessor::IsBlockValueValid(const CChain& active_chain, const C
 
     // this actually also checks for correct payees and not only amount
     const bool is_v24{check_superblock == SuperBlockCheckType::DisallowDuplicates};
-    if (!m_superblocks.IsValidSuperblock(active_chain, tip_mn_list, *block.vtx[0], nBlockHeight, blockReward, is_v24)) {
+    if (!m_superblocks.IsValidSuperblock(tip_mn_list, *block.vtx[0], nBlockHeight, blockReward, is_v24)) {
         // triggered but invalid? that's weird
         LogPrintf("CMNPaymentsProcessor::%s -- ERROR! Invalid superblock detected at height %d: %s", __func__, nBlockHeight, block.vtx[0]->ToString()); /* Continued */
         // should NOT allow invalid superblocks, when superblocks are enabled
@@ -389,7 +389,7 @@ bool CMNPaymentsProcessor::IsBlockValueValid(const CChain& active_chain, const C
     return true;
 }
 
-bool CMNPaymentsProcessor::IsBlockPayeeValid(const CChain& active_chain, const CTransaction& txNew, const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward, MnRewardEra era, bool strict_multiplicity, SuperBlockCheckType check_superblock)
+bool CMNPaymentsProcessor::IsBlockPayeeValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward, MnRewardEra era, bool strict_multiplicity, SuperBlockCheckType check_superblock)
 {
     const int nBlockHeight = pindexPrev  == nullptr ? 0 : pindexPrev->nHeight + 1;
 
@@ -423,7 +423,7 @@ bool CMNPaymentsProcessor::IsBlockPayeeValid(const CChain& active_chain, const C
     const auto tip_mn_list = m_dmnman.GetListAtChainTip();
     const bool is_v24{check_superblock == SuperBlockCheckType::DisallowDuplicates};
     if (m_superblocks.IsSuperblockTriggered(tip_mn_list, nBlockHeight)) {
-        if (m_superblocks.IsValidSuperblock(active_chain, tip_mn_list, txNew, nBlockHeight,
+        if (m_superblocks.IsValidSuperblock(tip_mn_list, txNew, nBlockHeight,
                                             blockSubsidy + feeReward, is_v24)) {
             LogPrint(BCLog::GOBJECT, "CMNPaymentsProcessor::%s -- Valid superblock at height %d: %s", /* Continued */
                      __func__, nBlockHeight, txNew.ToString());

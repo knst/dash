@@ -116,17 +116,15 @@ BOOST_FIXTURE_TEST_CASE(old_budget_window_accepted_while_unsynced, TestingSetup)
     block.vtx.push_back(MakeTransactionRef(coinbase));
 
     auto& mn_payments{*Assert(m_node.chain_helper)->mn_payments};
-    LOCK(cs_main);
-    const CChain& active_chain{m_node.chainman->ActiveChain()};
 
     std::string strError;
-    BOOST_CHECK(mn_payments.IsBlockValueValid(active_chain, block, &pindexPrev, blockReward, strError,
+    BOOST_CHECK(mn_payments.IsBlockValueValid(block, &pindexPrev, blockReward, strError,
                                               SuperBlockCheckType::NoCheck));
     BOOST_CHECK(strError.empty());
 
     // The enforcing branch is only reached by a node that is synced and has no
     // chainlock at that height, and it still rejects the over-reward block.
-    BOOST_CHECK(!mn_payments.IsBlockValueValid(active_chain, block, &pindexPrev, blockReward, strError,
+    BOOST_CHECK(!mn_payments.IsBlockValueValid(block, &pindexPrev, blockReward, strError,
                                                SuperBlockCheckType::AllowDuplicates));
     BOOST_CHECK_EQUAL(strError, "coinbase pays too much at height 332320 (actual=118108031847 vs limit=508031847), "
                                 "exceeded block reward, old budgets are disabled");

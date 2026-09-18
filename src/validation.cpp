@@ -2843,7 +2843,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
         : special_tx_rules.v24 ? SuperBlockCheckType::DisallowDuplicates : SuperBlockCheckType::AllowDuplicates;
 
 
-    if (!m_chain_helper->mn_payments->IsBlockValueValid(m_chain, block, pindex->pprev, blockSubsidy + feeReward, strError, check_superblock)) {
+    if (!m_chain_helper->mn_payments->IsBlockValueValid(block, pindex->pprev, blockSubsidy + feeReward, strError, check_superblock)) {
         // NOTE: Do not punish, the node might be missing governance data
         LogPrintf("ERROR: ConnectBlock(DASH): %s\n", strError);
         return state.Invalid(BlockValidationResult::BLOCK_RESULT_UNSET, "bad-cb-amount");
@@ -2857,7 +2857,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
              Ticks<MillisecondsDouble>(time_value_valid) / num_blocks_total);
 
     const MnRewardEra mn_reward_era{GetMnRewardEraAfter(pindex->pprev, m_chainman)};
-    if (!m_chain_helper->mn_payments->IsBlockPayeeValid(m_chain, *block.vtx[0], pindex->pprev, blockSubsidy, feeReward,
+    if (!m_chain_helper->mn_payments->IsBlockPayeeValid(*block.vtx[0], pindex->pprev, blockSubsidy, feeReward,
                                                         mn_reward_era, special_tx_rules.v24, check_superblock)) {
         // NOTE: Do not punish, the node might be missing governance data
         LogPrintf("ERROR: ConnectBlock(DASH): couldn't find masternode or superblock payments\n");
