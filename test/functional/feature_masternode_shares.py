@@ -106,6 +106,16 @@ class MasternodeSharesTest(DashTestFramework):
         tx.vout.append(CTxOut(1, CScript(b"\x51")))
         return tx.serialize().hex()
 
+    @staticmethod
+    def high_s(signature_b64):
+        """Return the high-S malleation of a base64 compact signature: s' = N - s with the recovery id
+        parity flipped. The plain recoverable verify accepts it (same key), the canonical check must not."""
+        sig = base64.b64decode(signature_b64)
+        header = sig[0] - 27
+        flipped = 27 + (header & 4) + ((header & 3) ^ 1)
+        s_neg = (ORDER - int.from_bytes(sig[33:], "big")).to_bytes(32, "big")
+        return base64.b64encode(bytes([flipped]) + sig[1:33] + s_neg).decode()
+
     def assert_rejected_transaction(self, node, tx, reason, *, mempool_reason=None):
         """Bypass wallet construction and mempool policy with an independently submitted block."""
         tip = node.getbestblockhash()
@@ -729,6 +739,14 @@ class MasternodeSharesTest(DashTestFramework):
         assert_equal(res["allowed"], False)
         assert_equal(res["reject-reason"], "bad-protx-shares-sig")
 
+        # The high-S malleation of a valid consent signature recovers the same key but is
+        # non-canonical, so it must be rejected too (otherwise the registration txid is malleable)
+        high_s = [dict(s) for s in sigtest_sigs]
+        high_s[0]["signature"] = self.high_s(high_s[0]["signature"])
+        res, _ = submit_with_sigs(high_s)
+        assert_equal(res["allowed"], False)
+        assert_equal(res["reject-reason"], "bad-protx-shares-sig")
+
         # Two valid consent signatures in each other's slots must also be rejected: each
         # signature is verified against its own share's owner key, in share order
         swapped = [
@@ -794,7 +812,17 @@ class MasternodeSharesTest(DashTestFramework):
         # an empty reward address is not a reset; the refund address must be passed explicitly
         assert_raises_rpc_error(-5, "invalid reward address", node.protx, "shared_update_share", protx_hash, 0, "", fee_addr)
         reward1 = node.getnewaddress()
-        node.protx("shared_update_share", protx_hash, 0, reward1, fee_addr)
+        # A high-S malleation of the share owner's payload signature is rejected: the signature is
+        # the last 65 bytes of the payload behind a one-byte length prefix
+        update_hex = node.protx("shared_update_share", protx_hash, 0, reward1, fee_addr, False)
+        update_tx = tx_from_hex(update_hex)
+        payload_sig = base64.b64encode(update_tx.vExtraPayload[-65:]).decode()
+        assert_equal(update_tx.vExtraPayload[-66], 65)
+        update_tx.vExtraPayload = update_tx.vExtraPayload[:-65] + base64.b64decode(self.high_s(payload_sig))
+        res = node.testmempoolaccept([update_tx.serialize().hex()])[0]
+        assert_equal(res["allowed"], False)
+        assert_equal(res["reject-reason"], "bad-proupshare-sig")
+        node.sendrawtransaction(update_hex)
         self.bump_mocktime(10 * 60 + 1)
         self.generate(node, 1, sync_fun=self.no_op)
         info = node.protx("info", protx_hash)
@@ -859,6 +887,11 @@ class MasternodeSharesTest(DashTestFramework):
         ]
         assert_raises_rpc_error(None, "bad-proupsharedreg-sig", node.protx,
                                 "shared_combine", prepared["tx"], swapped, True)
+        # ... as is the high-S malleation of an otherwise valid share signature
+        high_s = [dict(s) for s in sigs]
+        high_s[1]["signature"] = self.high_s(high_s[1]["signature"])
+        assert_raises_rpc_error(None, "bad-proupsharedreg-sig", node.protx,
+                                "shared_combine", prepared["tx"], high_s, True)
 
         self.log.info("A registrar update cannot move the voting key onto a share's payee script")
         node.sendtoaddress(fee_addr, 1)
@@ -964,9 +997,48 @@ class MasternodeSharesTest(DashTestFramework):
         assert_equal(int(dissolve_tx["vout"][0]["value"] * COIN), 600 * COIN + EARLY_PENALTY)
         assert_equal(dissolve_tx["vout"][1]["scriptPubKey"]["address"], refund2)
         assert_equal(int(dissolve_tx["vout"][1]["value"] * COIN), 400 * COIN - EARLY_PENALTY - DISSOLVE_FEE)
+        # Fund a source for the ordinary registration below before the dissolution confirms, so
+        # the registration's inputs do not depend on the dissolution block
+        reuse_funds = node.getnewaddress()
+        node.sendtoaddress(reuse_funds, 1001)
+        self.bump_mocktime(10 * 60 + 1)
+        dissolve_block = self.generate(node, 1, sync_fun=self.no_op)[0]
+        assert dissolve_txid in node.getblock(dissolve_block)["tx"]
+        assert_raises_rpc_error(None, None, node.protx, "info", protx_hash)
+        assert_equal(node.masternodelist(), {})
+
+        self.log.info("A share owner key freed by a dissolution is reusable only from the next block")
+        # An ordinary registration whose owner key is share 1's owner key. Share owner keys share
+        # the keyIDOwner uniqueness namespace, and a dissolved masternode is removed in the
+        # collateral-spend phase after the block's provider transactions are applied, so the key
+        # is still taken in the dissolution's own block and free in the block after it. The wallet
+        # preflights against the tip, so build the registration once the key is free, then
+        # disconnect the dissolution block to try both in one block.
+        reuse_hex = node.protx("register_fund", node.getnewaddress(), f"127.0.0.1:{p2p_port(7)}", owner2,
+                               node.bls("generate")["public"], node.getnewaddress(), 0, node.getnewaddress(),
+                               reuse_funds, False)
+        node.invalidateblock(dissolve_block)
+        assert dissolve_txid in node.getrawmempool()
+        assert_equal(node.testmempoolaccept([reuse_hex])[0]["reject-reason"], "bad-protx-dup-key")
+        assert_raises_rpc_error(-25, "bad-protx-dup-key", self.generateblock, node, miner_addr,
+                                [dissolve_txid, reuse_hex], sync_fun=self.no_op)
+        node.reconsiderblock(dissolve_block)
+        assert_equal(node.getbestblockhash(), dissolve_block)
+        reuse_txid = node.sendrawtransaction(reuse_hex)
         self.bump_mocktime(10 * 60 + 1)
         self.generate(node, 1, sync_fun=self.no_op)
-        assert_raises_rpc_error(None, None, node.protx, "info", protx_hash)
+        reuse_info = node.protx("info", reuse_txid)
+        assert_equal(reuse_info["state"]["ownerAddress"], owner2)
+        assert_equal(len(node.masternodelist()), 1)
+        # Spend the ordinary masternode's collateral so the rest of the test sees the same
+        # masternode list it did before this check
+        reuse_spend = node.createrawtransaction([{"txid": reuse_txid, "vout": reuse_info["collateralIndex"]}],
+                                                {node.getnewaddress(): 999.999})
+        reuse_spend_signed = node.signrawtransactionwithwallet(reuse_spend)
+        assert_equal(reuse_spend_signed["complete"], True)
+        node.sendrawtransaction(reuse_spend_signed["hex"])
+        self.bump_mocktime(10 * 60 + 1)
+        self.generate(node, 1, sync_fun=self.no_op)
         assert_equal(node.masternodelist(), {})
 
         self.log.info("A standby dissolution signed inside the early period is valid after it ends")
@@ -1097,6 +1169,33 @@ class MasternodeSharesTest(DashTestFramework):
         state_before_restart = node.protx("info", protx_hash4)["state"]
         self.restart_node(0)
         assert_equal(node.protx("info", protx_hash4)["state"], state_before_restart)
+
+        self.log.info("Shared state survives a restart that reloads the list from a disk snapshot")
+        # The deterministic list is snapshotted every DISK_SNAPSHOT_PERIOD blocks; a restart with
+        # the tip exactly on a snapshot boundary reloads the shared state from that snapshot
+        # rather than replaying diffs. Do this once with the current share table, then change a
+        # share reward script and do it again at the next boundary.
+        snapshot_period = 576
+        for round_index in range(2):
+            if round_index == 1:
+                fee_addr4 = node.getnewaddress()
+                node.sendtoaddress(fee_addr4, 1)
+                self.generate(node, 1, sync_fun=self.no_op)
+                reward7b = node.getnewaddress()
+                node.protx("shared_update_share", protx_hash4, 0, reward7b, fee_addr4)
+                self.bump_mocktime(10 * 60 + 1)
+                self.generate(node, 1, sync_fun=self.no_op)
+                assert_equal(node.protx("info", protx_hash4)["state"]["shares"][0]["rewardAddress"], reward7b)
+            height = node.getblockcount()
+            to_boundary = snapshot_period - (height % snapshot_period)
+            with node.assert_debug_log(["Wrote snapshot. nHeight=%d" % (height + to_boundary)]):
+                self.bump_mocktime(to_boundary)
+                self.generate(node, to_boundary, sync_fun=self.no_op)
+            assert_equal(node.getblockcount() % snapshot_period, 0)
+            state_at_snapshot = node.protx("info", protx_hash4)["state"]
+            self.restart_node(0)
+            assert_equal(node.protx("info", protx_hash4)["state"], state_at_snapshot)
+            assert_equal(node.protx("info", protx_hash4, node.getbestblockhash())["state"], state_at_snapshot)
 
         self.log.info("A reorg across a dissolution restores the masternode and its shares")
         info_before_dissolve = node.protx("info", protx_hash4)
