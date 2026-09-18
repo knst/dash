@@ -1745,6 +1745,17 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     node.chainlocks = std::make_unique<chainlock::Chainlocks>(*node.sporkman);
     node.sbman = std::make_unique<governance::SuperblockManager>();
 
+    /**
+     * The manager needs to be constructed regardless of whether governance
+     * validation is needed or not.
+     *
+     * Instead, we decide whether to initialize its database based on whether we
+     * need it or not further down and then query if the database is initialized
+     * to check if validation is enabled.
+     */
+    assert(!node.mn_sync);
+    node.mn_sync = std::make_unique<CMasternodeSync>(std::make_unique<NodeSyncNotifierImpl>(*node.connman, *node.netfulfilledman));
+
     const std::string spork_address{args.GetArg("-sporkaddr", chainparams.SporkAddress())};
     if (args.GetArgs("-sporkaddr").size() > 1) {
         InitWarning(strprintf(_("More than one spork address is provided. Using %s."), spork_address));
@@ -2007,7 +2018,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
 
     assert(!node.mempool);
     assert(!node.chainman);
-    assert(!node.mn_sync);
 
     CTxMemPool::Options mempool_opts{
         .estimator = node.fee_estimator.get(),
@@ -2054,16 +2064,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
 
         node.chainman = std::make_unique<ChainstateManager>(chainman_opts);
         ChainstateManager& chainman = *node.chainman;
-
-        /**
-         * The manager needs to be constructed regardless of whether governance
-         * validation is needed or not.
-         *
-         * Instead, we decide whether to initialize its database based on whether we
-         * need it or not further down and then query if the database is initialized
-         * to check if validation is enabled.
-         */
-        node.mn_sync = std::make_unique<CMasternodeSync>(std::make_unique<NodeSyncNotifierImpl>(*node.connman, *node.netfulfilledman));
 
         node::ChainstateLoadOptions options;
         options.chainlocks = Assert(node.chainlocks.get());
