@@ -9,8 +9,8 @@
 #include <consensus/validation.h>
 #include <evo/assetlocktx.h>
 #include <evo/cbtx.h>
-#include <evo/chainhelper.h>
 #include <evo/creditpool.h>
+#include <evo/specialtxman.h>
 #include <evo/evodb.h>
 #include <evo/specialtx.h>
 #include <llmq/context.h>
@@ -840,7 +840,7 @@ BOOST_FIXTURE_TEST_CASE(credit_pool_snapshot_persisted_after_transactionless_con
     CreateAndProcessBlock({}, coinbase_pk);
     CCreditPool snapshot;
     BOOST_REQUIRE(m_node.evodb->Read(snapshot_key, snapshot));
-    const CCreditPool pool = m_node.chain_helper->credit_pool_manager->GetCreditPool(snapshot_index);
+    const CCreditPool pool = m_node.special_tx->m_cpoolman->GetCreditPool(snapshot_index);
     BOOST_CHECK_EQUAL(snapshot.locked, pool.locked);
     BOOST_CHECK_EQUAL(snapshot.currentLimit, pool.currentLimit);
 }

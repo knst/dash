@@ -4,8 +4,8 @@
 //
 #include <chainparams.h>
 #include <consensus/validation.h>
-#include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
+#include <evo/specialtxman.h>
 #include <governance/superblock.h>
 #include <kernel/disconnected_transactions.h>
 #include <node/chainstate.h>
@@ -69,7 +69,8 @@ BOOST_AUTO_TEST_CASE(chainstatemanager)
     // Create a legacy (IBD) chainstate.
     //
     MakeDashChainContexts(/*llmq_dbs_wipe=*/false);
-    Chainstate& c1 = WITH_LOCK(::cs_main, return manager.InitializeChainstate(&mempool, evodb, m_node.chain_helper));
+    Chainstate& c1 = WITH_LOCK(::cs_main, return manager.InitializeChainstate(&mempool, evodb, *Assert(m_node.special_tx),
+                                                                              *Assert(m_node.chainlocks), m_node.isman.get()));
     chainstates.push_back(&c1);
     c1.InitCoinsDB(
         /*cache_size_bytes=*/1 << 23, /*in_memory=*/true, /*should_wipe=*/false);
@@ -97,9 +98,6 @@ BOOST_AUTO_TEST_CASE(chainstatemanager)
 
     BOOST_CHECK(!manager.SnapshotBlockhash().has_value());
 
-    m_node.chain_helper.reset();
-    m_node.llmq_ctx.reset();
-
     // Create a snapshot-based chainstate.
     //
     const uint256 snapshot_blockhash = active_tip->GetBlockHash();
@@ -113,8 +111,6 @@ BOOST_AUTO_TEST_CASE(chainstatemanager)
     // Only the active chainstate keeps the mempool.
     BOOST_CHECK_EQUAL(c2.GetMempool(), &mempool);
     BOOST_CHECK(!c1.GetMempool());
-
-    MakeDashChainContexts(/*llmq_dbs_wipe=*/false);
 
     BOOST_CHECK_EQUAL(manager.SnapshotBlockhash().value(), snapshot_blockhash);
 
@@ -148,7 +144,7 @@ BOOST_AUTO_TEST_CASE(chainstatemanager)
     // Let scheduler events finish running to avoid accessing memory that is going to be unloaded
     SyncWithValidationInterfaceQueue();
 
-    m_node.chain_helper.reset();
+    m_node.special_tx.reset();
     m_node.llmq_ctx.reset();
     // dmnman holds a reference to m_node.evodb, it mustn't outlive it
     m_node.dmnman.reset();
@@ -435,7 +431,7 @@ struct SnapshotTestSetup : TestChain100Setup {
                     cs->ForceFlushStateToDisk();
                 }
             }
-            m_node.chain_helper.reset();
+            m_node.special_tx.reset();
             m_node.llmq_ctx.reset();
             chainman.ResetChainstates();
             BOOST_CHECK_EQUAL(chainman.GetAll().size(), 0);
@@ -868,8 +864,10 @@ BOOST_FIXTURE_TEST_CASE(chainstatemanager_snapshot_init_missing_evodb_marker, Sn
     BOOST_REQUIRE(WITH_LOCK(::cs_main, return m_node.evodb->CommitRootTransaction(EvoDbIdentity::SNAPSHOT)));
 
     ChainstateManager& restarted = this->SimulateNodeRestart();
+    MakeDashChainContexts(/*llmq_dbs_wipe=*/false);
     WITH_LOCK(::cs_main, restarted.InitializeChainstate(
-        m_node.mempool.get(), *m_node.evodb, m_node.chain_helper));
+        m_node.mempool.get(), *m_node.evodb, *Assert(m_node.special_tx),
+        *Assert(m_node.chainlocks), m_node.isman.get()));
 
     bilingual_str error;
     BOOST_CHECK(!WITH_LOCK(::cs_main, return restarted.DetectSnapshotChainstate(m_node.mempool.get(), error)));
@@ -1206,7 +1204,8 @@ BOOST_FIXTURE_TEST_CASE(chainstatemanager_snapshot_missing_base_fails_load, Snap
     {
         ASSERT_DEBUG_LOG("missing from the block index");
         std::tie(status, error) = node::LoadChainstate(chainman, m_cache_sizes, ChainstateLoadOptionsForTest(),
-                                                       *m_node.evodb, *m_node.dmnman, m_node.chain_helper);
+                                                       *m_node.evodb, *m_node.dmnman,
+                                                       *m_node.special_tx);
     }
     BOOST_CHECK(status == node::ChainstateLoadStatus::FAILURE);
 }

@@ -8,7 +8,6 @@
 #include <consensus/amount.h>
 #include <consensus/merkle.h>
 #include <evo/cbtx.h>
-#include <evo/chainhelper.h>
 #include <evo/creditpool.h>
 #include <evo/evodb.h>
 #include <evo/mnhftx.h>

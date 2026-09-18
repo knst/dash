@@ -63,12 +63,12 @@
 #include <chainlock/chainlock.h>
 #include <evo/assetlocktx.h>
 #include <evo/cbtx.h>
-#include <evo/chainhelper.h>
 #include <evo/creditpool.h>
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
 #include <evo/specialtx.h>
 #include <evo/specialtxman.h>
+#include <instantsend/instantsend.h>
 #include <instantsend/lock.h>
 #include <key_io.h>
 #include <masternode/payments.h>
@@ -567,7 +567,8 @@ public:
         m_view(&m_dummy),
         m_viewmempool(&active_chainstate.CoinsTip(), m_pool),
         m_active_chainstate(active_chainstate),
-        m_chain_helper(active_chainstate.ChainHelper()),
+        m_special_tx(active_chainstate.m_special_tx),
+        m_isman(active_chainstate.m_isman),
         m_limits{m_pool.m_limits}
     {
     }
@@ -796,7 +797,8 @@ private:
     CCoinsViewMemPool m_viewmempool;
     CCoinsView m_dummy;
     Chainstate& m_active_chainstate;
-    CChainstateHelper& m_chain_helper;
+    CSpecialTxProcessor& m_special_tx;
+    llmq::CInstantSendManager* const m_isman;
 
     CTxMemPool::Limits m_limits;
 };
@@ -806,7 +808,7 @@ bool MemPoolAccept::CheckSpecialTxForMempool(const CTransaction& tx, SpecialTxRu
     const CChain& chain{m_active_chainstate.m_chain};
     const auto check_at = [&](const CBlockIndex* pindex,
                               TxValidationState& check_state) EXCLUSIVE_LOCKS_REQUIRED(::cs_main) {
-        return m_chain_helper.special_tx->CheckSpecialTx(tx, pindex, rules, m_active_chainstate.CoinsTip(),
+        return m_special_tx.CheckSpecialTx(tx, pindex, rules, m_active_chainstate.CoinsTip(),
                                                          /*check_sigs=*/true, check_state);
     };
     const auto payload{IsAssetUnlockWithStableTxid(tx) ? GetTxPayload<CAssetUnlockPayload>(tx) : std::nullopt};
@@ -890,7 +892,7 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
         return state.Invalid(TxValidationResult::TX_CONFLICT, "txn-already-in-mempool");
     }
 
-    if (auto conflictLockOpt = m_chain_helper.ConflictingISLockIfAny(tx); conflictLockOpt.has_value()) {
+    if (auto conflictLockOpt = m_isman ? m_isman->ConflictingISLockIfAny(tx) : std::nullopt; conflictLockOpt.has_value()) {
         auto& [_, conflict_txid] = conflictLockOpt.value();
 
         uint256 hashBlock;
@@ -901,7 +903,7 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
         return state.Invalid(TxValidationResult::TX_CONFLICT_LOCK, "tx-txlock-conflict");
     }
 
-    if (m_chain_helper.IsInstantSendWaitingForTx(hash)) {
+    if (m_isman && m_isman->IsWaitingForTx(hash)) {
         m_pool.removeConflicts(tx);
         m_pool.removeProTxConflicts(tx);
         m_pool.removeAssetUnlockConflicts(tx);
@@ -929,7 +931,7 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
     // call after startup may reconstruct the pool from the nearest disk snapshot.
     if (const auto opt_unlock = tx.IsPlatformTransfer() ? GetTxPayload<CAssetUnlockPayload>(tx) : std::nullopt) {
         try {
-            if (m_chain_helper.credit_pool_manager->GetCreditPool(m_active_chainstate.m_chain.Tip())
+            if (m_special_tx.m_cpoolman->GetCreditPool(m_active_chainstate.m_chain.Tip())
                     .indexes.Contains(opt_unlock->getIndex())) {
                 return state.Invalid(TxValidationResult::TX_CONFLICT, "txn-already-known");
             }
@@ -1399,7 +1401,7 @@ std::optional<MempoolAcceptResult> MemPoolAccept::TryAssetUnlockRefresh(const CT
     // and quorum signature. Everything the txid covers is identical to the held instance and
     // was validated when it was admitted.
     const CBlockIndex* tip{m_active_chainstate.m_chain.Tip()};
-    if (!m_chain_helper.special_tx->CheckSpecialTx(*ptx, tip, GetSpecialTxRules(tip, m_active_chainstate.m_chainman),
+    if (!m_special_tx.CheckSpecialTx(*ptx, tip, GetSpecialTxRules(tip, m_active_chainstate.m_chainman),
                                                    m_active_chainstate.CoinsTip(),
                                                    /*check_sigs=*/true, state)) {
         return MempoolAcceptResult::Failure(state);
@@ -1926,14 +1928,18 @@ Chainstate::Chainstate(CTxMemPool* mempool,
                          BlockManager& blockman,
                          ChainstateManager& chainman,
                          CEvoDB& evoDb,
-                         const std::unique_ptr<CChainstateHelper>& chain_helper,
+                         CSpecialTxProcessor& special_tx,
+                         const chainlock::Chainlocks& chainlocks,
+                         llmq::CInstantSendManager* isman,
                          std::optional<uint256> from_snapshot_blockhash)
     : m_mempool(mempool),
-      m_chain_helper(chain_helper),
       m_evoDb(evoDb),
       m_blockman(blockman),
       m_chainman(chainman),
-      m_from_snapshot_blockhash(from_snapshot_blockhash) {}
+      m_from_snapshot_blockhash(from_snapshot_blockhash),
+      m_special_tx{special_tx},
+      m_chainlocks{chainlocks},
+      m_isman{isman} {}
 
 ::EvoDbIdentity Chainstate::EvoDbIdentity() const
 {
@@ -2302,8 +2308,6 @@ int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out)
 DisconnectResult Chainstate::DisconnectBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view)
 {
     AssertLockHeld(cs_main);
-    assert(m_chain_helper);
-
     bool fDIP0003Active = DeploymentActiveAt(*pindex, m_chainman.GetConsensus(), Consensus::DEPLOYMENT_DIP0003);
     if (fDIP0003Active && !m_evoDb.VerifyBestBlock(EvoDbIdentity(), pindex->GetBlockHash())) {
         // Nodes that upgraded after DIP3 activation will have to reindex to ensure evodb consistency
@@ -2327,7 +2331,7 @@ DisconnectResult Chainstate::DisconnectBlock(const CBlock& block, const CBlockIn
     }
 
     MNListUpdates mnlist_updates;
-    if (!m_chain_helper->special_tx->UndoSpecialTxsInBlock(*this, block, pindex, mnlist_updates)) {
+    if (!m_special_tx.UndoSpecialTxsInBlock(*this, block, pindex, mnlist_updates)) {
         LogError("DisconnectBlock(): UndoSpecialTxsInBlock failed\n");
         return DISCONNECT_FAILED;
     }
@@ -2485,7 +2489,7 @@ static int64_t num_blocks_total = 0;
 
 bool Chainstate::IsSuperblockValidationRequired(const CBlockIndex* const pindex) const
 {
-    if (m_chain_helper->GetBestChainLockHeight() >= pindex->nHeight) {
+    if (m_chainlocks.GetBestChainLockHeight() >= pindex->nHeight) {
         LogPrint(BCLog::MNPAYMENTS, "%s -- validation of chainlocked block=%s is skipped\n", __func__, pindex->GetBlockHash().ToString());
         return false;
     }
@@ -2693,8 +2697,6 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
     assert(*pindex->phashBlock == block_hash);
     const bool parallel_script_checks{scriptcheckqueue.HasThreads()};
 
-    assert(m_chain_helper);
-
     // The scheme in force while a block is processed is the one its parent left
     // behind; ProcessSpecialTxsInBlock flips it to basic afterwards when V19
     // activates. Establish it here rather than inheriting the caller's, because
@@ -2727,7 +2729,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
         return false;
     }
 
-    if (pindex->pprev && pindex->phashBlock && m_chain_helper->HasConflictingChainLock(pindex->nHeight, pindex->GetBlockHash())) {
+    if (pindex->pprev && pindex->phashBlock && m_chainlocks.HasConflictingChainLock(pindex->nHeight, pindex->GetBlockHash())) {
         LogPrintf("ERROR: %s: conflicting with chainlock\n", __func__);
         return state.Invalid(BlockValidationResult::BLOCK_CHAINLOCK, "bad-chainlock");
     }
@@ -2874,7 +2876,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
 
     // MUST process special txes before updating UTXO to ensure consistency between mempool and block processing
     MNListUpdates mnlist_updates;
-    if (!m_chain_helper->special_tx->ProcessSpecialTxsInBlock(*this, m_chain, block, pindex, special_tx_rules, view,
+    if (!m_special_tx.ProcessSpecialTxsInBlock(*this, m_chain, block, pindex, special_tx_rules, view,
                                                               blockSubsidy, fJustCheck, fScriptChecks, state,
                                                               mnlist_updates)) {
         LogError("ConnectBlock(DASH): ProcessSpecialTxsInBlock for block %s failed with %s\n",
@@ -3012,16 +3014,16 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
 
     // DASH : CHECK TRANSACTIONS FOR INSTANTSEND
 
-    if (!IsInitialBlockDownload()) {
+    if (m_isman != nullptr && !IsInitialBlockDownload()) {
         // Require other nodes to comply, send them some data in case they are missing it.
-        const bool has_chainlock = m_chain_helper->HasChainLock(pindex->nHeight, pindex->GetBlockHash());
+        const bool has_chainlock = m_chainlocks.HasChainLock(pindex->nHeight, pindex->GetBlockHash());
         for (const auto& tx : block.vtx) {
             if (!instantsend::HasLockInputs(*tx)) continue;
-            while (auto conflictLockOpt = m_chain_helper->ConflictingISLockIfAny(*tx)) {
+            while (auto conflictLockOpt = m_isman->ConflictingISLockIfAny(*tx)) {
                 auto [conflict_islock_hash, conflict_txid] = conflictLockOpt.value();
                 if (has_chainlock) {
                     LogPrint(BCLog::ALL, "ConnectBlock(DASH): chain-locked transaction %s overrides islock %s\n", tx->GetHash().ToString(), conflict_islock_hash.ToString());
-                    m_chain_helper->RemoveConflictingISLockByTx(*tx);
+                    m_isman->RemoveConflictingISLockByTx(*tx);
                 } else {
                     // The node which relayed this should switch to correct chain.
                     // TODO: relay instantsend data/proof.
@@ -4897,7 +4899,7 @@ bool ChainstateManager::AcceptBlockHeader(const CBlockHeader& block, BlockValida
             }
         }
 
-        if (ActiveChainstate().m_chain_helper->HasConflictingChainLock(pindexPrev->nHeight + 1, hash)) {
+        if (ActiveChainstate().m_chainlocks.HasConflictingChainLock(pindexPrev->nHeight + 1, hash)) {
             if (miSelf == m_blockman.m_block_index.end()) {
                 m_blockman.AddToBlockIndex(block, hash, m_best_header, BLOCK_CONFLICT_CHAINLOCK);
             }
@@ -5388,8 +5390,6 @@ bool Chainstate::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& in
 {
     AssertLockHeld(cs_main);
 
-    assert(m_chain_helper);
-
     // TODO: merge with ConnectBlock
     CBlock block;
     if (!ReadBlockFromDisk(block, pindex,m_chainman.GetConsensus())) {
@@ -5401,7 +5401,7 @@ bool Chainstate::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& in
     BlockValidationState state;
     const CAmount blockSubsidy = GetBlockSubsidy(pindex, m_chainman.GetConsensus());
     MNListUpdates mnlist_updates;
-    if (!m_chain_helper->special_tx->ProcessSpecialTxsInBlock(*this, m_chain, block, pindex,
+    if (!m_special_tx.ProcessSpecialTxsInBlock(*this, m_chain, block, pindex,
                                                               GetSpecialTxRules(pindex->pprev, m_chainman), inputs,
                                                               blockSubsidy, /*fJustCheck=*/false,
                                                               /*fCheckCbTxMerkleRoots=*/false, state, mnlist_updates)) {
@@ -6151,14 +6151,16 @@ std::vector<Chainstate*> ChainstateManager::GetAll()
 
 Chainstate& ChainstateManager::InitializeChainstate(CTxMemPool* mempool,
                                                      CEvoDB& evoDb,
-                                                     const std::unique_ptr<CChainstateHelper>& chain_helper)
+                                                     CSpecialTxProcessor& special_tx,
+                                                     const chainlock::Chainlocks& chainlocks,
+                                                     llmq::CInstantSendManager* isman)
 {
     AssertLockHeld(::cs_main);
     assert(!m_ibd_chainstate);
     assert(!m_active_chainstate);
 
     m_ibd_chainstate = std::make_unique<Chainstate>(
-        mempool, m_blockman, *this, evoDb, chain_helper);
+        mempool, m_blockman, *this, evoDb, special_tx, chainlocks, isman);
     m_active_chainstate = m_ibd_chainstate.get();
     return *m_active_chainstate;
 }
@@ -6275,7 +6277,9 @@ bool ChainstateManager::ActivateSnapshot(
     auto snapshot_chainstate = WITH_LOCK(::cs_main, return std::make_unique<Chainstate>(
             /*mempool=*/ nullptr, m_blockman, *this,
             this->ActiveChainstate().m_evoDb,
-            this->ActiveChainstate().m_chain_helper,
+            this->ActiveChainstate().m_special_tx,
+            this->ActiveChainstate().m_chainlocks,
+            this->ActiveChainstate().m_isman,
             base_blockhash
         )
     );
@@ -6600,7 +6604,7 @@ bool ChainstateManager::PopulateAndValidateSnapshot(
     if (const CBlockIndex* ibd_tip = m_ibd_chainstate->m_chain.Tip();
         ibd_tip != nullptr && ibd_tip->GetBlockHash() == base_blockhash) {
         base_mn_list_hash =
-            snapshot_chainstate.ChainHelper().GetDeterministicMNListHash(snapshot_start_block);
+            snapshot_chainstate.m_special_tx.GetDeterministicMNListHash(snapshot_start_block);
         auto db_tx = snapshot_chainstate.m_evoDb.BeginTransaction(::EvoDbIdentity::NORMAL);
         snapshot_chainstate.m_evoDb.WriteBackgroundMNListHash(base_blockhash, *base_mn_list_hash);
         db_tx->Commit();
@@ -7052,7 +7056,9 @@ Chainstate* ChainstateManager::ActivateExistingSnapshot(CTxMemPool* mempool, uin
     m_snapshot_chainstate = std::make_unique<Chainstate>(
         mempool, m_blockman, *this,
         evo_db,
-        this->ActiveChainstate().m_chain_helper,
+        this->ActiveChainstate().m_special_tx,
+        this->ActiveChainstate().m_chainlocks,
+        this->ActiveChainstate().m_isman,
         base_blockhash);
     LogPrintf("[snapshot] switching active chainstate to %s\n", m_snapshot_chainstate->ToString());
     m_active_chainstate = m_snapshot_chainstate.get();

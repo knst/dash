@@ -23,7 +23,6 @@
 class ArgsManager;
 class CBlockIndex;
 class CChainParams;
-class CChainstateHelper;
 class CConnman;
 class CDeterministicMNManager;
 class CEvoDB;
@@ -163,7 +162,6 @@ private:
     int nHeight;
     int64_t m_lock_time_cutoff;
 
-    CChainstateHelper& m_chain_helper;
     Chainstate& m_chainstate;
     CEvoDB& m_evoDb;
     CDeterministicMNManager& m_dmnman;

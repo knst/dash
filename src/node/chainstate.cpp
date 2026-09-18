@@ -25,10 +25,10 @@
 #include <validation.h>
 
 #include <bls/bls.h>
-#include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
 #include <evo/mnhftx.h>
+#include <evo/specialtxman.h>
 #include <gsl/pointers.h>
 
 #include <atomic>
@@ -141,7 +141,7 @@ static bool RecoverSnapshotCleanup(CEvoDB& evodb, const fs::path& data_dir, bili
 static ChainstateLoadResult CompleteChainstateInitialization(ChainstateManager& chainman, const CacheSizes& cache_sizes,
                                                              const ChainstateLoadOptions& options, CEvoDB& evodb,
                                                              CDeterministicMNManager& dmnman,
-                                                             const std::unique_ptr<CChainstateHelper>& chain_helper)
+                                                             CSpecialTxProcessor& special_tx)
     EXCLUSIVE_LOCKS_REQUIRED(::cs_main)
 {
     auto& pblocktree{chainman.m_blockman.m_block_tree_db};
@@ -262,7 +262,7 @@ static ChainstateLoadResult CompleteChainstateInitialization(ChainstateManager& 
         }
     }
 
-    if (!chain_helper->ehf_manager->ForceSignalDBUpdate(chainman.ActiveTip())) {
+    if (!special_tx.m_mnhfman->ForceSignalDBUpdate(chainman.ActiveTip())) {
         return {ChainstateLoadStatus::FAILURE, _("Error upgrading evo database for EHF")};
     }
 
@@ -281,11 +281,9 @@ static ChainstateLoadResult CompleteChainstateInitialization(ChainstateManager& 
 
 ChainstateLoadResult LoadChainstate(ChainstateManager& chainman, const CacheSizes& cache_sizes,
                                     const ChainstateLoadOptions& options, CEvoDB& evodb,
-                                    CDeterministicMNManager& dmnman, const std::unique_ptr<CChainstateHelper>& chain_helper)
+                                    CDeterministicMNManager& dmnman, CSpecialTxProcessor& special_tx)
 {
-    assert(options.isman);
     assert(options.chainlocks);
-    assert(chain_helper);
 
     if (!chainman.AssumedValidBlock().IsNull()) {
         LogPrintf("Assuming ancestors of block %s have valid signatures.\n", chainman.AssumedValidBlock().GetHex());
@@ -314,7 +312,7 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman, const CacheSize
     chainman.m_total_coinsdb_cache = cache_sizes.coins_db;
 
     // Load the fully validated chainstate.
-    chainman.InitializeChainstate(options.mempool, evodb, chain_helper);
+    chainman.InitializeChainstate(options.mempool, evodb, special_tx, *options.chainlocks, options.isman);
 
     // On a reindex the caller hands us a freshly wiped EvoDB, without the
     // SNAPSHOT best-block marker that ActivateExistingSnapshot() requires, so a
@@ -333,7 +331,7 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman, const CacheSize
     }
 
     auto [init_status, init_error] = CompleteChainstateInitialization(chainman, cache_sizes, options, evodb, dmnman,
-                                                                      chain_helper);
+                                                                      special_tx);
     if (init_status != ChainstateLoadStatus::SUCCESS) {
         return {init_status, init_error};
     }
@@ -363,14 +361,14 @@ ChainstateLoadResult LoadChainstate(ChainstateManager& chainman, const CacheSize
         assert(!chainman.IsSnapshotActive());
         assert(!chainman.IsSnapshotValidated());
 
-        chainman.InitializeChainstate(options.mempool, evodb, chain_helper);
+        chainman.InitializeChainstate(options.mempool, evodb, special_tx, *options.chainlocks, options.isman);
 
         // A reload of the block index is required to recompute setBlockIndexCandidates
         // for the fully validated chainstate.
         chainman.ActiveChainstate().ClearBlockIndexCandidates();
 
         std::tie(init_status, init_error) = CompleteChainstateInitialization(chainman, cache_sizes, options, evodb,
-                                                                             dmnman, chain_helper);
+                                                                             dmnman, special_tx);
         if (init_status != ChainstateLoadStatus::SUCCESS) {
             return {init_status, init_error};
         }

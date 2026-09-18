@@ -10,7 +10,6 @@
 #include <coinjoin/common.h>
 #include <coinjoin/options.h>
 #include <coinjoin/server.h>
-#include <evo/chainhelper.h>
 #include <llmq/context.h>
 #include <masternode/sync.h>
 #include <net.h>

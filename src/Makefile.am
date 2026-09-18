@@ -222,7 +222,6 @@ BITCOIN_CORE_H = \
   dsnotificationinterface.h \
   evo/assetlocktx.h \
   evo/cbtx.h \
-  evo/chainhelper.h \
   evo/creditpool.h \
   evo/deterministicmns.h \
   evo/dmn_types.h \
@@ -548,7 +547,6 @@ libbitcoin_node_a_SOURCES = \
   dsnotificationinterface.cpp \
   evo/assetlocktx.cpp \
   evo/cbtx.cpp \
-  evo/chainhelper.cpp \
   evo/creditpool.cpp \
   evo/deterministicmns.cpp \
   evo/dmnstate.cpp \
@@ -1282,7 +1280,6 @@ libdashkernel_la_SOURCES = \
   deploymentstatus.cpp \
   evo/assetlocktx.cpp \
   evo/cbtx.cpp \
-  evo/chainhelper.cpp \
   evo/creditpool.cpp \
   evo/deterministicmns.cpp \
   evo/dmnstate.cpp \

@@ -27,7 +27,7 @@
 #include <validationinterface.h>
 
 ActiveContext::ActiveContext(CBLSWorker& bls_worker, ChainstateManager& chainman, CConnman& connman,
-                             CDeterministicMNManager& dmnman, CGovernanceManager& govman,
+                             CDeterministicMNManager& dmnman, CGovernanceManager& govman, CMNHFManager& mnhfman,
                              governance::SuperblockManager& superblocks, CSporkManager& sporkman,
                              const chainlock::Chainlocks& chainlocks, CTxMemPool& mempool,
                              chainlock::ChainlockHandler& clhandler, llmq::CInstantSendManager& isman,
@@ -43,7 +43,7 @@ ActiveContext::ActiveContext(CBLSWorker& bls_worker, ChainstateManager& chainman
     qdkgsman{std::make_unique<llmq::CDKGSessionManager>(dmnman, qsnapman, chainman, sporkman, db_params)},
     shareman{std::make_unique<llmq::CSigSharesManager>(connman, chainman, sigman, *nodeman, qman, sporkman)},
     gov_signer{std::make_unique<GovernanceSigner>(dmnman, govman, superblocks, *nodeman, chainman, mn_sync)},
-    ehf_sighandler{std::make_unique<llmq::CEHFSignalsHandler>(chainman, sigman, *shareman, qman)},
+    ehf_sighandler{std::make_unique<llmq::CEHFSignalsHandler>(chainman, mnhfman, sigman, *shareman, qman)},
     cl_signer{std::make_unique<chainlock::ChainLockSigner>(chainman, chainlocks, clhandler, isman,
                                                            qman, sigman, *shareman, mn_sync)},
     is_signer{std::make_unique<instantsend::InstantSendSigner>(chainman, chainlocks, isman, sigman,

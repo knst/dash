@@ -16,7 +16,6 @@
 #include <consensus/validation.h>
 #include <deploymentinfo.h>
 #include <deploymentstatus.h>
-#include <evo/chainhelper.h>
 #include <index/blockfilterindex.h>
 #include <index/coinstatsindex.h>
 #include <index/spentindex.h>
@@ -57,6 +56,7 @@
 #include <evo/creditpool.h>
 #include <evo/evodb.h>
 #include <evo/mnhftx.h>
+#include <evo/specialtxman.h>
 #include <evo/specialtx.h>
 #include <evo/specialtx_filter.h>
 #include <instantsend/instantsend.h>
@@ -1624,7 +1624,7 @@ RPCHelpMan getblockchaininfo()
     }
 
     if (IsDeprecatedRPCEnabled("softforks")) {
-        const auto ehf_signals{active_chainstate.ChainHelper().GetSignalsStage(&tip)};
+        const auto ehf_signals{CHECK_NONFATAL(node.special_tx)->m_mnhfman->GetSignalsStage(&tip)};
         obj.pushKV("softforks", DeploymentInfo(&tip, ehf_signals, chainman));
     }
 
@@ -1732,7 +1732,7 @@ RPCHelpMan getdeploymentinfo()
                 }
             }
 
-            const auto ehf_signals{active_chainstate.ChainHelper().GetSignalsStage(blockindex)};
+            const auto ehf_signals{CHECK_NONFATAL(node.special_tx)->m_mnhfman->GetSignalsStage(blockindex)};
 
             UniValue deploymentinfo(UniValue::VOBJ);
             deploymentinfo.pushKV("hash", blockindex->GetBlockHash().ToString());
@@ -1792,7 +1792,7 @@ static RPCHelpMan getcreditpoolinfo()
 {
     const NodeContext& node = EnsureAnyNodeContext(request.context);
     ChainstateManager& chainman = EnsureChainman(node);
-    auto& chain_helper = chainman.ActiveChainstate().ChainHelper();
+    CCreditPoolManager& cpoolman = *CHECK_NONFATAL(node.special_tx)->m_cpoolman;
 
     const CBlockIndex* pindex{WITH_LOCK(::cs_main, return request.params[0].isNull()
                                                        ? chainman.ActiveChain().Tip()
@@ -1805,7 +1805,7 @@ static RPCHelpMan getcreditpoolinfo()
     // nullptr when the chain is shorter than the window
     const CBlockIndex* pindex_window_start{pindex->GetAncestor(pindex->nHeight - window_blocks)};
 
-    const CCreditPool pool{chain_helper.GetCreditPool(pindex)};
+    const CCreditPool pool{cpoolman.GetCreditPool(pindex)};
     // The same read the consensus rule makes for the window start
     const CAmount window_start_balance{
         pindex_window_start ? CCreditPoolManager::GetBalanceAt(pindex_window_start, chainman.GetConsensus()) : CAmount{0}};

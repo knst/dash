@@ -102,7 +102,6 @@
 #include <coinjoin/server.h>
 #include <coinjoin/walletman.h>
 #include <dsnotificationinterface.h>
-#include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
 #include <evo/specialtxman.h>
@@ -458,7 +457,7 @@ void PrepareShutdown(NodeContext& node)
         // The mempool holds raw pointers to dmnman and isman, so it must be
         // destroyed before either manager.
         node.mempool.reset();
-        node.chain_helper.reset();
+        node.special_tx.reset();
         node.llmq_ctx.reset();
         node.isman.reset();
         node.dmnman.reset();
@@ -2040,7 +2039,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         // On a retry iteration the previous instances still hold the on-disk
         // database locks, so release them before opening the databases again.
         node.mempool.reset();
-        node.chain_helper.reset();
+        node.special_tx.reset();
         node.llmq_ctx.reset();
         node.isman.reset();
         node.dmnman.reset();
@@ -2104,11 +2103,11 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                 WITH_LOCK(::cs_main, node.llmq_ctx = std::make_unique<LLMQContext>(*node.dmnman, *node.evodb, chainman,
                                                                                    util::DbWrapperParams{.path = args.GetDataDirNet(), .memory = false, .wipe = node::fReindex || fReindexChainState},
                                                                                    bls_threads, llmq::DEFAULT_WORKER_COUNT, max_recsigs_age));
-                node.chain_helper = std::make_unique<CChainstateHelper>(*node.evodb, *node.dmnman, *node.isman,
+                node.special_tx = std::make_unique<CSpecialTxProcessor>(*node.evodb, *node.dmnman,
                                                                         *node.llmq_ctx->quorum_block_processor, *node.llmq_ctx->qsnapman,
                                                                         chainman, chainman.m_blockman, chainman.GetConsensus(),
                                                                         *node.chainlocks, *node.llmq_ctx->qman);
-                return LoadChainstate(chainman, cache_sizes, options, *node.evodb, *node.dmnman, node.chain_helper);
+                return LoadChainstate(chainman, cache_sizes, options, *node.evodb, *node.dmnman, *node.special_tx);
             });
         }
         if (status == node::ChainstateLoadStatus::SUCCESS) {
@@ -2184,7 +2183,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         }
         // Will init later in ThreadImport
         node.active_ctx = std::make_unique<ActiveContext>(*node.llmq_ctx->bls_worker, chainman, *node.connman, *node.dmnman,
-                                                          *node.govman, *node.sbman,
+                                                          *node.govman, *node.special_tx->m_mnhfman, *node.sbman,
                                                           *node.sporkman, *node.chainlocks, *node.mempool, *node.clhandler, *node.isman,
                                                           *node.llmq_ctx->qman, *node.llmq_ctx->qsnapman, *node.llmq_ctx->sigman,
                                                           *node.mn_sync, operator_sk, dash_db_params, quorums_watch);
@@ -2531,7 +2530,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                                        const CDeterministicMNList& prevList, const CCoinsViewCache& view, bool debugLogs,
                                        BlockValidationState& state, CDeterministicMNList& mnListRet) -> bool {
                     const bool is_v24_active{DeploymentActiveAfter(pindexPrev, chainman, Consensus::DEPLOYMENT_V24)};
-                    return node.chain_helper->special_tx->RebuildListFromBlock(block, pindexPrev, is_v24_active, prevList,
+                    return node.special_tx->RebuildListFromBlock(block, pindexPrev, is_v24_active, prevList,
                                                                                view, debugLogs, state, mnListRet);
                 };
                 auto result = node.dmnman->RecalculateAndRepairDiffs(start_index, stop_index, build_list_func, true);

@@ -15,10 +15,10 @@
 #include <string>
 #include <tuple>
 
-class CChainstateHelper;
 class CDeterministicMNManager;
 class CEvoDB;
 class ChainstateManager;
+class CSpecialTxProcessor;
 class CTxMemPool;
 
 namespace chainlock { class Chainlocks; }
@@ -82,7 +82,7 @@ using ChainstateLoadResult = std::tuple<ChainstateLoadStatus, bilingual_str>;
  */
 ChainstateLoadResult LoadChainstate(ChainstateManager& chainman, const CacheSizes& cache_sizes,
                                     const ChainstateLoadOptions& options, CEvoDB& evodb,
-                                    CDeterministicMNManager& dmnman, const std::unique_ptr<CChainstateHelper>& chain_helper);
+                                    CDeterministicMNManager& dmnman, CSpecialTxProcessor& special_tx);
 ChainstateLoadResult VerifyLoadedChainstate(ChainstateManager& chainman, const ChainstateLoadOptions& options, CEvoDB& evodb,
                                             std::function<void(bool)> notify_bls_state = nullptr);
 } // namespace node

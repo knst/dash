@@ -7,7 +7,6 @@
 #include <chainparams.h>
 #include <consensus/validation.h>
 #include <deploymentstatus.h>
-#include <evo/chainhelper.h>
 #include <evo/mnhftx.h>
 #include <index/txindex.h> // g_txindex
 #include <llmq/commitment.h>
@@ -18,9 +17,10 @@
 #include <versionbits.h>
 
 namespace llmq {
-CEHFSignalsHandler::CEHFSignalsHandler(ChainstateManager& chainman, CSigningManager& sigman,
+CEHFSignalsHandler::CEHFSignalsHandler(ChainstateManager& chainman, CMNHFManager& mnhfman, CSigningManager& sigman,
                                        CSigSharesManager& shareman, const CQuorumManager& qman) :
     m_chainman(chainman),
+    m_mnhfman(mnhfman),
     sigman(sigman),
     shareman(shareman),
     qman(qman)
@@ -43,7 +43,7 @@ void CEHFSignalsHandler::UpdatedBlockTip(const CBlockIndex* const pindexNew)
 {
     if (!DeploymentActiveAfter(pindexNew, Params().GetConsensus(), Consensus::DEPLOYMENT_V20)) return;
 
-    const auto ehfSignals = m_chainman.ActiveChainstate().ChainHelper().ehf_manager->GetSignalsStage(pindexNew);
+    const auto ehfSignals = m_mnhfman.GetSignalsStage(pindexNew);
     const int64_t time_past = pindexNew->GetMedianTimePast();
     for (int i = 0; i < Consensus::MAX_VERSION_BITS_DEPLOYMENTS; ++i) {
         const auto pos{static_cast<Consensus::DeploymentPos>(i)};
@@ -108,8 +108,7 @@ RecoveredSigResult CEHFSignalsHandler::HandleNewRecoveredSig(const CRecoveredSig
         return std::monostate{};
     }
 
-    const auto ehfSignals = m_chainman.ActiveChainstate().ChainHelper().ehf_manager->GetSignalsStage(
-        WITH_LOCK(::cs_main, return m_chainman.ActiveTip()));
+    const auto ehfSignals = m_mnhfman.GetSignalsStage(WITH_LOCK(::cs_main, return m_chainman.ActiveTip()));
     MNHFTxPayload mnhfPayload;
     for (const auto& deployment : Params().GetConsensus().vDeployments) {
         // skip deployments that do not use dip0023 or that have already been mined

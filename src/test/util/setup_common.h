@@ -94,7 +94,7 @@ struct ChainTestingSetup : public BasicTestingSetup {
     // exposed for tests that drive LoadChainstate() to an expected failure.
     node::ChainstateLoadOptions ChainstateLoadOptionsForTest();
 
-    // (Re)creates m_node.llmq_ctx and m_node.chain_helper, which must exist
+    // (Re)creates m_node.llmq_ctx and m_node.special_tx, which must exist
     // before Chainstate objects can be created; exposed for tests that call
     // InitializeChainstate() or LoadChainstate() themselves.
     void MakeDashChainContexts(bool llmq_dbs_wipe);

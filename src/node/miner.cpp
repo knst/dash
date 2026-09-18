@@ -28,12 +28,12 @@
 #include <chainlock/handler.h>
 #include <evo/specialtx.h>
 #include <evo/cbtx.h>
-#include <evo/chainhelper.h>
 #include <evo/creditpool.h>
 #include <evo/mnhftx.h>
 #include <evo/deterministicmns.h>
 #include <evo/simplifiedmns.h>
 #include <evo/specialtxman.h>
+#include <instantsend/instantsend.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/context.h>
 #include <llmq/options.h>
@@ -68,7 +68,6 @@ static BlockAssembler::Options ClampOptions(BlockAssembler::Options options)
 }
 
 BlockAssembler::BlockAssembler(Chainstate& chainstate, const NodeContext& node, const CTxMemPool* mempool, const Options& options) :
-      m_chain_helper(chainstate.ChainHelper()),
       m_chainstate{chainstate},
       m_evoDb(*Assert(node.evodb)),
       m_dmnman(*Assert(node.dmnman)),
@@ -329,7 +328,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         BlockValidationState state;
         CDeterministicMNList mn_list;
         const bool is_v24_active{DeploymentActiveAfter(pindexPrev, m_chainstate.m_chainman, Consensus::DEPLOYMENT_V24)};
-        if (!m_chain_helper.special_tx->BuildNewListFromBlock(*pblock, pindexPrev, is_v24_active,
+        if (!m_chainstate.m_special_tx.BuildNewListFromBlock(*pblock, pindexPrev, is_v24_active,
                                                               m_chainstate.CoinsTip(), true, state, mn_list)) {
             throw std::runtime_error(strprintf("%s: BuildNewListFromBlock failed: %s", __func__, state.ToString()));
         }
@@ -348,7 +347,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                     LogPrintf("CreateNewBlock() h[%d] CbTx failed to find best CL. Inserting null CL\n", nHeight);
                 }
                 BlockValidationState state;
-                const auto creditPoolDiff = GetCreditPoolDiffForBlock(*m_chain_helper.credit_pool_manager, *pblock, pindexPrev, chainparams.GetConsensus(), blockSubsidy, state);
+                const auto creditPoolDiff = GetCreditPoolDiffForBlock(*m_chainstate.m_special_tx.m_cpoolman, *pblock, pindexPrev, chainparams.GetConsensus(), blockSubsidy, state);
                 if (creditPoolDiff == std::nullopt) {
                     throw std::runtime_error(strprintf("%s: GetCreditPoolDiffForBlock failed: %s", __func__, state.ToString()));
                 }
@@ -439,7 +438,7 @@ bool BlockAssembler::TestPackageTransactions(const CTxMemPool::setEntries& packa
         // signature regardless, which is cheap enough here given how rare MNHF signals are.
         if (it->GetTx().IsSpecialTxVersion()) {
             TxValidationState tx_state;
-            if (!m_chain_helper.special_tx->CheckSpecialTx(it->GetTx(), m_chainstate.m_chain.Tip(), special_tx_rules,
+            if (!m_chainstate.m_special_tx.CheckSpecialTx(it->GetTx(), m_chainstate.m_chain.Tip(), special_tx_rules,
                                                            m_chainstate.CoinsTip(), /*check_sigs=*/false, tx_state)) {
                 return false;
             }
@@ -458,7 +457,7 @@ bool BlockAssembler::TestPackageTransactions(const CTxMemPool::setEntries& packa
         }
 
         const auto& txid = it->GetTx().GetHash();
-        if (!m_chain_helper.IsInstantSendEnabled() || m_chain_helper.IsInstantSendLocked(txid)) {
+        if (auto* isman{m_chainstate.m_isman}; isman == nullptr || !isman->IsInstantSendEnabled() || isman->IsLocked(txid)) {
             continue;
         }
 
@@ -547,12 +546,12 @@ void BlockAssembler::addPackageTxs(const CTxMemPool& mempool, int& nPackagesSele
     // duplicates of indexes. There's used `BlockSubsidy` equaled to 0
     std::optional<CCreditPoolDiff> creditPoolDiff;
     if (DeploymentActiveAfter(pindexPrev, chainparams.GetConsensus(), Consensus::DEPLOYMENT_V20)) {
-        CCreditPool creditPool = m_chain_helper.GetCreditPool(pindexPrev);
+        CCreditPool creditPool = m_chainstate.m_special_tx.m_cpoolman->GetCreditPool(pindexPrev);
         creditPoolDiff.emplace(std::move(creditPool), pindexPrev, chainparams.GetConsensus(), 0);
     }
 
     // This map with signals is used only to find duplicates
-    auto signals = m_chain_helper.ehf_manager->GetSignalsStage(pindexPrev);
+    auto signals = m_chainstate.m_special_tx.m_mnhfman->GetSignalsStage(pindexPrev);
     const SpecialTxRules special_tx_rules{GetSpecialTxRules(pindexPrev, m_chainstate.m_chainman)};
 
     // mapModifiedTx will store sorted packages after they are modified
@@ -693,7 +692,7 @@ void BlockAssembler::addPackageTxs(const CTxMemPool& mempool, int& nPackagesSele
                 // producing an invalid template.
                 if (IsAssetUnlockWithStableTxid(tx)) {
                     TxValidationState state;
-                    if (!m_chain_helper.special_tx->CheckSpecialTx(tx, m_chainstate.m_chain.Tip(), special_tx_rules,
+                    if (!m_chainstate.m_special_tx.CheckSpecialTx(tx, m_chainstate.m_chain.Tip(), special_tx_rules,
                                                                    m_chainstate.CoinsTip(), /*check_sigs=*/true, state)) {
                         LogPrintf("%s: package tx %s skipped, asset unlock instance not currently minable: %s\n", __func__,
                                   tx.GetHash().ToString(), state.ToString());

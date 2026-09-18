@@ -12,7 +12,6 @@
 #include <chainparams.h>
 #include <coinjoin/common.h>
 #include <deploymentstatus.h>
-#include <evo/chainhelper.h>
 #include <evo/creditpool.h>
 #include <evo/deterministicmns.h>
 #include <evo/providertx_service.h>
@@ -445,7 +444,7 @@ public:
     }
     std::optional<int32_t> getProposalFundedHeight(const uint256& proposal_hash) override
     {
-        if (context().chain_helper != nullptr && context().chainman != nullptr) {
+        if (context().sbman != nullptr && context().chainman != nullptr) {
             const int32_t nTipHeight = WITH_LOCK(::cs_main, return context().chainman->ActiveHeight());
             for (const auto& trigger : context().sbman->GetActiveTriggers()) {
                 if (!trigger || trigger->GetBlockHeight() > nTipHeight) continue;
@@ -566,18 +565,18 @@ public:
     CreditPoolCounts getCreditPoolCounts() override
     {
         CreditPoolCounts ret{};
-        if (!context().chainman) {
+        if (!context().chainman || !context().special_tx) {
             return ret;
         }
         const auto* pindex{WITH_LOCK(::cs_main, return context().chainman->ActiveChain().Tip())};
         if (!pindex || !pindex->pprev) {
             return ret;
         }
-        auto& chain_helper{context().chainman->ActiveChainstate().ChainHelper()};
-        const auto pool{chain_helper.GetCreditPool(pindex)};
+        auto& cpoolman{*context().special_tx->m_cpoolman};
+        const auto pool{cpoolman.GetCreditPool(pindex)};
         ret.m_locked = pool.locked;
         ret.m_limit = pool.currentLimit;
-        ret.m_diff = pool.locked - chain_helper.GetCreditPool(pindex->pprev).locked;
+        ret.m_diff = pool.locked - cpoolman.GetCreditPool(pindex->pprev).locked;
         return ret;
     }
     ChainLockInfo getBestChainLock() override

@@ -71,7 +71,6 @@
 #include <coinjoin/coinjoin.h>
 #include <coinjoin/walletman.h>
 #include <evo/cbtx.h>
-#include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
 #include <evo/simplifiedmns.h>
@@ -288,8 +287,8 @@ ChainTestingSetup::~ChainTestingSetup()
     StopScriptCheckWorkerThreads();
     GetMainSignals().FlushBackgroundCallbacks();
     GetMainSignals().UnregisterBackgroundSignalScheduler();
-    m_node.chainman.reset();
     m_node.mn_sync.reset();
+    m_node.chainman.reset();
     m_node.mempool.reset();
     m_node.fee_estimator.reset();
     m_node.scheduler.reset();
@@ -322,12 +321,12 @@ void ChainTestingSetup::MakeDashChainContexts(const bool llmq_dbs_wipe)
     auto& chainman{*Assert(m_node.chainman)};
 
     LOCK(::cs_main);
-    m_node.chain_helper.reset();
+    m_node.special_tx.reset();
     m_node.llmq_ctx.reset();
     m_node.llmq_ctx = std::make_unique<LLMQContext>(*m_node.dmnman, *m_node.evodb, chainman,
                                                     util::DbWrapperParams{.path = m_node.args->GetDataDirNet(), .memory = m_dash_dbs_in_memory, .wipe = llmq_dbs_wipe},
                                                     llmq::DEFAULT_BLSCHECK_THREADS, llmq::DEFAULT_WORKER_COUNT, llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE);
-    m_node.chain_helper = std::make_unique<CChainstateHelper>(*m_node.evodb, *m_node.dmnman, *Assert(m_node.isman),
+    m_node.special_tx = std::make_unique<CSpecialTxProcessor>(*m_node.evodb, *m_node.dmnman,
                                                               *m_node.llmq_ctx->quorum_block_processor, *m_node.llmq_ctx->qsnapman,
                                                               chainman, chainman.m_blockman, chainman.GetConsensus(),
                                                               *Assert(m_node.chainlocks), *m_node.llmq_ctx->qman);
@@ -361,7 +360,7 @@ void ChainTestingSetup::LoadVerifyActivateChainstate()
         // here, including the chainlock handler that references the mempool.
         m_node.clhandler.reset();
         m_node.mempool.reset();
-        m_node.chain_helper.reset();
+        m_node.special_tx.reset();
         m_node.llmq_ctx.reset();
         m_node.isman.reset();
         m_node.dmnman.reset();
@@ -377,7 +376,8 @@ void ChainTestingSetup::LoadVerifyActivateChainstate()
         MakeDashChainContexts(/*llmq_dbs_wipe=*/false);
     }
 
-    auto [status, error] = LoadChainstate(chainman, m_cache_sizes, options, *m_node.evodb, *m_node.dmnman, m_node.chain_helper);
+    auto [status, error] = LoadChainstate(chainman, m_cache_sizes, options, *m_node.evodb, *m_node.dmnman,
+                                          *m_node.special_tx);
     assert(status == node::ChainstateLoadStatus::SUCCESS);
 
     std::tie(status, error) = VerifyLoadedChainstate(chainman, options, *Assert(m_node.evodb), [](bool bls_state) {
@@ -462,7 +462,7 @@ TestingSetup::~TestingSetup()
     // init.cpp for fixtures that construct govman.
     m_node.govman.reset();
 
-    m_node.chain_helper.reset();
+    m_node.special_tx.reset();
     m_node.llmq_ctx.reset();
 }
 
@@ -616,7 +616,7 @@ CBlock TestChainSetup::CreateBlock(
         CDeterministicMNList mn_list;
         const CBlockIndex* pindexPrev{chainstate.m_chain.Tip()};
         const bool is_v24_active{DeploymentActiveAfter(pindexPrev, chainstate.m_chainman, Consensus::DEPLOYMENT_V24)};
-        if (!chainstate.ChainHelper().special_tx->BuildNewListFromBlock(block, pindexPrev, is_v24_active,
+        if (!chainstate.m_special_tx.BuildNewListFromBlock(block, pindexPrev, is_v24_active,
                                                                         chainstate.CoinsTip(), true, state, mn_list)) {
             Assert(false);
         }

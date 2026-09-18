@@ -7,7 +7,6 @@
 #include <consensus/tx_verify.h>
 #include <consensus/validation.h>
 #include <deploymentstatus.h>
-#include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
 #include <evo/netinfo.h>
 #include <evo/providertx.h>
@@ -360,7 +359,7 @@ std::optional<ProviderTxError> Preflight(node::NodeContext& node, const CTransac
 {
     AssertLockNotHeld(::cs_main);
     auto& chainman{*Assert(node.chainman)};
-    auto& chain_helper{*Assert(node.chain_helper)};
+    auto& special_tx{*Assert(node.special_tx)};
     LOCK(::cs_main);
 
     const CBlockIndex* tip{chainman.ActiveChain().Tip()};
@@ -379,7 +378,7 @@ std::optional<ProviderTxError> Preflight(node::NodeContext& node, const CTransac
     }
 
     TxValidationState state;
-    if (!chain_helper.special_tx->CheckSpecialTx(tx, tip, GetSpecialTxRules(tip, chainman),
+    if (!special_tx.CheckSpecialTx(tx, tip, GetSpecialTxRules(tip, chainman),
                                                  chainman.ActiveChainstate().CoinsTip(), true, state)) {
         return Error(ProviderTxErrorCode::CONSENSUS_REJECTED, state.ToString(), state.GetRejectReason());
     }

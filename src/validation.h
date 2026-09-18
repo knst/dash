@@ -53,7 +53,7 @@ class CEvoDB;
 class CMNHFManager;
 class CTxMemPool;
 class TxValidationState;
-class CChainstateHelper;
+class CSpecialTxProcessor;
 class CDeterministicMNList;
 class ChainstateManager;
 enum class EvoDbIdentity;
@@ -66,6 +66,9 @@ struct AssumeutxoData;
 namespace Consensus {
 struct Params;
 } // namespace Consensus
+namespace llmq {
+class CInstantSendManager;
+} // namespace llmq
 namespace node {
 class SnapshotMetadata;
 } // namespace node
@@ -504,8 +507,6 @@ protected:
     //! Manages the UTXO set, which is a reflection of the contents of `m_chain`.
     std::unique_ptr<CoinsViews> m_coins_views;
 
-    //! Dash
-    const std::unique_ptr<CChainstateHelper>& m_chain_helper;
     CEvoDB& m_evoDb;
 
     //! This toggle exists for use when doing background validation for UTXO
@@ -538,7 +539,9 @@ public:
                          node::BlockManager& blockman,
                          ChainstateManager& chainman,
                          CEvoDB& evoDb,
-                         const std::unique_ptr<CChainstateHelper>& chain_helper,
+                         CSpecialTxProcessor& special_tx,
+                         const chainlock::Chainlocks& chainlocks,
+                         llmq::CInstantSendManager* isman,
                          std::optional<uint256> from_snapshot_blockhash = std::nullopt);
 
     //! Return the stable EvoDB identity corresponding to this chainstate's coins DB.
@@ -596,11 +599,11 @@ public:
      */
     std::set<CBlockIndex*, node::CBlockIndexWorkComparator> setBlockIndexCandidates;
 
-    CChainstateHelper& ChainHelper()
-    {
-        assert(m_chain_helper);
-        return *m_chain_helper;
-    }
+    //! Dash: chainman-bound processors and managers used by block validation
+    CSpecialTxProcessor& m_special_tx;
+    const chainlock::Chainlocks& m_chainlocks;
+    //! Null when running without InstantSend (bitcoin-chainstate)
+    llmq::CInstantSendManager* const m_isman;
 
     //! @returns A reference to the in-memory cache of the UTXO set.
     CCoinsViewCache& CoinsTip() EXCLUSIVE_LOCKS_REQUIRED(::cs_main)
@@ -1060,7 +1063,9 @@ public:
     //                                  constructor
     Chainstate& InitializeChainstate(CTxMemPool* mempool,
                                       CEvoDB& evoDb,
-                                      const std::unique_ptr<CChainstateHelper>& chain_helper)
+                                      CSpecialTxProcessor& special_tx,
+                                      const chainlock::Chainlocks& chainlocks,
+                                      llmq::CInstantSendManager* isman)
         LIFETIMEBOUND EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     //! Get all chainstates currently being used.

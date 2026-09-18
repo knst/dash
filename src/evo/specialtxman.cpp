@@ -30,6 +30,26 @@
 #include <primitives/block.h>
 #include <util/system.h>
 
+CSpecialTxProcessor::CSpecialTxProcessor(CEvoDB& evodb, CDeterministicMNManager& dmnman,
+                                         llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumSnapshotManager& qsnapman,
+                                         const ChainstateManager& chainman, const node::BlockManager& blockman,
+                                         const Consensus::Params& consensus_params,
+                                         const chainlock::Chainlocks& chainlocks, const llmq::CQuorumManager& qman) :
+    m_cpoolman{std::make_unique<CCreditPoolManager>(evodb, chainman)},
+    m_mnhfman{std::make_unique<CMNHFManager>(evodb, consensus_params)},
+    m_dmnman{dmnman},
+    m_qblockman{qblockman},
+    m_qsnapman{qsnapman},
+    m_chainman(chainman),
+    m_blockman{blockman},
+    m_consensus_params{consensus_params},
+    m_chainlocks{chainlocks},
+    m_qman{qman}
+{
+}
+
+CSpecialTxProcessor::~CSpecialTxProcessor() = default;
+
 static bool AddNetInfoEntries(const std::shared_ptr<NetInfoInterface>& net_info, NetInfoPurpose purpose,
                               const NetInfoList& entries, BlockValidationState& state)
 {
@@ -794,6 +814,11 @@ bool CSpecialTxProcessor::RebuildListFromBlock(const CBlock& block, gsl::not_nul
     return true;
 }
 
+uint256 CSpecialTxProcessor::GetDeterministicMNListHash(gsl::not_null<const CBlockIndex*> pindex) const
+{
+    return SerializeHash(m_dmnman.GetListForBlock(pindex));
+}
+
 bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(Chainstate& chainstate, const CChain& chain, const CBlock& block,
                                                    const CBlockIndex* pindex, SpecialTxRules rules,
                                                    const CCoinsViewCache& view, CAmount blockSubsidy, bool fJustCheck,
@@ -845,7 +870,7 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(Chainstate& chainstate, const
 
         CRangesSet indexes;
         if (DeploymentActiveAt(*pindex, m_consensus_params, Consensus::DEPLOYMENT_V20)) {
-            CCreditPool creditPool{m_cpoolman.GetCreditPool(pindex->pprev)};
+            CCreditPool creditPool{m_cpoolman->GetCreditPool(pindex->pprev)};
             LogPrint(BCLog::CREDITPOOL, "CSpecialTxProcessor::%s -- CCreditPool is %s\n", __func__, creditPool.ToString());
             indexes = std::move(creditPool.indexes);
         }
@@ -973,14 +998,14 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(Chainstate& chainstate, const
 
         int64_t nTime7 = GetTimeMicros();
 
-        if (!m_mnhfman.ProcessBlock(block, pindex, fJustCheck, state)) {
+        if (!m_mnhfman->ProcessBlock(block, pindex, fJustCheck, state)) {
             // pass the state returned by the function above
             return false;
         }
 
         int64_t nTime8 = GetTimeMicros();
         nTimeMnehf += nTime8 - nTime7;
-        LogPrint(BCLog::BENCHMARK, "      - m_mnhfman.ProcessBlock: %.2fms [%.2fs]\n", 0.001 * (nTime8 - nTime7),
+        LogPrint(BCLog::BENCHMARK, "      - m_mnhfman->ProcessBlock: %.2fms [%.2fs]\n", 0.001 * (nTime8 - nTime7),
                  nTimeMnehf * 0.000001);
 
         if (DeploymentActiveAfter(pindex, m_consensus_params, Consensus::DEPLOYMENT_V19) && bls::bls_legacy_scheme.load()) {
@@ -1015,7 +1040,7 @@ bool CSpecialTxProcessor::UndoSpecialTxsInBlock(const Chainstate& chainstate, co
             LogPrintf("CSpecialTxProcessor::%s -- bls_legacy_scheme=%d\n", __func__, bls::bls_legacy_scheme.load());
         }
 
-        if (!m_mnhfman.UndoBlock(block, pindex)) {
+        if (!m_mnhfman->UndoBlock(block, pindex)) {
             return false;
         }
 
@@ -1045,7 +1070,7 @@ bool CSpecialTxProcessor::CheckCreditPoolDiffForBlock(const CBlock& block, const
     if (!DeploymentActiveAt(*pindex, m_consensus_params, Consensus::DEPLOYMENT_V20)) return true;
 
     try {
-        const auto creditPoolDiff = GetCreditPoolDiffForBlock(m_cpoolman, block,
+        const auto creditPoolDiff = GetCreditPoolDiffForBlock(*m_cpoolman, block,
                                                               pindex->pprev, m_consensus_params, blockSubsidy, state);
         if (!creditPoolDiff.has_value()) return false;
 

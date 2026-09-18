@@ -8,7 +8,6 @@
 #include <chainlock/chainlock.h>
 #include <chainparams.h>
 #include <evo/assetlocktx.h>
-#include <evo/chainhelper.h>
 #include <evo/creditpool.h>
 #include <evo/specialtx.h>
 #include <evo/specialtxman.h>
@@ -211,9 +210,8 @@ bool InstantSendSigner::CheckCanLockAssetUnlock(const CTransaction& tx, bool pri
     const CBlockIndex* tip = chainstate.m_chain.Tip();
     // Minable in the next block: inside its height window and signed by a recent quorum
     TxValidationState state;
-    if (!chainstate.ChainHelper().special_tx->CheckSpecialTx(tx, tip, GetSpecialTxRules(tip, m_chainman),
-                                                             chainstate.CoinsTip(),
-                                                             /*check_sigs=*/true, state)) {
+    if (!chainstate.m_special_tx.CheckSpecialTx(tx, tip, GetSpecialTxRules(tip, m_chainman),
+                                                chainstate.CoinsTip(), /*check_sigs=*/true, state)) {
         return log_refusal(state.ToString());
     }
     // Fits the withdrawal limit alongside every other pending withdrawal: the limit is enforced
@@ -225,7 +223,7 @@ bool InstantSendSigner::CheckCanLockAssetUnlock(const CTransaction& tx, bool pri
     // inconsistent pool, EvoDB) refuses this lock rather than escaping into the worker thread.
     CAmount limit{0};
     try {
-        limit = chainstate.ChainHelper().GetCreditPool(tip).currentLimit;
+        limit = chainstate.m_special_tx.m_cpoolman->GetCreditPool(tip).currentLimit;
     } catch (const std::exception& e) {
         LogPrintf("%s -- txid=%s: GetCreditPool failed: %s\n", __func__, tx.GetHash().ToString(), e.what());
         return false;
