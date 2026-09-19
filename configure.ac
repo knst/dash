@@ -1081,17 +1081,20 @@ if test "$use_hardening" != "no"; then
     ;;
   esac
 
-  dnl When enable_debug is yes, all optimizations are disabled.
-  dnl However, FORTIFY_SOURCE requires that there is some level of optimization, otherwise it does nothing and just creates a compiler warning.
-  dnl Since FORTIFY_SOURCE is a no-op without optimizations, do not enable it when enable_debug is yes.
-  if test "$enable_debug" != "yes"; then
-    AX_CHECK_PREPROC_FLAG([-D_FORTIFY_SOURCE=3],[
-      AX_CHECK_PREPROC_FLAG([-U_FORTIFY_SOURCE],[
-        HARDENED_CPPFLAGS="$HARDENED_CPPFLAGS -U_FORTIFY_SOURCE"
-      ])
-      HARDENED_CPPFLAGS="$HARDENED_CPPFLAGS -D_FORTIFY_SOURCE=3"
+  dnl _FORTIFY_SOURCE requires that there is some level of optimization,
+  dnl otherwise it does nothing and just creates a compiler warning.
+  dnl The probe sees the -O flags in compile-line order ($(AM_CXXFLAGS) before
+  dnl $(CXXFLAGS)), so a user-supplied -O2 still counts after --enable-debug's -O0.
+  AX_CHECK_PREPROC_FLAG([-D_FORTIFY_SOURCE=3],[
+    AX_CHECK_PREPROC_FLAG([-U_FORTIFY_SOURCE],[
+      HARDENED_CPPFLAGS="$HARDENED_CPPFLAGS -U_FORTIFY_SOURCE"
     ])
-  fi
+    HARDENED_CPPFLAGS="$HARDENED_CPPFLAGS -D_FORTIFY_SOURCE=3"
+  ], [], [$DEBUG_CXXFLAGS $CORE_CXXFLAGS $CXXFLAGS], [AC_LANG_PROGRAM([[
+    #if !defined __OPTIMIZE__ || __OPTIMIZE__ <= 0
+    #error
+    #endif
+  ]])])
 
   AX_CHECK_LINK_FLAG([-Wl,--enable-reloc-section], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,--enable-reloc-section"], [], [$LDFLAG_WERROR])
   AX_CHECK_LINK_FLAG([-Wl,--dynamicbase], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,--dynamicbase"], [], [$LDFLAG_WERROR])
