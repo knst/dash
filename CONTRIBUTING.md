@@ -313,7 +313,7 @@ In general, all pull requests must:
     instead;
   - Follow code style guidelines ([C++](doc/developer-notes.md), [functional tests](test/functional/README.md));
   - Not break the existing test suite;
-  - Where bugs are fixed, come with steps to reproduce or an explanation of
+  - Where bugs are fixed, provide steps to reproduce or an explanation of
     the issue and reasoning for the way the bug was fixed;
   - Change relevant comments and documentation when behaviour of code changes.
 
