@@ -118,9 +118,9 @@ Useful developer configure flags:
             --enable-werror
 ```
 
-Generate `compile_commands.json` or running clang-tidy:
+Generate `compile_commands.json` or run clang-tidy:
 
-See `doc/developer-notes.md`, chapter Running clang-tidy
+See `doc/developer-notes.md` under "Running clang-tidy".
 
 When adding, removing, or renaming C++ source files, update the build system in
 the same change. Most source/test files need `src/Makefile.am` or
@@ -131,13 +131,12 @@ the same change. Most source/test files need `src/Makefile.am` or
 Pick the test type by what it can observe, not by where it is easiest to
 write.
 
-- A unit test (`src/test/`, Boost) isolates one function or class. Every input
-  is named in the test and every assertion checks the return value or the
-  state that the function documents. If the test needs a full node fixture,
-  injected internal state, a `friend` declaration, or a comment explaining
+- A unit test (`src/test/`, `src/qt/test`, `src/wallet/test`, Boost) isolates
+  one function or class. Every input is named in the test and every assertion
+  checks its documented return value or state. If the test needs a full node fixture,
+  injected internal state, a `friend` declaration, or an explanation of
   how a private method computes its precondition, it is not a unit test.
-  Either extract the logic into a function that can be tested directly, or
-  write a functional test.
+  Extract the logic into a directly testable function or write a functional test.
 - A functional test (`test/functional/`, Python) proves a user-visible outcome
   through RPC or P2P: a block is accepted, a lock appears, a peer is or is not
   banned. It is the right home for anything that depends on quorums, signing,
