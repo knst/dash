@@ -1760,7 +1760,7 @@ static RPCHelpMan protx_shared_update_share()
     tx.nType = TRANSACTION_PROVIDER_UPDATE_SHARE;
 
     // make sure we get enough fees added
-    ptx.vchSig.resize(65);
+    ptx.vchSig.resize(CPubKey::COMPACT_SIGNATURE_SIZE);
 
     FundSpecialTx(*pwallet, tx, ptx, feeSourceDest);
     SignSpecialTxPayloadByHash(tx, ptx, dmn->pdmnState->shares[ptx.shareIndex].keyIDOwner, *pwallet);
@@ -2662,14 +2662,7 @@ static RPCHelpMan protx_shared_register_prepare()
     ptx.pubKeyOperator.Set(ParseBLSPubKey(request.params[3].get_str(), "operator BLS address", /*specific_legacy_bls_scheme=*/false),
                            /*specificLegacyScheme=*/false);
 
-    {
-        CTxDestination voting_dest = DecodeDestination(request.params[4].get_str());
-        const PKHash* voting_pkhash = std::get_if<PKHash>(&voting_dest);
-        if (!voting_pkhash) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("voting address must be a valid P2PKH address, not %s", request.params[4].get_str()));
-        }
-        ptx.keyIDVoting = ToKeyID(*voting_pkhash);
-    }
+    ptx.keyIDVoting = ParsePubKeyIDFromAddress(request.params[4].get_str(), "voting address");
 
     int64_t operatorReward;
     if (!ParseFixedPoint(request.params[5].getValStr(), 2, &operatorReward)) {
