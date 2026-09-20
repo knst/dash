@@ -2,7 +2,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <arith_uint256.h>
 #include <bls/bls.h>
 #include <chainparams.h>
 #include <consensus/tx_verify.h>
@@ -392,28 +391,13 @@ static CMutableTransaction BuildProDisTx(const CDeterministicMN& dmn, uint16_t a
     tx.nType = TRANSACTION_PROVIDER_DISSOLVE;
     tx.vin.emplace_back(dmn.collateralOutpoint);
 
-    CAmount non_actor_total{0};
-    size_t last_non_actor{0};
+    CollateralShares non_actors;
     for (size_t i = 0; i < shares.size(); i++) {
-        if (i != actorIndex) {
-            non_actor_total += shares[i].amount;
-            last_non_actor = i;
-        }
+        if (i != actorIndex) non_actors.push_back(shares[i]);
     }
-    CAmount distributed{0};
-    for (size_t i = 0; i < shares.size(); i++) {
-        if (i == actorIndex) continue;
-        CAmount bonus;
-        if (i == last_non_actor) {
-            bonus = penalty - distributed;
-        } else {
-            arith_uint256 v{static_cast<uint64_t>(penalty)};
-            v *= arith_uint256{static_cast<uint64_t>(shares[i].amount)};
-            v /= arith_uint256{static_cast<uint64_t>(non_actor_total)};
-            bonus = static_cast<CAmount>(v.GetLow64());
-        }
-        distributed += bonus;
-        tx.vout.emplace_back(shares[i].amount + bonus, shares[i].scriptRefund);
+    const auto bonuses{SplitAmountByShares(penalty, non_actors)};
+    for (size_t i = 0; i < non_actors.size(); i++) {
+        tx.vout.emplace_back(non_actors[i].amount + bonuses[i], non_actors[i].scriptRefund);
     }
     if (actor_output > 0) {
         tx.vout.emplace_back(actor_output, shares[actorIndex].scriptRefund);
