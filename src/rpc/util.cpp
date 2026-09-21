@@ -887,7 +887,7 @@ void RPCResult::ToSections(Sections& sections, const OuterType outer_type, const
     NONFATAL_UNREACHABLE();
 }
 
-static const std::optional<UniValue::VType> ExpectedType(RPCResult::Type type)
+static std::optional<UniValue::VType> ExpectedType(RPCResult::Type type)
 {
     using Type = RPCResult::Type;
     switch (type) {
