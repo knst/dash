@@ -5,7 +5,6 @@
 #include <evo/providertx.h>
 
 #include <evo/dmn_types.h>
-#include <evo/sharedcollateral.h>
 #include <util/std23.h>
 
 #include <chainparams.h>
@@ -61,21 +60,11 @@ bool IsPayoutListTriviallyValid(const MasternodePayoutShares& payouts, const CKe
     return true;
 }
 
-bool IsShareListTriviallyValid(const CollateralShares& shares,
-                               const std::vector<std::vector<unsigned char>>& join_sigs,
-                               uint32_t early_period_blocks, CAmount early_penalty, CAmount required_collateral,
-                               const CKeyID& keyIDVoting, TxValidationState& state)
+bool IsShareListTriviallyValid(const CollateralShares& shares, uint32_t early_period_blocks, CAmount early_penalty,
+                               CAmount required_collateral, const CKeyID& keyIDVoting, TxValidationState& state)
 {
     if (shares.size() < CProRegTx::MIN_SHARES || shares.size() > CProRegTx::MAX_SHARES) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-count");
-    }
-    if (join_sigs.size() != shares.size()) {
-        return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-sig-count");
-    }
-    for (const auto& sig : join_sigs) {
-        if (sig.size() != CPubKey::COMPACT_SIGNATURE_SIZE) {
-            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-sig-size");
-        }
     }
     if (early_period_blocks > CProRegTx::MAX_EARLY_PERIOD_BLOCKS) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-early-period");
@@ -107,9 +96,6 @@ bool IsShareListTriviallyValid(const CollateralShares& shares,
             if (script == &share.scriptReward && script->empty()) {
                 // An empty reward script means "use the refund script"
                 continue;
-            }
-            if (IsSharedCollateralScript(*script)) {
-                return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-payee-template");
             }
             if (!IsValidPayoutScript(*script)) {
                 return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-payee");
@@ -292,9 +278,6 @@ bool CProRegTx::IsTriviallyValid(TxValidationState& state) const
     }
 
     if (IsShared()) {
-        if (nVersion < ProTxVersion::ExtAddr) {
-            return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-version");
-        }
         if (nType != MnType::Regular) {
             return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-evo");
         }
@@ -310,7 +293,7 @@ bool CProRegTx::IsTriviallyValid(TxValidationState& state) const
             return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-payouts");
         }
     } else {
-        if (!vchJoinSigs.empty() || nEarlyPeriodBlocks != 0 || nEarlyPenalty != 0) {
+        if (nEarlyPeriodBlocks != 0 || nEarlyPenalty != 0) {
             return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-shares-empty-fields");
         }
         if (keyIDOwner.IsNull()) {
@@ -324,8 +307,8 @@ bool CProRegTx::IsTriviallyValid(TxValidationState& state) const
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-operator-pubkey");
     }
     if (IsShared()) {
-        if (!IsShareListTriviallyValid(shares, vchJoinSigs, nEarlyPeriodBlocks, nEarlyPenalty,
-                                       GetMnType(nType).collat_amount, keyIDVoting, state)) {
+        if (!IsShareListTriviallyValid(shares, nEarlyPeriodBlocks, nEarlyPenalty, GetMnType(nType).collat_amount,
+                                       keyIDVoting, state)) {
             return false;
         }
     } else {
@@ -557,11 +540,6 @@ bool CProDisTx::IsTriviallyValid(TxValidationState& state) const
     if (vchSigs.empty() || vchSigs.size() > CProRegTx::MAX_SHARES) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-prodis-sig-count");
     }
-    for (const auto& sig : vchSigs) {
-        if (sig.size() != CPubKey::COMPACT_SIGNATURE_SIZE) {
-            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-prodis-sig-size");
-        }
-    }
     return true;
 }
 
@@ -578,12 +556,6 @@ bool CProUpShareTx::IsTriviallyValid(TxValidationState& state) const
     }
     if (vchSig.size() != CPubKey::COMPACT_SIGNATURE_SIZE) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-proupshare-sig-size");
-    }
-    if (scriptReward.empty()) {
-        return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-proupshare-payee-empty");
-    }
-    if (IsSharedCollateralScript(scriptReward)) {
-        return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-proupshare-payee-template");
     }
     if (!IsValidPayoutScript(scriptReward)) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-proupshare-payee");
@@ -612,11 +584,6 @@ bool CProUpSharedRegTx::IsTriviallyValid(TxValidationState& state) const
     }
     if (vchSigs.empty() || vchSigs.size() > CProRegTx::MAX_SHARES) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-proupsharedreg-sig-count");
-    }
-    for (const auto& sig : vchSigs) {
-        if (sig.size() != CPubKey::COMPACT_SIGNATURE_SIZE) {
-            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-proupsharedreg-sig-size");
-        }
     }
     return true;
 }

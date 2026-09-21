@@ -2,7 +2,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <arith_uint256.h>
 #include <bls/bls.h>
 #include <chainparams.h>
 #include <consensus/tx_verify.h>
@@ -392,28 +391,13 @@ static CMutableTransaction BuildProDisTx(const CDeterministicMN& dmn, uint16_t a
     tx.nType = TRANSACTION_PROVIDER_DISSOLVE;
     tx.vin.emplace_back(dmn.collateralOutpoint);
 
-    CAmount non_actor_total{0};
-    size_t last_non_actor{0};
+    CollateralShares non_actors;
     for (size_t i = 0; i < shares.size(); i++) {
-        if (i != actorIndex) {
-            non_actor_total += shares[i].amount;
-            last_non_actor = i;
-        }
+        if (i != actorIndex) non_actors.push_back(shares[i]);
     }
-    CAmount distributed{0};
-    for (size_t i = 0; i < shares.size(); i++) {
-        if (i == actorIndex) continue;
-        CAmount bonus;
-        if (i == last_non_actor) {
-            bonus = penalty - distributed;
-        } else {
-            arith_uint256 v{static_cast<uint64_t>(penalty)};
-            v *= arith_uint256{static_cast<uint64_t>(shares[i].amount)};
-            v /= arith_uint256{static_cast<uint64_t>(non_actor_total)};
-            bonus = static_cast<CAmount>(v.GetLow64());
-        }
-        distributed += bonus;
-        tx.vout.emplace_back(shares[i].amount + bonus, shares[i].scriptRefund);
+    const auto bonuses{SplitAmountByShares(penalty, non_actors)};
+    for (size_t i = 0; i < non_actors.size(); i++) {
+        tx.vout.emplace_back(non_actors[i].amount + bonuses[i], non_actors[i].scriptRefund);
     }
     if (actor_output > 0) {
         tx.vout.emplace_back(actor_output, shares[actorIndex].scriptRefund);
@@ -1695,7 +1679,9 @@ static RPCHelpMan protx_shared_dissolve()
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY,
                            "private key for the actor share's owner address not found in this wallet");
     }
-    ptx.vchSigs = {vchSig};
+    CompactSignature sig;
+    std::copy(vchSig.begin(), vchSig.end(), sig.begin());
+    ptx.vchSigs = {sig};
     SetTxPayload(tx, ptx);
 
     if (!fSubmit) {
@@ -1774,7 +1760,7 @@ static RPCHelpMan protx_shared_update_share()
     tx.nType = TRANSACTION_PROVIDER_UPDATE_SHARE;
 
     // make sure we get enough fees added
-    ptx.vchSig.resize(65);
+    ptx.vchSig.resize(CPubKey::COMPACT_SIGNATURE_SIZE);
 
     FundSpecialTx(*pwallet, tx, ptx, feeSourceDest);
     SignSpecialTxPayloadByHash(tx, ptx, dmn->pdmnState->shares[ptx.shareIndex].keyIDOwner, *pwallet);
@@ -1845,7 +1831,7 @@ static RPCHelpMan protx_shared_update_registrar_prepare()
     tx.nType = TRANSACTION_PROVIDER_UPDATE_SHARED_REGISTRAR;
 
     // make sure we get enough fees added: one signature per share
-    ptx.vchSigs.assign(dmn->pdmnState->shares.size(), std::vector<unsigned char>(CPubKey::COMPACT_SIGNATURE_SIZE, 0));
+    ptx.vchSigs.assign(dmn->pdmnState->shares.size(), CompactSignature{});
 
     FundSpecialTx(*pwallet, tx, ptx, feeSourceDest);
     UpdateSpecialTxInputsHash(tx, ptx);
@@ -1896,14 +1882,16 @@ static RPCHelpMan protx_shared_combine()
     }
 
     // Collect (shareIndex, signature) pairs
-    std::map<size_t, std::vector<unsigned char>> sigs;
+    std::map<size_t, CompactSignature> sigs;
     for (const auto& entry : request.params[1].get_array().getValues()) {
         const int64_t index{entry.find_value("shareIndex").getInt<int64_t>()};
         auto opt_sig = DecodeBase64(entry.find_value("signature").get_str());
         if (index < 0 || !opt_sig.has_value() || opt_sig->size() != CPubKey::COMPACT_SIGNATURE_SIZE) {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "invalid signature entry");
         }
-        if (!sigs.emplace(static_cast<size_t>(index), *opt_sig).second) {
+        CompactSignature sig;
+        std::copy(opt_sig->begin(), opt_sig->end(), sig.begin());
+        if (!sigs.emplace(static_cast<size_t>(index), sig).second) {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "duplicate shareIndex");
         }
     }
@@ -2674,14 +2662,7 @@ static RPCHelpMan protx_shared_register_prepare()
     ptx.pubKeyOperator.Set(ParseBLSPubKey(request.params[3].get_str(), "operator BLS address", /*specific_legacy_bls_scheme=*/false),
                            /*specificLegacyScheme=*/false);
 
-    {
-        CTxDestination voting_dest = DecodeDestination(request.params[4].get_str());
-        const PKHash* voting_pkhash = std::get_if<PKHash>(&voting_dest);
-        if (!voting_pkhash) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("voting address must be a valid P2PKH address, not %s", request.params[4].get_str()));
-        }
-        ptx.keyIDVoting = ToKeyID(*voting_pkhash);
-    }
+    ptx.keyIDVoting = ParsePubKeyIDFromAddress(request.params[4].get_str(), "voting address");
 
     int64_t operatorReward;
     if (!ParseFixedPoint(request.params[5].getValStr(), 2, &operatorReward)) {
@@ -2704,7 +2685,7 @@ static RPCHelpMan protx_shared_register_prepare()
     ptx.collateralOutpoint = COutPoint(uint256(), static_cast<uint32_t>(tx.vout.size() - 1));
 
     // Placeholder consent signatures; filled in by "protx shared_combine"
-    ptx.vchJoinSigs.assign(ptx.shares.size(), std::vector<unsigned char>(CPubKey::COMPACT_SIGNATURE_SIZE, 0));
+    ptx.vchJoinSigs.assign(ptx.shares.size(), CompactSignature{});
 
     UpdateSpecialTxInputsHash(tx, ptx);
 

@@ -21,7 +21,6 @@
 #include <llmq/utils.h>
 #include <messagesigner.h>
 
-#include <arith_uint256.h>
 #include <chainparams.h>
 #include <coins.h>
 #include <consensus/amount.h>
@@ -1697,15 +1696,7 @@ bool CheckProDisTxForList(const CTransaction& tx, const CProDisTx& ptx, const CD
         // Minimum-based rules: bonus[i] >= floor(P * amount[i] / W). The floor is element-wise
         // monotone in P, which is what preserves monotone validity; overpaying is always valid.
         const CAmount bonus{out.nValue - shares[i].amount};
-        const CAmount min_bonus{[&]() {
-            if (required_penalty == 0) return CAmount{0};
-            // 128-bit intermediate: penalty and amount can each approach the full collateral
-            arith_uint256 v{static_cast<uint64_t>(required_penalty)};
-            v *= arith_uint256{static_cast<uint64_t>(shares[i].amount)};
-            v /= arith_uint256{static_cast<uint64_t>(non_actor_total)};
-            return static_cast<CAmount>(v.GetLow64());
-        }()};
-        if (bonus < min_bonus) {
+        if (bonus < ProRataFloor(required_penalty, shares[i].amount, non_actor_total)) {
             return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-prodis-penalty-floor");
         }
         bonus_total += bonus;

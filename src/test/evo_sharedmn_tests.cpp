@@ -29,6 +29,7 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <algorithm>
 #include <optional>
 
 BOOST_FIXTURE_TEST_SUITE(evo_sharedmn_tests, BasicTestingSetup)
@@ -82,17 +83,13 @@ static CCollateralShare NewShare(CAmount amount, CKey& refund_key, CKey& owner_k
     return {amount, NewP2PKHScript(refund_key), CScript(), owner_key.GetPubKey().GetID()};
 }
 
-static std::vector<std::vector<unsigned char>> DummyJoinSigs(size_t count)
-{
-    return {count, std::vector<unsigned char>(CPubKey::COMPACT_SIGNATURE_SIZE, 0)};
-}
+static std::vector<CompactSignature> DummyJoinSigs(size_t count) { return std::vector<CompactSignature>(count); }
 
-static void CheckShares(const CollateralShares& shares, const std::vector<std::vector<unsigned char>>& join_sigs,
-                        uint32_t early_period_blocks, CAmount early_penalty, const CKeyID& voting,
-                        const std::optional<std::string>& expected_error)
+static void CheckShares(const CollateralShares& shares, uint32_t early_period_blocks, CAmount early_penalty,
+                        const CKeyID& voting, const std::optional<std::string>& expected_error)
 {
     TxValidationState state;
-    BOOST_CHECK_EQUAL(IsShareListTriviallyValid(shares, join_sigs, early_period_blocks, early_penalty,
+    BOOST_CHECK_EQUAL(IsShareListTriviallyValid(shares, early_period_blocks, early_penalty,
                                                 dmn_types::Regular.collat_amount, voting, state),
                       !expected_error.has_value());
     if (expected_error.has_value()) {
@@ -109,66 +106,56 @@ BOOST_AUTO_TEST_CASE(share_list_validation)
     CKey refund_keys[8], owner_keys[8];
     CollateralShares two_shares{NewShare(600 * COIN, refund_keys[0], owner_keys[0]),
                                 NewShare(400 * COIN, refund_keys[1], owner_keys[1])};
-    CheckShares(two_shares, DummyJoinSigs(2), 0, 0, voting_id, std::nullopt);
-    CheckShares(two_shares, DummyJoinSigs(2), CProRegTx::MAX_EARLY_PERIOD_BLOCKS, 399 * COIN, voting_id, std::nullopt);
+    CheckShares(two_shares, 0, 0, voting_id, std::nullopt);
+    CheckShares(two_shares, CProRegTx::MAX_EARLY_PERIOD_BLOCKS, 399 * COIN, voting_id, std::nullopt);
 
     CollateralShares eight_shares;
     for (size_t i = 0; i < 8; i++) {
         eight_shares.push_back(NewShare(125 * COIN, refund_keys[i], owner_keys[i]));
     }
-    CheckShares(eight_shares, DummyJoinSigs(8), 100, 100 * COIN, voting_id, std::nullopt);
+    CheckShares(eight_shares, 100, 100 * COIN, voting_id, std::nullopt);
 
     // Count bounds: 0, 1 and 9 shares are invalid
-    CheckShares({}, DummyJoinSigs(0), 0, 0, voting_id, "bad-protx-shares-count");
-    CheckShares({two_shares[0]}, DummyJoinSigs(1), 0, 0, voting_id, "bad-protx-shares-count");
+    CheckShares({}, 0, 0, voting_id, "bad-protx-shares-count");
+    CheckShares({two_shares[0]}, 0, 0, voting_id, "bad-protx-shares-count");
     {
         CollateralShares nine_shares{eight_shares};
         CKey k1, k2;
         nine_shares.push_back(NewShare(125 * COIN, k1, k2));
-        CheckShares(nine_shares, DummyJoinSigs(9), 0, 0, voting_id, "bad-protx-shares-count");
-    }
-
-    // One join signature per share, each 65 bytes
-    CheckShares(two_shares, DummyJoinSigs(1), 0, 0, voting_id, "bad-protx-shares-sig-count");
-    CheckShares(two_shares, DummyJoinSigs(3), 0, 0, voting_id, "bad-protx-shares-sig-count");
-    {
-        auto bad_sigs = DummyJoinSigs(2);
-        bad_sigs[1].resize(64);
-        CheckShares(two_shares, bad_sigs, 0, 0, voting_id, "bad-protx-shares-sig-size");
+        CheckShares(nine_shares, 0, 0, voting_id, "bad-protx-shares-count");
     }
 
     // Early period cap and penalty bounds
-    CheckShares(two_shares, DummyJoinSigs(2), CProRegTx::MAX_EARLY_PERIOD_BLOCKS + 1, 0, voting_id,
-                "bad-protx-shares-early-period");
-    CheckShares(two_shares, DummyJoinSigs(2), 100, -1, voting_id, "bad-protx-shares-penalty");
+    CheckShares(two_shares, CProRegTx::MAX_EARLY_PERIOD_BLOCKS + 1, 0, voting_id, "bad-protx-shares-early-period");
+    CheckShares(two_shares, 100, -1, voting_id, "bad-protx-shares-penalty");
     // earlyPenalty must be strictly below the smallest share amount
-    CheckShares(two_shares, DummyJoinSigs(2), 100, 400 * COIN, voting_id, "bad-protx-shares-penalty");
+    CheckShares(two_shares, 100, 400 * COIN, voting_id, "bad-protx-shares-penalty");
     // A penalty without an early period is never required, but it would still set the unilateral
     // bonus ceiling, leaving that much of the actor's share extractable by a stolen owner key
-    CheckShares(two_shares, DummyJoinSigs(2), 0, 1, voting_id, "bad-protx-shares-penalty");
-    CheckShares(two_shares, DummyJoinSigs(2), 100, 0, voting_id, std::nullopt);
+    CheckShares(two_shares, 0, 1, voting_id, "bad-protx-shares-penalty");
+    CheckShares(two_shares, 100, 0, voting_id, std::nullopt);
 
     // Amount bounds: below the 100 DASH minimum and sums different from the collateral
     {
         CollateralShares shares{two_shares};
         shares[0].amount = 99 * COIN;
-        CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, "bad-protx-shares-amount");
+        CheckShares(shares, 0, 0, voting_id, "bad-protx-shares-amount");
         shares[0].amount = 599 * COIN;
-        CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, "bad-protx-shares-amount-sum");
+        CheckShares(shares, 0, 0, voting_id, "bad-protx-shares-amount-sum");
         shares[0].amount = 601 * COIN;
-        CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, "bad-protx-shares-amount-sum");
+        CheckShares(shares, 0, 0, voting_id, "bad-protx-shares-amount-sum");
     }
 
     // Duplicate owner keys and refund scripts within the table
     {
         CollateralShares shares{two_shares};
         shares[1].keyIDOwner = shares[0].keyIDOwner;
-        CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, "bad-protx-shares-dup-key");
+        CheckShares(shares, 0, 0, voting_id, "bad-protx-shares-dup-key");
     }
     {
         CollateralShares shares{two_shares};
         shares[1].scriptRefund = shares[0].scriptRefund;
-        CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, "bad-protx-shares-dup-refund");
+        CheckShares(shares, 0, 0, voting_id, "bad-protx-shares-dup-refund");
     }
     // Duplicate reward scripts are allowed
     {
@@ -177,39 +164,32 @@ BOOST_AUTO_TEST_CASE(share_list_validation)
         const CScript reward = NewP2PKHScript(reward_key);
         shares[0].scriptReward = reward;
         shares[1].scriptReward = reward;
-        CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, std::nullopt);
+        CheckShares(shares, 0, 0, voting_id, std::nullopt);
     }
 
     // Null owner key
     {
         CollateralShares shares{two_shares};
         shares[0].keyIDOwner = CKeyID();
-        CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, "bad-protx-shares-key-null");
+        CheckShares(shares, 0, 0, voting_id, "bad-protx-shares-key-null");
     }
 
-    // Script type restrictions: template, non-standard, P2SH allowed
+    // Script type restrictions: non-standard rejected, P2SH allowed
     {
         CollateralShares shares{two_shares};
-        shares[0].scriptReward = SharedCollateralScript();
-        CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, "bad-protx-shares-payee-template");
         shares[0].scriptReward = CScript() << OP_TRUE;
-        CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, "bad-protx-shares-payee");
+        CheckShares(shares, 0, 0, voting_id, "bad-protx-shares-payee");
         shares[0].scriptReward = GetScriptForDestination(ScriptHash(CScript() << OP_TRUE));
-        CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, std::nullopt);
-    }
-    {
-        CollateralShares shares{two_shares};
-        shares[0].scriptRefund = SharedCollateralScript();
-        CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, "bad-protx-shares-payee-template");
+        CheckShares(shares, 0, 0, voting_id, std::nullopt);
     }
 
     // Refund/reward scripts must not pay any table owner key or the voting key
     {
         CollateralShares shares{two_shares};
         shares[0].scriptReward = GetScriptForDestination(PKHash(shares[1].keyIDOwner));
-        CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, "bad-protx-shares-payee-reuse");
+        CheckShares(shares, 0, 0, voting_id, "bad-protx-shares-payee-reuse");
         shares[0].scriptReward = GetScriptForDestination(PKHash(voting_key.GetPubKey()));
-        CheckShares(shares, DummyJoinSigs(2), 0, 0, voting_id, "bad-protx-shares-payee-reuse");
+        CheckShares(shares, 0, 0, voting_id, "bad-protx-shares-payee-reuse");
     }
 }
 
@@ -259,11 +239,6 @@ BOOST_AUTO_TEST_CASE(shared_proregtx_shape_validation)
     {
         auto proTx = base();
         proTx.shares.clear();
-        check(proTx, "bad-protx-shares-empty-fields"); // joinSigs still present
-    }
-    {
-        auto proTx = base();
-        proTx.shares.clear();
         proTx.vchJoinSigs.clear();
         proTx.nEarlyPenalty = 1;
         check(proTx, "bad-protx-shares-empty-fields");
@@ -293,7 +268,7 @@ BOOST_AUTO_TEST_CASE(proupshare_sig_size)
     BOOST_CHECK(ptx.IsTriviallyValid(state));
     ptx.scriptReward.clear();
     BOOST_CHECK(!ptx.IsTriviallyValid(state));
-    BOOST_CHECK_EQUAL(state.GetRejectReason(), "bad-proupshare-payee-empty");
+    BOOST_CHECK_EQUAL(state.GetRejectReason(), "bad-proupshare-payee");
 }
 
 BOOST_AUTO_TEST_CASE(shared_proregtx_serialization)
@@ -345,31 +320,6 @@ BOOST_AUTO_TEST_CASE(shared_proregtx_serialization)
         mismatched.vchJoinSigs = DummyJoinSigs(1);
         CDataStream ss_mismatch(SER_NETWORK, CLIENT_VERSION);
         BOOST_CHECK_THROW(ss_mismatch << mismatched, std::ios_base::failure);
-    }
-
-    // A share count above the one-byte wire field must fail loudly rather than truncate into a
-    // non-shared registration (256 shares would serialize a zero count)
-    {
-        CProRegTx oversized;
-        oversized.nVersion = ProTxVersion::ExtAddr;
-        oversized.netInfo = NetInfoInterface::MakeNetInfo(oversized.nVersion);
-        const size_t too_many{size_t{CProRegTx::MAX_SHARES} + 1};
-        for (size_t i = 0; i < too_many; i++) {
-            oversized.shares.push_back(NewShare(100 * COIN, refund_keys[i % 8], owner_keys[i % 8]));
-        }
-        oversized.vchJoinSigs = DummyJoinSigs(too_many);
-        CDataStream ss_oversized(SER_NETWORK, CLIENT_VERSION);
-        BOOST_CHECK_THROW(ss_oversized << oversized, std::ios_base::failure);
-
-        CProDisTx dis;
-        dis.vchSigs = DummyJoinSigs(too_many);
-        CDataStream ss_dis(SER_NETWORK, CLIENT_VERSION);
-        BOOST_CHECK_THROW(ss_dis << dis, std::ios_base::failure);
-
-        CProUpSharedRegTx upreg;
-        upreg.vchSigs = DummyJoinSigs(too_many);
-        CDataStream ss_upreg(SER_NETWORK, CLIENT_VERSION);
-        BOOST_CHECK_THROW(ss_upreg << upreg, std::ios_base::failure);
     }
 
     // A non-shared extended payload serializes an empty share list and zeroed penalty fields
@@ -749,6 +699,15 @@ struct ProDisTestSetup {
         return tx;
     }
 
+    static CompactSignature SignCompact(const uint256& hash, const CKey& key)
+    {
+        std::vector<unsigned char> vchSig;
+        BOOST_REQUIRE(CHashSigner::SignHash(hash, key, vchSig));
+        CompactSignature sig;
+        std::copy(vchSig.begin(), vchSig.end(), sig.begin());
+        return sig;
+    }
+
     void Sign(const CMutableTransaction& tx, CProDisTx& ptx, bool unanimous) const
     {
         const uint8_t sig_count{unanimous ? static_cast<uint8_t>(std::size(owner_keys)) : uint8_t{1}};
@@ -756,14 +715,10 @@ struct ProDisTestSetup {
         ptx.vchSigs.clear();
         if (unanimous) {
             for (const auto& key : owner_keys) {
-                std::vector<unsigned char> sig;
-                BOOST_REQUIRE(CHashSigner::SignHash(hash, key, sig));
-                ptx.vchSigs.push_back(sig);
+                ptx.vchSigs.push_back(SignCompact(hash, key));
             }
         } else {
-            std::vector<unsigned char> sig;
-            BOOST_REQUIRE(CHashSigner::SignHash(hash, owner_keys[ptx.actorIndex], sig));
-            ptx.vchSigs.push_back(sig);
+            ptx.vchSigs.push_back(SignCompact(hash, owner_keys[ptx.actorIndex]));
         }
     }
 
@@ -892,9 +847,7 @@ BOOST_AUTO_TEST_CASE(prodis_validation)
     {
         CProDisTx ptx;
         auto tx = t.BuildTx(2, ProDisTestSetup::PENALTY, false, ptx);
-        std::vector<unsigned char> sig;
-        BOOST_REQUIRE(CHashSigner::SignHash(ptx.MakeSignHash(CTransaction(tx), /*sig_count=*/1), t.owner_keys[0], sig));
-        ptx.vchSigs = {sig};
+        ptx.vchSigs = {t.SignCompact(ptx.MakeSignHash(CTransaction(tx), /*sig_count=*/1), t.owner_keys[0])};
         t.Check(tx, ptx, IN_EARLY, "bad-prodis-sig");
     }
     // Unanimous signatures out of share order

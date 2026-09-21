@@ -55,7 +55,8 @@ bool CHashSigner::VerifyHash(const uint256& hash, const CPubKey& pubkey, const s
     return VerifyHash(hash, pubkey.GetID(), vchSig, strErrorRet);
 }
 
-bool CHashSigner::VerifyHashCanonical(const uint256& hash, const CKeyID& keyID, const std::vector<unsigned char>& vchSig, std::string& strErrorRet)
+bool CHashSigner::VerifyHashCanonical(const uint256& hash, const CKeyID& keyID, Span<const unsigned char> vchSig,
+                                      std::string& strErrorRet)
 {
     if (vchSig.size() != CPubKey::COMPACT_SIGNATURE_SIZE) {
         strErrorRet = "Signature is not 65 bytes.";
@@ -84,7 +85,7 @@ bool CHashSigner::VerifyHashCanonical(const uint256& hash, const CKeyID& keyID, 
         strErrorRet = "Signature is not low-S.";
         return false;
     }
-    return VerifyHash(hash, keyID, vchSig, strErrorRet);
+    return VerifyHash(hash, keyID, std::vector<unsigned char>(vchSig.begin(), vchSig.end()), strErrorRet);
 }
 
 bool CHashSigner::VerifyHash(const uint256& hash, const CKeyID& keyID, const std::vector<unsigned char>& vchSig, std::string& strErrorRet)
