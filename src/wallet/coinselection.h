@@ -9,7 +9,9 @@
 #include <policy/feerate.h>
 #include <primitives/transaction.h>
 #include <random.h>
+#include <util/check.h>
 #include <util/result.h>
+#include <util/system.h>
 
 #include <cstdint>
 #include <optional>
@@ -125,6 +127,8 @@ public:
         assert(effective_value.has_value());
         return effective_value.value();
     }
+
+    bool HasEffectiveValue() const { return effective_value.has_value(); }
 };
 
 /** Parameters for one iteration of Coin Selection. */
@@ -198,6 +202,7 @@ struct CoinEligibilityFilter
     /** When avoid_reuse=true and there are full groups (OUTPUT_GROUP_MAX_ENTRIES), whether or not to use any partial groups.*/
     const bool m_include_partial_groups{false};
 
+    CoinEligibilityFilter() = delete;
     CoinEligibilityFilter(int conf_mine, int conf_theirs, uint64_t max_ancestors) : conf_mine(conf_mine), conf_theirs(conf_theirs), max_ancestors(max_ancestors), max_descendants(max_ancestors) {}
     CoinEligibilityFilter(int conf_mine, int conf_theirs, uint64_t max_ancestors, uint64_t max_descendants) : conf_mine(conf_mine), conf_theirs(conf_theirs), max_ancestors(max_ancestors), max_descendants(max_descendants) {}
     CoinEligibilityFilter(int conf_mine, int conf_theirs, uint64_t max_ancestors, uint64_t max_descendants, bool include_partial) : conf_mine(conf_mine), conf_theirs(conf_theirs), max_ancestors(max_ancestors), max_descendants(max_descendants), m_include_partial_groups(include_partial) {}
@@ -236,6 +241,8 @@ struct OutputGroup
     /** Indicate that we are subtracting the fee from outputs.
      * When true, the value that is used for coin selection is the UTXO's real value rather than effective value */
     bool m_subtract_fee_outputs{false};
+    /** Total weight of the UTXOs in this group. */
+    int m_weight{0};
 
     OutputGroup() {}
     OutputGroup(const CoinSelectionParams& params) :
@@ -308,6 +315,19 @@ private:
     bool m_use_effective{false};
     /** The computed waste */
     std::optional<CAmount> m_waste;
+    /** Total weight of the selected inputs */
+    int m_weight{0};
+
+    template<typename T>
+    void InsertInputs(const T& inputs)
+    {
+        // Store sum of combined input sets to check that the results have no shared UTXOs
+        const size_t expected_count = m_selected_inputs.size() + inputs.size();
+        util::insert(m_selected_inputs, inputs);
+        if (m_selected_inputs.size() != expected_count) {
+            throw std::runtime_error(STR_INTERNAL_BUG("Shared UTXOs among selection results"));
+        }
+    }
 
 public:
     explicit SelectionResult(const CAmount target, SelectionAlgorithm algo)
@@ -329,6 +349,12 @@ public:
     void ComputeAndSetWaste(const CAmount min_viable_change, const CAmount change_cost, const CAmount change_fee);
     [[nodiscard]] CAmount GetWaste() const;
 
+    /**
+     * Combines the @param[in] other selection result into 'this' selection result.
+     *
+     * Important note:
+     * There must be no shared 'COutput' among the two selection results being combined.
+     */
     void Merge(const SelectionResult& other);
 
     /** Get m_selected_inputs */
@@ -360,6 +386,8 @@ public:
     CAmount GetTarget() const { return m_target; }
 
     SelectionAlgorithm GetAlgo() const { return m_algo; }
+
+    int GetWeight() const { return m_weight; }
 };
 
 util::Result<SelectionResult> SelectCoinsBnB(std::vector<OutputGroup>& utxo_pool, const CAmount& selection_target, const CAmount& cost_of_change,

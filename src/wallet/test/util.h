@@ -36,7 +36,7 @@ std::unique_ptr<WalletDatabase> DuplicateMockDatabase(WalletDatabase& database, 
 /** Returns a new encoded destination from the wallet */
 std::string getnewaddress(wallet::CWallet& w);
 /** Returns a new destination, of an specific type, from the wallet */
-CTxDestination getNewDestination(wallet::CWallet& w);
+CTxDestination getNewDestination(wallet::CWallet& w, OutputType output_type);
 
 } // namespace wallet
 

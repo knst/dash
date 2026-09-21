@@ -4,6 +4,8 @@
 
 #include <wallet/coinselection.h>
 
+#include <consensus/amount.h>
+#include <consensus/consensus.h>
 #include <policy/feerate.h>
 #include <util/check.h>
 #include <util/system.h>
@@ -497,6 +499,10 @@ void OutputGroup::Insert(const COutput& output, size_t ancestors, size_t descend
     // descendants is the count as seen from the top ancestor, not the descendants as seen from the
     // coin itself; thus, this value is counted as the max, not the sum
     m_descendants = std::max(m_descendants, descendants);
+
+    if (output.input_bytes > 0) {
+        m_weight += output.input_bytes;
+    }
 }
 
 bool OutputGroup::EligibleForSpending(const CoinEligibilityFilter& eligibility_filter, bool isISLocked) const
@@ -579,28 +585,41 @@ void SelectionResult::Clear()
 {
     m_selected_inputs.clear();
     m_waste.reset();
+    m_weight = 0;
 }
 
 void SelectionResult::AddInput(const OutputGroup& group)
 {
-    util::insert(m_selected_inputs, group.m_outputs);
+    // As it can fail, combine inputs first
+    InsertInputs(group.m_outputs);
     m_use_effective = !group.m_subtract_fee_outputs;
+
+    m_weight += group.m_weight;
 }
 
 void SelectionResult::AddInputs(const std::set<COutput>& inputs, bool subtract_fee_outputs)
 {
-    util::insert(m_selected_inputs, inputs);
+    // As it can fail, combine inputs first
+    InsertInputs(inputs);
     m_use_effective = !subtract_fee_outputs;
+
+    m_weight += std::accumulate(inputs.cbegin(), inputs.cend(), 0, [](int sum, const auto& coin) {
+        return sum + std::max(coin.input_bytes, 0);
+    });
 }
 
 void SelectionResult::Merge(const SelectionResult& other)
 {
+    // As it can fail, combine inputs first
+    InsertInputs(other.m_selected_inputs);
+
     m_target += other.m_target;
     m_use_effective |= other.m_use_effective;
     if (m_algo == SelectionAlgorithm::MANUAL) {
         m_algo = other.m_algo;
     }
-    util::insert(m_selected_inputs, other.m_selected_inputs);
+
+    m_weight += other.m_weight;
 }
 
 const std::set<COutput>& SelectionResult::GetInputSet() const

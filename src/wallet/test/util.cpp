@@ -13,6 +13,7 @@
 #include <wallet/wallet.h>
 #include <wallet/walletdb.h>
 
+#include <cassert>
 #include <memory>
 
 namespace wallet {
@@ -82,11 +83,13 @@ std::unique_ptr<WalletDatabase> DuplicateMockDatabase(WalletDatabase& database, 
 
 std::string getnewaddress(CWallet& w)
 {
-    return EncodeDestination(getNewDestination(w));
+    constexpr auto output_type = OutputType::LEGACY;
+    return EncodeDestination(getNewDestination(w, output_type));
 }
 
-CTxDestination getNewDestination(CWallet& w)
+CTxDestination getNewDestination(CWallet& w, OutputType output_type)
 {
+    assert(output_type == OutputType::LEGACY);
     return *Assert(w.GetNewDestination(""));
 }
 

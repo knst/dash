@@ -4,13 +4,18 @@
 
 #include <wallet/wallet.h>
 
+#include <algorithm>
 #include <future>
 #include <iostream>
 #include <memory>
 #include <stdint.h>
 #include <vector>
 
+#include <bls/bls.h>
 #include <coinjoin/client.h>
+#include <coinjoin/coinjoin.h>
+#include <evo/deterministicmns.h>
+#include <evo/dmn_types.h>
 #include <interfaces/chain.h>
 #include <interfaces/coinjoin.h>
 #include <key_io.h>
@@ -20,10 +25,13 @@
 #include <rpc/rawtransaction_util.h>
 #include <rpc/server.h>
 #include <test/util/logging.h>
+#include <test/util/masternode.h>
 #include <test/util/setup_common.h>
+#include <txmempool.h>
 #include <util/translation.h>
 #include <validation.h>
 #include <wallet/coincontrol.h>
+#include <wallet/coinjoin.h>
 #include <wallet/context.h>
 #include <wallet/receive.h>
 #include <wallet/spend.h>
@@ -722,7 +730,7 @@ BOOST_FIXTURE_TEST_CASE(ListCoinsTest, ListCoinsTestingSetup)
     BOOST_CHECK_EQUAL(list.begin()->second.size(), 1U);
 
     // Check initial balance from one mature coinbase transaction.
-    BOOST_CHECK_EQUAL(500 * COIN, WITH_LOCK(wallet->cs_wallet, return AvailableCoins(*wallet).total_amount));
+    BOOST_CHECK_EQUAL(500 * COIN, WITH_LOCK(wallet->cs_wallet, return AvailableCoins(*wallet).GetTotalAmount()));
 
     // Add a transaction creating a change address, and confirm ListCoins still
     // returns the coin associated with the change address underneath the
@@ -761,6 +769,46 @@ BOOST_FIXTURE_TEST_CASE(ListCoinsTest, ListCoinsTestingSetup)
     BOOST_CHECK_EQUAL(list.size(), 1U);
     BOOST_CHECK_EQUAL(std::get<PKHash>(list.begin()->first).ToString(), coinbaseAddress);
     BOOST_CHECK_EQUAL(list.begin()->second.size(), 2U);
+}
+
+void TestCoinsResult(ListCoinsTestingSetup& context, OutputType out_type, CAmount amount,
+                     std::map<OutputType, size_t>& expected_coins_sizes)
+{
+    LOCK(context.wallet->cs_wallet);
+    util::Result<CTxDestination> dest = Assert(context.wallet->GetNewDestination(""));
+    CWalletTx& wtx = context.AddTx(CRecipient{{GetScriptForDestination(*dest)}, amount, /*fSubtractFeeFromAmount=*/true});
+    CoinFilterParams filter;
+    filter.skip_locked = false;
+    CoinsResult available_coins = AvailableCoins(*context.wallet, nullptr, std::nullopt, filter);
+    // Lock outputs so they are not spent in follow-up transactions
+    for (uint32_t i = 0; i < wtx.tx->vout.size(); i++) context.wallet->LockCoin({wtx.GetHash(), i});
+    for (const auto& [type, size] : expected_coins_sizes) BOOST_CHECK_EQUAL(size, available_coins.coins[type].size());
+}
+
+BOOST_FIXTURE_TEST_CASE(BasicOutputTypesTest, ListCoinsTestingSetup)
+{
+    std::map<OutputType, size_t> expected_coins_sizes;
+    for (const auto& out_type : OUTPUT_TYPES) { expected_coins_sizes[out_type] = 0U; }
+
+    // Verify our wallet has one usable coinbase UTXO before starting
+    // This UTXO is a P2PK, so it should show up in the Other bucket
+    expected_coins_sizes[OutputType::UNKNOWN] = 1U;
+    CoinsResult available_coins = WITH_LOCK(wallet->cs_wallet, return AvailableCoins(*wallet));
+    BOOST_CHECK_EQUAL(available_coins.Size(), expected_coins_sizes[OutputType::UNKNOWN]);
+    BOOST_CHECK_EQUAL(available_coins.coins[OutputType::UNKNOWN].size(), expected_coins_sizes[OutputType::UNKNOWN]);
+
+    // We will create a self transfer for each of the OutputTypes and
+    // verify it is put in the correct bucket after running GetAvailablecoins
+    //
+    // For each OutputType, We expect 2 UTXOs in our wallet following the self transfer:
+    //   1. One UTXO as the recipient
+    //   2. One UTXO from the change, due to payment address matching logic
+
+    for (const auto& out_type : OUTPUT_TYPES) {
+        if (out_type == OutputType::UNKNOWN) continue;
+        expected_coins_sizes[out_type] = 2U;
+        TestCoinsResult(*this, out_type, 1 * COIN, expected_coins_sizes);
+    }
 }
 
 BOOST_FIXTURE_TEST_CASE(wallet_disableprivkeys, TestChain100Setup)
@@ -1560,7 +1608,7 @@ BOOST_FIXTURE_TEST_CASE(CreateTransactionTest, CreateTransactionTestSetup)
 BOOST_FIXTURE_TEST_CASE(select_coins_grouped_by_addresses, ListCoinsTestingSetup)
 {
     // Check initial balance from one mature coinbase transaction.
-    BOOST_CHECK_EQUAL(WITH_LOCK(wallet->cs_wallet, return AvailableCoins(*wallet).total_amount), 500 * COIN);
+    BOOST_CHECK_EQUAL(WITH_LOCK(wallet->cs_wallet, return AvailableCoins(*wallet).GetTotalAmount()), 500 * COIN);
 
     {
         std::vector<CompactTallyItem> vecTally = wallet->SelectCoinsGroupedByAddresses(/*fSkipDenominated=*/false,
@@ -1583,7 +1631,7 @@ BOOST_FIXTURE_TEST_CASE(select_coins_grouped_by_addresses, ListCoinsTestingSetup
     BOOST_CHECK(ret2);
     const auto& txr2 = ret2->tx;
     wallet->CommitTransaction(txr1, {}, {});
-    BOOST_CHECK_EQUAL(WITH_LOCK(wallet->cs_wallet, return AvailableCoins(*wallet).total_amount), 0);
+    BOOST_CHECK_EQUAL(WITH_LOCK(wallet->cs_wallet, return AvailableCoins(*wallet).GetTotalAmount()), 0);
     CreateAndProcessBlock({CMutableTransaction(*txr2)}, GetScriptForRawPubKey({}));
     struct ChainInfo {
         const CBlockIndex* tip;
@@ -1620,9 +1668,280 @@ BOOST_FIXTURE_TEST_CASE(select_coins_grouped_by_addresses, ListCoinsTestingSetup
     BOOST_CHECK_EQUAL(vecTally.at(0).outpoints.size(), 1);
     BOOST_CHECK_EQUAL(vecTally.at(1).outpoints.size(), 1);
     BOOST_CHECK_EQUAL(vecTally.at(0).nAmount + vecTally.at(1).nAmount, (500 + 499) * COIN);
-    BOOST_CHECK_EQUAL(WITH_LOCK(wallet->cs_wallet, return AvailableCoins(*wallet).total_amount), (500 + 499) * COIN);
+    BOOST_CHECK_EQUAL(WITH_LOCK(wallet->cs_wallet, return AvailableCoins(*wallet).GetTotalAmount()), (500 + 499) * COIN);
 }
 
+BOOST_FIXTURE_TEST_CASE(UnconfirmableOutputsAreNotWalletFunds, ListCoinsTestingSetup)
+{
+    LOCK(wallet->cs_wallet);
+
+    const auto dest{wallet->GetNewDestination("")};
+    BOOST_ASSERT(dest);
+
+    // Use a real CoinJoin denomination so the denominated-credit paths apply.
+    const CAmount denom{CoinJoin::GetSmallestDenomination()};
+    CMutableTransaction mtx;
+    mtx.vin.emplace_back(COutPoint{uint256::ONE, 0});
+    mtx.vout.emplace_back(denom, GetScriptForDestination(*dest));
+    const CTransactionRef tx{MakeTransactionRef(mtx)};
+
+    // A transaction the wallet knows about but that never reached the mempool cannot
+    // confirm as it stands, so its outputs are not funds the wallet can spend or mix.
+    BOOST_CHECK(wallet->AddToWallet(tx, TxStateInactive{}));
+    BOOST_CHECK_EQUAL(wallet->CountInputsWithAmount(denom), 0);
+
+    // The aggregate CoinJoin balances have to agree: an output that is not wallet funds
+    // is not denominated or anonymized funds either.
+    const CWalletTx& wtx{wallet->mapWallet.at(tx->GetHash())};
+    BOOST_CHECK_EQUAL(CachedTxGetAvailableCoinJoinCredits(*wallet, wtx).m_denominated, 0);
+
+    // Once it is in the mempool they count.
+    BOOST_CHECK(wallet->AddToWallet(tx, TxStateInMempool{}));
+    BOOST_CHECK_EQUAL(wallet->CountInputsWithAmount(denom), 1);
+    BOOST_CHECK_EQUAL(CachedTxGetAvailableCoinJoinCredits(*wallet, wtx).m_denominated, denom);
+}
+
+BOOST_FIXTURE_TEST_CASE(MempoolRemovalInvalidatesAnonymizableTally, ListCoinsTestingSetup)
+{
+    LOCK(wallet->cs_wallet);
+
+    const auto dest{wallet->GetNewDestination("")};
+    BOOST_ASSERT(dest);
+
+    // A wallet transaction in the mempool is trusted at depth zero, so its outputs count
+    // towards the anonymizable tally and that tally is cacheable.
+    auto created{CreateTransaction(*wallet, {CRecipient{GetScriptForDestination(*dest), 1 * COIN,
+                                                        /*fSubtractFeeFromAmount=*/false}},
+                                   RANDOM_CHANGE_POSITION, CCoinControl{})};
+    BOOST_REQUIRE(created);
+    const CTransactionRef tx{created->tx};
+    BOOST_CHECK(wallet->AddToWallet(tx, TxStateInMempool{}));
+
+    const auto tallied = [&](const CTxDestination& target) {
+        for (const auto& item : wallet->SelectCoinsGroupedByAddresses()) {
+            if (item.txdest == target) return true;
+        }
+        return false;
+    };
+
+    // Prime the cache, so that the check below cannot pass by recomputing the tally.
+    BOOST_REQUIRE(tallied(*dest));
+
+    // Leaving the mempool makes the transaction unconfirmable as it stands; the cached
+    // tally must not keep handing out its outputs.
+    wallet->transactionRemovedFromMempool(tx, MemPoolRemovalReason::EXPIRY);
+    BOOST_CHECK(!tallied(*dest));
+}
+
+BOOST_FIXTURE_TEST_CASE(AbandonedSpendReleasesItsInputs, ListCoinsTestingSetup)
+{
+    LOCK(wallet->cs_wallet);
+
+    CoinsResult before{AvailableCoins(*wallet)};
+    BOOST_CHECK(before.Size() > 0);
+
+    CCoinControl coin_control;
+    auto created{CreateTransaction(*wallet, {CRecipient{{GetScriptForRawPubKey(coinbaseKey.GetPubKey())}, 1 * COIN,
+                                                        /*fSubtractFeeFromAmount=*/false}},
+                                   RANDOM_CHANGE_POSITION, coin_control)};
+    BOOST_CHECK(created);
+    const CTransactionRef tx{created->tx};
+    BOOST_REQUIRE(!tx->vin.empty());
+    const CTxIn& input{tx->vin.front()};
+    const CAmount input_amount{wallet->mapWallet.at(input.prevout.hash).tx->vout.at(input.prevout.n).nValue};
+    const int inputs_before{wallet->CountInputsWithAmount(input_amount)};
+    BOOST_CHECK(inputs_before > 0);
+
+    // The transaction is only in the wallet: never broadcast, never mined.
+    BOOST_CHECK(wallet->AddToWallet(tx, TxStateInactive{}));
+    BOOST_CHECK(AvailableCoins(*wallet).Size() < before.Size());
+    BOOST_CHECK(wallet->CountInputsWithAmount(input_amount) < inputs_before);
+
+    // Abandoning it makes the coins it spent available again, without a reload.
+    BOOST_CHECK(wallet->AbandonTransaction(tx->GetHash()));
+    CoinsResult after{AvailableCoins(*wallet)};
+    BOOST_CHECK_EQUAL(after.Size(), before.Size());
+    BOOST_CHECK_EQUAL(after.GetTotalAmount(), before.GetTotalAmount());
+    BOOST_CHECK_EQUAL(wallet->CountInputsWithAmount(input_amount), inputs_before);
+
+    // The abandoned transaction re-entering the mempool spends the inputs
+    // again: the restored outpoints must leave the wallet UTXO set, or
+    // functions that trust it directly (CountInputsWithAmount and the
+    // CoinJoin rounds accounting) would count spent coins.
+    BOOST_CHECK(wallet->AddToWallet(tx, TxStateInMempool{}));
+    BOOST_CHECK(wallet->IsSpent(input.prevout));
+    BOOST_CHECK(wallet->CountInputsWithAmount(input_amount) < inputs_before);
+}
+
+BOOST_FIXTURE_TEST_CASE(ConflictedDescendantReactivationReconcilesInputs, ListCoinsTestingSetup)
+{
+    const CScript wallet_script{GetScriptForRawPubKey(coinbaseKey.GetPubKey())};
+    auto created{CreateTransaction(*wallet, {CRecipient{wallet_script, 1 * COIN, /*fSubtractFeeFromAmount=*/false}},
+                                   RANDOM_CHANGE_POSITION, CCoinControl{})};
+    BOOST_REQUIRE(created);
+    const CTransactionRef parent{created->tx};
+
+    CKey external_key;
+    external_key.MakeNewKey(true);
+    auto conflict_created{CreateTransaction(*wallet, {CRecipient{GetScriptForRawPubKey(external_key.GetPubKey()), COIN / 4,
+                                                                 /*fSubtractFeeFromAmount=*/false}},
+                                            RANDOM_CHANGE_POSITION, CCoinControl{})};
+    BOOST_REQUIRE(conflict_created);
+    const CTransactionRef conflict{conflict_created->tx};
+    BOOST_REQUIRE(parent->vin.front().prevout == conflict->vin.front().prevout);
+
+    BOOST_REQUIRE(wallet->AddToWallet(parent, TxStateInactive{}));
+
+    const auto parent_output_it{std::ranges::find_if(parent->vout, [&](const CTxOut& output) {
+        return output.nValue == 1 * COIN && output.scriptPubKey == wallet_script;
+    })};
+    BOOST_REQUIRE(parent_output_it != parent->vout.end());
+    const COutPoint parent_outpoint{parent->GetHash(), static_cast<uint32_t>(parent_output_it - parent->vout.begin())};
+
+    CMutableTransaction child_mtx;
+    child_mtx.vin.emplace_back(parent_outpoint);
+    child_mtx.vout.emplace_back(COIN / 2, wallet_script);
+    const CTransactionRef child{MakeTransactionRef(child_mtx)};
+    BOOST_REQUIRE(wallet->AddToWallet(child, TxStateInactive{}));
+    {
+        LOCK(wallet->cs_wallet);
+        BOOST_CHECK(wallet->IsSpent(parent_outpoint));
+    }
+    BOOST_CHECK_EQUAL(wallet->CountInputsWithAmount(1 * COIN), 0);
+
+    // A block transaction conflicts the parent and recursively conflicts the
+    // child. The child's input is temporarily unspent and returns to the UTXO
+    // set, although CountInputsWithAmount() ignores it while its parent is
+    // conflicted.
+    const CBlock block{CreateAndProcessBlock({CMutableTransaction{*conflict}}, GetScriptForRawPubKey({}))};
+    const uint256 block_hash{block.GetHash()};
+    const CBlockIndex* tip{WITH_LOCK(m_node.chainman->GetMutex(), return m_node.chainman->ActiveChain().Tip())};
+    BOOST_REQUIRE_EQUAL(tip->GetBlockHash(), block_hash);
+
+    interfaces::BlockInfo block_info{block_hash};
+    block_info.prev_hash = &block.hashPrevBlock;
+    block_info.height = tip->nHeight;
+    block_info.data = &block;
+    wallet->blockConnected(block_info);
+    {
+        LOCK(wallet->cs_wallet);
+        BOOST_REQUIRE(wallet->mapWallet.at(child->GetHash()).isConflicted());
+        BOOST_CHECK(!wallet->IsSpent(parent_outpoint));
+    }
+
+    // Disconnecting the conflicting block makes the parent and descendant
+    // inactive again. The child therefore spends parent_outpoint again, and
+    // the public CoinJoin counter must not observe a stale UTXO-set entry.
+    wallet->blockDisconnected(block_info);
+    {
+        LOCK(wallet->cs_wallet);
+        BOOST_CHECK(!wallet->mapWallet.at(child->GetHash()).isConflicted());
+        BOOST_CHECK(wallet->IsSpent(parent_outpoint));
+    }
+    BOOST_CHECK_EQUAL(wallet->CountInputsWithAmount(1 * COIN), 0);
+}
+
+BOOST_FIXTURE_TEST_CASE(AbandonedSpendRestoresDustLock, ListCoinsTestingSetup)
+{
+    LOCK(wallet->cs_wallet);
+    wallet->m_dust_protection_threshold = 1 * COIN;
+
+    const auto dest{wallet->GetNewDestination("")};
+    BOOST_ASSERT(dest);
+
+    // An external transaction (no input is ours) pays us a dust-protection
+    // target; AddToWallet() locks the output on insertion.
+    CMutableTransaction dust_mtx;
+    dust_mtx.vin.emplace_back(COutPoint{uint256::ONE, 0});
+    dust_mtx.vout.emplace_back(COIN / 100, GetScriptForDestination(*dest));
+    const CTransactionRef dust_tx{MakeTransactionRef(dust_mtx)};
+    const COutPoint dust_outpoint{dust_tx->GetHash(), 0};
+    BOOST_CHECK(wallet->AddToWallet(dust_tx, TxStateInMempool{}));
+    BOOST_CHECK(wallet->IsLockedCoin(dust_outpoint));
+    BOOST_CHECK_EQUAL(wallet->CountInputsWithAmount(COIN / 100), 1);
+
+    // A wallet transaction spending it unlocks it and removes it from the
+    // wallet UTXO set.
+    CMutableTransaction spend_mtx;
+    spend_mtx.vin.emplace_back(dust_outpoint);
+    spend_mtx.vout.emplace_back(COIN / 200, GetScriptForDestination(*dest));
+    const CTransactionRef spend_tx{MakeTransactionRef(spend_mtx)};
+    BOOST_CHECK(wallet->AddToWallet(spend_tx, TxStateInactive{}));
+    BOOST_CHECK(!wallet->IsLockedCoin(dust_outpoint));
+    BOOST_CHECK_EQUAL(wallet->CountInputsWithAmount(COIN / 100), 0);
+
+    // Abandoning the spend restores the outpoint together with the automatic
+    // dust lock a wallet reload would apply.
+    BOOST_CHECK(wallet->AbandonTransaction(spend_tx->GetHash()));
+    BOOST_CHECK_EQUAL(wallet->CountInputsWithAmount(COIN / 100), 1);
+    BOOST_CHECK(wallet->IsLockedCoin(dust_outpoint));
+
+    BOOST_CHECK(wallet->AddToWallet(spend_tx, TxStateInMempool{}));
+    BOOST_CHECK_EQUAL(wallet->CountInputsWithAmount(COIN / 100), 0);
+    BOOST_CHECK(!wallet->IsLockedCoin(dust_outpoint));
+}
+
+BOOST_FIXTURE_TEST_CASE(AbandonedSpendRestoresActiveMasternodeCollateralLock, ListCoinsTestingSetup)
+{
+    const CScript wallet_script{GetScriptForDestination(PKHash(coinbaseKey.GetPubKey()))};
+    while (WITH_LOCK(m_node.chainman->GetMutex(), return m_node.chainman->ActiveChain().Height()) <
+           Params().GetConsensus().DIP0003Height) {
+        CreateAndProcessBlock({}, wallet_script);
+    }
+
+    CKey owner_key;
+    CBLSSecretKey operator_key;
+    auto utxos{BuildSimpleUtxoMap(m_coinbase_txns)};
+    CMutableTransaction pro_reg_mtx{CreateProRegTx(*m_node.chainman, utxos, /*port=*/1, wallet_script,
+                                                   coinbaseKey, owner_key, operator_key)};
+    const CTransactionRef pro_reg_tx{MakeTransactionRef(pro_reg_mtx)};
+    const CBlock block{CreateAndProcessBlock({pro_reg_mtx}, wallet_script)};
+    const CBlockIndex* tip{WITH_LOCK(m_node.chainman->GetMutex(), return m_node.chainman->ActiveChain().Tip())};
+    {
+        LOCK(::cs_main);
+        m_node.dmnman->UpdatedBlockTip(tip);
+        BOOST_REQUIRE(m_node.dmnman->GetListAtChainTip().HasMN(pro_reg_tx->GetHash()));
+    }
+
+    const uint256 block_hash{block.GetHash()};
+    interfaces::BlockInfo block_info{block_hash};
+    block_info.prev_hash = &block.hashPrevBlock;
+    block_info.height = tip->nHeight;
+    block_info.data = &block;
+    wallet->blockConnected(block_info);
+
+    const COutPoint collateral{pro_reg_tx->GetHash(), 0};
+    {
+        LOCK(wallet->cs_wallet);
+        BOOST_CHECK(wallet->IsLockedCoin(collateral));
+    }
+    BOOST_CHECK_EQUAL(wallet->CountInputsWithAmount(dmn_types::Regular.collat_amount), 1);
+
+    CMutableTransaction spend_mtx;
+    spend_mtx.vin.emplace_back(collateral);
+    spend_mtx.vout.emplace_back(1 * COIN, wallet_script);
+    const CTransactionRef spend_tx{MakeTransactionRef(spend_mtx)};
+    BOOST_REQUIRE(wallet->AddToWallet(spend_tx, TxStateInactive{}));
+    {
+        LOCK(wallet->cs_wallet);
+        BOOST_CHECK(!wallet->IsLockedCoin(collateral));
+    }
+    BOOST_CHECK_EQUAL(wallet->CountInputsWithAmount(dmn_types::Regular.collat_amount), 0);
+
+    BOOST_REQUIRE(wallet->AbandonTransaction(spend_tx->GetHash()));
+    BOOST_CHECK_EQUAL(wallet->CountInputsWithAmount(dmn_types::Regular.collat_amount), 1);
+    {
+        LOCK(wallet->cs_wallet);
+        BOOST_CHECK(wallet->IsLockedCoin(collateral));
+    }
+
+    BOOST_CHECK(wallet->AddToWallet(spend_tx, TxStateInMempool{}));
+    BOOST_CHECK_EQUAL(wallet->CountInputsWithAmount(dmn_types::Regular.collat_amount), 0);
+    {
+        LOCK(wallet->cs_wallet);
+        BOOST_CHECK(!wallet->IsLockedCoin(collateral));
+    }
+}
 
 
 /**

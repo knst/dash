@@ -24,6 +24,8 @@ from test_framework.util import (
 )
 from test_framework.wallet_util import bytes_to_wif
 
+ERR_NOT_ENOUGH_PRESET_INPUTS = "The preselected coins total amount does not cover the transaction target. " \
+                               "Please allow other inputs to be automatically selected or include more coins manually"
 
 def get_unspent(listunspent, amount):
     for utx in listunspent:
@@ -104,6 +106,7 @@ class RawTransactionsTest(BitcoinTestFramework):
         self.generate(self.nodes[0], 121)
 
         self.test_add_inputs_default_value()
+        self.test_preset_inputs_selection()
         self.test_change_position()
         self.test_simple()
         self.test_simple_two_coins()
@@ -136,6 +139,7 @@ class RawTransactionsTest(BitcoinTestFramework):
         self.test_external_inputs()
         self.test_22670()
         self.test_feerate_rounding()
+        self.test_input_confs_control()
 
     def test_change_position(self):
         """Ensure setting changePosition in fundraw with an exact match is handled properly."""
@@ -302,7 +306,7 @@ class RawTransactionsTest(BitcoinTestFramework):
         assert_equal("00", dec_tx['vin'][0]['scriptSig']['hex'])
 
         # Should fail without add_inputs:
-        assert_raises_rpc_error(-4, "Insufficient funds", self.nodes[2].fundrawtransaction, rawtx, {"add_inputs": False})
+        assert_raises_rpc_error(-4, ERR_NOT_ENOUGH_PRESET_INPUTS, self.nodes[2].fundrawtransaction, rawtx, {"add_inputs": False})
         # add_inputs is enabled by default
         rawtxfund = self.nodes[2].fundrawtransaction(rawtx)
 
@@ -332,7 +336,7 @@ class RawTransactionsTest(BitcoinTestFramework):
         assert_equal(utx['txid'], dec_tx['vin'][0]['txid'])
 
         # Should fail without add_inputs:
-        assert_raises_rpc_error(-4, "Insufficient funds", self.nodes[2].fundrawtransaction, rawtx, {"add_inputs": False})
+        assert_raises_rpc_error(-4, ERR_NOT_ENOUGH_PRESET_INPUTS, self.nodes[2].fundrawtransaction, rawtx, {"add_inputs": False})
         rawtxfund = self.nodes[2].fundrawtransaction(rawtx, {"add_inputs": True})
 
         dec_tx  = self.nodes[2].decoderawtransaction(rawtxfund['hex'])
@@ -364,7 +368,7 @@ class RawTransactionsTest(BitcoinTestFramework):
         assert_equal(utx['txid'], dec_tx['vin'][0]['txid'])
 
         # Should fail without add_inputs:
-        assert_raises_rpc_error(-4, "Insufficient funds", self.nodes[2].fundrawtransaction, rawtx, {"add_inputs": False})
+        assert_raises_rpc_error(-4, ERR_NOT_ENOUGH_PRESET_INPUTS, self.nodes[2].fundrawtransaction, rawtx, {"add_inputs": False})
         rawtxfund = self.nodes[2].fundrawtransaction(rawtx, {"add_inputs": True})
 
         dec_tx  = self.nodes[2].decoderawtransaction(rawtxfund['hex'])
@@ -1071,7 +1075,7 @@ class RawTransactionsTest(BitcoinTestFramework):
                 }
             ]
         }
-        assert_raises_rpc_error(-4, "Insufficient funds", wallet.send, outputs=[{addr1: 8}], options=options)
+        assert_raises_rpc_error(-4, ERR_NOT_ENOUGH_PRESET_INPUTS, wallet.send, outputs=[{addr1: 8}], options=options)
 
         # Case (3), Explicit add_inputs=true and preset inputs (with preset inputs not-covering the target amount)
         options["add_inputs"] = True
@@ -1099,7 +1103,7 @@ class RawTransactionsTest(BitcoinTestFramework):
 
         # 6. Explicit add_inputs=false, no preset inputs:
         options = {"add_inputs": False}
-        assert_raises_rpc_error(-4, "Insufficient funds", wallet.send, outputs=[{addr1: 3}], options=options)
+        assert_raises_rpc_error(-4, ERR_NOT_ENOUGH_PRESET_INPUTS, wallet.send, outputs=[{addr1: 3}], options=options)
 
         ################################################
 
@@ -1116,7 +1120,7 @@ class RawTransactionsTest(BitcoinTestFramework):
             "vout": 1  # change position was hardcoded to index 0
         }]
         outputs = {self.nodes[1].getnewaddress(): 8}
-        assert_raises_rpc_error(-4, "Insufficient funds", wallet.walletcreatefundedpsbt, inputs=inputs, outputs=outputs)
+        assert_raises_rpc_error(-4, ERR_NOT_ENOUGH_PRESET_INPUTS, wallet.walletcreatefundedpsbt, inputs=inputs, outputs=outputs)
 
         # Case (3), Explicit add_inputs=true and preset inputs (with preset inputs not-covering the target amount)
         options["add_inputs"] = True
@@ -1143,9 +1147,54 @@ class RawTransactionsTest(BitcoinTestFramework):
 
         # Case (6). Explicit add_inputs=false, no preset inputs:
         options = {"add_inputs": False}
-        assert_raises_rpc_error(-4, "Insufficient funds", wallet.walletcreatefundedpsbt, inputs=[], outputs=outputs, options=options)
+        assert_raises_rpc_error(-4, ERR_NOT_ENOUGH_PRESET_INPUTS, wallet.walletcreatefundedpsbt, inputs=[], outputs=outputs, options=options)
 
         self.nodes[2].unloadwallet("test_preset_inputs")
+
+    def test_preset_inputs_selection(self):
+        self.log.info('Test wallet preset inputs are not double-counted or reused in coin selection')
+
+        # Create and fund the wallet with 4 UTXO of 5 BTC each (20 BTC total)
+        self.nodes[2].createwallet("test_preset_inputs_selection")
+        wallet = self.nodes[2].get_wallet_rpc("test_preset_inputs_selection")
+        outputs = {}
+        for _ in range(4):
+            outputs[wallet.getnewaddress()] = 5
+        self.nodes[0].sendmany("", outputs)
+        self.generate(self.nodes[0], 1)
+
+        # Select the preset inputs
+        coins = wallet.listunspent()
+        preset_inputs = [coins[0], coins[1], coins[2]]
+
+        # Now let's create the tx creation options
+        options = {
+            "inputs": preset_inputs,
+            "add_inputs": True,  # automatically add coins from the wallet to fulfill the target
+            "subtract_fee_from_outputs": [0],  # deduct fee from first output
+            "add_to_wallet": False
+        }
+
+        # Attempt to send 29 BTC from a wallet that only has 20 BTC. The wallet should exclude
+        # the preset inputs from the pool of available coins, realize that there is not enough
+        # money to fund the 29 BTC payment, and fail with "Insufficient funds".
+        #
+        # Even with SFFO, the wallet can only afford to send 20 BTC.
+        # If the wallet does not properly exclude preset inputs from the pool of available coins
+        # prior to coin selection, it may create a transaction that does not fund the full payment
+        # amount or, through SFFO, incorrectly reduce the recipient's amount by the difference
+        # between the original target and the wrongly counted inputs (in this case 9 BTC)
+        # so that the recipient's amount is no longer equal to the user's selected target of 29 BTC.
+
+        # First case, use 'subtract_fee_from_outputs = true'
+        assert_raises_rpc_error(-4, "Insufficient funds", wallet.send, outputs=[{wallet.getnewaddress(): 29}], options=options)
+
+        # Second case, don't use 'subtract_fee_from_outputs'
+        del options["subtract_fee_from_outputs"]
+        assert_raises_rpc_error(-4, "Insufficient funds", wallet.send, outputs=[{wallet.getnewaddress(): 29}], options=options)
+
+        self.nodes[2].unloadwallet("test_preset_inputs_selection")
+
     def test_include_unsafe(self):
         self.log.info("Test fundrawtxn with unsafe inputs")
 
@@ -1264,6 +1313,60 @@ class RawTransactionsTest(BitcoinTestFramework):
         rawtx = w.createrawtransaction(inputs=[], outputs=[{self.nodes[0].getnewaddress(): 1 - 0.00000202}])
         assert_raises_rpc_error(-4, "Insufficient funds", w.fundrawtransaction, rawtx, {"fee_rate": 1.85})
 
+    def test_input_confs_control(self):
+        self.nodes[0].createwallet("minconf")
+        wallet = self.nodes[0].get_wallet_rpc("minconf")
+
+        # Fund the wallet with different chain heights
+        for _ in range(2):
+            self.nodes[2].sendmany("", {wallet.getnewaddress():1, wallet.getnewaddress():1})
+            self.generate(self.nodes[2], 1)
+
+        unconfirmed_txid = wallet.sendtoaddress(wallet.getnewaddress(), 0.5)
+
+        self.log.info("Crafting TX using an unconfirmed input")
+        target_address = self.nodes[2].getnewaddress()
+        raw_tx1 = wallet.createrawtransaction([], {target_address: 0.1}, 0)
+        funded_tx1 = wallet.fundrawtransaction(raw_tx1, {'fee_rate': 1, 'maxconf': 0})['hex']
+
+        # Make sure we only had the one input
+        tx1_inputs = self.nodes[0].decoderawtransaction(funded_tx1)['vin']
+        assert_equal(len(tx1_inputs), 1)
+
+        utxo1 = tx1_inputs[0]
+        assert unconfirmed_txid == utxo1['txid']
+
+        final_tx1 = wallet.signrawtransactionwithwallet(funded_tx1)['hex']
+        txid1 = self.nodes[0].sendrawtransaction(final_tx1)
+
+        mempool = self.nodes[0].getrawmempool()
+        assert txid1 in mempool
+
+        self.log.info("Fail to craft a new TX with minconf above highest one")
+        # Create a replacement tx to 'final_tx1' that has 1 BTC target instead of 0.1.
+        raw_tx2 = wallet.createrawtransaction([{'txid': utxo1['txid'], 'vout': utxo1['vout']}], {target_address: 1})
+        assert_raises_rpc_error(-4, "Insufficient funds", wallet.fundrawtransaction, raw_tx2, {'add_inputs': True, 'minconf': 3, 'fee_rate': 10})
+
+        self.log.info("Fail to broadcast a new TX with maxconf 0 to verify it actually chose unconfirmed outputs")
+        # Now fund 'raw_tx2' to fulfill the total target (1 BTC) by using all the wallet unconfirmed outputs.
+        # As it was created with the first unconfirmed output, 'raw_tx2' only has 0.1 BTC covered (need to fund 0.9 BTC more).
+        # So, the selection process, to cover the amount, will pick up the 'final_tx1' output as well, which is an output of the tx that this
+        # new tx conflicts with (there is no RBF in Dash). So, once we send it to the mempool, it will return a "txn-mempool-conflict".
+        funded_invalid = wallet.fundrawtransaction(raw_tx2, {'add_inputs': True, 'maxconf': 0, 'fee_rate': 10})['hex']
+        invalid_inputs = self.nodes[0].decoderawtransaction(funded_invalid)['vin']
+        assert any(vin['txid'] == txid1 for vin in invalid_inputs)
+        final_invalid = wallet.signrawtransactionwithwallet(funded_invalid)['hex']
+        assert_raises_rpc_error(-26, "txn-mempool-conflict", self.nodes[0].sendrawtransaction, final_invalid)
+
+        self.log.info("Craft a new TX adding inputs with highest depth possible")
+        funded_tx2 = wallet.fundrawtransaction(raw_tx2, {'add_inputs': True, 'minconf': 2, 'fee_rate': 10})['hex']
+        tx2_inputs = self.nodes[0].decoderawtransaction(funded_tx2)['vin']
+        assert_greater_than_or_equal(len(tx2_inputs), 2)
+        for vin in tx2_inputs:
+            if vin['txid'] != unconfirmed_txid:
+                assert_greater_than_or_equal(self.nodes[0].gettxout(vin['txid'], vin['vout'])['confirmations'], 2)
+
+        wallet.unloadwallet()
 
 if __name__ == '__main__':
     RawTransactionsTest().main()

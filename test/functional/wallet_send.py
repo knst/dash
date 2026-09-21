@@ -40,7 +40,7 @@ class WalletSendTest(BitcoinTestFramework):
                   conf_target=None, estimate_mode=None, fee_rate=None, add_to_wallet=None, psbt=None,
                   inputs=None, add_inputs=None, include_unsafe=None, change_address=None, change_position=None,
                   include_watching=None, locktime=None, lock_unspents=None, subtract_fee_from_outputs=None,
-                  expect_error=None, solving_data=None):
+                  expect_error=None, solving_data=None, minconf=None):
         assert (amount is None) != (data is None)
 
         from_balance_before = from_wallet.getbalances()["mine"]["trusted"]
@@ -95,6 +95,8 @@ class WalletSendTest(BitcoinTestFramework):
             options["subtract_fee_from_outputs"] = subtract_fee_from_outputs
         if solving_data is not None:
             options["solving_data"] = solving_data
+        if minconf is not None:
+            options["minconf"] = minconf
 
         if len(options.keys()) == 0:
             options = None
@@ -400,10 +402,12 @@ class WalletSendTest(BitcoinTestFramework):
         assert res["complete"]
         utxo1 = w0.listunspent()[0]
         assert_equal(utxo1["amount"], 500)
+        ERR_NOT_ENOUGH_PRESET_INPUTS = "The preselected coins total amount does not cover the transaction target. " \
+                                       "Please allow other inputs to be automatically selected or include more coins manually"
         self.test_send(from_wallet=w0, to_wallet=w1, amount=501, inputs=[utxo1],
-                       expect_error=(-4, "Insufficient funds"))
+                       expect_error=(-4, ERR_NOT_ENOUGH_PRESET_INPUTS))
         self.test_send(from_wallet=w0, to_wallet=w1, amount=501, inputs=[utxo1], add_inputs=False,
-                       expect_error=(-4, "Insufficient funds"))
+                       expect_error=(-4, ERR_NOT_ENOUGH_PRESET_INPUTS))
         res = self.test_send(from_wallet=w0, to_wallet=w1, amount=501, inputs=[utxo1], add_inputs=True, add_to_wallet=False)
         assert res["complete"]
 
@@ -463,6 +467,16 @@ class WalletSendTest(BitcoinTestFramework):
         self.test_send(from_wallet=w0, to_wallet=w5, amount=2)
         self.test_send(from_wallet=w5, to_wallet=w0, amount=1, expect_error=(-4, "Insufficient funds"))
         res = self.test_send(from_wallet=w5, to_wallet=w0, amount=1, include_unsafe=True)
+        assert res["complete"]
+
+        self.log.info("Minconf")
+        self.nodes[1].createwallet(wallet_name="minconfw")
+        minconfw= self.nodes[1].get_wallet_rpc("minconfw")
+        self.test_send(from_wallet=w0, to_wallet=minconfw, amount=2)
+        self.generate(self.nodes[0], 3)
+        self.test_send(from_wallet=minconfw, to_wallet=w0, amount=1, minconf=4, expect_error=(-4, "Insufficient funds"))
+        self.test_send(from_wallet=minconfw, to_wallet=w0, amount=1, minconf=-4, expect_error=(-8, "Negative minconf"))
+        res = self.test_send(from_wallet=minconfw, to_wallet=w0, amount=1, minconf=3)
         assert res["complete"]
 
         self.log.info("External outputs")
