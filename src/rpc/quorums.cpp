@@ -1565,6 +1565,7 @@ static RPCHelpMan getquorumproofchain()
                     const auto hash = uint256S(quorumText);
                     const auto commitments = builder.ActiveCommitments(target);
                     std::vector<uint256> leaves;
+                    leaves.reserve(commitments.size());
                     for (const auto& commitment : commitments)
                         leaves.push_back(SerializeHash(commitment));
                     bool found = false;
