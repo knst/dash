@@ -1796,7 +1796,7 @@ static RPCHelpMan getcreditpoolinfo()
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Block height out of range");
     }
 
-    const int window_blocks{Params().CreditPoolPeriodBlocks()};
+    const int window_blocks{chainman.GetParams().CreditPoolPeriodBlocks()};
     // nullptr when the chain is shorter than the window
     const CBlockIndex* pindex_window_start{pindex->GetAncestor(pindex->nHeight - window_blocks)};
 
