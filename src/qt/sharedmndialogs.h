@@ -21,7 +21,6 @@
 
 class BitcoinAmountField;
 class SharedMnStatusBoard;
-struct ProTxResult;
 
 QT_BEGIN_NAMESPACE
 class QCheckBox;
@@ -249,7 +248,6 @@ public:
     DissolveDialog(interfaces::Node& node, WalletModel* wallet_model, const MasternodeEntry& entry, int current_height,
                    QWidget* parent = nullptr);
 
-
     //! Open on the standby tab, for callers that come from a "create a standby
     //! dissolution" entry point instead of the dissolution itself
     void selectStandbyTab();
@@ -307,7 +305,6 @@ private:
 
     // Dissolve together
     int m_together_tab_index{-1};
-    //! True once this wallet ran the prepare: only then does it own the flow
     QComboBox* m_un_actor{nullptr};
     BitcoinAmountField* m_un_fee{nullptr};
     QPushButton* m_un_prepare{nullptr};

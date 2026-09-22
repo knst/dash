@@ -19,7 +19,6 @@
 #include <uint256.h>
 #include <univalue.h>
 #include <util/strencodings.h>
-#include <util/translation.h>
 
 #include <qt/bitcoinamountfield.h>
 #include <qt/bitcoinunits.h>
@@ -60,7 +59,6 @@
 #include <QVBoxLayout>
 
 #include <algorithm>
-#include <optional>
 
 namespace {
 
@@ -106,13 +104,6 @@ QString NoShareKeysMessage()
 {
     return QCoreApplication::translate("SharedMnDialog",
                                        "This wallet does not hold any of this masternode's share owner keys.");
-}
-
-//! The single canonical wording for the activation gate
-QString V24InactiveMessage()
-{
-    return QCoreApplication::translate(
-        "SharedMnDialog", "Shared masternodes need the v24 upgrade, which is not active on this network yet.");
 }
 
 QString OwnerAddress(const interfaces::MnShare& share)
@@ -228,7 +219,7 @@ void FillMyShareCombo(QComboBox* combo, const std::vector<interfaces::MnShare>& 
     if (!all && wallet_model->wallet().privateKeysDisabled()) return;
     const BitcoinUnits::Unit unit{SharedMnDisplayUnit(wallet_model)};
     for (size_t i = 0; i < shares.size(); ++i) {
-        if (!all && !wallet_model->wallet().isSpendable(PKHash(shares[i].keyIDOwner))) continue;
+        if (!all && !SharedMnWalletOwnsShare(wallet_model, shares[i])) continue;
         combo->addItem(QCoreApplication::translate("SharedMnDialog", "%1 — %2 — %3")
                            .arg(ShareOfLabel(static_cast<int>(i), shares.size()),
                                 SharedMnFormatAmount(unit, shares[i].amount),
@@ -416,7 +407,7 @@ void UpdateShareDialog::validate()
     if (!m_is_shared) {
         showError(tr("This masternode is not shared and has no share table."));
     } else if (!m_v24_active) {
-        showError(V24InactiveMessage());
+        showError(SharedMnV24InactiveMessage());
     } else if (m_share_combo->count() == 0) {
         showError(NoShareKeysMessage());
     } else if (!m_reward_edit->text().trimmed().isEmpty() && !problem.isEmpty()) {
@@ -498,7 +489,7 @@ SharedSigCollector::SharedSigCollector(Kind kind, const QString& pro_tx_hash,
         rows.push_back({ShareRowName(static_cast<int>(i), m_shares.size(), m_shares[i]), m_shares[i].amount,
                         OwnerAddress(m_shares[i])});
         if (you_row < 0 && m_wallet_model != nullptr && !m_wallet_model->wallet().privateKeysDisabled() &&
-            m_wallet_model->wallet().isSpendable(PKHash(m_shares[i].keyIDOwner))) {
+            SharedMnWalletOwnsShare(m_wallet_model, m_shares[i])) {
             you_row = static_cast<int>(i);
         }
     }
@@ -864,7 +855,7 @@ bool SharedMnDialog::gateButton(QPushButton* button) const
     }
     if (!m_v24_active) {
         button->setEnabled(false);
-        button->setToolTip(V24InactiveMessage());
+        button->setToolTip(SharedMnV24InactiveMessage());
         return false;
     }
     return true;
@@ -890,7 +881,6 @@ bool SharedMnDialog::runCommand(const QString& method, const UniValue& params, P
     m_busy = true;
     setEnabled(false);
     QApplication::setOverrideCursor(Qt::WaitCursor);
-    // Waits on the GUI thread, which keeps the unlock context above alive
     const ProTxResult outcome{m_sender->executeAndWait(method, params, m_wallet_model)};
     QApplication::restoreOverrideCursor();
     setEnabled(true);
@@ -1045,10 +1035,9 @@ bool SharedMnDialog::sessionAlive(SharedSigCollector* collector, QLabel* status)
 
 bool SharedMnDialog::holdsAnyShareKey() const
 {
-    if (m_wallet_model == nullptr || m_wallet_model->wallet().privateKeysDisabled()) return false;
-    return std::any_of(m_shares.begin(), m_shares.end(), [this](const interfaces::MnShare& share) {
-        return m_wallet_model->wallet().isSpendable(PKHash(share.keyIDOwner));
-    });
+    return canSign() && std::any_of(m_shares.begin(), m_shares.end(), [this](const interfaces::MnShare& share) {
+               return SharedMnWalletOwnsShare(m_wallet_model, share);
+           });
 }
 
 // ----------------------------------------------------------------------------
@@ -1423,8 +1412,7 @@ void DissolveDialog::updateTogetherPayouts()
     const int actor{static_cast<int>(ptx->actorIndex)};
     m_un_table->setRowCount(static_cast<int>(m_shares.size()));
     for (size_t i = 0; i < m_shares.size(); ++i) {
-        const bool mine{m_wallet_model != nullptr && !m_wallet_model->wallet().privateKeysDisabled() &&
-                        m_wallet_model->wallet().isSpendable(PKHash(m_shares[i].keyIDOwner))};
+        const bool mine{canSign() && SharedMnWalletOwnsShare(m_wallet_model, m_shares[i])};
         const QString label{shareLabel(static_cast<int>(i))};
         FillPayoutRow(m_un_table, static_cast<int>(i), mine ? tr("%1 (you)").arg(label) : label,
                       ScriptAddress(m_shares[i].scriptRefund),

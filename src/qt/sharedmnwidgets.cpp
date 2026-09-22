@@ -6,10 +6,11 @@
 
 #include <core_io.h>
 #include <evo/providertx.h>
+#include <interfaces/wallet.h>
 #include <primitives/transaction.h>
+#include <script/standard.h>
 #include <util/strencodings.h>
 
-#include <qt/guiutil.h>
 #include <qt/masternodewidgets.h>
 #include <qt/optionsmodel.h>
 #include <qt/walletmodel.h>
@@ -22,7 +23,6 @@
 #include <QGuiApplication>
 #include <QHeaderView>
 #include <QLabel>
-#include <QMetaObject>
 #include <QPushButton>
 #include <QScreen>
 #include <QScrollArea>
@@ -78,6 +78,18 @@ BitcoinUnits::Unit SharedMnDisplayUnit(const WalletModel* wallet_model)
 {
     if (wallet_model && wallet_model->getOptionsModel()) return wallet_model->getOptionsModel()->getDisplayUnit();
     return BitcoinUnits::Unit::DASH;
+}
+
+bool SharedMnWalletOwnsShare(const WalletModel* wallet_model, const interfaces::MnShare& share)
+{
+    return wallet_model != nullptr && wallet_model->wallet().isSpendable(PKHash(share.keyIDOwner));
+}
+
+QString SharedMnV24InactiveMessage()
+{
+    return QCoreApplication::translate("SharedMnDialog",
+                                       "Shared masternodes need the v24 upgrade, which is not active on this network "
+                                       "yet.");
 }
 
 SharedMnStatusBoard::SharedMnStatusBoard(QWidget* parent) : QWidget(parent)
@@ -419,18 +431,6 @@ void SharedMnSizeFromContent(QDialog* dialog, int minimum_width)
     // dialog cannot be resized down on a small display
     dialog->setMinimumWidth(std::min(minimum_width, size.width()));
     dialog->resize(size);
-}
-
-bool OpenSharedMaintenanceDialog(QWidget* origin, const QString& text)
-{
-    // Start at the parent: the dialog asking to route a message is never the
-    // one that can act on it.
-    for (QObject* candidate = origin != nullptr ? origin->parent() : nullptr; candidate != nullptr;
-         candidate = candidate->parent()) {
-        if (candidate->metaObject()->indexOfMethod("openSharedMessage(QString)") < 0) continue;
-        return QMetaObject::invokeMethod(candidate, "openSharedMessage", Qt::DirectConnection, Q_ARG(QString, text));
-    }
-    return false;
 }
 
 QString SharedMnTermSheetHtml(const MnShareSession& session, int you_share_index, BitcoinUnits::Unit unit)

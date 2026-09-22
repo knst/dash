@@ -23,7 +23,6 @@
 #include <qt/bitcoinunits.h>
 #include <qt/guiutil.h>
 #include <qt/masternodewidgets.h>
-#include <qt/optionsmodel.h>
 #include <qt/protxsender.h>
 #include <qt/qvalidatedlineedit.h>
 #include <qt/sendcoinsdialog.h>
@@ -40,17 +39,16 @@
 #include <QDoubleSpinBox>
 #include <QFile>
 #include <QFileInfo>
-#include <QFrame>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QMetaMethod>
 #include <QProgressBar>
 #include <QPushButton>
 #include <QRadioButton>
-#include <QScrollArea>
 #include <QSet>
 #include <QSpacerItem>
 #include <QSpinBox>
@@ -1141,7 +1139,7 @@ void SharedMnCreateDialog::enterPage(Page page)
         if (m_wallet_model == nullptr) {
             gate = tr("No wallet is available.");
         } else if (!m_v24_active) {
-            gate = tr("Shared masternodes need the v24 upgrade, which is not active on this network yet.");
+            gate = SharedMnV24InactiveMessage();
         } else if (!canSign()) {
             gate = tr("This wallet cannot sign. You can view, but not take part.");
         }
@@ -2129,7 +2127,7 @@ void SharedMnCreateDialog::pushSessionToWidgets()
 void SharedMnCreateDialog::startSession()
 {
     if (!m_v24_active) {
-        showError(tr("Shared masternodes need the v24 upgrade, which is not active on this network yet."));
+        showError(SharedMnV24InactiveMessage());
         return;
     }
     if (m_wallet_model == nullptr) {
@@ -2552,7 +2550,7 @@ void SharedMnCreateDialog::unlockTerms()
     goToPage(PageInvite);
 }
 
-bool SharedMnCreateDialog::confirmBroadcast() const
+bool SharedMnCreateDialog::confirmBroadcast()
 {
     const CAmount collateral{GetMnType(MnType::Regular).collat_amount};
     bool fatal{false};
@@ -2572,7 +2570,7 @@ bool SharedMnCreateDialog::confirmBroadcast() const
         SEND_CONFIRM_DELAY,
         /*enable_send=*/true,
         /*always_show_unsigned=*/false,
-        const_cast<SharedMnCreateDialog*>(this)};
+        this};
     confirmation.setWindowModality(Qt::WindowModal);
     // A QMessageBox is only as wide as its longest line, which wraps a
     // thousands separator across lines; make it wide enough to read
@@ -2746,7 +2744,9 @@ void SharedMnCreateDialog::handleImportedText(const QString& text)
     case SharedMnImport::Kind::StandbyHex:
         // Not this dialog's message: only the masternode list can resolve the
         // proTxHash it carries to the masternode it belongs to.
-        if (!OpenSharedMaintenanceDialog(this, text)) {
+        if (isSignalConnected(QMetaMethod::fromSignal(&SharedMnCreateDialog::maintenanceMessage))) {
+            Q_EMIT maintenanceMessage(text);
+        } else {
             showError(tr("This message is about an existing masternode. Open it from the Masternodes list."));
         }
         return;
@@ -3281,7 +3281,7 @@ bool SharedMnCreateDialog::coordinatedHere(const MnShareSession& session) const
     // default wallet - so the share the envelope names as the coordinator's
     // must be one this wallet can sign for. A participant's copy of the same
     // session names somebody else's share there.
-    const QString coordinator{session.coordinatorLabel()};
+    const QString& coordinator{session.coordinatorLabel()};
     if (coordinator.isEmpty()) return false;
     for (const auto& share : session.shares()) {
         if (share.label != coordinator) continue;

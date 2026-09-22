@@ -94,7 +94,7 @@ public:
     //! envelope opens the creation wizard, a signing envelope opens the
     //! dissolution or key-rotation dialog for that masternode, and a standby
     //! dissolution is offered for broadcast.
-    Q_INVOKABLE void openSharedMessage(const QString& text);
+    void openSharedMessage(const QString& text);
 
     //! Whether this wallet has a stake in `entry`: its collateral, one of its
     //! keys, or a destination it pays to. A shared masternode counts through

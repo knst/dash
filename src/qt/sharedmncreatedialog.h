@@ -84,6 +84,12 @@ public:
     //! Close protection: offers to save an unsaved session first
     void reject() override;
 
+Q_SIGNALS:
+    //! A pasted message about an existing masternode (a "dash-shared-mn-sigs"
+    //! envelope or a standby dissolution), which only the masternode list can
+    //! resolve to the masternode it is about
+    void maintenanceMessage(const QString& text);
+
 private Q_SLOTS:
     void onNext();
     void onBack();
@@ -232,7 +238,7 @@ private:
     void signAndCopy();
     void unlockTerms();
     void broadcastRegistration();
-    bool confirmBroadcast() const;
+    bool confirmBroadcast();
 
     // Messages
     //! Display name of what `session` currently is, from the reader's point of

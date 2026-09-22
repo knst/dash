@@ -38,6 +38,14 @@ QT_END_NAMESPACE
 //! messages and cannot include this header without a dependency cycle.
 BitcoinUnits::Unit SharedMnDisplayUnit(const WalletModel* wallet_model);
 
+//! True when `wallet_model` holds `share`'s owner key, which is what makes a
+//! share this wallet's on every shared-masternode screen. A watch-only wallet
+//! holds keys too; anything that signs must also check canSign().
+bool SharedMnWalletOwnsShare(const WalletModel* wallet_model, const interfaces::MnShare& share);
+
+//! The one wording for the v24 activation gate
+QString SharedMnV24InactiveMessage();
+
 //! What a ProDisTx pays out, read against the share table of the masternode it
 //! dissolves.
 struct SharedMnDissolution {
@@ -192,18 +200,6 @@ void SharedMnFitWrappedLabels(QWidget* root);
 //! around one opens with its table, checkbox and submit button below the fold.
 //! Add back what the scrolled widgets really want.
 void SharedMnSizeFromContent(QDialog* dialog, int minimum_width);
-
-//! Hand a maintenance message - a "dash-shared-mn-sigs" envelope or a standby
-//! dissolution - to whichever window can act on it, and report whether one
-//! took it.
-//!
-//! Only the masternode list can resolve the proTxHash such a message carries
-//! to the masternode it is about, and it already owns the maintenance dialogs.
-//! The message is therefore passed up the object hierarchy to the first
-//! ancestor exposing an `openSharedMessage(QString)` slot. Dispatching by slot
-//! name rather than by type keeps this header, which the maintenance dialogs
-//! themselves use, free of a dependency back on them.
-bool OpenSharedMaintenanceDialog(QWidget* origin, const QString& text);
 
 //! The term sheet everyone reads before approving: participants, masternode
 //! settings, exit terms, funding and identity, as five HTML cards.

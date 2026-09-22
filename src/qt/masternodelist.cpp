@@ -31,7 +31,6 @@
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QPointer>
-#include <QMetaObject>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QThread>
@@ -288,6 +287,7 @@ void MasternodeList::showSharedMnCreateDialog()
         return;
     }
     SharedMnCreateDialog dlg(clientModel->node(), walletModel, this);
+    connect(&dlg, &SharedMnCreateDialog::maintenanceMessage, this, &MasternodeList::openSharedMessage);
     dlg.exec();
 }
 
@@ -398,6 +398,7 @@ void MasternodeList::openSharedMessage(const QString& text)
     switch (detected.kind) {
     case SharedMnImport::Kind::Session: {
         SharedMnCreateDialog dlg(clientModel->node(), walletModel, this);
+        connect(&dlg, &SharedMnCreateDialog::maintenanceMessage, this, &MasternodeList::openSharedMessage);
         dlg.openSharedMessage(text);
         dlg.exec();
         return;
@@ -464,9 +465,8 @@ void MasternodeList::updateContextMenuActions(const MasternodeEntry* entry)
     bool owns_share{false};
     if (can_sign && is_shared) {
         const auto& shares{entry->shares()};
-        owns_share = std::any_of(shares.begin(), shares.end(), [&](const auto& share) {
-            return walletModel->wallet().isSpendable(PKHash(share.keyIDOwner));
-        });
+        owns_share = std::any_of(shares.begin(), shares.end(),
+                                 [&](const auto& share) { return SharedMnWalletOwnsShare(walletModel, share); });
     }
     const QString shared_tooltip{
         owns_share ? QString{} : tr("Requires one of this masternode's share owner keys in this wallet")};
@@ -600,9 +600,8 @@ void MasternodeList::updateMasternodeList()
         }
         if (!entry->isShared()) continue;
         const auto& shares{entry->shares()};
-        const auto count{std::count_if(shares.begin(), shares.end(), [&](const auto& share) {
-            return walletModel->wallet().isSpendable(PKHash(share.keyIDOwner));
-        })};
+        const auto count{std::count_if(shares.begin(), shares.end(),
+                                       [&](const auto& share) { return SharedMnWalletOwnsShare(walletModel, share); })};
         if (count > 0) {
             my_share_counts.insert(entry->proTxHash(), static_cast<int>(count));
         }
@@ -735,12 +734,10 @@ void MasternodeList::extraInfoDIP3_clicked()
     }
 
     QSet<int> my_share_indexes;
-    if (walletModel && entry->isShared()) {
+    if (entry->isShared()) {
         const auto& shares{entry->shares()};
         for (size_t i = 0; i < shares.size(); ++i) {
-            if (walletModel->wallet().isSpendable(PKHash(shares[i].keyIDOwner))) {
-                my_share_indexes.insert(static_cast<int>(i));
-            }
+            if (SharedMnWalletOwnsShare(walletModel, shares[i])) my_share_indexes.insert(static_cast<int>(i));
         }
     }
     auto* dialog = new DescriptionDialog(tr("Details for Masternode %1").arg(entry->proTxHash()),
@@ -805,9 +802,8 @@ QString MasternodeList::shareOwnerFilterAddress(const MasternodeEntry& entry) co
     if (shares.empty()) {
         return {};
     }
-    const auto owned{std::find_if(shares.begin(), shares.end(), [&](const auto& share) {
-        return walletModel != nullptr && walletModel->wallet().isSpendable(PKHash(share.keyIDOwner));
-    })};
+    const auto owned{std::find_if(shares.begin(), shares.end(),
+                                  [&](const auto& share) { return SharedMnWalletOwnsShare(walletModel, share); })};
     const auto& share{owned != shares.end() ? *owned : shares.front()};
     return QString::fromStdString(EncodeDestination(PKHash(share.keyIDOwner)));
 }
