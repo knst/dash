@@ -31,6 +31,7 @@ private Q_SLOTS:
     void coordinatorResumesFullySignedSession();
     void unauthorisedSignedInputsAreDetected();
     void refusesToSignCoinsOutsideOwnContribution();
+    void refusesToSignShortChangedOwnContribution();
     void savingWaitsForTheOperatorKeyBackup();
     void coordinatorCanRetryOwnApproval();
     void participantsPageGating();

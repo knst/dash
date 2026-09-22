@@ -1217,11 +1217,10 @@ void SharedMnCreateDialog::enterPage(Page page)
     refreshBoards();
     updateProgress();
     updateButtons();
-    // The exception to the rule above: a coin of ours the session spends
-    // outside our own contribution is about the session, not about the page
-    // that happens to be on screen, and it must be read before anything is
-    // signed
-    if (!m_foreign_input.isEmpty()) showError(foreignInputError(m_foreign_input));
+    // The exception to the rule above: a funding transaction this wallet must
+    // not sign is about the session, not about the page that happens to be on
+    // screen, and it must be read before anything is signed
+    if (!m_funding_refusal.isEmpty()) showError(m_funding_refusal);
 }
 
 bool SharedMnCreateDialog::validatePage(Page page, QString& err)
@@ -1340,14 +1339,14 @@ bool SharedMnCreateDialog::validatePage(Page page, QString& err)
         }
         break;
     case PageApprovals:
-        if (!m_foreign_input.isEmpty()) {
-            err = foreignInputError(m_foreign_input);
+        if (!m_funding_refusal.isEmpty()) {
+            err = m_funding_refusal;
         } else if (m_role == Role::Participant && !canSign()) {
             err = tr("This wallet is watch-only and cannot sign.");
         }
         break;
     case PageSignatures:
-        if (!m_foreign_input.isEmpty()) err = foreignInputError(m_foreign_input);
+        if (!m_funding_refusal.isEmpty()) err = m_funding_refusal;
         break;
     default:
         break;
@@ -1444,9 +1443,9 @@ void SharedMnCreateDialog::updateButtons()
     } else if (!canSign() && page != PageComplete && page != PageWaitBroadcast) {
         enabled = false;
         tooltip = tr("This wallet is watch-only and cannot sign.");
-    } else if (!m_foreign_input.isEmpty() && (page == PageApprovals || page == PageSignatures)) {
+    } else if (!m_funding_refusal.isEmpty() && (page == PageApprovals || page == PageSignatures)) {
         enabled = false;
-        tooltip = foreignInputError(m_foreign_input);
+        tooltip = m_funding_refusal;
     } else if (page == PageSecret && !secretConfirmed()) {
         enabled = false;
         tooltip = tr("Confirm you saved the operator secret key by typing its last 4 characters.");
@@ -1627,8 +1626,8 @@ void SharedMnCreateDialog::refreshAll()
     updateButtons();
     if (!m_dead_reason.isEmpty()) {
         showError(m_dead_reason);
-    } else if (!m_foreign_input.isEmpty()) {
-        showError(foreignInputError(m_foreign_input));
+    } else if (!m_funding_refusal.isEmpty()) {
+        showError(m_funding_refusal);
     }
 }
 
@@ -2162,7 +2161,7 @@ void SharedMnCreateDialog::startSession()
     m_my_share = 0;
     m_prepare_warning.clear();
     m_dead_reason.clear();
-    m_foreign_input.clear();
+    m_funding_refusal.clear();
     m_replies_absorbed_revision = -1;
     m_session_imported = false;
     m_operator_key_from_import = false;
@@ -2267,6 +2266,7 @@ void SharedMnCreateDialog::lockTerms()
         return;
     }
     if (m_wallet_model != nullptr) m_session.setPrepareWallet(m_wallet_model->getWalletName());
+    checkOwnFunding();
     // The advisory only comes back from the prepare call, so it is shown on the
     // approvals page while the terms can still be unlocked
     const UniValue& warning{result.value.find_value("warning")};
@@ -2427,10 +2427,50 @@ QString SharedMnCreateDialog::foreignInputError(const QString& outpoint) const
         .arg(outpoint, recipientName());
 }
 
-void SharedMnCreateDialog::checkForeignInputs()
+QString SharedMnCreateDialog::ownContributionError() const
+{
+    const MnShareSession::Contribution* const mine{myContribution()};
+    if (m_wallet_model == nullptr || mine == nullptr || m_session.protxHex().isEmpty()) return {};
+    interfaces::Wallet& wallet{m_wallet_model->wallet()};
+    // What this wallet would sign: coins it tracks, and coins in the UTXO set
+    // one of its keys can spend ("signrawtransactionwithwallet" signs both)
+    CAmount ours{0};
+    for (const auto& input : mine->inputs) {
+        const COutPoint outpoint{uint256S(input.txid.toStdString()), input.vout};
+        CTxOut txout{wallet.getCoins({outpoint}).front().txout};
+        if (Coin coin; txout.IsNull() && m_node.getUnspentOutput(outpoint, coin)) txout = coin.out;
+        if (!txout.IsNull() && wallet.isSpendable(txout.scriptPubKey)) ours += txout.nValue;
+    }
+    if (ours == 0) return {};
+    const CAmount share{m_session.shares()[m_my_share].amount};
+    const bool change_is_ours{mine->hasChange &&
+                              wallet.isSpendable(DecodeDestination(mine->changeAddress.toStdString()))};
+    const CAmount change_to_us{change_is_ours ? mine->changeAmount : 0};
+    // What may leave this wallet on top of its share: the network fee when it
+    // coordinates (the transaction's own fee when every input can be valued,
+    // else the fee typed here or the usual cap), and a remainder too small to
+    // relay as change, which selectCoins() lets go to the fee instead
+    CAmount allowance{0};
+    if (m_role == Role::Coordinator) {
+        const FundingTotals totals{fundingTotals()};
+        allowance = std::max({MAX_EXPECTED_FUNDING_FEE, m_fee_field->value(),
+                              totals.unresolved == 0 ? totals.fee() : CAmount{0}});
+    }
+    if (!mine->hasChange) {
+        const CTxOut probe{0, GetScriptForDestination(PKHash{CKeyID{}})};
+        allowance += GetDustThreshold(probe, m_node.getDustRelayFee()) - 1;
+    }
+    if (ours <= share + change_to_us + allowance) return {};
+    return tr("This transaction spends %1 of this wallet's coins for a %2 share but returns only %3 of change to "
+              "this wallet. Do not sign; ask %4 for a fresh session.")
+        .arg(FormatAmount(m_wallet_model, ours), FormatAmount(m_wallet_model, share),
+             FormatAmount(m_wallet_model, change_to_us), recipientName());
+}
+
+void SharedMnCreateDialog::checkOwnFunding()
 {
     const QStringList foreign{foreignWalletInputs()};
-    m_foreign_input = foreign.isEmpty() ? QString() : foreign.front();
+    m_funding_refusal = foreign.isEmpty() ? ownContributionError() : foreignInputError(foreign.front());
 }
 
 bool SharedMnCreateDialog::signOwnFundingInputs(bool& complete, QString& error)
@@ -2442,11 +2482,12 @@ bool SharedMnCreateDialog::signOwnFundingInputs(bool& complete, QString& error)
         return false;
     }
     // "signrawtransactionwithwallet" signs every input this wallet can sign,
-    // so a coin of ours recorded under somebody else's contribution would be
-    // signed away with our own. Refuse before the wallet is even unlocked.
-    checkForeignInputs();
-    if (!m_foreign_input.isEmpty()) {
-        error = foreignInputError(m_foreign_input);
+    // so a coin of ours recorded under somebody else's contribution, or our own
+    // contribution short-changing us, would be signed away with the rest.
+    // Refuse before the wallet is even unlocked.
+    checkOwnFunding();
+    if (!m_funding_refusal.isEmpty()) {
+        error = m_funding_refusal;
         return false;
     }
     const QString before{m_session.protxHex()};
@@ -2473,12 +2514,12 @@ bool SharedMnCreateDialog::signOwnFundingInputs(bool& complete, QString& error)
     const QString signed_hex{QString::fromStdString(hex.get_str())};
     complete = done.get_bool();
     if (QString outpoint; !signedOnlyOwnInputs(before, signed_hex, myContribution(), outpoint)) {
-        if (!outpoint.isEmpty()) m_foreign_input = outpoint;
         error = outpoint.isEmpty()
                     ? tr("The signed transaction is not the one you reviewed. Do not use it; ask %1 for a fresh "
                          "session.")
                           .arg(recipientName())
                     : foreignInputError(outpoint);
+        if (!outpoint.isEmpty()) m_funding_refusal = error;
         return false;
     }
     QString apply_error;
@@ -2545,6 +2586,7 @@ void SharedMnCreateDialog::unlockTerms()
     if (choice != QMessageBox::Yes) return;
     m_session.unfreeze();
     m_prepare_warning.clear();
+    checkOwnFunding();
     m_dirty = true;
     refreshAll();
     goToPage(PageInvite);
@@ -2781,7 +2823,7 @@ void SharedMnCreateDialog::replaceSession(const MnShareSession& imported)
     m_my_share = -1;
     m_prepare_warning.clear();
     m_dead_reason.clear();
-    m_foreign_input.clear();
+    m_funding_refusal.clear();
     m_replies_absorbed_revision = -1;
 
     // An adopted envelope's signatures were stored as-is by fromJson; drop any
@@ -2809,7 +2851,7 @@ void SharedMnCreateDialog::replaceSession(const MnShareSession& imported)
 
     inferMyShare();
     checkSessionLiveness();
-    checkForeignInputs();
+    checkOwnFunding();
     if (m_dead_reason.isEmpty()) refreshContributedCoinLocks();
     rebuildOrder();
     refreshAll();
@@ -2888,7 +2930,7 @@ void SharedMnCreateDialog::absorbSession(const MnShareSession& imported)
     m_dirty = true;
     inferMyShare();
     checkSessionLiveness();
-    checkForeignInputs();
+    checkOwnFunding();
     if (m_dead_reason.isEmpty()) refreshContributedCoinLocks();
     rebuildOrder();
 
@@ -3201,23 +3243,27 @@ std::optional<CAmount> SharedMnCreateDialog::resolveInputValue(const MnShareSess
     return std::nullopt;
 }
 
+SharedMnCreateDialog::FundingTotals SharedMnCreateDialog::fundingTotals() const
+{
+    FundingTotals totals;
+    for (const auto& contribution : m_session.contributions()) {
+        if (contribution.hasChange) totals.change += contribution.changeAmount;
+        for (const auto& input : contribution.inputs) {
+            if (const auto value{resolveInputValue(input)}) {
+                totals.resolved += *value;
+            } else {
+                ++totals.unresolved;
+            }
+        }
+    }
+    return totals;
+}
+
 QString SharedMnCreateDialog::fundingCheck(bool& fatal) const
 {
     fatal = false;
     const CAmount collateral{GetMnType(MnType::Regular).collat_amount};
-    CAmount change_total{0};
-    CAmount resolved{0};
-    int unresolved{0};
-    for (const auto& contribution : m_session.contributions()) {
-        if (contribution.hasChange) change_total += contribution.changeAmount;
-        for (const auto& input : contribution.inputs) {
-            if (const auto value{resolveInputValue(input)}) {
-                resolved += *value;
-            } else {
-                ++unresolved;
-            }
-        }
-    }
+    const auto [resolved, change_total, unresolved]{fundingTotals()};
     if (unresolved > 0) {
         const QString inputs{
             SharedMnPlural(unresolved, QT_TRANSLATE_NOOP("MnShareSession", "1 funding input"),

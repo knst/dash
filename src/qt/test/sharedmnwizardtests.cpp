@@ -443,6 +443,88 @@ void SharedMnWizardTests::refusesToSignCoinsOutsideOwnContribution()
     QVERIFY2(!dialog.m_dirty, "a refused signing run must leave nothing to save");
 }
 
+void SharedMnWizardTests::refusesToSignShortChangedOwnContribution()
+{
+    TestingSetup test{CBaseChainParams::REGTEST};
+    m_node.setContext(&test.m_node);
+    WalletContext& context{*m_node.walletLoader().context()};
+
+    // bob's wallet funds its 350 DASH share with one 450 DASH coin, so 100 DASH
+    // of change has to come back to it
+    CKey victim_key;
+    victim_key.MakeNewKey(/*fCompressed=*/true);
+    const auto wallet{MakeSpendingWallet(m_node, context, "victim", victim_key)};
+    QVERIFY(wallet != nullptr);
+    WalletGuard guard{context, wallet};
+
+    CMutableTransaction coin;
+    coin.vin.emplace_back(COutPoint(uint256::ONE, 0));
+    coin.vout.emplace_back(450 * COIN, GetScriptForDestination(PKHash(victim_key.GetPubKey())));
+    const QString coin_txid{QString::fromStdString(coin.GetHash().ToString())};
+    QVERIFY(wallet->AddToWallet(MakeTransactionRef(coin), wallet::TxStateInactive{}) != nullptr);
+    const QString own_address{QString::fromStdString(EncodeDestination(PKHash(victim_key.GetPubKey())))};
+
+    MasternodeTestUtil::GuiModels models{m_node};
+    QVERIFY2(models.ok, qPrintable(QString::fromStdString(models.error.translated)));
+    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), models.client);
+
+    // A combined session in which bob's own contribution spends that coin and
+    // sends `change_amount` to `change_address`. Every envelope check passes:
+    // the file and the transaction agree with each other.
+    const auto session_with_change = [&](const QString& change_address, CAmount change_amount) {
+        MnShareSession invitation{InvitationSession()};
+        MnShareSession draft{invitation};
+        std::vector<CKey> owner_keys(3);
+        QString error;
+        for (int i = 0; i < 3; ++i) {
+            draft.absorbDraftReply(DraftReply(invitation, i, FakeTxid('1' + i), &owner_keys[i]), error);
+        }
+        owner_keys[1] = victim_key;
+        draft.shares()[1].ownerAddress = own_address;
+        draft.removeContribution(QStringLiteral("bob"), error);
+        draft.addContribution({.label = QStringLiteral("bob"),
+                               .inputs = {{.txid = coin_txid}},
+                               .hasChange = true,
+                               .changeAddress = change_address,
+                               .changeAmount = change_amount},
+                              error);
+        MnShareSession session{FrozenSession(draft, owner_keys, /*sign_all=*/true)};
+        session.setCombinedTx(session.protxHex(), error);
+        return session;
+    };
+    // Signing refuses, naming `amount`, and the primary button stays disabled
+    const auto expect_refusal = [&](const MnShareSession& session, const QString& amount) {
+        SharedMnCreateDialog dialog(m_node, &wallet_model, /*parent=*/nullptr);
+        dialog.handleImportedText(session.toJsonString());
+        QCOMPARE(dialog.myShareIndex(), 1);
+        QCOMPARE(int(dialog.currentPage()), int(SharedMnCreateDialog::PageSignatures));
+        const QString refusal{dialog.m_funding_refusal};
+        QVERIFY2(refusal.contains(amount), qPrintable(refusal));
+        QVERIFY(!dialog.m_next_button->isEnabled());
+        bool complete{true};
+        QString sign_error;
+        QVERIFY(!dialog.signOwnFundingInputs(complete, sign_error));
+        QCOMPARE(sign_error, refusal);
+    };
+
+    // Honest: the change comes back to this wallet, so nothing stands in the way
+    // of signing (the sign itself fails on the unconfirmed coin, not the check)
+    const MnShareSession honest{session_with_change(own_address, 100 * COIN)};
+    QCOMPARE(int(honest.stage()), int(MnShareSession::Stage::Combined));
+    {
+        SharedMnCreateDialog dialog(m_node, &wallet_model, /*parent=*/nullptr);
+        dialog.handleImportedText(honest.toJsonString());
+        QVERIFY2(dialog.m_funding_refusal.isEmpty(), qPrintable(dialog.m_funding_refusal));
+        QVERIFY2(dialog.m_next_button->isEnabled(), qPrintable(dialog.m_next_button->toolTip()));
+    }
+
+    // The change goes to somebody else's address
+    CKey attacker_key;
+    expect_refusal(session_with_change(FreshP2PKHAddress(&attacker_key), 100 * COIN), QStringLiteral("450"));
+    // The change comes back to this wallet, but 50 DASH short
+    expect_refusal(session_with_change(own_address, 50 * COIN), QStringLiteral("50"));
+}
+
 void SharedMnWizardTests::savingWaitsForTheOperatorKeyBackup()
 {
     TestingSetup test{CBaseChainParams::REGTEST};

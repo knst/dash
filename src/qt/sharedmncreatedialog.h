@@ -6,6 +6,7 @@
 #define BITCOIN_QT_SHAREDMNCREATEDIALOG_H
 
 #include <consensus/amount.h>
+#include <evo/dmn_types.h>
 
 #include <qt/mnsharesession.h>
 
@@ -216,9 +217,18 @@ private:
                                     const MnShareSession::Contribution* mine, QString& outpoint);
     //! Refusal naming a funding input this wallet owns but never contributed
     QString foreignInputError(const QString& outpoint) const;
-    //! Record the first funding input this wallet owns but never contributed,
-    //! so the pages leading to signing can refuse before the wallet unlocks
-    void checkForeignInputs();
+    //! Refusal when the coins this wallet puts into its own contribution are
+    //! worth more than its share plus the change that comes back to it, or
+    //! empty. "signrawtransactionwithwallet" signs whatever this wallet can
+    //! sign, so a session file that lists our coins under our own label but
+    //! sends the change elsewhere, or shrinks it, would have us pay the
+    //! difference to whoever wrote the file. Only the wallet's own view of
+    //! its coins counts here; nothing in the file is trusted.
+    QString ownContributionError() const;
+    //! Record why this wallet must not sign the funding transaction (a foreign
+    //! input, or a short-changed own contribution), so the pages leading to
+    //! signing can refuse before the wallet unlocks
+    void checkOwnFunding();
     void runCombineAndSign();
     void signAndCopy();
     void unlockTerms();
@@ -271,6 +281,17 @@ private:
     //! it tracks, else the confirmed UTXO set; nullopt when it cannot be
     //! resolved here (another participant's unconfirmed coin)
     std::optional<CAmount> resolveInputValue(const MnShareSession::Input& input) const;
+    //! Sum of every recorded contribution: the input values this node can
+    //! resolve, the change promised, and how many inputs it could not value
+    struct FundingTotals {
+        CAmount resolved{0};
+        CAmount change{0};
+        int unresolved{0};
+        //! Network fee the funding transaction pays, meaningful only when
+        //! nothing is unresolved
+        CAmount fee() const { return resolved - GetMnType(MnType::Regular).collat_amount - change; }
+    };
+    FundingTotals fundingTotals() const;
     //! One sentence about whether the recorded inputs cover collateral, change
     //! and a positive fee; `fatal` marks funding that could never broadcast
     QString fundingCheck(bool& fatal) const;
@@ -346,10 +367,9 @@ private:
     //! A recorded funding coin was spent, so the registration can never
     //! complete
     QString m_dead_reason;
-    //! "txid:vout" of a funding input this wallet owns but never contributed,
-    //! i.e. a coin this session would have us sign away
-    QString m_foreign_input;
-    //! Warning from the envelope currently being imported ("This message was
+    //! Why this wallet must not sign the funding transaction (see
+    //! checkOwnFunding()), or empty
+    QString m_funding_refusal;
     //! The last message this wallet handed on, for the waiting pages
     QString m_sent_what;
     QString m_sent_code;
