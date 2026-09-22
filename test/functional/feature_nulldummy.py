@@ -35,7 +35,7 @@ from test_framework.wallet import getnewdestination
 from test_framework.key import ECKey
 from test_framework.wallet_util import bytes_to_wif
 
-NULLDUMMY_ERROR = "non-mandatory-script-verify-flag (Dummy CHECKMULTISIG argument must be zero)"
+NULLDUMMY_ERROR = "mandatory-script-verify-flag-failed (Dummy CHECKMULTISIG argument must be zero)"
 
 
 def invalidate_nulldummy_tx(tx):

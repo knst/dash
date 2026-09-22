@@ -47,6 +47,11 @@ struct ChainstateLoadOptions {
     int8_t bls_threads{llmq::DEFAULT_BLSCHECK_THREADS};
     int16_t worker_count{llmq::DEFAULT_WORKER_COUNT};
     int64_t max_recsigs_age{llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE};
+    //! Setting require_full_verification to true will require all checks at
+    //! check_level (below) to succeed for loading to succeed. Setting it to
+    //! false will skip checks if cache is not big enough to run them, so may be
+    //! helpful for running with a small cache.
+    bool require_full_verification{true};
     int64_t check_blocks{DEFAULT_CHECKBLOCKS};
     int64_t check_level{DEFAULT_CHECKLEVEL};
     std::function<bool()> check_interrupt;
@@ -62,6 +67,7 @@ enum class ChainstateLoadStatus {
     FAILURE, //!< Generic failure which reindexing may fix
     FAILURE_FATAL, //!< Fatal error which should not prompt to reindex
     FAILURE_INCOMPATIBLE_DB,
+    FAILURE_INSUFFICIENT_DBCACHE,
     INTERRUPTED,
 };
 
