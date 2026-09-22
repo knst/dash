@@ -17,6 +17,8 @@
 
 #include <gsl/pointers.h>
 
+#include <algorithm>
+#include <limits>
 #include <optional>
 #include <unordered_set>
 #include <vector>
@@ -128,7 +130,38 @@ public:
     static constexpr CAmount LimitAmountLow = 100 * COIN;
     static constexpr CAmount LimitAmountHigh = 1000 * COIN;
     static constexpr CAmount LimitAmountV22 = 2000 * COIN;
-    static constexpr CAmount LimitAmountV24 = 4000 * COIN;
+    /** From v24 the limit is a net rule on the credit pool balance: unlocks may not leave it below
+     *  its balance CreditPoolPeriodBlocks earlier minus an allowed drop of MaxUnlockDropPercentV24
+     *  of that earlier balance, never less than MinUnlockDropV24 and with no upper bound. Deposits
+     *  and Platform rewards inside the window raise the balance and are withdrawable again. The
+     *  drop is per window whatever the window length, so regtest's 100-block window drains
+     *  proportionally faster than mainnet's 576. */
+    static constexpr int MaxUnlockDropPercentV24 = 20;
+    static constexpr CAmount MinUnlockDropV24 = 2000 * COIN;
+    static_assert(MAX_MONEY <= std::numeric_limits<CAmount>::max() / MaxUnlockDropPercentV24,
+                  "balance * MaxUnlockDropPercentV24 must not overflow for any CbTx balance");
+
+    /** The total amount of asset unlocks the v24 rule admits in the block after one whose credit
+     *  pool balance is `balance`, given the balance `balance_window_start` CreditPoolPeriodBlocks
+     *  earlier. When that block predates the credit pool (or the chain is shorter than the window)
+     *  the window-start balance is 0: the whole pool then entered inside the window and is
+     *  withdrawable, which is the net rule taken literally. */
+    static constexpr CAmount UnlockLimitV24(const CAmount balance, const CAmount balance_window_start)
+    {
+        // Consensus: integer arithmetic only. A CbTx balance is bounded by the total supply, so
+        // the product stays inside int64 (static_assert above), and truncation only ever makes
+        // the limit stricter.
+        const CAmount allowed_drop = std::max(balance_window_start * MaxUnlockDropPercentV24 / 100, MinUnlockDropV24);
+        // The pool may not end the next block below balance_window_start - allowed_drop; what it
+        // gained since the window start is withdrawable on top of the allowed drop. Written with
+        // min/max rather than clamp so it is total for every input.
+        return std::min(std::max(CAmount{0}, allowed_drop - (balance_window_start - balance)), balance);
+    }
+
+    /** The credit pool balance after `block_index` as its CbTx records it, 0 when the block has
+     *  no credit pool; the read the v24 rule makes for its window start. Throws if the block
+     *  cannot be read. */
+    static CAmount GetBalanceAt(gsl::not_null<const CBlockIndex*> block_index, const Consensus::Params& consensusParams);
 
     CCreditPoolManager() = delete;
     CCreditPoolManager(const CCreditPoolManager&) = delete;

@@ -195,18 +195,20 @@ CCreditPool CCreditPoolManager::ConstructCreditPool(const gsl::not_null<const CB
     const CBlockIndex* distant_block_index{
         block_index->GetAncestor(block_index->nHeight - m_chainman.GetParams().CreditPoolPeriodBlocks())};
     CAmount distantUnlocked{0};
+    CAmount distantBalance{0};
     if (distant_block_index) {
         if (std::optional<CreditPoolDataPerBlock> distant_block{
                 GetCreditDataFromBlock(distant_block_index, m_chainman.GetConsensus())};
             distant_block) {
             distantUnlocked = distant_block->unlocked;
+            distantBalance = distant_block->credit_pool;
         }
     }
 
     CAmount currentLimit = blockData.credit_pool;
     const CAmount latelyUnlocked = prev.latelyUnlocked + blockData.unlocked - distantUnlocked;
     if (DeploymentActiveAt(*block_index, m_chainman, Consensus::DEPLOYMENT_V24)) {
-        currentLimit = std::max(CAmount{0}, std::min(currentLimit, LimitAmountV24 - latelyUnlocked));
+        currentLimit = UnlockLimitV24(blockData.credit_pool, distantBalance);
     } else if (DeploymentActiveAt(*block_index, m_chainman.GetConsensus(), Consensus::DEPLOYMENT_WITHDRAWALS)) {
         currentLimit = std::min(currentLimit, LimitAmountV22);
     } else {
@@ -221,9 +223,10 @@ CCreditPool CCreditPoolManager::ConstructCreditPool(const gsl::not_null<const CB
     if (currentLimit != 0 || latelyUnlocked > 0 || blockData.credit_pool > 0) {
         LogPrint(BCLog::CREDITPOOL, /* Continued */
                  "CCreditPoolManager: asset unlock limits on height: %d locked: %d.%08d limit: %d.%08d "
-                 "unlocked-in-window: %d.%08d\n",
+                 "unlocked-in-window: %d.%08d locked-at-window-start: %d.%08d\n",
                  block_index->nHeight, blockData.credit_pool / COIN, blockData.credit_pool % COIN, currentLimit / COIN,
-                 currentLimit % COIN, latelyUnlocked / COIN, latelyUnlocked % COIN);
+                 currentLimit % COIN, latelyUnlocked / COIN, latelyUnlocked % COIN, distantBalance / COIN,
+                 distantBalance % COIN);
     }
 
     if (currentLimit < 0) {
@@ -235,6 +238,13 @@ CCreditPool CCreditPoolManager::ConstructCreditPool(const gsl::not_null<const CB
     AddToCache(block_index->GetBlockHash(), block_index->nHeight, pool);
     return pool;
 
+}
+
+CAmount CCreditPoolManager::GetBalanceAt(const gsl::not_null<const CBlockIndex*> block_index,
+                                         const Consensus::Params& consensusParams)
+{
+    const std::optional<CreditPoolDataPerBlock> block_data{GetCreditDataFromBlock(block_index, consensusParams)};
+    return block_data ? block_data->credit_pool : CAmount{0};
 }
 
 CCreditPool CCreditPoolManager::GetCreditPool(const CBlockIndex* block_index)
