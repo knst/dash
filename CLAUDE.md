@@ -45,8 +45,8 @@ Short version, in order of preference:
   `Assert` returns its argument: `assert(ptr != nullptr); obj = *ptr;` becomes
   `obj = *Assert(ptr);`
 - `CHECK_NONFATAL(cond)` / `NONFATAL_UNREACHABLE()` for internal logic bugs on
-  a path with a caller to report to. Required in RPC code, enforced
-  (best-effort) for `src/rpc/` and `src/wallet/rpc*`.
+  a path with a caller to report to. Required in RPC code for `src/rpc/` and
+  `src/wallet/rpc*`.
 
 The production-crash guidance above does not apply to C++ regression and
 unit-test sources under `src/test/`, `src/qt/test/`, `src/wallet/test/`. They compile into test
@@ -140,22 +140,18 @@ write.
   testable function or write a functional test.
 - A functional test (`test/functional/`) proves a user-visible outcome over
   RPC or P2P: a block accepted, a lock formed, a peer banned. It is the home
-  for anything that depends on quorums, signing, sync state, or several
-  subsystems together.
+  for anything that depends on several subsystems together.
 - A regression test must fail without the fix and pass with it, and must
   observe the behavior the change claims. Asserting on a cache entry, a
   seen-set size, or a returned container because the real outcome is
   unreachable in the fixture is not coverage; test at the layer where the
   outcome is visible.
 - One scenario per test case, or a table of inputs with expected values.
-  Every special-cased path gets its own negative case, and a failure must
-  point at the scenario that broke, not at a shared lambda or one "nothing
-  changed" check at the end. A new scenario goes into the file that already
-  tests that scope; a new file is for a new scope, a subject no existing
-  fixture serves. Every test line is maintenance for as long as it exists,
-  and a new file adds setup and compile time on top. Add a test only when
-  catching the regression is worth carrying it for years; otherwise leave
-  it out and say so. Name tests after the invariant they check.
+  Every special-cased path gets its own negative case check.  A new scenario
+  goes into the file that already tests that scope; a new file is for a new
+  scope or new fixture. Add a test only when catching the regression is more
+  valuable than efforts for maintenance test line as long as it exists.
+  New files increases compilation time. Name tests after the testing scenario.
 - Do not fake a test. Some changes are proven by the diff: pass-by-reference,
   a typo, stray newline, or wrong category in a log line, a misspelled RPC
   help string, a missing `const`, a renamed local, an include reordering.
@@ -167,8 +163,7 @@ write.
 
 ## Test Commands
 
-Choose tests based on the files touched. Do not claim broad validation if only a
-targeted test was run.
+Choose tests based on the files touched.
 
 ```bash
 # All unit tests
@@ -275,16 +270,16 @@ Be extra careful around:
   relevant future work/cycle base instead of only the current tip;
 - time, mocktime, scheduler, and interrupt/shutdown behavior.
 
-For these areas, prefer small tests that prove the invariant being changed.
-
 ## PR Hygiene
 
-- When creating pull requests, follow `.github/PULL_REQUEST_TEMPLATE.md` for the description and ensure the PR title satisfies the active linter in `.github/workflows/semantic-pull-request.yml` (using Conventional Commits, including `backport:` for Bitcoin Core backports).
+- Follow `.github/PULL_REQUEST_TEMPLATE.md`: remove its italicized prompts,
+  fill in the required sections, and keep the checklist accurate for the
+  change. The title must satisfy `.github/workflows/semantic-pull-request.yml`
+  (Conventional Commits, with `backport:` for Bitcoin Core backports).
 - Use atomic commits. Each commit should make sense on its own and generally
   build and pass tests. An intentionally non-building commit (e.g. a
   regression test landing before its fix) is fine if called out explicitly so
   it isn't mistaken for an oversight.
-- Remove the italicized helper prompts from `.github/PULL_REQUEST_TEMPLATE.md`, fill in the required sections, and keep the checklist accurate for the change.
 - Do not put `@` mentions in PR descriptions; they are copied into merge
   commits and notify users repeatedly.
 - Explain what changed and why. For bug fixes, include the failure mode and why
