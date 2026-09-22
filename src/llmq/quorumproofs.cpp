@@ -475,7 +475,7 @@ std::optional<QuorumProofChain> QuorumProofBuilder::Build(const CBlockIndex* che
     Require(targetIndex->GetBlockHash() == target.getBlockHash(), "target ChainLock block mismatch");
     auto certificate = [&](const chainlock::CoinbaseChainLock& entry) {
         return ProofCertificate{uint32_t(entry.clsig.getHeight()), chain[entry.clsig.getHeight()]->GetBlockHeader(),
-                                entry.clsig.getSig()};
+                                entry.Signed().getSig()};
     };
     QuorumProofChain proof;
     proof.anchor = StateAt(checkpoint);

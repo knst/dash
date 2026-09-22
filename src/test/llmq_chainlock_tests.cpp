@@ -121,7 +121,7 @@ BOOST_FIXTURE_TEST_CASE(historical_coinbase_lookup_from_disk, RegTestingSetup)
         BOOST_REQUIRE(entry);
         BOOST_CHECK_EQUAL(entry->clsig.getHeight(), expected);
         BOOST_CHECK(entry->clsig.getBlockHash() == chain[expected]->GetBlockHash());
-        BOOST_CHECK(entry->clsig.getSig() == signature);
+        BOOST_CHECK(entry->Signed().getSig() == signature);
         const int carrier = expected == activation + 1    ? activation + 20
                             : expected == activation + 65 ? activation + 80
                                                           : activation + 110;
@@ -143,10 +143,19 @@ BOOST_FIXTURE_TEST_CASE(historical_coinbase_lookup_from_disk, RegTestingSetup)
     BOOST_CHECK(!after_disconnect.Find(activation + 65, activation + 65));
     BOOST_REQUIRE(after_disconnect.Find(activation + 1, activation + 1));
 
-    // Unavailable block data is an error, distinct from an absent certificate.
-    WITH_LOCK(cs_main, indexes[activation + 3].nStatus &= ~BLOCK_HAVE_DATA);
+    // A carrier's certificate is a fact about its block hash, so once read it is
+    // served from the process-wide memo even if the block data goes away...
+    BOOST_REQUIRE(chainlock::CoinbaseChainLockReader(chain).Read(activation + 30));
+    WITH_LOCK(cs_main, indexes[activation + 30].nStatus &= ~BLOCK_HAVE_DATA);
+    const auto memoized = chainlock::CoinbaseChainLockReader(chain).Read(activation + 30);
+    BOOST_REQUIRE(memoized);
+    BOOST_CHECK(memoized->Signed().getSig() == signature);
+
+    // ...while unavailable block data that was never read is an error, distinct
+    // from an absent certificate.
+    chainlock::ClearCoinbaseChainLockCacheForTesting();
     chainlock::CoinbaseChainLockReader unavailable(chain);
-    BOOST_CHECK_THROW(unavailable.Read(activation + 3), std::runtime_error);
+    BOOST_CHECK_THROW(unavailable.Read(activation + 30), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(chainlock_construction_test)

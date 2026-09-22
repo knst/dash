@@ -276,7 +276,7 @@ BOOST_FIXTURE_TEST_CASE(generation_retries_retired_checkpoint_signer, QuorumProo
     const auto first = reader.Find(checkpoint_height + 1, chain.Height());
     BOOST_REQUIRE(first);
     BOOST_CHECK_EQUAL(first->clsig.getHeight(), checkpoint_height + 1);
-    BOOST_CHECK(!builder.Build(checkpoint, first->clsig));
+    BOOST_CHECK(!builder.Build(checkpoint, first->Signed()));
 
     const auto result = Generate(checkpoint_height + 1);
     const auto proof = llmq::QuorumProofChain::Decode(ParseHex(result["proof_hex"].get_str()));
@@ -311,7 +311,7 @@ BOOST_FIXTURE_TEST_CASE(consensus_valid_envelopes_are_provable, QuorumProofGener
                                      *m_node.chainman, reader);
     const auto entry = reader.Find(handoff_height + llmq::SIGN_HEIGHT_OFFSET, chain.Height());
     BOOST_REQUIRE(entry);
-    const auto proof = builder.Build(checkpoint, entry->clsig);
+    const auto proof = builder.Build(checkpoint, entry->Signed());
     BOOST_REQUIRE(proof);
     BOOST_REQUIRE_EQUAL(proof->links.size(), 1U);
 

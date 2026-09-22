@@ -7,6 +7,7 @@
 
 #include <chainlock/chainlock.h>
 
+#include <array>
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -28,6 +29,11 @@ namespace chainlock {
 struct CoinbaseChainLock {
     ChainLockSig clsig;
     const CBlockIndex* carrier{nullptr};
+    /** Serialized signature as it appears in the carrier coinbase. `clsig` holds
+     *  height and block hash only; call Signed() for a copy with the decoded
+     *  signature. Decoding a BLS point is the costly part of reading a carrier. */
+    std::array<uint8_t, 96> signature_bytes{};
+    ChainLockSig Signed() const;
 };
 
 /** Reads historical signatures from a fixed, validated chain view.
@@ -46,6 +52,10 @@ public:
     /** First certificate at or above minimum_height, limited by maximum_height. */
     std::optional<CoinbaseChainLock> Find(int minimum_height, int maximum_height);
 };
+
+/** Coinbase ChainLocks are memoized process-wide by carrier block hash, so a
+ *  carrier read once stays available even if its block data is later removed. */
+void ClearCoinbaseChainLockCacheForTesting();
 
 //! Generate clsig request ID with block height
 uint256 GenSigRequestId(const int32_t nHeight);

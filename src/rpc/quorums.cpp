@@ -58,7 +58,13 @@ std::shared_ptr<const CChain> GetProofChainSnapshot(const ChainstateManager& cha
 {
     std::lock_guard lock(g_proof_chain_mutex);
     if (!g_proof_chain_snapshot || g_proof_chain_owner != &chainman || g_proof_chain_tip != tip) {
+        // Snapshots are shared and immutable, so a new tip needs a new object. Seed it
+        // from the previous one: CChain::SetTip then only rewrites heights that changed
+        // (new blocks, or the fork on a reorg) instead of all ~2.5M entries per block.
         auto snapshot = std::make_shared<CChain>();
+        if (g_proof_chain_snapshot && g_proof_chain_owner == &chainman) {
+            snapshot->CopyFrom(*g_proof_chain_snapshot);
+        }
         snapshot->SetTip(*tip);
         g_proof_chain_snapshot = std::move(snapshot);
         g_proof_chain_owner = &chainman;
@@ -1457,7 +1463,7 @@ static RPCHelpMan getchainlockbyheight()
                 UniValue result(UniValue::VOBJ);
                 result.pushKV("height", height);
                 result.pushKV("blockhash", entry->clsig.getBlockHash().ToString());
-                result.pushKV("signature", entry->clsig.getSig().ToString());
+                result.pushKV("signature", entry->Signed().getSig().ToString());
                 result.pushKV("cbtx_height", entry->carrier->nHeight);
                 return result;
             } catch (const std::exception& e) {
@@ -1536,7 +1542,7 @@ static RPCHelpMan getquorumproofchain()
                     }
                     chainlock::ChainLockSig target_signature;
                     if (target_chainlock) {
-                        target_signature = target_chainlock->clsig;
+                        target_signature = target_chainlock->Signed();
                         target_guard = target_chainlock->carrier;
                     }
                     // Platform can already reference a tip ChainLock before another
