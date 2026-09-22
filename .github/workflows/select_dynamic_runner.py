@@ -9,7 +9,7 @@ import re
 import sys
 import urllib.error
 import urllib.request
-from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 
 DEFAULT_REPOS = (
@@ -25,6 +25,8 @@ REQUEST_TIMEOUT_SECONDS = 10
 # Prefixes — any label starting with one of these indicates a non-GitHub-hosted runner
 NON_GITHUB_HOSTED_RUNNER_PREFIXES = ("blacksmith-",)
 SELF_HOSTED_LABEL = "self-hosted"
+# Any queued GitHub-hosted job at all is enough to prefer our own hardware for lint.
+SELFHOSTED_BACKLOG_THRESHOLD = 0
 
 
 def parse_next_link(link_header: str) -> Optional[str]:
@@ -81,12 +83,22 @@ def iter_pages(
         next_url = parse_next_link(headers.get("Link", ""))
 
 
-def targets_github_hosted_runner(job: Dict) -> bool:
-    """Return True if the job targets GitHub-hosted runners, not Blacksmith or self-hosted."""
+def targets_github_hosted_runner(
+    job: Dict,
+    non_hosted_labels: Sequence[str] = (),
+) -> bool:
+    """Return True if the job targets GitHub-hosted runners, not Blacksmith or self-hosted.
+
+    non_hosted_labels carries any additional bare labels that name our own
+    hardware. A job asking for one of those is not competing for the
+    account-wide GitHub-hosted concurrency limit, so counting it would inflate
+    the very backlog figure used to decide whether to escalate to Blacksmith.
+    """
+    extra = {label.lower() for label in non_hosted_labels if label}
     for label in job.get("labels", []):
         if not isinstance(label, str):
             continue
-        if label == SELF_HOSTED_LABEL:
+        if label == SELF_HOSTED_LABEL or label.lower() in extra:
             return False
         for prefix in NON_GITHUB_HOSTED_RUNNER_PREFIXES:
             if label.startswith(prefix):
@@ -98,6 +110,7 @@ def count_queued_jobs(
     fetch_json: Callable[[str], Tuple[Dict, Dict[str, str]]],
     repos: Sequence[str],
     statuses: Sequence[str] = DEFAULT_STATUSES,
+    non_hosted_labels: Sequence[str] = (),
 ) -> int:
     queued_jobs = 0
 
@@ -120,7 +133,9 @@ def count_queued_jobs(
             ).format(repo, run_id)
             for payload in iter_pages(fetch_json, jobs_url):
                 for job in payload.get("jobs", []):
-                    if job.get("status") == "queued" and targets_github_hosted_runner(job):
+                    if job.get("status") == "queued" and targets_github_hosted_runner(
+                        job, non_hosted_labels
+                    ):
                         queued_jobs += 1
 
     return queued_jobs
@@ -129,6 +144,108 @@ def count_queued_jobs(
 def load_event(event_path: str) -> Dict:
     with open(event_path, "r", encoding="utf-8") as fh:
         return json.load(fh)
+
+
+def parse_author_allowlist(raw: str) -> Set[str]:
+    """Split a comma/whitespace separated list of logins into a lowercased set.
+
+    GitHub logins are case-insensitive and this list is hand-maintained in a
+    repository variable, so normalise rather than trust the exact spelling.
+    """
+    return {login.lower() for login in raw.replace(",", " ").split()}
+
+
+def is_selfhosted_allowed(
+    event_name: str,
+    event: Dict,
+    actor: str,
+    allowed_authors: Set[str],
+) -> bool:
+    """Whether this event may run on our own hardware.
+
+    build.yml runs on pull_request_target and checks out the pull request head,
+    so the code that executes is supplied by the head repository - which is a
+    fork for effectively every Dash pull request. A persistent self-hosted
+    runner must therefore only be offered to a fixed allowlist of logins.
+    """
+    if actor.strip().lower() not in allowed_authors:
+        return False
+
+    if event_name == "push":
+        # Pushing to this repository already requires write access.
+        return True
+
+    if event_name == "pull_request_target":
+        pull_request = event.get("pull_request") or {}
+
+        # Both must be allowlisted: the author is stable across synchronize,
+        # while the actor is whoever pushed the head that is about to run. A
+        # fork branch can be pushed to by someone other than the PR author.
+        author = (pull_request.get("user") or {}).get("login") or ""
+        if author.strip().lower() not in allowed_authors:
+            return False
+
+        # The tree that executes comes from the head repository, which is not
+        # necessarily owned by the author: a pull request may be opened from any
+        # readable fork. Trusting the people without checking whose repository
+        # supplies the code would leave the gate open to a cross-fork head.
+        head_repo = (pull_request.get("head") or {}).get("repo") or {}
+        base_repo = (pull_request.get("base") or {}).get("repo") or {}
+        head_name = head_repo.get("full_name") or ""
+        base_name = base_repo.get("full_name") or ""
+        if not head_name or not base_name:
+            # Cannot attribute the tree to a repository; refuse rather than guess.
+            return False
+        if head_name != base_name:
+            head_owner = (head_repo.get("owner") or {}).get("login") or ""
+            if head_owner.strip().lower() not in allowed_authors:
+                return False
+
+        return True
+
+    return False
+
+
+def select_lint_runner(
+    event_name: str,
+    event: Dict,
+    actor: str,
+    backlog_count_value: Optional[int],
+    measurement_error: Optional[str],
+    selfhosted_label: str,
+    allowed_authors: Set[str],
+    fallback_runner: str,
+    label_override: bool = False,
+) -> Tuple[str, str]:
+    """Pick the runner for the lint job, and the reason for the pick.
+
+    Inserts a self-hosted rung into the hosted -> Blacksmith ladder: once any
+    GitHub-hosted job is queued, lint goes to our own hardware instead of
+    competing for the account-wide concurrency limit. When the rung is not
+    available lint keeps the caller's existing amd64 decision unchanged.
+    """
+    if not selfhosted_label:
+        return fallback_runner, "selfhosted-disabled"
+
+    if label_override:
+        # Someone asked for Blacksmith explicitly; do not quietly send them to
+        # our own hardware instead.
+        return fallback_runner, "label:blacksmith-ci"
+
+    if measurement_error is not None:
+        return fallback_runner, "metric-unavailable"
+
+    if backlog_count_value is None or backlog_count_value <= SELFHOSTED_BACKLOG_THRESHOLD:
+        return fallback_runner, "backlog:{}<={}".format(
+            backlog_count_value, SELFHOSTED_BACKLOG_THRESHOLD
+        )
+
+    if not is_selfhosted_allowed(event_name, event, actor, allowed_authors):
+        return fallback_runner, "actor-not-allowed"
+
+    return selfhosted_label, "selfhosted:backlog:{}>{}".format(
+        backlog_count_value, SELFHOSTED_BACKLOG_THRESHOLD
+    )
 
 
 def select_runners(
@@ -140,6 +257,9 @@ def select_runners(
     runner_arm64_var: str,
     fetch_json: Callable[[str], Tuple[Dict, Dict[str, str]]],
     repos: Sequence[str] = DEFAULT_REPOS,
+    runner_selfhosted_var: str = "",
+    selfhosted_authors: str = "",
+    actor: str = "",
 ) -> Dict[str, str]:
     label_names = [
         label.get("name", "")
@@ -154,7 +274,9 @@ def select_runners(
     measurement_error = None
 
     try:
-        backlog_count_value = count_queued_jobs(fetch_json, repos)
+        backlog_count_value = count_queued_jobs(
+            fetch_json, repos, non_hosted_labels=(runner_selfhosted_var,)
+        )
         backlog_count = str(backlog_count_value)
     except Exception as exc:  # noqa: BLE001
         measurement_error = "{}: {}".format(type(exc).__name__, exc)
@@ -208,9 +330,23 @@ def select_runners(
         decision_parts.append("error:{}".format(measurement_error[:180]))
     decision_parts.extend(fallback_parts)
 
+    runner_lint, lint_decision_reason = select_lint_runner(
+        event_name=event_name,
+        event=event,
+        actor=actor,
+        backlog_count_value=backlog_count_value,
+        measurement_error=measurement_error,
+        selfhosted_label=runner_selfhosted_var,
+        allowed_authors=parse_author_allowlist(selfhosted_authors),
+        fallback_runner=runner_amd64,
+        label_override=label_override,
+    )
+
     return {
         "runner_amd64": runner_amd64,
         "runner_arm64": runner_arm64,
+        "runner_lint": runner_lint,
+        "lint_decision_reason": lint_decision_reason,
         "use_blacksmith": "true" if use_blacksmith_amd64 or use_blacksmith_arm64 else "false",
         "use_blacksmith_amd64": "true" if use_blacksmith_amd64 else "false",
         "use_blacksmith_arm64": "true" if use_blacksmith_arm64 else "false",
@@ -255,7 +391,9 @@ def write_step_summary(path: Optional[str], outputs: Dict[str, str]) -> None:
         )
         fh.write("- amd64 runner: `{}`\n".format(outputs["runner_amd64"]))
         fh.write("- arm64 runner: `{}`\n".format(outputs["runner_arm64"]))
+        fh.write("- lint runner: `{}`\n".format(outputs["runner_lint"]))
         fh.write("- Decision: `{}`\n".format(outputs["decision_reason"]))
+        fh.write("- Lint decision: `{}`\n".format(outputs["lint_decision_reason"]))
 
 
 def env_int(name: str, default: int) -> int:
@@ -301,6 +439,21 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         help="Blacksmith runner label for arm64",
     )
     parser.add_argument(
+        "--runner-selfhosted-var",
+        default=os.environ.get("RUNNER_SELFHOSTED_VAR", ""),
+        help="Self-hosted runner label for the lint job; empty disables the rung",
+    )
+    parser.add_argument(
+        "--selfhosted-authors",
+        default=os.environ.get("SELFHOSTED_LINT_AUTHORS", ""),
+        help="Comma separated logins allowed to run on self-hosted runners",
+    )
+    parser.add_argument(
+        "--actor",
+        default=os.environ.get("GITHUB_ACTOR", ""),
+        help="Login that triggered this run",
+    )
+    parser.add_argument(
         "--token",
         default=os.environ.get("GH_TOKEN", ""),
         help="GitHub API token",
@@ -342,6 +495,9 @@ def main(argv: Sequence[str]) -> int:
         runner_arm64_var=args.runner_arm64_var,
         fetch_json=fetch_json,
         repos=repos,
+        runner_selfhosted_var=args.runner_selfhosted_var,
+        selfhosted_authors=args.selfhosted_authors,
+        actor=args.actor,
     )
 
     write_github_output(os.environ.get("GITHUB_OUTPUT"), outputs)

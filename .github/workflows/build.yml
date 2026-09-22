@@ -27,6 +27,7 @@ jobs:
       skip: ${{ steps.skip-check.outputs.skip }}
       runner-amd64: ${{ steps.select-runner.outputs.runner_amd64 }}
       runner-arm64: ${{ steps.select-runner.outputs.runner_arm64 }}
+      runner-lint: ${{ steps.select-runner.outputs.runner_lint }}
       use-blacksmith: ${{ steps.select-runner.outputs.use_blacksmith }}
       use-blacksmith-amd64: ${{ steps.select-runner.outputs.use_blacksmith_amd64 }}
       use-blacksmith-arm64: ${{ steps.select-runner.outputs.use_blacksmith_arm64 }}
@@ -60,6 +61,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUNNER_AMD64_VAR: ${{ vars.RUNNER_AMD64 }}
           RUNNER_ARM64_VAR: ${{ vars.RUNNER_ARM64 }}
+          # Self-hosted rung for the lint job only. Unset RUNNER_SELFHOSTED (or
+          # rename it) to send lint straight back to the hosted/Blacksmith ladder.
+          RUNNER_SELFHOSTED_VAR: ${{ vars.RUNNER_SELFHOSTED }}
+          SELFHOSTED_LINT_AUTHORS: ${{ vars.SELFHOSTED_LINT_AUTHORS }}
         run: |
           python3 .github/workflows/select_dynamic_runner.py
 
@@ -193,7 +198,7 @@ jobs:
     needs: [check-skip, container-slim]
     with:
       container-path: ${{ needs.container-slim.outputs.path }}
-      runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      runs-on: ${{ needs.check-skip.outputs['runner-lint'] }}
 
   src-aarch64-linux:
     name: aarch64-linux-build
