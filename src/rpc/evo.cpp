@@ -39,8 +39,6 @@
 #include <string_view>
 
 #ifdef ENABLE_WALLET
-#include <wallet/coincontrol.h>
-#include <wallet/spend.h>
 #include <wallet/wallet.h>
 
 extern RPCHelpMan sendrawtransaction();
@@ -59,15 +57,10 @@ using node::GetTransaction;
 using node::NodeContext;
 using wallet::CWallet;
 #ifdef ENABLE_WALLET
-using wallet::CCoinControl;
-using wallet::COutput;
-using wallet::CreatedTransactionResult;
-using wallet::CRecipient;
 using wallet::DEFAULT_DISABLE_WALLET;
 using wallet::GetWalletForJSONRPCRequest;
 using wallet::HELP_REQUIRING_PASSPHRASE;
 using wallet::isminetype;
-using wallet::RANDOM_CHANGE_POSITION;
 #endif // ENABLE_WALLET
 
 // Defined here rather than with the other ToJson() in evo/core_write.cpp: dash-tx never prints
@@ -410,80 +403,15 @@ static CMutableTransaction BuildProDisTx(const CDeterministicMN& dmn, uint16_t a
 }
 
 template <typename SpecialTxPayload>
-static void FundSpecialTx(CWallet& wallet, CMutableTransaction& tx, const SpecialTxPayload& payload,
-                          const CTxDestination& fundDest) EXCLUSIVE_LOCKS_REQUIRED(!wallet.cs_wallet)
+static void FundSpecialTx(interfaces::Wallet& wallet, CMutableTransaction& tx, const SpecialTxPayload& payload,
+                          const CTxDestination& fundDest)
 {
-    // Make sure the results are valid at least up to the most recent block
-    // the user could have gotten from another RPC command prior to now
-    wallet.BlockUntilSyncedToCurrentChain();
-
-    LOCK(wallet.cs_wallet);
-
-    CTxDestination nodest = CNoDestination();
-    if (fundDest == nodest) {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "No source of funds specified");
+    SetTxPayload(tx, payload);
+    auto funded{wallet.fundTransaction(tx, fundDest)};
+    if (!funded) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, util::ErrorString(funded).original);
     }
-
-    CDataStream ds(SER_NETWORK, PROTOCOL_VERSION);
-    ds << payload;
-    tx.vExtraPayload.assign(UCharCast(ds.data()), UCharCast(ds.data() + ds.size()));
-
-    static const CTxOut dummyTxOut(0, CScript() << OP_RETURN);
-    std::vector<CRecipient> vecSend;
-    bool dummyTxOutAdded = false;
-
-    if (tx.vout.empty()) {
-        // add dummy txout as CreateTransaction requires at least one recipient
-        tx.vout.emplace_back(dummyTxOut);
-        dummyTxOutAdded = true;
-    }
-
-    for (const auto& txOut : tx.vout) {
-        CRecipient recipient = {txOut.scriptPubKey, txOut.nValue, false};
-        vecSend.push_back(recipient);
-    }
-
-    CCoinControl coinControl;
-    coinControl.destChange = fundDest;
-    // Spend only from fundDest
-    coinControl.m_allow_other_inputs = false;
-    std::vector<COutput> address_coins;
-    for (const auto& out : AvailableCoinsListUnspent(wallet).All()) {
-        CTxDestination txDest;
-        if (ExtractDestination(out.txout.scriptPubKey, txDest) && txDest == fundDest) {
-            address_coins.push_back(out);
-        }
-    }
-    if (address_coins.empty()) {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, strprintf("No funds at specified address %s", EncodeDestination(fundDest)));
-    }
-
-    // Every selected coin is force-spent, so select as few as possible: largest first, adding
-    // another one only while they don't cover amount plus fees
-    std::sort(address_coins.begin(), address_coins.end(),
-              [](const COutput& a, const COutput& b) { return a.txout.nValue > b.txout.nValue; });
-    util::Result<CreatedTransactionResult> res{util::Error{}};
-    for (const COutput& coin : address_coins) {
-        coinControl.Select(coin.outpoint);
-        res = CreateTransaction(wallet, vecSend, RANDOM_CHANGE_POSITION, coinControl, /*sign=*/true,
-                                tx.vExtraPayload.size());
-        if (res) break;
-    }
-    if (!res) {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, util::ErrorString(res).original);
-    }
-
-    const CTransactionRef& newTx = res->tx;
-    tx.vin = newTx->vin;
-    tx.vout = newTx->vout;
-
-    if (dummyTxOutAdded && tx.vout.size() > 1) {
-        // CreateTransaction added a change output, so we don't need the dummy txout anymore.
-        // Removing it results in slight overpayment of fees, but we ignore this for now (as it's a very low amount).
-        auto it = std::find(tx.vout.begin(), tx.vout.end(), dummyTxOut);
-        CHECK_NONFATAL(it != tx.vout.end());
-        tx.vout.erase(it);
-    }
+    tx = CMutableTransaction{**funded};
 }
 
 template <typename SpecialTxPayload>
@@ -509,24 +437,8 @@ static std::string SignAndSendSpecialTx(const JSONRPCRequest& request, CChainsta
     {
     LOCK(::cs_main);
 
-    const CBlockIndex* tip{chainman.ActiveChain().Tip()};
-    const Consensus::Params& consensus_params{chainman.GetConsensus()};
-    if (!DeploymentActiveAfter(tip, consensus_params, Consensus::DEPLOYMENT_DIP0003)) {
-        const int current_height{tip ? tip->nHeight : -1};
-        const int next_block_height{current_height + 1};
-        const int activation_height{consensus_params.DIP0003Height};
-        const int blocks_to_mine{
-            activation_height > next_block_height ? activation_height - next_block_height : 0
-        };
-        throw JSONRPCError(RPC_VERIFY_ERROR, strprintf(
-            "DIP0003 is not active yet; ProTx transactions are valid starting at block height %d "
-            "(current chain height %d, next block height %d). Mine %d more block%s or restart "
-            "this regtest/devnet chain with DIP3 activation parameters that are already active.",
-            activation_height, current_height, next_block_height, blocks_to_mine,
-            blocks_to_mine == 1 ? "" : "s"));
-    }
-
     TxValidationState state;
+    const CBlockIndex* tip{chainman.ActiveChain().Tip()};
     const bool is_v24_active{DeploymentActiveAfter(tip, chainman, Consensus::DEPLOYMENT_V24)};
     if (!chain_helper.special_tx->CheckSpecialTx(CTransaction(tx), tip, is_v24_active,
                                                  chainman.ActiveChainstate().CoinsTip(), true, state)) {
@@ -1762,7 +1674,7 @@ static RPCHelpMan protx_shared_update_share()
     // make sure we get enough fees added
     ptx.vchSig.resize(CPubKey::COMPACT_SIGNATURE_SIZE);
 
-    FundSpecialTx(*pwallet, tx, ptx, feeSourceDest);
+    FundSpecialTx(*MakeWalletInterface(node, pwallet), tx, ptx, feeSourceDest);
     SignSpecialTxPayloadByHash(tx, ptx, dmn->pdmnState->shares[ptx.shareIndex].keyIDOwner, *pwallet);
     SetTxPayload(tx, ptx);
 
@@ -1833,7 +1745,7 @@ static RPCHelpMan protx_shared_update_registrar_prepare()
     // make sure we get enough fees added: one signature per share
     ptx.vchSigs.assign(dmn->pdmnState->shares.size(), CompactSignature{});
 
-    FundSpecialTx(*pwallet, tx, ptx, feeSourceDest);
+    FundSpecialTx(*MakeWalletInterface(node, pwallet), tx, ptx, feeSourceDest);
     UpdateSpecialTxInputsHash(tx, ptx);
     SetTxPayload(tx, ptx);
 
