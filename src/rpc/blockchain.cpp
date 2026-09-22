@@ -53,6 +53,7 @@
 #include <chainlock/chainlock.h>
 #include <evo/assetlocktx.h>
 #include <evo/cbtx.h>
+#include <evo/creditpool.h>
 #include <evo/evodb.h>
 #include <evo/mnhftx.h>
 #include <evo/specialtx.h>
@@ -1752,6 +1753,74 @@ struct CompareBlocksByHeight
     }
 };
 
+static RPCHelpMan getcreditpoolinfo()
+{
+    return RPCHelpMan{
+        "getcreditpoolinfo",
+        "\nReturns the credit pool balance after a block and the asset unlock limit that applies to the block after it.\n"
+        "The limit is computed over a window of blocks ending at that block (576 blocks on mainnet and testnet); from v24 it is relative to the balance at the window start.\n"
+        "The answer describes the named block even if it has since left the active chain, and fails if a block of the window cannot be read (for example on a pruned node).\n",
+        {
+            {"height", RPCArg::Type::NUM, RPCArg::DefaultHint{"the chain tip"}, "The block height to report the credit pool at"},
+        },
+        RPCResult{
+            RPCResult::Type::OBJ, "", "",
+            {
+                {RPCResult::Type::NUM, "height", "The height the credit pool is reported at"},
+                {RPCResult::Type::STR_HEX, "blockhash", "The hash of that block"},
+                {RPCResult::Type::STR_AMOUNT, "balance", "The credit pool balance after that block in " + CURRENCY_UNIT},
+                {RPCResult::Type::STR_AMOUNT, "currentlimit", "The total amount of asset unlocks that may be mined in the next block in " + CURRENCY_UNIT},
+                {RPCResult::Type::OBJ, "window", "The window the limit is computed over",
+                {
+                    {RPCResult::Type::NUM, "blocks", "The number of blocks in the window"},
+                    {RPCResult::Type::NUM, "height", "The height of the block whose balance the window starts from (-1 when the chain is shorter than the window)"},
+                    {RPCResult::Type::STR_AMOUNT, "balance", "The credit pool balance after the window start block in " + CURRENCY_UNIT + " (0 when there is no such block or it has no credit pool)"},
+                    {RPCResult::Type::STR_AMOUNT, "unlocked", "The amount unlocked in the blocks of the window in " + CURRENCY_UNIT + " (informational from v24, where the limit no longer uses it)"},
+                }},
+            }},
+        RPCExamples{
+            HelpExampleCli("getcreditpoolinfo", "")
+            + HelpExampleCli("getcreditpoolinfo", "2500000")
+            + HelpExampleRpc("getcreditpoolinfo", "2500000")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+    const NodeContext& node = EnsureAnyNodeContext(request.context);
+    ChainstateManager& chainman = EnsureChainman(node);
+    auto& chain_helper = chainman.ActiveChainstate().ChainHelper();
+
+    const CBlockIndex* pindex{WITH_LOCK(::cs_main, return request.params[0].isNull()
+                                                       ? chainman.ActiveChain().Tip()
+                                                       : chainman.ActiveChain()[request.params[0].getInt<int>()])};
+    if (!pindex) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Block height out of range");
+    }
+
+    const int window_blocks{chainman.GetParams().CreditPoolPeriodBlocks()};
+    // nullptr when the chain is shorter than the window
+    const CBlockIndex* pindex_window_start{pindex->GetAncestor(pindex->nHeight - window_blocks)};
+
+    const CCreditPool pool{chain_helper.GetCreditPool(pindex)};
+    // The same read the consensus rule makes for the window start
+    const CAmount window_start_balance{
+        pindex_window_start ? CCreditPoolManager::GetBalanceAt(pindex_window_start, chainman.GetConsensus()) : CAmount{0}};
+
+    UniValue result(UniValue::VOBJ);
+    result.pushKV("height", pindex->nHeight);
+    result.pushKV("blockhash", pindex->GetBlockHash().GetHex());
+    result.pushKV("balance", ValueFromAmount(pool.locked));
+    result.pushKV("currentlimit", ValueFromAmount(pool.currentLimit));
+    UniValue window(UniValue::VOBJ);
+    window.pushKV("blocks", window_blocks);
+    window.pushKV("height", pindex_window_start ? pindex_window_start->nHeight : -1);
+    window.pushKV("balance", ValueFromAmount(window_start_balance));
+    window.pushKV("unlocked", ValueFromAmount(pool.latelyUnlocked));
+    result.pushKV("window", window);
+    return result;
+},
+    };
+}
+
 static RPCHelpMan getchaintips()
 {
     return RPCHelpMan{"getchaintips",
@@ -3161,6 +3230,7 @@ void RegisterBlockchainRPCCommands(CRPCTable& t)
         {"blockchain", &getblockheader},
         {"blockchain", &getblockheaders},
         {"blockchain", &getchaintips},
+        {"blockchain", &getcreditpoolinfo},
         {"blockchain", &getdeploymentinfo},
         {"blockchain", &getdifficulty},
         {"blockchain", &getmerkleblocks},

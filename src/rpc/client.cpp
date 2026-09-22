@@ -72,6 +72,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "listreceivedbylabel", 4, "include_immature_coinbase" },
     { "getassetunlockstatuses", 0, "indexes" },
     { "getassetunlockstatuses", 1, "height" },
+    { "getcreditpoolinfo", 0, "height" },
     { "getbalance", 1, "minconf" },
     { "getbalance", 2, "addlocked" },
     { "getbalance", 3, "include_watchonly" },
