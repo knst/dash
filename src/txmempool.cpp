@@ -202,9 +202,8 @@ util::Result<CTxMemPool::setEntries> CTxMemPool::CalculateAncestorsAndCheckLimit
     return ancestors;
 }
 
-bool CTxMemPool::CheckPackageLimits(const Package& package,
-                                    const Limits& limits,
-                                    std::string &errString) const
+util::Result<void> CTxMemPool::CheckPackageLimits(const Package& package,
+                                                  const Limits& limits) const
 {
     CTxMemPoolEntry::Parents staged_ancestors;
     int64_t total_size = 0;
@@ -215,8 +214,7 @@ bool CTxMemPool::CheckPackageLimits(const Package& package,
             if (piter) {
                 staged_ancestors.insert(**piter);
                 if (staged_ancestors.size() + package.size() > static_cast<uint64_t>(limits.ancestor_count)) {
-                    errString = strprintf("too many unconfirmed parents [limit: %u]", limits.ancestor_count);
-                    return false;
+                    return util::Error{Untranslated(strprintf("too many unconfirmed parents [limit: %u]", limits.ancestor_count))};
                 }
             }
         }
@@ -227,8 +225,8 @@ bool CTxMemPool::CheckPackageLimits(const Package& package,
     const auto ancestors{CalculateAncestorsAndCheckLimits(total_size, package.size(),
                                                           staged_ancestors, limits)};
     // It's possible to overestimate the ancestor/descendant totals.
-    if (!ancestors.has_value()) errString = "possibly " + util::ErrorString(ancestors).original;
-    return ancestors.has_value();
+    if (!ancestors.has_value()) return util::Error{Untranslated("possibly " + util::ErrorString(ancestors).original)};
+    return {};
 }
 
 util::Result<CTxMemPool::setEntries> CTxMemPool::CalculateMemPoolAncestors(
@@ -1459,19 +1457,6 @@ std::vector<CTxMemPool::indexed_transaction_set::const_iterator> CTxMemPool::Get
     }
     std::sort(iters.begin(), iters.end(), DepthAndScoreComparator());
     return iters;
-}
-
-void CTxMemPool::queryHashes(std::vector<uint256>& vtxid) const
-{
-    LOCK(cs);
-    auto iters = GetSortedDepthAndScore();
-
-    vtxid.clear();
-    vtxid.reserve(mapTx.size());
-
-    for (auto it : iters) {
-        vtxid.push_back(it->GetTx().GetHash());
-    }
 }
 
 static TxMempoolInfo GetInfo(CTxMemPool::indexed_transaction_set::const_iterator it) {

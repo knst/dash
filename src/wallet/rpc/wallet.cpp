@@ -32,12 +32,21 @@
 
 #include <coinjoin/client.h>
 #include <coinjoin/options.h>
+#include <wallet/walletutil.h>
 
 #include <optional>
 
 #include <univalue.h>
 
 namespace wallet {
+
+static const std::map<uint64_t, std::string> WALLET_FLAG_CAVEATS{
+    {WALLET_FLAG_AVOID_REUSE,
+     "You need to rescan the blockchain in order to correctly mark used "
+     "destinations in the past. Until this is done, some destinations may "
+     "be considered unused, even if the opposite is the case."},
+};
+
 /** Checks if a CKey is in the given CWallet compressed or otherwise*/
 bool HaveKey(const SigningProvider& wallet, const CKey& key)
 {
@@ -335,7 +344,7 @@ static RPCHelpMan upgradetohd()
     bool generate_mnemonic = request.params[0].isNull() || request.params[0].get_str().empty();
     bool mnemonic_passphrase_has_null{false};
     {
-        LOCK(pwallet->cs_wallet);
+        LOCK2(pwallet->m_relock_mutex, pwallet->cs_wallet);
 
         SecureString wallet_passphrase;
         wallet_passphrase.reserve(100);
@@ -475,7 +484,11 @@ static RPCHelpMan loadwallet()
                     RPCResult::Type::OBJ, "", "",
                     {
                         {RPCResult::Type::STR, "name", "The wallet name if loaded successfully."},
-                        {RPCResult::Type::STR, "warning", "Warning message if wallet was not loaded cleanly."},
+                        {RPCResult::Type::STR, "warning", /*optional=*/true, "Warning messages, if any, related to loading the wallet. Multiple messages will be delimited by newlines. (DEPRECATED, returned only if config option -deprecatedrpc=walletwarningfield is passed.)"},
+                        {RPCResult::Type::ARR, "warnings", /*optional=*/true, "Warning messages, if any, related to loading the wallet.",
+                        {
+                            {RPCResult::Type::STR, "", ""},
+                        }},
                     }
                 },
                 RPCExamples{
@@ -508,7 +521,10 @@ static RPCHelpMan loadwallet()
 
     UniValue obj(UniValue::VOBJ);
     obj.pushKV("name", wallet->GetName());
-    obj.pushKV("warning", Join(warnings, Untranslated("\n")).original);
+    if (wallet->chain().rpcEnableDeprecated("walletwarningfield")) {
+        obj.pushKV("warning", Join(warnings, Untranslated("\n")).original);
+    }
+    PushWarnings(warnings, obj);
 
     return obj;
 },
@@ -602,7 +618,11 @@ static RPCHelpMan createwallet()
             RPCResult::Type::OBJ, "", "",
             {
                 {RPCResult::Type::STR, "name", "The wallet name if created successfully. If the wallet was created using a full path, the wallet_name will be the full path."},
-                {RPCResult::Type::STR, "warning", "Warning message if wallet was not loaded cleanly."},
+                {RPCResult::Type::STR, "warning", /*optional=*/true, "Warning messages, if any, related to creating the wallet. Multiple messages will be delimited by newlines. (DEPRECATED, returned only if config option -deprecatedrpc=walletwarningfield is passed.)"},
+                {RPCResult::Type::ARR, "warnings", /*optional=*/true, "Warning messages, if any, related to creating the wallet.",
+                {
+                    {RPCResult::Type::STR, "", ""},
+                }},
             }
         },
         RPCExamples{
@@ -675,7 +695,10 @@ static RPCHelpMan createwallet()
 
     UniValue obj(UniValue::VOBJ);
     obj.pushKV("name", wallet->GetName());
-    obj.pushKV("warning", Join(warnings, Untranslated("\n")).original);
+    if (wallet->chain().rpcEnableDeprecated("walletwarningfield")) {
+        obj.pushKV("warning", Join(warnings, Untranslated("\n")).original);
+    }
+    PushWarnings(warnings, obj);
 
     return obj;
 },
@@ -692,7 +715,11 @@ static RPCHelpMan unloadwallet()
                     {"load_on_startup", RPCArg::Type::BOOL, RPCArg::Optional::OMITTED_NAMED_ARG, "Save wallet name to persistent settings and load on startup. True to add wallet to startup list, false to remove, null to leave unchanged."},
                 },
                 RPCResult{RPCResult::Type::OBJ, "", "", {
-                    {RPCResult::Type::STR, "warning", "Warning message if wallet was not unloaded cleanly."},
+                    {RPCResult::Type::STR, "warning", /*optional=*/true, "Warning messages, if any, related to unloading the wallet. Multiple messages will be delimited by newlines. (DEPRECATED, returned only if config option -deprecatedrpc=walletwarningfield is passed.)"},
+                    {RPCResult::Type::ARR, "warnings", /*optional=*/true, "Warning messages, if any, related to unloading the wallet.",
+                    {
+                        {RPCResult::Type::STR, "", ""},
+                    }},
                 }},
                 RPCExamples{
                     HelpExampleCli("unloadwallet", "wallet_name")
@@ -730,11 +757,13 @@ static RPCHelpMan unloadwallet()
             throw JSONRPCError(RPC_MISC_ERROR, "Requested wallet already unloaded");
         }
     }
+    UniValue result(UniValue::VOBJ);
+    if (wallet->chain().rpcEnableDeprecated("walletwarningfield")) {
+        result.pushKV("warning", Join(warnings, Untranslated("\n")).original);
+    }
+    PushWarnings(warnings, result);
 
     UnloadWallet(std::move(wallet));
-
-    UniValue result(UniValue::VOBJ);
-    result.pushKV("warning", Join(warnings, Untranslated("\n")).original);
     return result;
 },
     };
@@ -860,7 +889,14 @@ static RPCHelpMan sethdseed()
     }
 
     if (request.params[1].isNull()) {
-        spk_man.GenerateNewHDChain("", "");
+        if (pwallet->IsCrypted()) {
+            pwallet->WithEncryptionKey([&](const CKeyingMaterial& encryption_key) {
+                spk_man.GenerateNewHDChain("", "", encryption_key);
+                return true;
+            });
+        } else {
+            spk_man.GenerateNewHDChain("", "");
+        }
     } else {
         CKey key = DecodeSecret(request.params[1].get_str());
         if (!key.IsValid()) {
@@ -872,6 +908,11 @@ static RPCHelpMan sethdseed()
         CHDChain newHdChain;
         if (!newHdChain.SetSeed(SecureVector(key.begin(), key.end()), true)) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid private key: SetSeed failed");
+        }
+        if (pwallet->IsCrypted() && !pwallet->WithEncryptionKey([&](const CKeyingMaterial& encryption_key) {
+                return spk_man.EncryptHDChain(encryption_key, newHdChain);
+            })) {
+            throw JSONRPCError(RPC_WALLET_ENCRYPTION_FAILED, "Failed to encrypt the HD seed");
         }
         if (!spk_man.AddHDChainSingle(newHdChain)) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid private key: AddHDChainSingle failed");

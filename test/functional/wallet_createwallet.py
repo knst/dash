@@ -15,12 +15,16 @@ from test_framework.util import (
 )
 from test_framework.wallet_util import bytes_to_wif, generate_wif_key
 
+EMPTY_PASSPHRASE_MSG = "Empty string given as passphrase, wallet will not be encrypted."
+
+
 class CreateWalletTest(BitcoinTestFramework):
     def add_options(self, parser):
         self.add_wallet_options(parser)
 
     def set_test_params(self):
         self.num_nodes = 1
+        self.extra_args = [["-deprecatedrpc=walletwarningfield"]]
 
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
@@ -55,7 +59,7 @@ class CreateWalletTest(BitcoinTestFramework):
         else:
             result = w1.importmulti([{'scriptPubKey': {'address': key_to_p2pkh(eckey.get_pubkey().get_bytes())}, 'timestamp': 'now', 'keys': [privkey]}])
         assert not result[0]['success']
-        assert 'warning' not in result[0]
+        assert 'warnings' not in result[0]
         assert_equal(result[0]['error']['code'], -4)
         assert_equal(result[0]['error']['message'], 'Cannot import private keys to a wallet with private keys disabled')
 
@@ -160,7 +164,9 @@ class CreateWalletTest(BitcoinTestFramework):
         assert_equal(walletinfo['keypoolsize_hd_internal'], keys)
         # Allow empty passphrase, but there should be a warning
         resp = self.nodes[0].createwallet(wallet_name='w7', disable_private_keys=False, blank=False, passphrase='')
-        assert 'Empty string given as passphrase, wallet will not be encrypted.' in resp['warning']
+        assert_equal(resp["warning"], EMPTY_PASSPHRASE_MSG)
+        assert_equal(resp["warnings"], [EMPTY_PASSPHRASE_MSG])
+
         w7 = node.get_wallet_rpc('w7')
         assert_raises_rpc_error(-15, 'Error: running with an unencrypted wallet, but walletpassphrase was called.', w7.walletpassphrase, '', 60)
 
@@ -172,6 +178,12 @@ class CreateWalletTest(BitcoinTestFramework):
 
         self.log.info('Using a passphrase with private keys disabled returns error')
         assert_raises_rpc_error(-4, 'Passphrase provided but private keys are disabled. A passphrase is only used to encrypt private keys, so cannot be used for wallets with private keys disabled.', self.nodes[0].createwallet, wallet_name='w9', disable_private_keys=True, passphrase='thisisapassphrase')
+
+        self.log.info('Test "warning" field deprecation, i.e. not returned without -deprecatedrpc=walletwarningfield')
+        self.restart_node(0, extra_args=[])
+        result = self.nodes[0].createwallet(wallet_name="w7_again", disable_private_keys=False, blank=False, passphrase="")
+        assert "warning" not in result
+
 
 if __name__ == '__main__':
     CreateWalletTest().main()

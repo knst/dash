@@ -70,14 +70,6 @@ static isminetype InputIsMine(const CWallet& wallet, const CTxIn& txin) EXCLUSIV
     return ISMINE_NO;
 }
 
-const std::map<uint64_t,std::string> WALLET_FLAG_CAVEATS{
-    {WALLET_FLAG_AVOID_REUSE,
-        "You need to rescan the blockchain in order to correctly mark used "
-        "destinations in the past. Until this is done, some destinations may "
-        "be considered unused, even if the opposite is the case."
-    },
-};
-
 bool AddWalletSetting(interfaces::Chain& chain, const std::string& wallet_name)
 {
     util::SettingsValue setting_value = chain.getRwSetting("wallet");
@@ -586,7 +578,7 @@ bool CWallet::ChangeWalletPassphrase(const SecureString& strOldWalletPassphrase,
     bool fWasLocked = IsLocked(true);
 
     {
-        LOCK(cs_wallet);
+        LOCK2(m_relock_mutex, cs_wallet);
         Lock();
 
         CCrypter crypter;
@@ -833,7 +825,7 @@ bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)
         return false;
 
     {
-        LOCK(cs_wallet);
+        LOCK2(m_relock_mutex, cs_wallet);
 
         if (IsCrypted()) {
             // verify again now that cs_wallet lock is held
@@ -4144,7 +4136,7 @@ bool CWallet::Lock(bool fAllowMixing)
         return false;
 
     {
-        LOCK(cs_wallet);
+        LOCK2(m_relock_mutex, cs_wallet);
         if (!fAllowMixing) {
             if (!vMasterKey.empty()) {
                 memory_cleanse(vMasterKey.data(), vMasterKey.size() * sizeof(decltype(vMasterKey)::value_type));

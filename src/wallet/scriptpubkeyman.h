@@ -315,7 +315,6 @@ private:
     /** Add a KeyOriginInfo to the wallet */
     bool AddKeyOriginWithDB(WalletBatch& batch, const CPubKey& pubkey, const KeyOriginInfo& info);
 
-    bool EncryptHDChain(const CKeyingMaterial& vMasterKeyIn, CHDChain& chain);
     bool DecryptHDChain(const CKeyingMaterial& vMasterKeyIn, CHDChain& hdChainRet) const;
 
     /* the HD chain data model (external chain counters) */
@@ -438,6 +437,8 @@ public:
      * which causes db flush every time these methods are used
      */
     bool AddHDChainSingle(const CHDChain& chain);
+    //! Encrypt the seed and mnemonic of an unencrypted HD chain with the wallet's master key
+    bool EncryptHDChain(const CKeyingMaterial& vMasterKeyIn, CHDChain& chain);
 
     //! Adds a watch-only address to the store, without saving it to disk (used by LoadWallet)
     bool LoadWatchOnly(const CScript &dest);

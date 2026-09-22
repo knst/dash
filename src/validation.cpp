@@ -50,6 +50,7 @@
 #include <util/fs.h>
 #include <util/fs_helpers.h>
 #include <util/hasher.h>
+#include <util/result.h>
 #include <util/strencodings.h>
 #include <util/time.h>
 #include <util/trace.h>
@@ -1105,10 +1106,10 @@ bool MemPoolAccept::PackageMempoolChecks(const std::vector<CTransactionRef>& txn
     assert(std::all_of(txns.cbegin(), txns.cend(), [this](const auto& tx)
                        { return !m_pool.exists(tx->GetHash());}));
 
-    std::string err_string;
-    if (!m_pool.CheckPackageLimits(txns, m_limits, err_string)) {
+    auto result = m_pool.CheckPackageLimits(txns, m_limits);
+    if (!result) {
         // This is a package-wide error, separate from an individual transaction error.
-        return package_state.Invalid(PackageValidationResult::PCKG_POLICY, "package-mempool-limits", err_string);
+        return package_state.Invalid(PackageValidationResult::PCKG_POLICY, "package-mempool-limits", util::ErrorString(result).original);
     }
    return true;
 }
