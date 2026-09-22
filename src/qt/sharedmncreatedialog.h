@@ -329,9 +329,6 @@ private:
     //! ready for "...failed: %1", or an empty string with `result` filled in.
     QString runRpc(const QString& method, const UniValue& params, const QString& busy_text, bool needs_unlock,
                    ProTxResult& result);
-    //! Replace the session's transaction hex in place (newly signed funding
-    //! inputs) without changing the stage, via an envelope round-trip
-    bool replaceSessionProTx(const QString& tx_hex, QString& error);
 
     interfaces::Node& m_node;
     WalletModel* const m_wallet_model;

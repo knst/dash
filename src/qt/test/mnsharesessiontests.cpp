@@ -219,7 +219,7 @@ void MnShareSessionTests::envelopeFingerprint()
     }
     // Deterministic: the same content always yields the same code
     QCOMPARE(session.fingerprint(), code);
-    QCOMPARE(MnShareSession::FingerprintOf(session.toJson()), code);
+    QCOMPARE(shared_mn::EnvelopeFingerprint(session.toJson()), code);
 
     // The session code names the session for its whole life
     QCOMPARE(session.sessionCode(), session.sessionId().left(6).toUpper());
@@ -544,7 +544,9 @@ void MnShareSessionTests::signatureVerification()
     const QString sig_b64{QString::fromStdString(EncodeBase64(sig))};
     QVERIFY2(session.addSignature(1, sig_b64, error), qPrintable(error));
     QCOMPARE(session.signedCount(), 1);
-    QCOMPARE(session.missingIndexes(), (std::vector<int>{0, 2}));
+    QVERIFY(session.signatureFor(0).isEmpty());
+    QVERIFY(!session.signatureFor(1).isEmpty());
+    QVERIFY(session.signatureFor(2).isEmpty());
 
     // A byte-identical duplicate is a silent success, and does not double-count
     QVERIFY(session.addSignature(1, sig_b64, error));

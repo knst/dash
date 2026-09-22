@@ -17,6 +17,9 @@
 #include <string>
 #include <vector>
 
+class CProRegTx;
+struct CMutableTransaction;
+
 //! The one amount formatter for every shared-masternode screen. It lives next
 //! to the engine rather than in qt/sharedmnwidgets.h because the engine's own
 //! validation messages quote amounts and must not depend on the widgets.
@@ -71,8 +74,8 @@ bool CheckFingerprint(const UniValue& json, QString& warning);
 //! consent digest from the envelope's protx hex and check each compact
 //! signature against the share owner key). fromJson() verifies every
 //! signature once the envelope claims Stage::Combined or later; before that
-//! it stores them as-is and callers run verifyAllSignatures() and drop what
-//! fails before counting, which is what the dialogs do on import.
+//! it stores them as-is and callers run dropUnverifiedSignatures() before
+//! counting, which is what the dialogs do on import.
 class MnShareSession
 {
 public:
@@ -134,12 +137,6 @@ public:
         QString signatureB64; //!< base64 65-byte compact signature
     };
 
-    struct SignatureCheck {
-        int shareIndex{-1};
-        bool valid{false};
-        QString error;
-    };
-
     //! Mirror of the BuildProDisTx output math for previewing a unilateral
     //! dissolution before it is built
     struct PenaltyPreview {
@@ -163,17 +160,13 @@ public:
     static QString StageName(Stage stage);
 
     const QString& sessionId() const { return m_session_id; }
-    //! Short, human-checkable form of a session id: its first six hex
+    //! Short, human-checkable form of the session id: its first six hex
     //! characters, uppercased ("3F9A2C"). It names the session for the whole
     //! of its life and never changes.
-    static QString SessionCode(const QString& session_id);
-    QString sessionCode() const { return SessionCode(m_session_id); }
+    QString sessionCode() const { return m_session_id.left(6).toUpper(); }
     const QString& network() const { return m_network; }
     int revision() const { return m_revision; }
 
-    //! Fingerprint of an already-built envelope object, for callers that hold
-    //! the JSON rather than the session (see shared_mn::EnvelopeFingerprint)
-    static QString FingerprintOf(const UniValue& json);
     //! Fingerprint of this session's current envelope. It changes whenever any
     //! field changes, so it identifies one exact message rather than the
     //! session as a whole.
@@ -188,7 +181,6 @@ public:
     Terms& terms() { return m_terms; }
     const Terms& terms() const { return m_terms; }
     const std::vector<Contribution>& contributions() const { return m_contributions; }
-    const std::vector<Signature>& signatures() const { return m_sigs; }
 
     const QString& fundingTxHex() const { return m_funding_tx; }
     const QString& protxHex() const { return m_protx; }
@@ -218,9 +210,9 @@ public:
     //! (hard error naming both networks) and the stage must be known. A
     //! "fingerprint" that disagrees with the rest of the message is not a
     //! parse failure; it is reported through importWarning().
-    //! Signatures are stored as-is; callers must run verifyAllSignatures()
-    //! (or rely on addSignature/mergeEnvelope, which verify) before counting
-    //! them.
+    //! Signatures are stored as-is before Stage::Combined; callers must run
+    //! dropUnverifiedSignatures() (or rely on addSignature/mergeEnvelope,
+    //! which verify) before counting them.
     bool fromJson(const UniValue& json, QString& error);
     bool fromJson(const std::string& text, QString& error);
 
@@ -248,17 +240,24 @@ public:
     //! the stored consentHash, then check the signature against the share
     //! owner key (canonical encoding required)
     bool verifySignature(int share_index, const QString& sig_b64, QString& error) const;
-    //! Re-verify every stored signature (import-time verification)
-    std::vector<SignatureCheck> verifyAllSignatures() const;
 
     //! Store a signature after verifying it. A byte-identical duplicate is a
     //! silent success; a different signature for an already-signed index is
     //! rejected as a stale-version conflict.
     bool addSignature(int share_index, const QString& sig_b64, QString& error);
     int signedCount() const;
-    std::vector<int> missingIndexes() const;
     //! Base64 signature for a share index, or empty if not signed yet
     QString signatureFor(int share_index) const;
+    //! The stored signatures as the [{shareIndex, signature}] array both the
+    //! envelope and "protx shared_combine" take
+    UniValue signaturesJson() const;
+    //! Drop every stored signature that no longer verifies (an imported copy
+    //! stores them as-is). Returns one sentence per dropped signature.
+    QStringList dropUnverifiedSignatures();
+    //! Replace the registration transaction with a copy whose funding inputs
+    //! carry more signatures, keeping the stage. Everything the consent digest
+    //! and the displayed session cover must be unchanged.
+    bool replaceProTx(const QString& tx_hex, QString& error);
 
     //! Absorb one participant's reply to a circulated invitation: their share
     //! row (owner, refund and reward addresses) and their funding
@@ -324,6 +323,10 @@ private:
     //! refresh each contribution's changeIndex
     bool rebuildFundingTx(QString& error);
     const Signature* findSignature(int share_index) const;
+    //! Decode `protx_hex` as a shared registration whose recomputed consent
+    //! digest is this session's consentHash, i.e. a transaction everyone's
+    //! approval still covers
+    bool decodeFrozen(const QString& protx_hex, CMutableTransaction& tx, CProRegTx& payload, QString& error) const;
     //! Decode m_protx and require it to be exactly what the envelope displays:
     //! its CProRegTx payload's share table and terms must match
     //! m_shares/m_terms, and its inputs and outputs must be the funding

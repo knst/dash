@@ -169,23 +169,6 @@ QString ShareName(const MnShareSession& session, int index)
     }
     return QObject::tr("Share %1 of %2").arg(index + 1).arg(session.shares().size());
 }
-
-//! Message box for text carrying untrusted content (participant names written
-//! by somebody else): rendered as plain text so a crafted name cannot inject
-//! markup into the warning that talks about it
-int ShowPlainMessage(QWidget* parent, QMessageBox::Icon icon, const QString& title, const QString& text,
-                     QMessageBox::StandardButtons buttons = QMessageBox::Ok,
-                     QMessageBox::StandardButton default_button = QMessageBox::NoButton)
-{
-    QMessageBox box(parent);
-    box.setIcon(icon);
-    box.setWindowTitle(title);
-    box.setTextFormat(Qt::PlainText);
-    box.setText(text);
-    box.setStandardButtons(buttons);
-    if (default_button != QMessageBox::NoButton) box.setDefaultButton(default_button);
-    return box.exec();
-}
 } // anonymous namespace
 
 //! Keeps the wallet unlocked on the GUI thread while an RPC command is in
@@ -2345,14 +2328,7 @@ bool SharedMnCreateDialog::combineApprovals(QString& error)
     error.clear();
     UniValue params(UniValue::VOBJ);
     params.pushKV("tx", m_session.protxHex().toStdString());
-    UniValue signatures(UniValue::VARR);
-    for (const auto& sig : m_session.signatures()) {
-        UniValue entry(UniValue::VOBJ);
-        entry.pushKV("shareIndex", sig.shareIndex);
-        entry.pushKV("signature", sig.signatureB64.toStdString());
-        signatures.push_back(entry);
-    }
-    params.pushKV("signatures", signatures);
+    params.pushKV("signatures", m_session.signaturesJson());
     params.pushKV("submit", false);
 
     ProTxResult result;
@@ -2508,7 +2484,7 @@ bool SharedMnCreateDialog::signOwnFundingInputs(bool& complete, QString& error)
     }
     QString apply_error;
     const bool applied{complete ? m_session.setFundingSignedTx(signed_hex, apply_error)
-                                : replaceSessionProTx(signed_hex, apply_error)};
+                                : m_session.replaceProTx(signed_hex, apply_error)};
     if (!applied) {
         error = tr("Signing failed: %1").arg(apply_error);
         return false;
@@ -2810,25 +2786,15 @@ void SharedMnCreateDialog::replaceSession(const MnShareSession& imported)
 
     // An adopted envelope's signatures were stored as-is by fromJson; drop any
     // that do not verify so they are never counted.
-    QStringList bad;
-    for (const auto& check : m_session.verifyAllSignatures()) {
-        if (!check.valid) bad << check.error;
-    }
-    if (!bad.isEmpty()) {
-        UniValue json{m_session.toJson()};
-        UniValue sigs(UniValue::VARR);
-        for (const auto& sig : m_session.signatures()) {
-            QString sig_error;
-            if (!m_session.verifySignature(sig.shareIndex, sig.signatureB64, sig_error)) continue;
-            UniValue entry(UniValue::VOBJ);
-            entry.pushKV("shareIndex", sig.shareIndex);
-            entry.pushKV("signature", sig.signatureB64.toStdString());
-            sigs.push_back(entry);
-        }
-        json.pushKV("sigs", sigs);
-        QString error;
-        m_session.fromJson(json, error); // leaves the session untouched on failure
-        ShowPlainMessage(this, QMessageBox::Warning, tr("Signatures not counted"), bad.join(QLatin1Char('\n')));
+    if (const QStringList bad{m_session.dropUnverifiedSignatures()}; !bad.isEmpty()) {
+        // Plain text: the reasons name participants, whose names somebody
+        // else wrote
+        QMessageBox box(this);
+        box.setIcon(QMessageBox::Warning);
+        box.setWindowTitle(tr("Signatures not counted"));
+        box.setTextFormat(Qt::PlainText);
+        box.setText(bad.join(QLatin1Char('\n')));
+        box.exec();
     }
 
     inferMyShare();
@@ -3396,13 +3362,6 @@ QString SharedMnCreateDialog::runRpc(const QString& method, const UniValue& para
     setBusy(false);
     if (result.ok) return {};
     return result.message.isEmpty() ? tr("the node gave no reason.") : result.message;
-}
-
-bool SharedMnCreateDialog::replaceSessionProTx(const QString& tx_hex, QString& error)
-{
-    UniValue json{m_session.toJson()};
-    json.pushKV("protx", tx_hex.toStdString());
-    return m_session.fromJson(json, error);
 }
 
 void SharedMnCreateDialog::reject()

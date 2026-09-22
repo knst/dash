@@ -96,6 +96,14 @@ size_t ShareIndexOfLabel(const std::vector<MnShareSession::Share>& shares, const
     return shares.size();
 }
 
+//! Same consensus content. Labels are local annotations, not terms, and are
+//! ignored.
+bool SameShare(const MnShareSession::Share& a, const MnShareSession::Share& b)
+{
+    return a.amount == b.amount && a.ownerAddress == b.ownerAddress && a.refundAddress == b.refundAddress &&
+           a.rewardAddress == b.rewardAddress;
+}
+
 bool SameContribution(const MnShareSession::Contribution& a, const MnShareSession::Contribution& b)
 {
     if (a.inputs.size() != b.inputs.size() || a.hasChange != b.hasChange) return false;
@@ -325,14 +333,7 @@ UniValue MnShareSession::toJsonBody() const
     ret.pushKV("consentHash", m_consent_hash.toStdString());
     ret.pushKV("collateralIndex", m_collateral_index);
 
-    UniValue sigs(UniValue::VARR);
-    for (const auto& sig : m_sigs) {
-        UniValue entry(UniValue::VOBJ);
-        entry.pushKV("shareIndex", sig.shareIndex);
-        entry.pushKV("signature", sig.signatureB64.toStdString());
-        sigs.push_back(entry);
-    }
-    ret.pushKV("sigs", sigs);
+    ret.pushKV("sigs", signaturesJson());
 
     ret.pushKV("prepareWallet", m_prepare_wallet.toStdString());
     ret.pushKV("operatorSecretHolder", m_operator_secret_holder.toStdString());
@@ -345,16 +346,6 @@ UniValue MnShareSession::toJson() const
     UniValue ret{toJsonBody()};
     shared_mn::AppendFingerprint(ret);
     return ret;
-}
-
-QString MnShareSession::SessionCode(const QString& session_id)
-{
-    return session_id.left(6).toUpper();
-}
-
-QString MnShareSession::FingerprintOf(const UniValue& json_without_fingerprint)
-{
-    return shared_mn::EnvelopeFingerprint(json_without_fingerprint);
 }
 
 QString MnShareSession::fingerprint() const
@@ -516,13 +507,16 @@ bool MnShareSession::fromJson(const UniValue& json, QString& error)
                             .arg(CProRegTx::MAX_SHARES);
                 return false;
             }
+            const auto malformed = [&error](size_t i) {
+                error = QCoreApplication::translate("MnShareSession",
+                                                    "Contribution entry %1 in the session file is malformed.")
+                            .arg(i + 1);
+                return false;
+            };
             for (size_t i = 0; i < contributions.size(); ++i) {
                 const UniValue& entry{contributions[i]};
                 if (!entry.isObject() || !entry.find_value("label").isStr() || !entry.find_value("inputs").isArray()) {
-                    error = QCoreApplication::translate("MnShareSession",
-                                                        "Contribution entry %1 in the session file is malformed.")
-                                .arg(i + 1);
-                    return false;
+                    return malformed(i);
                 }
                 Contribution contribution;
                 contribution.label = QString::fromStdString(entry.find_value("label").get_str());
@@ -541,47 +535,32 @@ bool MnShareSession::fromJson(const UniValue& json, QString& error)
                     const bool well_formed{in.isObject() && in.find_value("txid").isStr() &&
                                            in.find_value("vout").isNum() && in.find_value("sequence").isNum()};
                     if (!well_formed) {
-                        error = QCoreApplication::translate("MnShareSession",
-                                                            "Contribution entry %1 in the session file is malformed.")
-                                    .arg(i + 1);
-                        return false;
+                        return malformed(i);
                     }
                     const int64_t vout{in.find_value("vout").getInt<int64_t>()};
                     const int64_t sequence{in.find_value("sequence").getInt<int64_t>()};
                     if (vout < 0 || vout > std::numeric_limits<uint32_t>::max() ||
                         sequence < 0 || sequence > std::numeric_limits<uint32_t>::max()) {
-                        error = QCoreApplication::translate("MnShareSession",
-                                                            "Contribution entry %1 in the session file is malformed.")
-                                    .arg(i + 1);
-                        return false;
+                        return malformed(i);
                     }
                     Input input;
                     input.txid = QString::fromStdString(in.find_value("txid").get_str());
                     input.vout = static_cast<uint32_t>(vout);
                     input.sequence = static_cast<uint32_t>(sequence);
                     if (!IsTxidHex(input.txid)) {
-                        error = QCoreApplication::translate("MnShareSession",
-                                                            "Contribution entry %1 in the session file is malformed.")
-                                    .arg(i + 1);
-                        return false;
+                        return malformed(i);
                     }
                     contribution.inputs.push_back(input);
                 }
                 if (const UniValue& change{entry.find_value("change")}; change.isObject()) {
                     if (!change.find_value("address").isStr() || !change.find_value("amount").isNum()) {
-                        error = QCoreApplication::translate("MnShareSession",
-                                                            "Contribution entry %1 in the session file is malformed.")
-                                    .arg(i + 1);
-                        return false;
+                        return malformed(i);
                     }
                     contribution.hasChange = true;
                     contribution.changeAddress = QString::fromStdString(change.find_value("address").get_str());
                     contribution.changeAmount = change.find_value("amount").getInt<int64_t>();
                     if (!MoneyRange(contribution.changeAmount)) {
-                        error = QCoreApplication::translate("MnShareSession",
-                                                            "Contribution entry %1 in the session file is malformed.")
-                                    .arg(i + 1);
-                        return false;
+                        return malformed(i);
                     }
                 }
                 if (const UniValue& v{entry.find_value("changeIndex")}; v.isNum()) contribution.changeIndex = v.getInt<int>();
@@ -638,13 +617,7 @@ bool MnShareSession::fromJson(const UniValue& json, QString& error)
             // and its prepared transaction must match its consent hash
             CMutableTransaction frozen_tx;
             CProRegTx frozen_payload;
-            if (!DecodeSharedProTx(parsed.m_protx, frozen_tx, frozen_payload, error)) return false;
-            if (frozen_payload.MakeSharedRegConsentHash(CTransaction(frozen_tx)) != uint256S(parsed.m_consent_hash.toStdString())) {
-                error = QCoreApplication::translate("MnShareSession",
-                                                    "The session file's prepared transaction does not match its "
-                                                    "consent hash. Do not use it; request a fresh copy.");
-                return false;
-            }
+            if (!parsed.decodeFrozen(parsed.m_protx, frozen_tx, frozen_payload, error)) return false;
             if (!parsed.payloadMatchesEnvelope(error)) return false;
             for (const auto& sig : parsed.m_sigs) {
                 if (sig.shareIndex < 0 || static_cast<size_t>(sig.shareIndex) >= parsed.m_shares.size()) {
@@ -970,20 +943,14 @@ bool MnShareSession::verifySignature(int share_index, const QString& sig_b64, QS
     }
     CMutableTransaction tx;
     CProRegTx payload;
-    if (!DecodeSharedProTx(m_protx, tx, payload, error)) return false;
+    if (!decodeFrozen(m_protx, tx, payload, error)) return false;
     if (share_index < 0 || static_cast<size_t>(share_index) >= payload.shares.size()) {
         error = QCoreApplication::translate("MnShareSession", "Share %1 of %2 does not exist.")
                     .arg(share_index + 1)
                     .arg(payload.shares.size());
         return false;
     }
-    const uint256 consent_hash{payload.MakeSharedRegConsentHash(CTransaction(tx))};
-    if (consent_hash != uint256S(m_consent_hash.toStdString())) {
-        error = QCoreApplication::translate("MnShareSession",
-                                            "The session file is internally inconsistent: its prepared transaction no "
-                                            "longer matches its consent hash. Do not sign; request a fresh copy.");
-        return false;
-    }
+    const uint256 consent_hash{uint256S(m_consent_hash.toStdString())};
     // A signature over the payload digest is meaningless if the payload is not
     // the share table the participant reviewed
     if (!payloadMatchesEnvelope(error)) return false;
@@ -1002,19 +969,6 @@ bool MnShareSession::verifySignature(int share_index, const QString& sig_b64, QS
         return false;
     }
     return true;
-}
-
-std::vector<MnShareSession::SignatureCheck> MnShareSession::verifyAllSignatures() const
-{
-    std::vector<SignatureCheck> ret;
-    ret.reserve(m_sigs.size());
-    for (const auto& sig : m_sigs) {
-        SignatureCheck check;
-        check.shareIndex = sig.shareIndex;
-        check.valid = verifySignature(sig.shareIndex, sig.signatureB64, check.error);
-        ret.push_back(check);
-    }
-    return ret;
 }
 
 const MnShareSession::Signature* MnShareSession::findSignature(int share_index) const
@@ -1136,13 +1090,7 @@ bool MnShareSession::sameDraftState(const MnShareSession& other) const
     if (m_funding_tx != other.m_funding_tx) return false;
     if (m_shares.size() != other.m_shares.size()) return false;
     for (size_t i = 0; i < m_shares.size(); ++i) {
-        const Share& a{m_shares[i]};
-        const Share& b{other.m_shares[i]};
-        // Labels are local annotations, not consensus terms; ignore them
-        if (a.amount != b.amount || a.ownerAddress != b.ownerAddress ||
-            a.refundAddress != b.refundAddress || a.rewardAddress != b.rewardAddress) {
-            return false;
-        }
+        if (!SameShare(m_shares[i], other.m_shares[i])) return false;
     }
     return sameTerms(other);
 }
@@ -1191,13 +1139,60 @@ int MnShareSession::signedCount() const
     return count;
 }
 
-std::vector<int> MnShareSession::missingIndexes() const
+UniValue MnShareSession::signaturesJson() const
 {
-    std::vector<int> ret;
-    for (size_t i = 0; i < m_shares.size(); ++i) {
-        if (!findSignature(static_cast<int>(i))) ret.push_back(static_cast<int>(i));
+    UniValue sigs(UniValue::VARR);
+    for (const auto& sig : m_sigs) {
+        UniValue entry(UniValue::VOBJ);
+        entry.pushKV("shareIndex", sig.shareIndex);
+        entry.pushKV("signature", sig.signatureB64.toStdString());
+        sigs.push_back(entry);
     }
-    return ret;
+    return sigs;
+}
+
+QStringList MnShareSession::dropUnverifiedSignatures()
+{
+    QStringList dropped;
+    std::vector<Signature> kept;
+    for (const auto& sig : m_sigs) {
+        if (QString error; verifySignature(sig.shareIndex, sig.signatureB64, error)) {
+            kept.push_back(sig);
+        } else {
+            dropped << error;
+        }
+    }
+    m_sigs = std::move(kept);
+    return dropped;
+}
+
+bool MnShareSession::replaceProTx(const QString& tx_hex, QString& error)
+{
+    if (m_stage != Stage::Combined) {
+        error = QCoreApplication::translate("MnShareSession",
+                                            "Funding inputs can only be signed once the approvals are combined.");
+        return false;
+    }
+    MnShareSession candidate{*this};
+    candidate.m_protx = tx_hex;
+    CMutableTransaction tx;
+    CProRegTx payload;
+    if (!candidate.decodeFrozen(tx_hex, tx, payload, error) || !candidate.payloadMatchesEnvelope(error)) return false;
+    m_protx = tx_hex;
+    return true;
+}
+
+bool MnShareSession::decodeFrozen(const QString& protx_hex, CMutableTransaction& tx, CProRegTx& payload,
+                                  QString& error) const
+{
+    if (!DecodeSharedProTx(protx_hex, tx, payload, error)) return false;
+    if (payload.MakeSharedRegConsentHash(CTransaction(tx)) != uint256S(m_consent_hash.toStdString())) {
+        error = QCoreApplication::translate("MnShareSession",
+                                            "The prepared transaction does not match the terms everyone approved. Do "
+                                            "not sign or broadcast it; request a fresh copy.");
+        return false;
+    }
+    return true;
 }
 
 QString MnShareSession::signatureFor(int share_index) const
@@ -1335,11 +1330,8 @@ bool MnShareSession::adoptLockedTerms(const MnShareSession& other, QString& erro
     }
 
     for (size_t i = 0; i < m_shares.size(); ++i) {
-        const Share& ours{m_shares[i]};
-        if (ours.ownerAddress.isEmpty()) continue; // a row somebody else fills in
-        const Share& theirs{other.m_shares[i]};
-        if (ours.amount != theirs.amount || ours.ownerAddress != theirs.ownerAddress ||
-            ours.refundAddress != theirs.refundAddress || ours.rewardAddress != theirs.rewardAddress) {
+        if (m_shares[i].ownerAddress.isEmpty()) continue; // a row somebody else fills in
+        if (!SameShare(m_shares[i], other.m_shares[i])) {
             error = mismatch;
             return false;
         }
@@ -1436,17 +1428,8 @@ MnShareSession::MergeResult MnShareSession::mergeEnvelope(const MnShareSession& 
         CMutableTransaction theirs;
         CProRegTx ours_payload;
         CProRegTx theirs_payload;
-        QString decode_error;
-        if (!DecodeSharedProTx(merged.m_protx, ours, ours_payload, decode_error) ||
-            !DecodeSharedProTx(other.m_protx, theirs, theirs_payload, decode_error)) {
-            error = QCoreApplication::translate("MnShareSession", "A funding-signed copy contains an invalid "
-                                                                  "registration transaction. It was not merged.");
-            return MergeResult::Conflict;
-        }
-        if (ours_payload.MakeSharedRegConsentHash(CTransaction(ours)) != uint256S(m_consent_hash.toStdString()) ||
-            theirs_payload.MakeSharedRegConsentHash(CTransaction(theirs)) != uint256S(m_consent_hash.toStdString())) {
-            error = QCoreApplication::translate("MnShareSession", "A funding-signed copy does not match the terms "
-                                                                  "everyone approved. It was not merged.");
+        if (!decodeFrozen(merged.m_protx, ours, ours_payload, error) ||
+            !decodeFrozen(other.m_protx, theirs, theirs_payload, error)) {
             return MergeResult::Conflict;
         }
 
@@ -1526,15 +1509,9 @@ bool MnShareSession::setCombinedTx(const QString& tx_hex, QString& error)
     }
     CMutableTransaction tx;
     CProRegTx payload;
-    if (!DecodeSharedProTx(tx_hex, tx, payload, error)) return false;
     // Combining embeds the join signatures into the payload; everything the
     // consent digest covers must be unchanged
-    if (payload.MakeSharedRegConsentHash(CTransaction(tx)) != uint256S(m_consent_hash.toStdString())) {
-        error = QCoreApplication::translate("MnShareSession",
-                                            "The combined transaction does not match the terms everyone signed. Do not "
-                                            "broadcast it; restart from the prepared transaction.");
-        return false;
-    }
+    if (!decodeFrozen(tx_hex, tx, payload, error)) return false;
     m_protx = tx_hex;
     m_stage = Stage::Combined;
     return true;
@@ -1549,12 +1526,7 @@ bool MnShareSession::setFundingSignedTx(const QString& tx_hex, QString& error)
     }
     CMutableTransaction tx;
     CProRegTx payload;
-    if (!DecodeSharedProTx(tx_hex, tx, payload, error)) return false;
-    if (payload.MakeSharedRegConsentHash(CTransaction(tx)) != uint256S(m_consent_hash.toStdString())) {
-        error = QCoreApplication::translate("MnShareSession", "The signed transaction does not match the terms "
-                                                              "everyone signed. Do not broadcast it.");
-        return false;
-    }
+    if (!decodeFrozen(tx_hex, tx, payload, error)) return false;
     int unsigned_inputs{0};
     for (const auto& in : tx.vin) {
         if (in.scriptSig.empty()) ++unsigned_inputs;
