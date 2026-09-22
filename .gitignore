@@ -8,13 +8,6 @@ src/MakefilE
 src/cmake_install.cmake
 src/CMakeFile
 build/*
-blspy.egg-info
-dist
-python-impl/__pycache__/
-blspy.*.so
-.mypy_cache/
-.pytest_chache/
-.eggs/
 cmake-build-debug/
 
 js_build
@@ -48,7 +41,6 @@ runbench.*
 *.bak
 *.rej
 *.orig
-*.pyc
 *.o
 *.o-*
 *.patch
@@ -115,3 +107,76 @@ autom4te.cache
 /stamp-h1
 /ltmain.sh
 /texinfo.tex
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py.cover
+*.lcov
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Environments
+.env
+.envrc
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Cython debug symbols
+cython_debug/
+
+# Temporary file for partial code execution
+tempCodeRunnerFile.py
+
+# Ruff stuff:
+.ruff_cache/
+
+# PyPI configuration file
+.pypirc
+
+# PEP503 index
+_site
