@@ -468,6 +468,12 @@ bool MnShareSession::fromJson(const UniValue& json, QString& error)
                 Share share;
                 if (const UniValue& v{entry.find_value("label")}; v.isStr()) share.label = QString::fromStdString(v.get_str());
                 share.amount = entry.find_value("amount").getInt<int64_t>();
+                if (!MoneyRange(share.amount)) {
+                    error = QCoreApplication::translate("MnShareSession",
+                                                        "Share entry %1 in the session file is malformed.")
+                                .arg(i + 1);
+                    return false;
+                }
                 share.ownerAddress = QString::fromStdString(entry.find_value("ownerAddress").get_str());
                 share.refundAddress = QString::fromStdString(entry.find_value("refundAddress").get_str());
                 if (const UniValue& v{entry.find_value("rewardAddress")}; v.isStr()) {
@@ -491,7 +497,14 @@ bool MnShareSession::fromJson(const UniValue& json, QString& error)
                 }
                 parsed.m_terms.earlyPeriodBlocks = static_cast<uint32_t>(blocks);
             }
-            if (const UniValue& v{terms.find_value("earlyPenalty")}; v.isNum()) parsed.m_terms.earlyPenalty = v.getInt<int64_t>();
+            if (const UniValue& v{terms.find_value("earlyPenalty")}; v.isNum()) {
+                parsed.m_terms.earlyPenalty = v.getInt<int64_t>();
+                if (!MoneyRange(parsed.m_terms.earlyPenalty)) {
+                    error = QCoreApplication::translate("MnShareSession",
+                                                        "The session file has an invalid early-exit penalty.");
+                    return false;
+                }
+            }
         }
 
         if (const UniValue& contributions{json.find_value("contributions")}; contributions.isArray()) {
@@ -564,7 +577,7 @@ bool MnShareSession::fromJson(const UniValue& json, QString& error)
                     contribution.hasChange = true;
                     contribution.changeAddress = QString::fromStdString(change.find_value("address").get_str());
                     contribution.changeAmount = change.find_value("amount").getInt<int64_t>();
-                    if (contribution.changeAmount < 0) {
+                    if (!MoneyRange(contribution.changeAmount)) {
                         error = QCoreApplication::translate("MnShareSession",
                                                             "Contribution entry %1 in the session file is malformed.")
                                     .arg(i + 1);
@@ -1088,7 +1101,13 @@ bool MnShareSession::payloadMatchesEnvelope(QString& error) const
         error = funding_mismatch;
         return false;
     }
-    expected_vout.emplace_back(GetMnType(payload.nType).collat_amount, SharedCollateralScript());
+    // The wizard only ever builds regular masternodes, and the funding check
+    // and share validation both assume the regular collateral
+    if (payload.nType != MnType::Regular) {
+        error = funding_mismatch;
+        return false;
+    }
+    expected_vout.emplace_back(GetMnType(MnType::Regular).collat_amount, SharedCollateralScript());
 
     if (tx.vin.size() != expected_vin.size() || tx.vout.size() != expected_vout.size() || tx.nLockTime != 0) {
         error = funding_mismatch;
