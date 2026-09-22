@@ -25,6 +25,7 @@ QT_BEGIN_NAMESPACE
 class QFrame;
 class QLabel;
 class QRadioButton;
+class QScrollArea;
 class QVBoxLayout;
 QT_END_NAMESPACE
 
@@ -39,6 +40,10 @@ bool isP2PKHAddress(const QString& address);
 //! True when `address` decodes to a P2PKH or P2SH destination on the current network
 bool isP2PKHorP2SHAddress(const QString& address);
 
+//! A fresh receiving address from `wallet_model`, or an empty string with a
+//! translated reason in `error`
+QString freshAddress(WalletModel* wallet_model, QString& error);
+
 //! Spacing tokens (px) keeping one vertical rhythm across the dialogs' pages
 constexpr int GROUP_SPACING{16}; //!< between top-level groups of a page
 constexpr int TITLE_SPACING{8};  //!< between a group's title and its body
@@ -46,16 +51,57 @@ constexpr int ROW_SPACING{10};   //!< between rows inside a group
 constexpr int BODY_INDENT{26};   //!< indent of a body under its radio header
 constexpr int CARD_PADDING{12};  //!< a card's internal padding
 
+//! Point size of a page heading
+constexpr double PAGE_TITLE_SIZE{14};
+
 //! Bold label. A negative `point_size` keeps the theme's own size.
 QLabel* makeTitle(const QString& text, QWidget* parent, double point_size = -1);
+//! Heading of a whole page, in the page-heading size
+QLabel* makePageTitle(const QString& text, QWidget* parent);
+//! Heading of one block inside a page, in the page's own text size
+QLabel* makeBlockTitle(const QString& text, QWidget* parent);
+//! Vertical layout of a page: the dialog supplies the margins, the page only
+//! keeps the rhythm between its groups.
+QVBoxLayout* makePageLayout(QWidget* page);
+//! One group inside a page: label, hint and controls sit closer together than
+//! the groups themselves do.
+QVBoxLayout* makeBlock(QVBoxLayout* page_layout);
+
+//! Scroll area in the masternode dialogs' style, taking ownership of `body`.
+//! Named "mnWizardScroll" for theming. Never clips sideways silently: a bar the
+//! user can reach beats a table column that simply is not there.
+QScrollArea* makeScroll(QWidget* body, QWidget* parent,
+                        Qt::ScrollBarPolicy horizontal = Qt::ScrollBarAsNeeded);
+
+//! Scrollable body of a page, and the layout its content goes into
+struct ScrollBody {
+    QWidget* container;
+    QVBoxLayout* layout;
+};
+//! makeScroll() for a page that has no body widget yet: builds one, gives it a
+//! vertical layout in the pages' own rhythm, and adds the scroll area to
+//! `page_layout`.
+ScrollBody makeScrollBody(QWidget* page, QVBoxLayout* page_layout,
+                          Qt::ScrollBarPolicy horizontal = Qt::ScrollBarAsNeeded);
 //! Dim, word-wrapped explanation
 QLabel* makeHint(const QString& text, QWidget* parent);
 //! Word-wrapped, selectable plain-text value; `monospace` for addresses, hashes and keys
 QLabel* makeValue(const QString& text, QWidget* parent, bool monospace = false);
 //! Group `text` into blocks of `chunk_size` characters separated by spaces. A BLS
 //! key is one 96-character word that a wrapping label refuses to break; grouped,
-//! it wraps between blocks and stays readable.
-QString chunked(const QString& text, int chunk_size = 12);
+//! it wraps between blocks and stays readable. Inline because the masternode
+//! model, which is built without wallet support too, formats keys with it.
+inline QString chunked(const QString& text, int chunk_size = 12)
+{
+    if (chunk_size <= 0) return text;
+    QString ret;
+    ret.reserve(text.size() + text.size() / chunk_size);
+    for (int pos = 0; pos < text.size(); pos += chunk_size) {
+        if (pos > 0) ret += QLatin1Char(' ');
+        ret += text.mid(pos, chunk_size);
+    }
+    return ret;
+}
 //! Monospace value with a Copy button beside it. `display` is shown as given,
 //! `copy_text` is what the button puts on the clipboard, so a key can be shown
 //! in chunks and still be copied unbroken.

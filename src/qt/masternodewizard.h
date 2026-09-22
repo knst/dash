@@ -108,7 +108,6 @@ private:
     QString collateralAddress() const;
     QString ownerAddress() const;
     QString votingAddress() const;
-    QString freshAddress(QString& err) const;
     CAmount collateralAmount() const;
     //! True when the user typed the generated operator secret's last 4 characters
     bool secretConfirmed() const;
