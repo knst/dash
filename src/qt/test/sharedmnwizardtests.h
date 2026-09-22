@@ -15,8 +15,8 @@ class Node;
 //! a pasted message decides which page the user lands on, and what the status
 //! board says after replies are absorbed. They drive the dialog through the
 //! same seams the walkthrough screenshots use - goToPage(), currentPage(),
-//! handleImportedText() and copySession() - and need no wallet, except for the
-//! resume case, whose whole point is what the wallet can sign for.
+//! handleImportedText() and copySession(). The cases about what the wallet can
+//! sign for, or must refuse to sign, build a wallet; the rest need none.
 class SharedMnWizardTests : public QObject
 {
     Q_OBJECT

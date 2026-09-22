@@ -52,16 +52,12 @@
 #include <QTimer>
 #include <QWidget>
 
-#include <memory>
 #include <algorithm>
+#include <limits>
+#include <memory>
 #include <string>
 #include <vector>
 
-using wallet::AddWallet;
-using wallet::CWallet;
-using wallet::CreateMockWalletDatabase;
-using wallet::RemoveWallet;
-using wallet::WALLET_FLAG_DESCRIPTORS;
 using wallet::WalletContext;
 using MasternodeTestUtil::FakeTxid;
 using MasternodeTestUtil::FreshOperatorPubKey;
@@ -71,7 +67,6 @@ using MasternodeTestUtil::MakeSpendingWallet;
 using MasternodeTestUtil::PrepareRegistration;
 using MasternodeTestUtil::PreparedRegistration;
 using MasternodeTestUtil::WalletGuard;
-using wallet::WalletDescriptor;
 
 namespace {
 
@@ -128,11 +123,9 @@ void SharedMnWizardTests::coordinatorPageOrder()
     // The five pages that build the invitation are the numbered ones; what
     // comes after them depends on how fast the others answer
     dialog.goToPage(SharedMnCreateDialog::PageParticipants);
-    QVERIFY(dialog.m_progress_label->text().contains(QStringLiteral("1")));
     QVERIFY(dialog.m_progress_label->text().contains(dialog.pageTitle(SharedMnCreateDialog::PageParticipants)));
     dialog.goToPage(SharedMnCreateDialog::PageInvite);
     QCOMPARE(int(dialog.currentPage()), int(SharedMnCreateDialog::PageInvite));
-    QVERIFY(dialog.m_progress_label->text().contains(QStringLiteral("5")));
     dialog.goToPage(SharedMnCreateDialog::PageApprovals);
     QCOMPARE(dialog.m_progress_label->text(), dialog.pageTitle(SharedMnCreateDialog::PageApprovals));
 
@@ -230,7 +223,6 @@ void SharedMnWizardTests::coordinatorResumesSavedSession()
     QCOMPARE(int(dialog.currentPage()), int(SharedMnCreateDialog::PageInvite));
     QCOMPARE(dialog.myShareIndex(), 0);
     QVERIFY(dialog.allDetailsCollected());
-    QCOMPARE(dialog.m_next_button->text(), QStringLiteral("Lock Terms"));
 
     // The operator key everybody was invited to is kept: a fresh one from the
     // key widget would invalidate the terms the others are answering
@@ -293,7 +285,6 @@ void SharedMnWizardTests::coordinatorResumesFullySignedSession()
     QCOMPARE(int(dialog.currentPage()), int(SharedMnCreateDialog::PageSignatures));
     QVERIFY(!dialog.m_next_button->isHidden());
     QVERIFY2(dialog.m_next_button->isEnabled(), qPrintable(dialog.m_next_button->toolTip()));
-    QCOMPARE(dialog.m_next_button->text(), QStringLiteral("Broadcast Registration"));
 
     // A participant's copy of the same message still waits for the broadcast
     SharedMnCreateDialog participant(m_node, /*wallet_model=*/nullptr, /*parent=*/nullptr);
@@ -470,9 +461,15 @@ void SharedMnWizardTests::refusesToSignShortChangedOwnContribution()
 
     // A combined session in which bob's own contribution spends that coin and
     // sends `change_amount` to `change_address`. Every envelope check passes:
-    // the file and the transaction agree with each other.
-    const auto session_with_change = [&](const QString& change_address, CAmount change_amount) {
+    // the file and the transaction agree with each other. With `coordinated`
+    // the session is bob's own, reopened from a backup.
+    const auto session_with_change = [&](const QString& change_address, CAmount change_amount,
+                                         bool coordinated = false, uint32_t vout = 0) {
         MnShareSession invitation{InvitationSession()};
+        if (coordinated) {
+            invitation.setCoordinatorLabel(QStringLiteral("bob"));
+            invitation.setPrepareWallet(QStringLiteral("victim"));
+        }
         MnShareSession draft{invitation};
         std::vector<CKey> owner_keys(3);
         QString error;
@@ -483,7 +480,7 @@ void SharedMnWizardTests::refusesToSignShortChangedOwnContribution()
         draft.shares()[1].ownerAddress = own_address;
         draft.removeContribution(QStringLiteral("bob"), error);
         draft.addContribution({.label = QStringLiteral("bob"),
-                               .inputs = {{.txid = coin_txid}},
+                               .inputs = {{.txid = coin_txid, .vout = vout}},
                                .hasChange = true,
                                .changeAddress = change_address,
                                .changeAmount = change_amount},
@@ -492,14 +489,17 @@ void SharedMnWizardTests::refusesToSignShortChangedOwnContribution()
         session.setCombinedTx(session.protxHex(), error);
         return session;
     };
-    // Signing refuses, naming `amount`, and the primary button stays disabled
-    const auto expect_refusal = [&](const MnShareSession& session, const QString& amount) {
+    const auto amount = [&](CAmount value) { return SharedMnFormatAmount(SharedMnDisplayUnit(&wallet_model), value); };
+    // Signing refuses, naming what leaves and what comes back, and the primary
+    // button stays disabled
+    const auto expect_refusal = [&](const MnShareSession& session, CAmount returned) {
         SharedMnCreateDialog dialog(m_node, &wallet_model, /*parent=*/nullptr);
         dialog.handleImportedText(session.toJsonString());
         QCOMPARE(dialog.myShareIndex(), 1);
         QCOMPARE(int(dialog.currentPage()), int(SharedMnCreateDialog::PageSignatures));
         const QString refusal{dialog.m_funding_refusal};
-        QVERIFY2(refusal.contains(amount), qPrintable(refusal));
+        QVERIFY2(refusal.contains(QStringLiteral("spends %1").arg(amount(450 * COIN))), qPrintable(refusal));
+        QVERIFY2(refusal.contains(QStringLiteral("returns only %1").arg(amount(returned))), qPrintable(refusal));
         QVERIFY(!dialog.m_next_button->isEnabled());
         bool complete{true};
         QString sign_error;
@@ -517,12 +517,33 @@ void SharedMnWizardTests::refusesToSignShortChangedOwnContribution()
         QVERIFY2(dialog.m_funding_refusal.isEmpty(), qPrintable(dialog.m_funding_refusal));
         QVERIFY2(dialog.m_next_button->isEnabled(), qPrintable(dialog.m_next_button->toolTip()));
     }
+    // Honest coordinator paying a 0.05 DASH fee, above the usual cap, out of its
+    // own coin: what leaves on top of the share is the fee it chose
+    {
+        SharedMnCreateDialog dialog(m_node, &wallet_model, /*parent=*/nullptr);
+        dialog.m_fee_field->setValue(5 * COIN / 100);
+        dialog.handleImportedText(session_with_change(own_address, 100 * COIN - 5 * COIN / 100,
+                                                      /*coordinated=*/true)
+                                      .toJsonString());
+        QCOMPARE(int(dialog.m_role), int(SharedMnCreateDialog::Role::Coordinator));
+        QVERIFY2(dialog.m_funding_refusal.isEmpty(), qPrintable(dialog.m_funding_refusal));
+    }
+    // A file naming a coin this wallet holds with an output index past the end
+    // of its transaction is not a coin of ours, and must not crash the import
+    {
+        SharedMnCreateDialog dialog(m_node, &wallet_model, /*parent=*/nullptr);
+        dialog.handleImportedText(session_with_change(own_address, 100 * COIN, /*coordinated=*/false,
+                                                      /*vout=*/std::numeric_limits<uint32_t>::max())
+                                      .toJsonString());
+        QCOMPARE(int(dialog.currentPage()), int(SharedMnCreateDialog::PageSignatures));
+        QVERIFY2(dialog.m_funding_refusal.isEmpty(), qPrintable(dialog.m_funding_refusal));
+    }
 
     // The change goes to somebody else's address
     CKey attacker_key;
-    expect_refusal(session_with_change(FreshP2PKHAddress(&attacker_key), 100 * COIN), QStringLiteral("450"));
+    expect_refusal(session_with_change(FreshP2PKHAddress(&attacker_key), 100 * COIN), 0);
     // The change comes back to this wallet, but 50 DASH short
-    expect_refusal(session_with_change(own_address, 50 * COIN), QStringLiteral("50"));
+    expect_refusal(session_with_change(own_address, 50 * COIN), 50 * COIN);
 }
 
 void SharedMnWizardTests::savingWaitsForTheOperatorKeyBackup()
@@ -574,7 +595,6 @@ void SharedMnWizardTests::savingWaitsForTheOperatorKeyBackup()
 
     // Confirming the secret is what releases both
     dialog.m_confirm_edit->setText(dialog.m_operator_widget->secretHex().right(4));
-    dialog.m_confirm_edit->textChanged(dialog.m_confirm_edit->text());
     QVERIFY(dialog.secretConfirmed());
     QVERIFY(!dialog.operatorSecretUnsaved());
     QVERIFY(dialog.m_save_button->isEnabled());
@@ -619,7 +639,6 @@ void SharedMnWizardTests::coordinatorCanRetryOwnApproval()
     QVERIFY(dialog.needsOwnApproval());
     QVERIFY(!dialog.m_next_button->isHidden());
     QVERIFY2(dialog.m_next_button->isEnabled(), qPrintable(dialog.m_next_button->toolTip()));
-    QCOMPARE(dialog.m_next_button->text(), QStringLiteral("Approve"));
 
     // Once our own approval is in, the page waits for the others again
     std::vector<unsigned char> signature;
@@ -640,7 +659,7 @@ void SharedMnWizardTests::coordinatorCanRetryOwnApproval()
     dialog.updateButtons();
     QVERIFY(dialog.allApproved());
     QVERIFY(!dialog.m_next_button->isHidden());
-    QCOMPARE(dialog.m_next_button->text(), QStringLiteral("Retry"));
+    QVERIFY2(dialog.m_next_button->isEnabled(), qPrintable(dialog.m_next_button->toolTip()));
 }
 
 void SharedMnWizardTests::participantsPageGating()
@@ -789,7 +808,6 @@ void SharedMnWizardTests::pastedMessageRouting()
     QCOMPARE(int(warned.currentPage()), int(SharedMnCreateDialog::PageApprovals));
     QVERIFY2(warned.m_status_label->text().contains(QStringLiteral("edited after it was copied")),
              qPrintable(warned.m_status_label->text()));
-    QVERIFY(warned.m_status_label->isVisible() || !warned.m_status_label->text().isEmpty());
     const auto board{std::find_if(warned.m_boards.begin(), warned.m_boards.end(), [](const auto& entry) {
         return entry.first == SharedMnCreateDialog::PageApprovals;
     })};

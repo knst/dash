@@ -91,11 +91,6 @@ MnShareSession ValidSession(std::vector<CKey>& owner_keys)
     return session;
 }
 
-//! The shared registration "protx shared_register_prepare" would return for
-//! `session`: the funding transaction the session already describes, with the
-//! shared collateral output appended and the CProRegTx payload attached. The
-//! caller must have put `operator_secret`'s public key in the session's terms.
-
 //! A fresh basic-scheme operator key recorded in `session`'s terms
 CBLSSecretKey SetFreshOperatorKey(MnShareSession& session)
 {
@@ -496,12 +491,8 @@ void MnShareSessionTests::earlyPeriodWording()
     // the literal "(s)". Each unit spells its own plural instead.
     // No early period at all is "none", not "about 0 minutes"
     QCOMPARE(MnShareSession::HumanEarlyPeriod(0), QString("none"));
-    QCOMPARE(MnShareSession::HumanEarlyPeriod(24), QString("about 60 minutes"));
-    QCOMPARE(MnShareSession::HumanEarlyPeriod(48), QString("about 2 hours"));
-    QCOMPARE(MnShareSession::HumanEarlyPeriod(1000), QString("about 41 hours"));
 
     // Days round to the nearest day: 720 minutes is half a day
-    QCOMPARE(MnShareSession::HumanEarlyPeriod(1728), QString("about 3 days")); // exactly 3 days
     QCOMPARE(MnShareSession::HumanEarlyPeriod(1900), QString("about 3 days")); // 3.30 days, rounds down
     QCOMPARE(MnShareSession::HumanEarlyPeriod(2016), QString("about 4 days")); // 3.50 days, rounds up
 

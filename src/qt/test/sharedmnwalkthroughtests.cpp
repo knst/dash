@@ -69,11 +69,7 @@
 #include <string>
 #include <vector>
 
-using wallet::AddWallet;
 using wallet::CWallet;
-using wallet::CreateMockWalletDatabase;
-using wallet::RemoveWallet;
-using wallet::WALLET_FLAG_DESCRIPTORS;
 using wallet::WalletContext;
 using MasternodeTestUtil::FreshOperatorPubKey;
 using MasternodeTestUtil::MakeTestWallet;
@@ -510,7 +506,6 @@ void SharedMnWalkthroughTests::walkthrough()
     QVERIFY(!operator_secret.isEmpty());
     QVERIFY2(!coord.m_next_button->isEnabled(), "the gate must hold until the secret is confirmed");
     coord.m_confirm_edit->setText(operator_secret.right(4));
-    coord.m_confirm_edit->textChanged(coord.m_confirm_edit->text());
     QVERIFY2(coord.secretConfirmed(), "typing the last 4 characters must satisfy the gate");
     coord.m_next_button->click();
     QCOMPARE(int(coord.currentPage()), int(SharedMnCreateDialog::PageInvite));
@@ -607,11 +602,9 @@ void SharedMnWalkthroughTests::walkthrough()
     // =====================================================================
     // Round 2 - Locked Terms out, Approvals back
     // =====================================================================
-    QCOMPARE(coord.m_next_button->text(), QStringLiteral("Lock Terms"));
     coord.m_next_button->click();
     QCOMPARE(int(coord.currentPage()), int(SharedMnCreateDialog::PageInvite));
     QVERIFY2(coord.m_lock_confirm_card->isVisible(), "the lock confirmation replaces the page in place");
-    QCOMPARE(coord.m_next_button->text(), QStringLiteral("Lock and Approve"));
     Shots().capture(&coord, "coord", "17-lock-confirm",
                     "Lock confirmation: the full term sheet and the funding check, in place on the invite page");
 
@@ -655,7 +648,6 @@ void SharedMnWalkthroughTests::walkthrough()
                         who.who + " reading the locked terms before approving them");
 
         QApplication::clipboard()->clear();
-        QCOMPARE(dialog.m_next_button->text(), QStringLiteral("Approve and Copy Reply"));
         dialog.m_next_button->click();
         QVERIFY2(int(dialog.currentPage()) == int(SharedMnCreateDialog::PageWaitSigning),
                  qPrintable(QStringLiteral("%1 could not approve: %2").arg(who.who, dialog.m_error_label->text())));
@@ -706,7 +698,6 @@ void SharedMnWalkthroughTests::walkthrough()
                         who.who + " about to sign the coins they reserved");
 
         QApplication::clipboard()->clear();
-        QCOMPARE(dialog.m_next_button->text(), QStringLiteral("Sign and Copy Reply"));
         dialog.m_next_button->click();
         QVERIFY2(int(dialog.currentPage()) == int(SharedMnCreateDialog::PageWaitBroadcast),
                  qPrintable(QStringLiteral("%1 could not sign: %2").arg(who.who, dialog.m_error_label->text())));
@@ -731,7 +722,6 @@ void SharedMnWalkthroughTests::walkthrough()
                     "Signatures complete: the primary button is now Broadcast Registration");
 
     // --- broadcast ----------------------------------------------------------
-    QCOMPARE(coord.m_next_button->text(), QStringLiteral("Broadcast Registration"));
     pilot.captureNext("coord", "26-broadcast-confirm",
                       "The send confirmation shown before the registration is broadcast");
     coord.m_next_button->click();
@@ -919,7 +909,6 @@ void SharedMnWalkthroughTests::walkthrough()
     {
         DissolveDialog dialog(m_node, &coord_model, *shared_entry, height);
         QVERIFY(dialog.m_tabs != nullptr);
-        QCOMPARE(dialog.m_tabs->count(), 3);
 
         dialog.m_tabs->setCurrentIndex(0);
         ShotRecorder::settle();

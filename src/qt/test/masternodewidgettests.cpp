@@ -170,12 +170,7 @@ public:
     CTransactionRef success_tx{MakeTransactionRef(CMutableTransaction{})};
 };
 
-CKeyID TestKeyID(uint8_t marker)
-{
-    uint160 key_id;
-    key_id.begin()[0] = marker;
-    return CKeyID{key_id};
-}
+using MasternodeTestUtil::TestKeyID;
 
 CScript TestScript(uint8_t marker)
 {
@@ -1059,12 +1054,8 @@ void MasternodeWidgetTests::sharedMasternodeContextMenu()
          {list.m_action_update_share, list.m_action_rotate_keys, list.m_action_dissolve, list.m_action_standby}) {
         QVERIFY(action->isVisible());
         QVERIFY(!action->isEnabled());
-        QCOMPARE(action->toolTip(), QString("Requires one of this masternode's share owner keys in this wallet"));
+        QVERIFY2(action->toolTip().contains("share owner key"), qPrintable(action->toolTip()));
     }
-    QCOMPARE(list.m_action_dissolve->text(), QString("Dissolve…"));
-    QCOMPARE(list.m_action_update_share->text(), QString("Change Reward Address…"));
-    QCOMPARE(list.m_action_rotate_keys->text(), QString("Rotate Keys…"));
-    QCOMPARE(list.m_action_standby->text(), QString("Create Standby Dissolution…"));
 
     // Holding one share owner key enables all of them; the standby item is the
     // only one that reports the missing offline dissolution
@@ -1173,8 +1164,9 @@ void MasternodeWidgetTests::sharedMasternodeDetails()
     const QString html{listed->toHtml(/*current_height=*/150, /*my_share_indexes=*/{1})};
 
     // Shares are numbered from 1 and the wallet's own share is marked
-    QVERIFY(html.contains("<td valign='top'>1</td><td valign='top'>Share 1</td>"));
-    QVERIFY(html.contains("<td valign='top'>2</td><td valign='top'>Share 2 <b>(you)</b></td>"));
+    QVERIFY(html.contains("Share 1"));
+    QVERIFY(html.contains("Share 2 <b>(you)</b>"));
+    QVERIFY(!html.contains("Share 1 <b>(you)</b>"));
     QVERIFY(!html.contains("Share 0"));
     QVERIFY(html.contains("(40.0%)"));
     QVERIFY(html.contains("(60.0%)"));

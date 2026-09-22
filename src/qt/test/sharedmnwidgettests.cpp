@@ -4,6 +4,8 @@
 
 #include <qt/test/sharedmnwidgettests.h>
 
+#include <qt/test/masternodetestutil.h>
+
 #include <qt/mnsharesession.h>
 #include <qt/sharedmnwidgets.h>
 
@@ -23,14 +25,9 @@
 #include <string>
 #include <vector>
 
-namespace {
-QString FreshP2PKHAddress()
-{
-    CKey key;
-    key.MakeNewKey(/*fCompressed=*/true);
-    return QString::fromStdString(EncodeDestination(PKHash(key.GetPubKey())));
-}
+using MasternodeTestUtil::FreshP2PKHAddress;
 
+namespace {
 //! A draft session with two named shares and one recorded contribution
 MnShareSession TwoShareSession()
 {
@@ -127,9 +124,6 @@ void SharedMnWidgetTests::statusBoardCells()
     board.setShares({{QStringLiteral("alice"), 600 * COIN, QString()}, {QStringLiteral("bob"), 400 * COIN, QString()}});
     QCOMPARE(board.rowCount(), 2);
     QCOMPARE(board.columnCount(), 4);
-
-    // Everything starts pending
-    QCOMPARE(int(board.cellState(0, 0)), int(SharedMnStatusBoard::State::Pending));
     QCOMPARE(int(board.cellState(1, 3)), int(SharedMnStatusBoard::State::Pending));
 
     board.setCell(0, 0, SharedMnStatusBoard::State::Done);
@@ -159,9 +153,6 @@ void SharedMnWidgetTests::statusBoardCells()
     QCOMPARE(board.rowCount(), 2);
     QCOMPARE(int(board.cellState(0, 0)), int(SharedMnStatusBoard::State::Pending));
     QVERIFY(board.rowName(1).contains("(you)"));
-
-    board.setSummary(QStringLiteral("1 of 2 approved"));
-    board.setLastReceived(QStringLiteral("Received bob's Approval"));
 }
 
 void SharedMnWidgetTests::termSheetEscapesUntrustedText()

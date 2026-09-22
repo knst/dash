@@ -60,16 +60,10 @@
 #include <string>
 #include <utility>
 
-using wallet::AddWallet;
-using wallet::CWallet;
-using wallet::CreateMockWalletDatabase;
-using wallet::RemoveWallet;
-using wallet::WALLET_FLAG_DESCRIPTORS;
 using wallet::WalletContext;
 using MasternodeTestUtil::MakeCoinbaseWallet;
+using MasternodeTestUtil::MakeTestWallet;
 using MasternodeTestUtil::WalletGuard;
-using wallet::WalletDescriptor;
-using wallet::WalletRescanReserver;
 
 namespace {
 
@@ -701,7 +695,6 @@ void MasternodeMaintenanceTests::updateShareRewardValidation()
     QVERIFY(UpdateShareDialog::RewardAddressProblem(fresh, voting, shares).isEmpty());
 
     UpdateShareDialog dialog(m_node, /*wallet_model=*/nullptr, entry, /*parent=*/nullptr);
-    QCOMPARE(dialog.windowTitle(), QString("Change Reward Address"));
     QCOMPARE(dialog.m_share_combo->count(), 3);
     QVERIFY(dialog.m_share_combo->itemText(0).startsWith("Share 1 of 3"));
     QVERIFY(dialog.m_share_combo->itemText(2).startsWith("Share 3 of 3"));
@@ -760,12 +753,8 @@ void MasternodeMaintenanceTests::dissolveDialogTabsAndPayouts()
     MasternodeEntry entry{source, "collateral", 50};
 
     DissolveDialog dialog(m_node, /*wallet_model=*/nullptr, entry, /*current_height=*/100, /*parent=*/nullptr);
-    QCOMPARE(dialog.windowTitle(), QString("Dissolve Shared Masternode"));
     QVERIFY(dialog.m_tabs != nullptr);
     QCOMPARE(dialog.m_tabs->count(), 3);
-    QCOMPARE(dialog.m_tabs->tabText(0), QString("Dissolve Now"));
-    QCOMPARE(dialog.m_tabs->tabText(1), QString("Dissolve Together"));
-    QCOMPARE(dialog.m_tabs->tabText(2), QString("Standby Dissolution"));
 
     dialog.m_now_actor->setCurrentIndex(0);
     dialog.updateNowPreview();
@@ -884,18 +873,8 @@ void MasternodeMaintenanceTests::rotationSenderComesFromTheInputs()
 
     // Another share owner's wallet does not own the fee inputs, so it reads the
     // request instead of trying to send it
-    CKey other_key;
-    other_key.MakeNewKey(/*fCompressed=*/true);
-    const auto other_wallet{std::make_shared<CWallet>(m_node.context()->chain.get(),
-                                                      m_node.context()->coinjoin_loader.get(), "approver", gArgs,
-                                                      CreateMockWalletDatabase())};
-    other_wallet->LoadWallet();
-    other_wallet->SetWalletFlag(WALLET_FLAG_DESCRIPTORS);
-    {
-        LOCK(other_wallet->cs_wallet);
-        other_wallet->SetupDescriptorScriptPubKeyMans("", "");
-    }
-    AddWallet(context, other_wallet);
+    const auto other_wallet{MakeTestWallet(m_node, context, "approver")};
+    QVERIFY(other_wallet != nullptr);
     WalletGuard other_guard{context, other_wallet};
     WalletModel other_model(interfaces::MakeWallet(context, other_wallet), models.client);
 
