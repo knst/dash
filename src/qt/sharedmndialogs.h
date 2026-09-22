@@ -7,7 +7,7 @@
 
 #include <qt/bitcoinunits.h>
 #include <qt/masternodedialogs.h>
-#include <qt/protxsender.h>
+#include <qt/masternodeoperationrunner.h>
 
 #include <consensus/amount.h>
 #include <interfaces/node.h>
@@ -16,7 +16,10 @@
 #include <QString>
 #include <QWidget>
 
+#include <functional>
 #include <map>
+#include <memory>
+#include <type_traits>
 #include <vector>
 
 class BitcoinAmountField;
@@ -29,7 +32,7 @@ class QTableWidget;
 class QTabWidget;
 QT_END_NAMESPACE
 
-//! Send a ProUpShareTx ("protx shared_update_share"): change the reward address
+//! Send a ProUpShareTx: change the reward address
 //! collateral share of a shared masternode. Only shares whose owner key this
 //! wallet holds are offered; every other share field is immutable.
 class UpdateShareDialog : public MasternodeActionDialog
@@ -64,7 +67,6 @@ private:
     const bool m_is_shared;
     const QString m_voting_address;
     const std::vector<interfaces::MnShare> m_shares;
-    ProTxSender* m_sender{nullptr};
 
     QComboBox* m_share_combo{nullptr};
     QValidatedLineEdit* m_reward_edit{nullptr};
@@ -87,8 +89,8 @@ class SharedSigCollector : public QWidget
 
 public:
     enum class Kind {
-        Dissolve,  //!< unanimous ProDisTx from "protx shared_dissolve_prepare"
-        Registrar, //!< ProUpSharedRegTx from "protx shared_update_registrar_prepare"
+        Dissolve,  //!< unanimous ProDisTx
+        Registrar, //!< ProUpSharedRegTx
     };
 
     SharedSigCollector(Kind kind, const QString& pro_tx_hash, const std::vector<interfaces::MnShare>& shares,
@@ -104,8 +106,8 @@ public:
     bool setTransaction(const QString& tx_hex, QString& error);
 
     //! Verify and absorb an array of {shareIndex, signature} entries (the
-    //! "protx shared_sign" result shape). Returns the number of newly absorbed
-    //! signatures; `error` collects per-entry rejections.
+    //! envelope shape). Returns the number of newly absorbed signatures;
+    //! `error` collects per-entry rejections.
     int addSignatures(const UniValue& entries, QString& error);
 
     int signedCount() const { return static_cast<int>(m_sigs.size()); }
@@ -118,8 +120,12 @@ public:
     //! Put the current envelope on the clipboard and show its code line
     void copyEnvelope();
     bool complete() const { return m_sigs.size() == m_shares.size(); }
-    //! Signature entries in the shape "protx shared_combine" expects
+    //! Signature entries in the envelope's {shareIndex, signature} shape
     UniValue signaturesArray() const;
+    //! The collected signatures, for combining them into the transaction
+    std::vector<interfaces::SharedSignature> signatures() const;
+    //! The adopted transaction, or null when there is none
+    CTransactionRef transaction() const;
 
 Q_SIGNALS:
     //! The transaction or the signature set changed
@@ -152,17 +158,21 @@ private:
     QPushButton* m_save_button{nullptr};
 };
 
-//! Scaffolding for the larger shared masternode dialogs that run several RPC
-//! commands over their lifetime: wallet/watch-only gating and the unlock +
-//! busy-state + ProTxSender round trip with the result returned to the caller.
+//! Scaffolding for the larger shared masternode dialogs that run several
+//! provider operations over their lifetime: wallet/watch-only gating and the
+//! unlock + busy state held while an operation runs on the
+//! MasternodeOperationRunner.
 class SharedMnDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    //! Ignores Esc and window-close while a command runs in runCommand()'s
-    //! nested event loop, so a flow cannot be dismissed mid-flight
+    ~SharedMnDialog() override;
+
+    //! Ignores Esc and window-close while an operation runs, so a flow cannot
+    //! be dismissed mid-flight
     void reject() override;
+    bool isBusy() const { return m_busy; }
 
 protected:
     SharedMnDialog(interfaces::Node& node, WalletModel* wallet_model, const MasternodeEntry& entry, QWidget* parent);
@@ -173,11 +183,13 @@ protected:
     //! available or the v24 hard fork is not active yet; returns true when the
     //! button stays usable
     bool gateButton(QPushButton* button) const;
-    //! Unlock the wallet, execute `method` with named `params` on the RPC
-    //! bridge and wait in a local event loop (the dialog is disabled
-    //! meanwhile). Returns false with a user-displayable `error` when the
-    //! command could not run or failed.
-    bool runCommand(const QString& method, const UniValue& params, ProTxResult& result, QString& error);
+    //! Unlock the wallet and start `operation` on the runner. The dialog stays
+    //! disabled and the wallet unlocked until the result reaches `done`, which
+    //! is dropped when the dialog is being destroyed. Returns false, with the
+    //! reason reported into `status`, when the operation could not be started.
+    template <typename Request, typename Result>
+    bool runOperation(bool (MasternodeOperationRunner::*operation)(Request, std::function<void(Result)>),
+                      Request request, std::type_identity_t<std::function<void(Result)>> done, QLabel* status);
 
     //! True when no input of `tx_hex` is positively spent. An input that is
     //! merely waiting for its confirmation (an unconfirmed own-wallet fee
@@ -186,17 +198,20 @@ protected:
     //! started.
     bool txInputsUnspent(const QString& tx_hex, QString& error);
 
-    //! Adopt a "..._prepare" result into `collector` and cross-check the
+    //! Adopt a prepared transaction into `collector` and cross-check the
     //! locally computed signing digest against the node's; reports into
     //! `status` and returns false when the transaction must not be signed
-    bool adoptPreparedTx(SharedSigCollector* collector, const ProTxResult& result, QLabel* status);
-    //! "protx shared_sign" the collector's transaction with every share owner
-    //! key this wallet holds and absorb the resulting signatures. False when
-    //! nothing was absorbed, with the reason reported into `status`.
-    bool signWithWallet(SharedSigCollector* collector, QLabel* status);
-    //! "protx shared_combine" the fully signed transaction and submit it
-    bool combineAndSubmit(SharedSigCollector* collector, QLabel* status, QLineEdit* result_edit,
-                          const QString& success_text, const QString& failure_hint);
+    bool adoptPreparedTx(SharedSigCollector* collector, const interfaces::PreparedSharedConsent& prepared,
+                         QLabel* status);
+    //! Sign the collector's transaction with every share owner key this wallet
+    //! holds and absorb the resulting signatures. `done` learns whether
+    //! anything was absorbed; the reason when nothing was is reported into
+    //! `status`.
+    void signWithWallet(SharedSigCollector* collector, QLabel* status, std::function<void(bool absorbed)> done);
+    //! Combine the collected signatures into the transaction and submit it;
+    //! `sent` runs once it is on the network
+    void combineAndSubmit(SharedSigCollector* collector, QLabel* status, QLineEdit* result_edit,
+                          const QString& success_text, const QString& failure_hint, std::function<void()> sent);
     //! A spent input makes the prepared transaction permanently
     //! unbroadcastable: the flow is dead and must be started over. Reports
     //! into `status` and returns false.
@@ -210,7 +225,7 @@ protected:
     //! Transaction-fee input shared by every dissolution flow: 0.00001 to 0.01
     //! DASH, defaulting to 0.001 DASH, in the user's display unit
     BitcoinAmountField* makeFeeField(QWidget* parent) const;
-    //! "Share k of n" for the 0-based `share_index` the RPCs use
+    //! "Share k of n" for the 0-based `share_index` the transactions use
     QString shareLabel(int share_index) const;
     //! Unit every amount on this dialog is rendered in
     BitcoinUnits::Unit displayUnit() const;
@@ -218,19 +233,30 @@ protected:
     interfaces::Node& m_node;
     WalletModel* const m_wallet_model;
     const QString m_protx_hash;
+    const uint256 m_protx_hash_raw;
     const std::vector<interfaces::MnShare> m_shares;
     const CAmount m_early_penalty;
     const uint32_t m_early_period_blocks;
     const int m_registered_height;
     const bool m_v24_active;
-    ProTxSender* m_sender{nullptr};
+    //! Null without a wallet, in which case every action button is gated off
+    MasternodeOperationRunner* const m_runner;
 
 private:
+    struct UnlockHolder;
+
+    //! Take the unlock and the busy state for one operation; false with the
+    //! reason in `status` when that is not possible
+    bool beginOperation(QLabel* status);
+    //! Release what beginOperation() took
+    void endOperation();
+
+    std::unique_ptr<UnlockHolder> m_unlock;
     bool m_busy{false};
+    bool m_destroying{false};
 };
 
-//! Dissolution of a shared masternode ("protx shared_dissolve" / "protx
-//! shared_dissolve_prepare" + "protx shared_sign" + "protx shared_combine"):
+//! Dissolution of a shared masternode:
 //! - Dissolve now: unilateral, with a live penalty preview mirroring the real
 //!   transaction's outputs;
 //! - Unanimous: penalty-free at any height, needs every share owner's
@@ -270,6 +296,10 @@ private:
     QWidget* buildStandbyTab();
     //! Build both standby variants and write them to one file the user picks
     void createStandby();
+    //! Sign one standby variant for `share_index`; `done` receives its hex
+    void generateStandby(int share_index, CAmount fee, bool pay_penalty, std::function<void(QString)> done);
+    //! Show both standby variants and offer to save them
+    void storeStandby(int share_index, const QString& full, const QString& immediate);
     //! Contents of the standby file: a header saying which transaction to
     //! broadcast when, then both of them
     QString standbyFileText() const;
@@ -337,11 +367,10 @@ private:
     QLabel* m_sb_status{nullptr};
 };
 
-//! Rotate a shared masternode's operator and/or voting key ("protx
-//! shared_update_registrar_prepare" + "protx shared_sign" + "protx
-//! shared_combine"). The prepare and the final combine must run on the same
-//! wallet, whose coins pay the fee; other participants open this dialog only
-//! to import the envelope, sign and export.
+//! Rotate a shared masternode's operator and/or voting key: prepare, have every
+//! share owner sign, combine. The prepare and the final combine must run on the
+//! same wallet, whose coins pay the fee; other participants open this dialog
+//! only to import the envelope, sign and export.
 class RotateSharedKeysDialog : public SharedMnDialog
 {
     Q_OBJECT

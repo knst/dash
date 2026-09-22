@@ -7,10 +7,14 @@
 #include <core_io.h>
 #include <evo/providertx.h>
 #include <interfaces/wallet.h>
+#include <node/transaction.h>
+#include <policy/policy.h>
 #include <primitives/transaction.h>
 #include <script/standard.h>
+#include <util/error.h>
 #include <util/strencodings.h>
 
+#include <qt/masternodeoperationrunner.h>
 #include <qt/masternodewidgets.h>
 #include <qt/optionsmodel.h>
 #include <qt/walletmodel.h>
@@ -90,6 +94,16 @@ QString SharedMnV24InactiveMessage()
     return QCoreApplication::translate("SharedMnDialog",
                                        "Shared masternodes need the v24 upgrade, which is not active on this network "
                                        "yet.");
+}
+
+QString SharedMnBroadcast(interfaces::Node& node, const CTransactionRef& tx)
+{
+    bilingual_str message;
+    const TransactionError error{
+        node.broadcastTransaction(tx, node::DEFAULT_MAX_RAW_TX_FEE_RATE.GetFee(GetVirtualTransactionSize(*tx)), message)};
+    if (error == TransactionError::OK) return {};
+    if (message.empty()) message = TransactionErrorString(error);
+    return MasternodeOperationRunner::errorText({interfaces::ProviderTxErrorCode::BROADCAST_ERROR, message, {}, error});
 }
 
 SharedMnStatusBoard::SharedMnStatusBoard(QWidget* parent) : QWidget(parent)

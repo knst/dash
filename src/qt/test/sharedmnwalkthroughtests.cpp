@@ -76,6 +76,10 @@ using MasternodeTestUtil::MakeTestWallet;
 using MasternodeTestUtil::WalletGuard;
 using wallet::WalletRescanReserver;
 
+//! The dialogs run their provider operations on a worker thread; wait until
+//! the last result has been delivered before looking at what it did
+#define WAIT_UNTIL_IDLE(busy) QTRY_VERIFY_WITH_TIMEOUT(!(busy), 60000)
+
 namespace {
 
 //! Fixed size every wizard page is grabbed at, so the screenshots are directly
@@ -335,17 +339,18 @@ void SharedMnWalkthroughTests::walkthrough()
     WalletContext& context{*m_node.walletLoader().context()};
     ModalPilot pilot;
 
-    // The dialogs drive the node through its RPC table. The test fixture builds
+    // The dialogs go through interfaces::EVO, but the checks below read the
+    // result back with "protx list" and "protx info". The test fixture builds
     // a wallet loader but never registers its commands, so do here what
-    // AppInitMain() does: without this every wallet-backed protx call comes
-    // back as "This command is not available".
+    // AppInitMain() does: without this those calls come back as "This command
+    // is not available".
     for (const auto& client : test.m_node.chain_clients) {
         client->registerRpcs();
     }
     m_node.walletLoader().registerOtherRpcs(GetWalletEvoRPCCommands());
 
-    // Three separate descriptor wallets: the dialogs route every RPC through
-    // ProTxSender to "/wallet/<name>", so each role must have its own.
+    // Three separate descriptor wallets: each role signs with its own wallet,
+    // as it would on its own machine.
     WalletGuard wallets{context};
     const auto coord_wallet{MakeTestWallet(m_node, context, "coord", /*broadcast=*/true)};
     const auto alice_wallet{MakeTestWallet(m_node, context, "alice", /*broadcast=*/true)};
@@ -609,6 +614,7 @@ void SharedMnWalkthroughTests::walkthrough()
                     "Lock confirmation: the full term sheet and the funding check, in place on the invite page");
 
     coord.m_next_button->click();
+    WAIT_UNTIL_IDLE(coord.m_busy);
     ShotRecorder::settle();
     QVERIFY2(int(coord.currentPage()) == int(SharedMnCreateDialog::PageApprovals),
              qPrintable(QStringLiteral("Lock and Approve did not reach the Approvals page. Error: \"%1\"; modals: %2")
@@ -621,7 +627,8 @@ void SharedMnWalkthroughTests::walkthrough()
         // goToPage() clears the error label, so the reason the automatic own
         // approval failed never reaches the user; ask for it again here.
         QString sign_error;
-        coord.signOwnConsent(sign_error);
+        coord.signOwnConsent([&sign_error](bool, const QString& error) { sign_error = error; });
+        WAIT_UNTIL_IDLE(coord.m_busy);
         QVERIFY2(coord.m_session.signedCount() >= 1,
                  qPrintable(QStringLiteral("locking did not produce the coordinator's own approval: %1")
                                 .arg(sign_error)));
@@ -649,6 +656,7 @@ void SharedMnWalkthroughTests::walkthrough()
 
         QApplication::clipboard()->clear();
         dialog.m_next_button->click();
+        WAIT_UNTIL_IDLE(dialog.m_busy);
         QVERIFY2(int(dialog.currentPage()) == int(SharedMnCreateDialog::PageWaitSigning),
                  qPrintable(QStringLiteral("%1 could not approve: %2").arg(who.who, dialog.m_error_label->text())));
         QString code;
@@ -668,6 +676,7 @@ void SharedMnWalkthroughTests::walkthrough()
     // Absorbing the last approval also combines them and signs this wallet's
     // own funding inputs, with no further decision to make.
     coord.handleImportedText(approvals.at(1));
+    WAIT_UNTIL_IDLE(coord.m_busy);
     ShotRecorder::settle();
     QVERIFY2(int(coord.currentPage()) == int(SharedMnCreateDialog::PageSignatures),
              qPrintable(QStringLiteral("combine/sign did not advance to Signatures. Error: \"%1\"")
@@ -929,6 +938,7 @@ void SharedMnWalkthroughTests::walkthrough()
         Shots().capture(&dialog, "maintenance", "36-dissolve-together",
                           "Dissolve together, before the request is prepared", /*fixed_size=*/false);
         dialog.m_un_prepare->click();
+        WAIT_UNTIL_IDLE(dialog.isBusy());
         ShotRecorder::settle();
         QVERIFY2(dialog.m_un_collector->hasTransaction(),
                  qPrintable(QStringLiteral("Prepare Request produced no transaction: %1")
@@ -946,6 +956,7 @@ void SharedMnWalkthroughTests::walkthrough()
         // The save dialog cannot run headless: the pilot cancels it, then the
         // file is written where the test can check it.
         dialog.m_sb_create->click();
+        WAIT_UNTIL_IDLE(dialog.isBusy());
         ShotRecorder::settle();
         QVERIFY2(!dialog.m_sb_hex_full.isEmpty() && !dialog.m_sb_hex_immediate.isEmpty(),
                  qPrintable(QStringLiteral("no standby dissolutions were generated: %1")
@@ -969,6 +980,7 @@ void SharedMnWalkthroughTests::walkthrough()
         dialog.m_operator_edit->setText(FreshOperatorPubKey());
         ShotRecorder::settle();
         dialog.m_prepare_button->click();
+        WAIT_UNTIL_IDLE(dialog.isBusy());
         ShotRecorder::settle();
         QVERIFY2(dialog.m_collector->hasTransaction(),
                  qPrintable(QStringLiteral("Prepare Request produced no transaction: %1")

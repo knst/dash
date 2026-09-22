@@ -163,3 +163,87 @@ bool MasternodeOperationRunner::revokeMasternode(interfaces::ProviderRevokeReque
         [this, request = std::move(request)] { return m_evo.revokeMasternode(m_wallet, request); },
         std::move(callback));
 }
+
+bool MasternodeOperationRunner::prepareSharedRegistration(interfaces::SharedRegistrationRequest request,
+                                                          SharedRegistrationCallback callback)
+{
+    return run<SharedRegistrationResult>(
+        [this, request = std::move(request)] { return m_evo.prepareSharedRegistration(request); },
+        std::move(callback));
+}
+
+bool MasternodeOperationRunner::signShared(interfaces::SharedSignRequest request, SharedSignCallback callback)
+{
+    return run<SharedSigningResult>(
+        [this, request = std::move(request)] { return m_evo.signShared(m_wallet, request); }, std::move(callback));
+}
+
+bool MasternodeOperationRunner::combineShared(interfaces::SharedCombineRequest request, SubmissionCallback callback)
+{
+    return run<SubmissionResult>(
+        [this, request = std::move(request)] { return m_evo.combineShared(m_wallet, request); }, std::move(callback));
+}
+
+bool MasternodeOperationRunner::dissolveShared(interfaces::SharedDissolveRequest request, SubmissionCallback callback)
+{
+    return run<SubmissionResult>(
+        [this, request = std::move(request)] { return m_evo.dissolveShared(m_wallet, request); }, std::move(callback));
+}
+
+bool MasternodeOperationRunner::prepareSharedDissolution(interfaces::SharedDissolvePrepareRequest request,
+                                                         SharedConsentCallback callback)
+{
+    return run<SharedConsentResult>(
+        [this, request = std::move(request)] { return m_evo.prepareSharedDissolution(request); },
+        std::move(callback));
+}
+
+bool MasternodeOperationRunner::updateShare(interfaces::SharedUpdateShareRequest request, SubmissionCallback callback)
+{
+    return run<SubmissionResult>(
+        [this, request = std::move(request)] { return m_evo.updateShare(m_wallet, request); }, std::move(callback));
+}
+
+bool MasternodeOperationRunner::prepareSharedRegistrarUpdate(interfaces::SharedRegistrarUpdatePrepareRequest request,
+                                                             SharedConsentCallback callback)
+{
+    return run<SharedConsentResult>(
+        [this, request = std::move(request)] { return m_evo.prepareSharedRegistrarUpdate(m_wallet, request); },
+        std::move(callback));
+}
+
+namespace {
+//! Reject reasons worth a friendlier explanation than the node's own message
+struct KnownError {
+    const char* needle;
+    const char* explanation;
+};
+const KnownError KNOWN_ERRORS[]{
+    {"bad-protx-dup-key", QT_TRANSLATE_NOOP("MasternodeOperationRunner", "One of the chosen keys is already in use by a registered masternode or share. Every owner and voting key may be used only once network-wide.")},
+    {"bad-protx-dup-addr", QT_TRANSLATE_NOOP("MasternodeOperationRunner", "The chosen service address is already in use by a registered masternode.")},
+    {"bad-protx-shares-payee-reuse", QT_TRANSLATE_NOOP("MasternodeOperationRunner", "A refund or reward address may not double as a share owner or voting address. Use distinct addresses for payouts and keys.")},
+    {"bad-protx-shares-sig", QT_TRANSLATE_NOOP("MasternodeOperationRunner", "A participant's consent signature does not match the final transaction. This happens when the terms or the funding transaction changed after signing; collect fresh signatures.")},
+    {"bad-protx-version", QT_TRANSLATE_NOOP("MasternodeOperationRunner", "The network does not accept this transaction version yet. Wait for the network upgrade that introduces it to activate.")},
+    {"too-early", QT_TRANSLATE_NOOP("MasternodeOperationRunner", "This feature is not active on the network yet. Wait for the network upgrade that introduces it to activate.")},
+    {"bad-prodis-dup", QT_TRANSLATE_NOOP("MasternodeOperationRunner", "A dissolution for this masternode is already pending.")},
+};
+} // namespace
+
+QString MasternodeOperationRunner::errorText(const interfaces::ProviderTxError& error)
+{
+    QString text{QString::fromStdString(error.message.translated)};
+    if (error.code == interfaces::ProviderTxErrorCode::FUNDING_ERROR) {
+        text = text.isEmpty() ? tr("The transaction could not be funded.")
+                              : tr("The transaction could not be funded: %1").arg(text);
+    }
+    const QString reject_reason{QString::fromStdString(error.reject_reason)};
+    if (!reject_reason.isEmpty() && !text.contains(reject_reason)) {
+        text += tr("\n\nNetwork rejection: %1").arg(reject_reason);
+    }
+    for (const auto& known : KNOWN_ERRORS) {
+        if (text.contains(QLatin1String(known.needle))) {
+            return tr(known.explanation) + "\n\n" + tr("Details: %1").arg(text);
+        }
+    }
+    return text;
+}

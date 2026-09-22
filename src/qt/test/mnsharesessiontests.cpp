@@ -7,7 +7,6 @@
 #include <qt/test/masternodetestutil.h>
 
 #include <qt/mnsharesession.h>
-#include <qt/sharedmnrpc.h>
 
 #include <bls/bls.h>
 #include <chainparams.h>
@@ -21,12 +20,9 @@
 #include <key_io.h>
 #include <messagesigner.h>
 #include <primitives/transaction.h>
-#include <rpc/register.h>
-#include <rpc/server.h>
 #include <test/util/setup_common.h>
 #include <util/strencodings.h>
 
-#include <algorithm>
 #include <optional>
 #include <string>
 #include <vector>
@@ -796,19 +792,4 @@ void MnShareSessionTests::oversizedEnvelopesAreRefused()
     // The session itself still parses
     MnShareSession accepted;
     QVERIFY2(accepted.fromJson(session.toJson(), error), qPrintable(error));
-}
-
-void MnShareSessionTests::rpcMethodNamesAreRegistered()
-{
-    // The dialogs dispatch these names through interfaces::Node::executeRpc,
-    // which resolves them against the command table below. An unregistered
-    // name only fails at call time, in the middle of a multi-party flow, so
-    // check the whole set against the registration source itself.
-    std::vector<std::string> registered;
-    for (const CRPCCommand& command : GetWalletEvoRPCCommands()) {
-        registered.emplace_back(command.name);
-    }
-    for (const char* method : shared_mn_rpc::ALL) {
-        QVERIFY2(std::find(registered.begin(), registered.end(), method) != registered.end(), method);
-    }
 }

@@ -171,6 +171,17 @@ public:
         Wallet& wallet, const ProviderUpdateRegistrarRequest& request) = 0;
     virtual ProviderTxResult<ProviderTxSubmission> revokeMasternode(Wallet& wallet,
                                                                     const ProviderRevokeRequest& request) = 0;
+    virtual ProviderTxResult<PreparedSharedRegistration> prepareSharedRegistration(
+        const SharedRegistrationRequest& request) = 0;
+    virtual ProviderTxResult<SharedSignResult> signShared(Wallet& wallet, const SharedSignRequest& request) = 0;
+    virtual ProviderTxResult<ProviderTxSubmission> combineShared(Wallet& wallet, const SharedCombineRequest& request) = 0;
+    virtual ProviderTxResult<ProviderTxSubmission> dissolveShared(Wallet& wallet,
+                                                                  const SharedDissolveRequest& request) = 0;
+    virtual ProviderTxResult<PreparedSharedConsent> prepareSharedDissolution(
+        const SharedDissolvePrepareRequest& request) = 0;
+    virtual ProviderTxResult<ProviderTxSubmission> updateShare(Wallet& wallet, const SharedUpdateShareRequest& request) = 0;
+    virtual ProviderTxResult<PreparedSharedConsent> prepareSharedRegistrarUpdate(
+        Wallet& wallet, const SharedRegistrarUpdatePrepareRequest& request) = 0;
     virtual void setContext(node::NodeContext* context) {}
 };
 

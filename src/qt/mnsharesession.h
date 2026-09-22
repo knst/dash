@@ -248,8 +248,7 @@ public:
     int signedCount() const;
     //! Base64 signature for a share index, or empty if not signed yet
     QString signatureFor(int share_index) const;
-    //! The stored signatures as the [{shareIndex, signature}] array both the
-    //! envelope and "protx shared_combine" take
+    //! The stored signatures as the envelope's [{shareIndex, signature}] array
     UniValue signaturesJson() const;
     //! Drop every stored signature that no longer verifies (an imported copy
     //! stores them as-is). Returns one sentence per dropped signature.

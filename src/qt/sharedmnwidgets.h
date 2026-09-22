@@ -7,6 +7,7 @@
 
 #include <consensus/amount.h>
 #include <interfaces/node.h>
+#include <primitives/transaction.h>
 
 #include <qt/bitcoinunits.h>
 #include <qt/mnsharesession.h>
@@ -45,6 +46,11 @@ bool SharedMnWalletOwnsShare(const WalletModel* wallet_model, const interfaces::
 
 //! The one wording for the v24 activation gate
 QString SharedMnV24InactiveMessage();
+
+//! Broadcast a fully signed transaction under the same fee cap "sendrawtransaction"
+//! applies. Returns why it was rejected, ready to show to the user, or an empty
+//! string once it is in the mempool.
+QString SharedMnBroadcast(interfaces::Node& node, const CTransactionRef& tx);
 
 //! What a ProDisTx pays out, read against the share table of the masternode it
 //! dissolves.

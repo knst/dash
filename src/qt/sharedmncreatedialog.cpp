@@ -17,16 +17,16 @@
 #include <script/standard.h>
 #include <uint256.h>
 #include <univalue.h>
+#include <util/result.h>
+#include <util/strencodings.h>
 #include <wallet/ismine.h>
 
 #include <qt/bitcoinamountfield.h>
 #include <qt/bitcoinunits.h>
 #include <qt/guiutil.h>
 #include <qt/masternodewidgets.h>
-#include <qt/protxsender.h>
 #include <qt/qvalidatedlineedit.h>
 #include <qt/sendcoinsdialog.h>
-#include <qt/sharedmnrpc.h>
 #include <qt/sharedmnwidgets.h>
 #include <qt/walletmodel.h>
 
@@ -62,6 +62,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 
 namespace {
 using MasternodeWidgetUtil::CARD_PADDING;
@@ -169,22 +170,20 @@ QString ShareName(const MnShareSession& session, int index)
 }
 } // anonymous namespace
 
-//! Keeps the wallet unlocked on the GUI thread while an RPC command is in
-//! flight. UnlockContext is neither copyable nor movable, so it is constructed
-//! in place from requestUnlock()'s prvalue.
-namespace {
-struct UnlockHolder {
+//! Keeps the wallet unlocked on the GUI thread while this wallet signs.
+//! UnlockContext is neither copyable nor movable, so it is constructed in place
+//! from requestUnlock()'s prvalue.
+struct SharedMnCreateDialog::UnlockHolder {
     WalletModel::UnlockContext ctx;
     explicit UnlockHolder(WalletModel& wallet_model) : ctx(wallet_model.requestUnlock()) {}
 };
-} // anonymous namespace
 
 SharedMnCreateDialog::SharedMnCreateDialog(interfaces::Node& node, WalletModel* wallet_model, QWidget* parent) :
     QDialog(parent),
     m_node{node},
     m_wallet_model{wallet_model},
     m_v24_active{node.isV24Active()},
-    m_sender{new ProTxSender(node, this)}
+    m_runner{wallet_model ? new MasternodeOperationRunner(node.evo(), wallet_model->wallet(), this) : nullptr}
 {
     setObjectName(QStringLiteral("SharedMnCreateDialog"));
     setWindowTitle(tr("Shared Masternode"));
@@ -294,10 +293,64 @@ SharedMnCreateDialog::SharedMnCreateDialog(interfaces::Node& node, WalletModel* 
 
 SharedMnCreateDialog::~SharedMnCreateDialog()
 {
+    // A result delivered from here on reaches a half-destroyed dialog, so
+    // runOperation() only lets it release the unlock and the busy state
+    m_destroying = true;
+    if (m_runner) m_runner->shutdown();
     for (QLineEdit* const edit : {m_secret_edit, m_conf_line_edit, m_confirm_edit}) {
         edit->setText(QString(edit->text().size(), QLatin1Char('0')));
         edit->clear();
     }
+}
+
+template <typename Request, typename Result>
+bool SharedMnCreateDialog::runOperation(
+    bool (MasternodeOperationRunner::*operation)(Request, std::function<void(Result)>), Request request,
+    const QString& busy_text, bool needs_unlock, std::type_identity_t<std::function<void(Result)>> done,
+    QString& error)
+{
+    if (m_busy) {
+        error = tr("another operation is still running.");
+        return false;
+    }
+    if (m_runner == nullptr) {
+        error = tr("no wallet is available.");
+        return false;
+    }
+    if (needs_unlock) {
+        m_unlock = std::make_unique<UnlockHolder>(*m_wallet_model);
+        if (!m_unlock->ctx.isValid()) {
+            m_unlock.reset();
+            error = tr("the wallet stayed locked.");
+            return false;
+        }
+    }
+    setBusy(true, busy_text);
+    const bool started{(m_runner->*operation)(std::move(request), [this, done = std::move(done)](Result result) {
+        m_unlock.reset();
+        setBusy(false);
+        if (!m_destroying) done(std::move(result));
+    })};
+    if (!started) {
+        m_unlock.reset();
+        setBusy(false);
+        error = tr("another operation is still running.");
+    }
+    return started;
+}
+
+QString SharedMnCreateDialog::operationError(const interfaces::ProviderTxError& error)
+{
+    const QString text{MasternodeOperationRunner::errorText(error)};
+    return text.isEmpty() ? tr("the node gave no reason.") : text;
+}
+
+std::optional<CMutableTransaction> SharedMnCreateDialog::sessionTx(QString& error) const
+{
+    CMutableTransaction tx;
+    if (DecodeHexTx(tx, m_session.protxHex().toStdString())) return tx;
+    error = tr("the registration is not a valid transaction.");
+    return std::nullopt;
 }
 
 QWidget* SharedMnCreateDialog::createLandingPage()
@@ -1559,14 +1612,15 @@ void SharedMnCreateDialog::onNext()
         if (m_role == Role::Participant) {
             approveAndCopy();
         } else if (needsOwnApproval()) {
-            QString sign_error;
-            if (!signOwnConsent(sign_error)) {
-                showError(sign_error);
+            signOwnConsent([this](bool approved, const QString& sign_error) {
+                if (!approved) {
+                    showError(sign_error);
+                    refreshAll();
+                    return;
+                }
                 refreshAll();
-                return;
-            }
-            refreshAll();
-            if (allApproved()) runCombineAndSign();
+                if (allApproved()) runCombineAndSign();
+            });
         } else {
             runCombineAndSign();
         }
@@ -2191,161 +2245,189 @@ void SharedMnCreateDialog::lockTerms()
         return;
     }
 
-    const auto& terms{m_session.terms()};
-    UniValue params(UniValue::VOBJ);
-    params.pushKV("fundingTx", m_session.fundingTxHex().toStdString());
-    UniValue shares(UniValue::VARR);
-    for (const auto& share : m_session.shares()) {
-        UniValue entry(UniValue::VOBJ);
-        entry.pushKV("amount", share.amount);
-        entry.pushKV("refundAddress", share.refundAddress.toStdString());
-        if (!share.rewardAddress.isEmpty()) entry.pushKV("rewardAddress", share.rewardAddress.toStdString());
-        entry.pushKV("ownerAddress", share.ownerAddress.toStdString());
-        shares.push_back(entry);
-    }
-    params.pushKV("shares", shares);
-    // The RPC declares coreP2PAddrs as a string but also accepts an array;
-    // a single string is one endpoint, so several endpoints go as an array
-    const QStringList endpoints{MasternodeWidgetUtil::tokenizeEndpointList(terms.coreP2PAddrs)};
-    if (endpoints.size() <= 1) {
-        params.pushKV("coreP2PAddrs", endpoints.value(0).toStdString());
-    } else {
-        UniValue services(UniValue::VARR);
-        for (const QString& service : endpoints) {
-            services.push_back(service.toStdString());
-        }
-        params.pushKV("coreP2PAddrs", services);
-    }
-    params.pushKV("operatorPubKey", terms.operatorPubKey.toStdString());
-    params.pushKV("votingAddress", terms.votingAddress.toStdString());
-    params.pushKV("operatorReward", QStringLiteral("%1.%2")
-                                        .arg(terms.operatorReward / 100)
-                                        .arg(terms.operatorReward % 100, 2, 10, QLatin1Char('0'))
-                                        .toStdString());
-    params.pushKV("earlyPeriodBlocks", static_cast<int64_t>(terms.earlyPeriodBlocks));
-    params.pushKV("earlyPenalty", terms.earlyPenalty);
-
-    // shared_register_prepare only assembles the transaction; no keys involved
-    ProTxResult result;
-    const QString failure{runRpc(shared_mn_rpc::REGISTER_PREPARE, params, tr("Preparing…"), /*needs_unlock=*/false,
-                                 result)};
-    if (!failure.isEmpty()) {
+    QString failure;
+    auto request{registrationRequest(failure)};
+    // Preparing only assembles the transaction; no keys involved
+    if (!request || !runOperation(&MasternodeOperationRunner::prepareSharedRegistration, std::move(*request),
+                                  tr("Preparing…"), /*needs_unlock=*/false,
+                                  [this](auto result) { finishLockTerms(std::move(result)); }, failure)) {
         showError(tr("Preparing the registration failed: %1").arg(failure));
+    }
+}
+
+std::optional<interfaces::SharedRegistrationRequest> SharedMnCreateDialog::registrationRequest(QString& error) const
+{
+    interfaces::SharedRegistrationRequest request;
+    if (!DecodeHexTx(request.funding_tx, m_session.fundingTxHex().toStdString())) {
+        error = tr("the funding transaction is not valid.");
+        return std::nullopt;
+    }
+    for (const auto& share : m_session.shares()) {
+        interfaces::SharedShareSpec spec;
+        spec.amount = share.amount;
+        spec.refund = DecodeDestination(share.refundAddress.toStdString());
+        if (!IsValidDestination(spec.refund)) {
+            error = tr("invalid refund address: %1").arg(share.refundAddress);
+            return std::nullopt;
+        }
+        if (!share.rewardAddress.isEmpty()) {
+            spec.reward = DecodeDestination(share.rewardAddress.toStdString());
+            if (!IsValidDestination(*spec.reward)) {
+                error = tr("invalid reward address: %1").arg(share.rewardAddress);
+                return std::nullopt;
+            }
+        }
+        const CTxDestination owner{DecodeDestination(share.ownerAddress.toStdString())};
+        const auto* owner_key{std::get_if<PKHash>(&owner)};
+        if (owner_key == nullptr) {
+            error = tr("invalid share owner address: %1").arg(share.ownerAddress);
+            return std::nullopt;
+        }
+        spec.owner = ToKeyID(*owner_key);
+        request.shares.push_back(std::move(spec));
+    }
+
+    const auto& terms{m_session.terms()};
+    for (const QString& service : MasternodeWidgetUtil::tokenizeEndpointList(terms.coreP2PAddrs)) {
+        request.net_info.core_p2p.push_back(service.toStdString());
+    }
+    if (!request.operator_key.SetHexStr(terms.operatorPubKey.toStdString(), /*specificLegacyScheme=*/false)) {
+        error = tr("the operator key is not a valid BLS public key.");
+        return std::nullopt;
+    }
+    const CTxDestination voting{DecodeDestination(terms.votingAddress.toStdString())};
+    const auto* voting_key{std::get_if<PKHash>(&voting)};
+    if (voting_key == nullptr) {
+        error = tr("the voting address must be a P2PKH address.");
+        return std::nullopt;
+    }
+    request.voting_key = ToKeyID(*voting_key);
+    if (terms.operatorReward < 0 || terms.operatorReward > 10000) {
+        error = tr("the operator reward must be between 0% and 100%.");
+        return std::nullopt;
+    }
+    request.operator_reward = static_cast<uint16_t>(terms.operatorReward);
+    request.early_period_blocks = terms.earlyPeriodBlocks;
+    request.early_penalty = terms.earlyPenalty;
+    return request;
+}
+
+void SharedMnCreateDialog::finishLockTerms(MasternodeOperationRunner::SharedRegistrationResult result)
+{
+    if (const auto* error{std::get_if<interfaces::ProviderTxError>(&result)}) {
+        showError(tr("Preparing the registration failed: %1").arg(operationError(*error)));
         return;
     }
-    const UniValue& tx{result.value.find_value("tx")};
-    const UniValue& collateral_index{result.value.find_value("collateralIndex")};
-    const UniValue& consent_hash{result.value.find_value("consentHash")};
-    if (!result.value.isObject() || !tx.isStr() || !collateral_index.isNum() || !consent_hash.isStr()) {
+    const auto& prepared{std::get<interfaces::PreparedSharedRegistration>(result)};
+    if (!prepared.tx) {
         showError(tr("Unexpected reply from the node."));
         return;
     }
     QString error;
-    if (!m_session.freeze(QString::fromStdString(tx.get_str()), QString::fromStdString(consent_hash.get_str()),
-                          collateral_index.getInt<int>(), error)) {
+    if (!m_session.freeze(QString::fromStdString(EncodeHexTx(*prepared.tx)),
+                          QString::fromStdString(prepared.consent_hash.ToString()),
+                          static_cast<int>(prepared.collateral_index), error)) {
         showError(tr("Preparing the registration failed: %1").arg(error));
         return;
     }
     if (m_wallet_model != nullptr) m_session.setPrepareWallet(m_wallet_model->getWalletName());
     checkOwnFunding();
-    // The advisory only comes back from the prepare call, so it is shown on the
+    // The advisory only comes back from preparing, so it is shown on the
     // approvals page while the terms can still be unlocked
-    const UniValue& warning{result.value.find_value("warning")};
-    m_prepare_warning = warning.isStr() ? QString::fromStdString(warning.get_str()) : QString{};
+    m_prepare_warning = prepared.warning ? QString::fromStdString(*prepared.warning) : QString{};
     m_lock_confirming = false;
     m_dirty = true;
 
     // Approving the terms one just locked needs no separate decision. The page
     // switch clears the error line, so the reason a failed approval gives is
     // shown after it, not before.
-    const bool approved{signOwnConsent(error)};
-    refreshAll();
-    goToPage(PageApprovals);
-    if (!approved) showError(error);
+    signOwnConsent([this](bool approved, const QString& sign_error) {
+        refreshAll();
+        goToPage(PageApprovals);
+        if (!approved) showError(sign_error);
+    });
 }
 
-bool SharedMnCreateDialog::signOwnConsent(QString& error)
+void SharedMnCreateDialog::signOwnConsent(StepCallback done)
 {
-    error.clear();
     if (m_session.stage() != MnShareSession::Stage::Frozen && m_session.stage() != MnShareSession::Stage::Signing) {
-        error = tr("The terms are not locked yet.");
-        return false;
+        return done(false, tr("The terms are not locked yet."));
     }
     if (!canSign()) {
-        error = tr("This wallet is watch-only and cannot sign.");
-        return false;
+        return done(false, tr("This wallet is watch-only and cannot sign."));
     }
-    UniValue params(UniValue::VOBJ);
-    params.pushKV("tx", m_session.protxHex().toStdString());
-    ProTxResult result;
-    const QString failure{runRpc(shared_mn_rpc::SIGN, params, tr("Approving…"), /*needs_unlock=*/true, result)};
-    if (!failure.isEmpty()) {
-        error = tr("Approving failed: %1").arg(failure);
-        return false;
-    }
-    const UniValue& signatures{result.value.isObject() ? result.value.find_value("signatures") : NullUniValue};
-    if (!signatures.isArray()) {
-        error = tr("Unexpected reply from the node.");
-        return false;
-    }
-    QStringList problems;
-    for (const auto& entry : signatures.getValues()) {
-        try {
-            const int share_index{entry.find_value("shareIndex").getInt<int>()};
-            const QString signature{QString::fromStdString(entry.find_value("signature").get_str())};
-            if (QString add_error; !m_session.addSignature(share_index, signature, add_error)) {
-                problems << add_error;
+    QString failure;
+    auto tx{sessionTx(failure)};
+    if (!tx) return done(false, tr("Approving failed: %1").arg(failure));
+    interfaces::SharedSignRequest request;
+    request.tx = MakeTransactionRef(std::move(*tx));
+    const bool started{runOperation(
+        &MasternodeOperationRunner::signShared, std::move(request),
+        tr("Approving…"), /*needs_unlock=*/true,
+        [this, done](MasternodeOperationRunner::SharedSigningResult result) {
+            if (const auto* error{std::get_if<interfaces::ProviderTxError>(&result)}) {
+                return done(false, tr("Approving failed: %1").arg(operationError(*error)));
             }
-        } catch (const std::exception& e) {
-            problems << QString::fromUtf8(e.what());
-        }
-    }
-    m_dirty = true;
-    if (!problems.isEmpty()) {
-        error = problems.join(QLatin1Char('\n'));
-        return false;
-    }
-    return true;
+            QStringList problems;
+            for (const auto& signature : std::get<interfaces::SharedSignResult>(result).signatures) {
+                const QString encoded{QString::fromStdString(EncodeBase64(signature.signature))};
+                if (QString add_error;
+                    !m_session.addSignature(static_cast<int>(signature.share_index), encoded, add_error)) {
+                    problems << add_error;
+                }
+            }
+            m_dirty = true;
+            if (!problems.isEmpty()) return done(false, problems.join(QLatin1Char('\n')));
+            done(true, QString{});
+        },
+        failure)};
+    if (!started) done(false, tr("Approving failed: %1").arg(failure));
 }
 
 void SharedMnCreateDialog::approveAndCopy()
 {
-    QString error;
-    if (!signOwnConsent(error)) {
-        showError(error);
+    signOwnConsent([this](bool approved, const QString& error) {
+        if (!approved) {
+            showError(error);
+            refreshAll();
+            return;
+        }
         refreshAll();
-        return;
-    }
-    refreshAll();
-    copySession(tr("Approval"));
-    goToPage(PageWaitSigning);
+        copySession(tr("Approval"));
+        goToPage(PageWaitSigning);
+    });
 }
 
-bool SharedMnCreateDialog::combineApprovals(QString& error)
+void SharedMnCreateDialog::combineApprovals(StepCallback done)
 {
-    error.clear();
-    UniValue params(UniValue::VOBJ);
-    params.pushKV("tx", m_session.protxHex().toStdString());
-    params.pushKV("signatures", m_session.signaturesJson());
-    params.pushKV("submit", false);
-
-    ProTxResult result;
-    const QString failure{runRpc(shared_mn_rpc::COMBINE, params, tr("Combining approvals…"), /*needs_unlock=*/false,
-                                 result)};
-    if (!failure.isEmpty()) {
-        error = tr("Combining approvals failed: %1").arg(failure);
-        return false;
+    QString failure;
+    auto tx{sessionTx(failure)};
+    if (!tx) return done(false, tr("Combining approvals failed: %1").arg(failure));
+    interfaces::SharedCombineRequest request;
+    request.tx = MakeTransactionRef(std::move(*tx));
+    for (size_t i = 0; i < m_session.shares().size(); ++i) {
+        const QString signature{m_session.signatureFor(static_cast<int>(i))};
+        if (signature.isEmpty()) continue;
+        request.signatures.push_back({i, DecodeBase64(signature.toStdString()).value_or(std::vector<unsigned char>{})});
     }
-    if (!result.value.isStr()) {
-        error = tr("Unexpected reply from the node.");
-        return false;
-    }
-    if (QString set_error; !m_session.setCombinedTx(QString::fromStdString(result.value.get_str()), set_error)) {
-        error = tr("Combining approvals failed: %1").arg(set_error);
-        return false;
-    }
-    m_dirty = true;
-    return true;
+    const bool started{runOperation(
+        &MasternodeOperationRunner::combineShared, std::move(request),
+        tr("Combining approvals…"), /*needs_unlock=*/false,
+        [this, done](MasternodeOperationRunner::SubmissionResult result) {
+            if (const auto* error{std::get_if<interfaces::ProviderTxError>(&result)}) {
+                return done(false, tr("Combining approvals failed: %1").arg(operationError(*error)));
+            }
+            const auto& combined{std::get<interfaces::ProviderTxSubmission>(result)};
+            if (!combined.tx) return done(false, tr("Unexpected reply from the node."));
+            if (QString set_error;
+                !m_session.setCombinedTx(QString::fromStdString(EncodeHexTx(*combined.tx)), set_error)) {
+                return done(false, tr("Combining approvals failed: %1").arg(set_error));
+            }
+            m_dirty = true;
+            done(true, QString{});
+        },
+        failure)};
+    if (!started) done(false, tr("Combining approvals failed: %1").arg(failure));
 }
 
 QStringList SharedMnCreateDialog::foreignWalletInputs() const
@@ -2396,7 +2478,7 @@ QString SharedMnCreateDialog::ownContributionError() const
     if (m_wallet_model == nullptr || mine == nullptr || m_session.protxHex().isEmpty()) return {};
     interfaces::Wallet& wallet{m_wallet_model->wallet()};
     // What this wallet would sign: coins it tracks, and coins in the UTXO set
-    // one of its keys can spend ("signrawtransactionwithwallet" signs both)
+    // one of its keys can spend (signing the transaction signs both)
     CAmount ours{0};
     for (const auto& input : mine->inputs) {
         const COutPoint outpoint{uint256S(input.txid.toStdString()), input.vout};
@@ -2444,33 +2526,33 @@ bool SharedMnCreateDialog::signOwnFundingInputs(bool& complete, QString& error)
         error = tr("This wallet is watch-only and cannot sign.");
         return false;
     }
-    // "signrawtransactionwithwallet" signs every input this wallet can sign,
-    // so a coin of ours recorded under somebody else's contribution, or our own
-    // contribution short-changing us, would be signed away with the rest.
-    // Refuse before the wallet is even unlocked.
+    // Signing covers every input this wallet can sign, so a coin of ours
+    // recorded under somebody else's contribution, or our own contribution
+    // short-changing us, would be signed away with the rest. Refuse before the
+    // wallet is even unlocked.
     checkOwnFunding();
     if (!m_funding_refusal.isEmpty()) {
         error = m_funding_refusal;
         return false;
     }
     const QString before{m_session.protxHex()};
-    UniValue params(UniValue::VOBJ);
-    params.pushKV("hexstring", before.toStdString());
-    ProTxResult result;
-    const QString failure{runRpc(QStringLiteral("signrawtransactionwithwallet"), params,
-                                 tr("Signing your contribution…"), /*needs_unlock=*/true, result)};
-    if (!failure.isEmpty()) {
-        error = tr("Signing failed: %1").arg(failure);
+    const auto tx{sessionTx(error)};
+    if (!tx) {
+        error = tr("Signing failed: %1").arg(error);
         return false;
     }
-    const UniValue& hex{result.value.find_value("hex")};
-    const UniValue& done{result.value.find_value("complete")};
-    if (!result.value.isObject() || !hex.isStr() || !done.isBool()) {
-        error = tr("Unexpected reply from the node.");
+    const UnlockHolder unlock{*m_wallet_model};
+    if (!unlock.ctx.isValid()) {
+        error = tr("Signing failed: %1").arg(tr("the wallet stayed locked."));
         return false;
     }
-    const QString signed_hex{QString::fromStdString(hex.get_str())};
-    complete = done.get_bool();
+    const auto signed_result{m_wallet_model->wallet().signTransaction(*tx)};
+    if (!signed_result) {
+        error = tr("Signing failed: %1").arg(QString::fromStdString(util::ErrorString(signed_result).translated));
+        return false;
+    }
+    const QString signed_hex{QString::fromStdString(EncodeHexTx(*signed_result->tx))};
+    complete = signed_result->complete;
     if (QString outpoint; !signedOnlyOwnInputs(before, signed_hex, myContribution(), outpoint)) {
         error = outpoint.isEmpty()
                     ? tr("The signed transaction is not the one you reviewed. Do not use it; ask %1 for a fresh "
@@ -2494,25 +2576,29 @@ bool SharedMnCreateDialog::signOwnFundingInputs(bool& complete, QString& error)
 void SharedMnCreateDialog::runCombineAndSign()
 {
     if (m_busy || m_role != Role::Coordinator || !allApproved()) return;
-    QString error;
-    if (m_session.stage() == MnShareSession::Stage::Frozen ||
-        m_session.stage() == MnShareSession::Stage::Signing) {
-        if (!combineApprovals(error)) {
+    const auto sign_and_advance = [this] {
+        if (m_session.stage() == MnShareSession::Stage::Combined) {
+            bool complete{false};
+            if (QString error; !signOwnFundingInputs(complete, error)) {
+                showError(error);
+                refreshAll();
+                return;
+            }
+        }
+        refreshAll();
+        goToPage(PageSignatures);
+    };
+    if (m_session.stage() != MnShareSession::Stage::Frozen && m_session.stage() != MnShareSession::Stage::Signing) {
+        return sign_and_advance();
+    }
+    combineApprovals([this, sign_and_advance](bool combined, const QString& error) {
+        if (!combined) {
             showError(error);
             refreshAll();
             return;
         }
-    }
-    if (m_session.stage() == MnShareSession::Stage::Combined) {
-        bool complete{false};
-        if (!signOwnFundingInputs(complete, error)) {
-            showError(error);
-            refreshAll();
-            return;
-        }
-    }
-    refreshAll();
-    goToPage(PageSignatures);
+        sign_and_advance();
+    });
 }
 
 void SharedMnCreateDialog::signAndCopy()
@@ -2586,11 +2672,9 @@ void SharedMnCreateDialog::broadcastRegistration()
     if (m_busy || m_session.stage() != MnShareSession::Stage::FundingSigned) return;
     if (!confirmBroadcast()) return;
 
-    UniValue params(UniValue::VOBJ);
-    params.pushKV("hexstring", m_session.protxHex().toStdString());
-    ProTxResult result;
-    const QString failure{runRpc(QStringLiteral("sendrawtransaction"), params, tr("Broadcasting…"),
-                                 /*needs_unlock=*/false, result)};
+    QString failure;
+    auto tx{sessionTx(failure)};
+    if (tx) failure = SharedMnBroadcast(m_node, MakeTransactionRef(std::move(*tx)));
     if (!failure.isEmpty()) {
         showError(tr("Broadcast failed: %1").arg(failure));
         return;
@@ -3346,22 +3430,6 @@ bool SharedMnCreateDialog::allFundingSigned() const
 {
     return m_session.stage() == MnShareSession::Stage::FundingSigned ||
            m_session.stage() == MnShareSession::Stage::Broadcast;
-}
-
-QString SharedMnCreateDialog::runRpc(const QString& method, const UniValue& params, const QString& busy_text,
-                                     bool needs_unlock, ProTxResult& result)
-{
-    std::optional<UnlockHolder> unlock;
-    if (needs_unlock) {
-        if (!canSign()) return tr("this wallet is watch-only and cannot sign.");
-        unlock.emplace(*m_wallet_model);
-        if (!unlock->ctx.isValid()) return tr("the wallet stayed locked.");
-    }
-    setBusy(true, busy_text);
-    result = m_sender->executeAndWait(method, params, m_wallet_model);
-    setBusy(false);
-    if (result.ok) return {};
-    return result.message.isEmpty() ? tr("the node gave no reason.") : result.message;
 }
 
 void SharedMnCreateDialog::reject()

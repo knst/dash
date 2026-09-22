@@ -1563,18 +1563,6 @@ void RegisterMasternodeWizard::startSubmit(bool skip_confirmation)
     }
 }
 
-namespace {
-QString ProviderTxErrorText(const interfaces::ProviderTxError& error)
-{
-    QString text{QString::fromStdString(error.message.translated)};
-    const QString reject_reason{QString::fromStdString(error.reject_reason)};
-    if (!reject_reason.isEmpty() && !text.contains(reject_reason)) {
-        text += QObject::tr("\n\nNetwork rejection: %1").arg(reject_reason);
-    }
-    return text;
-}
-} // namespace
-
 void RegisterMasternodeWizard::finishSubmission(MasternodeOperationRunner::SubmissionResult result)
 {
     const Stage completed_stage{m_stage};
@@ -1584,7 +1572,7 @@ void RegisterMasternodeWizard::finishSubmission(MasternodeOperationRunner::Submi
     if (const auto* error{std::get_if<interfaces::ProviderTxError>(&result)}) {
         m_unlock.reset();
         if (!m_destroying) {
-            QMessageBox::critical(this, tr("Registration failed"), ProviderTxErrorText(*error));
+            QMessageBox::critical(this, tr("Registration failed"), MasternodeOperationRunner::errorText(*error));
         }
         return;
     }
@@ -1619,7 +1607,7 @@ void RegisterMasternodeWizard::finishPrepare(
 
     if (const auto* error{std::get_if<interfaces::ProviderTxError>(&result)}) {
         if (!m_destroying) {
-            QMessageBox::critical(this, tr("Registration failed"), ProviderTxErrorText(*error));
+            QMessageBox::critical(this, tr("Registration failed"), MasternodeOperationRunner::errorText(*error));
         }
         return;
     }

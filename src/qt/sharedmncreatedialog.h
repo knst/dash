@@ -8,6 +8,7 @@
 #include <consensus/amount.h>
 #include <evo/dmn_types.h>
 
+#include <qt/masternodeoperationrunner.h>
 #include <qt/mnsharesession.h>
 
 #include <QDialog>
@@ -15,19 +16,19 @@
 #include <QStringList>
 #include <QVector>
 
+#include <functional>
 #include <map>
+#include <memory>
 #include <optional>
+#include <type_traits>
 #include <vector>
 
 class BitcoinAmountField;
 class OperatorKeyWidget;
-class ProTxSender;
 class QValidatedLineEdit;
 class SharedMnStatusBoard;
 class SharedMnWalkthroughTests;
 class SharedMnWizardTests;
-struct ProTxResult;
-class UniValue;
 class WalletModel;
 
 namespace interfaces {
@@ -204,10 +205,17 @@ private:
     // The three rounds
     void startSession();
     void beginLockConfirmation();
+    //! Receives whether an asynchronous round step succeeded, and why not
+    using StepCallback = std::function<void(bool ok, const QString& error)>;
+
     void lockTerms();
-    bool signOwnConsent(QString& error);
+    //! The registration request for the locked terms, or nullopt with the
+    //! reason in `error`
+    std::optional<interfaces::SharedRegistrationRequest> registrationRequest(QString& error) const;
+    void finishLockTerms(MasternodeOperationRunner::SharedRegistrationResult result);
+    void signOwnConsent(StepCallback done);
     void approveAndCopy();
-    bool combineApprovals(QString& error);
+    void combineApprovals(StepCallback done);
     bool signOwnFundingInputs(bool& complete, QString& error);
     //! Funding inputs of the prepared transaction this wallet could spend but
     //! never contributed, as "txid:vout". Signing runs over the whole
@@ -224,7 +232,7 @@ private:
     QString foreignInputError(const QString& outpoint) const;
     //! Refusal when the coins this wallet puts into its own contribution are
     //! worth more than its share plus the change that comes back to it, or
-    //! empty. "signrawtransactionwithwallet" signs whatever this wallet can
+    //! empty. Signing the funding transaction signs whatever this wallet can
     //! sign, so a session file that lists our coins under our own label but
     //! sends the change elsewhere, or shrinks it, would have us pay the
     //! difference to whoever wrote the file. Only the wallet's own view of
@@ -316,7 +324,7 @@ private:
     bool canSign() const;
     //! True when this wallet coordinates a locked session that is still missing
     //! its own consent signature. The approval runs automatically at lock, but
-    //! a cancelled unlock or a failed "protx shared_sign" leaves it undone, and
+    //! a cancelled unlock or a failed approval leaves it undone, and
     //! allApproved() can then never become true.
     bool needsOwnApproval() const;
     bool hasDetails(int share_index) const;
@@ -330,17 +338,32 @@ private:
     bool allApproved() const;
     bool allFundingSigned() const;
 
-    //! Run one RPC command with the busy indicator up, asking for the wallet
-    //! unlock first when needs_unlock. Returns why it failed as a sentence
-    //! ready for "...failed: %1", or an empty string with `result` filled in.
-    QString runRpc(const QString& method, const UniValue& params, const QString& busy_text, bool needs_unlock,
-                   ProTxResult& result);
+    //! Start `operation` on the runner with the busy indicator up and, when
+    //! needs_unlock, the wallet unlocked until the result reaches `done`.
+    //! `done` is dropped when the dialog is being destroyed. Returns false with
+    //! why the operation could not start as a sentence ready for
+    //! "...failed: %1" in `error`.
+    template <typename Request, typename Result>
+    bool runOperation(bool (MasternodeOperationRunner::*operation)(Request, std::function<void(Result)>),
+                      Request request, const QString& busy_text, bool needs_unlock,
+                      std::type_identity_t<std::function<void(Result)>> done, QString& error);
+    //! The registration transaction of the session, or nullopt with why not as
+    //! a sentence ready for "...failed: %1" in `error`
+    std::optional<CMutableTransaction> sessionTx(QString& error) const;
+    //! Why an operation failed, as a sentence ready for "...failed: %1"
+    static QString operationError(const interfaces::ProviderTxError& error);
+
+    struct UnlockHolder;
 
     interfaces::Node& m_node;
     WalletModel* const m_wallet_model;
     const bool m_v24_active;
     MnShareSession m_session;
-    ProTxSender* const m_sender;
+    //! Null without a wallet, when nothing can be prepared or signed here
+    MasternodeOperationRunner* const m_runner;
+    //! Held while an operation that signs with this wallet is in flight
+    std::unique_ptr<UnlockHolder> m_unlock;
+    bool m_destroying{false};
 
     QVector<Page> m_order;
     int m_pos{0};
@@ -352,7 +375,7 @@ private:
     Role m_role{Role::Undecided};
     int m_my_share{-1};
     std::optional<Page> m_validation_page;
-    //! Advisory returned by "protx shared_register_prepare" for the locked
+    //! Advisory returned by preparing the registration for the locked
     //! terms (a zero early penalty lets anyone exit at will). Not part of the
     //! envelope, so it only exists on the wallet that prepared it.
     QString m_prepare_warning;

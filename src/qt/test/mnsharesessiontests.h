@@ -24,7 +24,6 @@ private Q_SLOTS:
     void frozenEnvelopeMatchesFunding();
     void oversizedEnvelopesAreRefused();
     void parallelFundingSignatureMerge();
-    void rpcMethodNamesAreRegistered();
 };
 
 #endif // BITCOIN_QT_TEST_MNSHARESESSIONTESTS_H

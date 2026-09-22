@@ -160,6 +160,41 @@ public:
     {
         return TestProviderError();
     }
+    interfaces::ProviderTxResult<interfaces::PreparedSharedRegistration> prepareSharedRegistration(
+        const interfaces::SharedRegistrationRequest&) override
+    {
+        return TestProviderError();
+    }
+    interfaces::ProviderTxResult<interfaces::SharedSignResult> signShared(interfaces::Wallet&,
+                                                                          const interfaces::SharedSignRequest&) override
+    {
+        return TestProviderError();
+    }
+    interfaces::ProviderTxResult<interfaces::ProviderTxSubmission> combineShared(
+        interfaces::Wallet&, const interfaces::SharedCombineRequest&) override
+    {
+        return TestProviderError();
+    }
+    interfaces::ProviderTxResult<interfaces::ProviderTxSubmission> dissolveShared(
+        interfaces::Wallet&, const interfaces::SharedDissolveRequest&) override
+    {
+        return TestProviderError();
+    }
+    interfaces::ProviderTxResult<interfaces::PreparedSharedConsent> prepareSharedDissolution(
+        const interfaces::SharedDissolvePrepareRequest&) override
+    {
+        return TestProviderError();
+    }
+    interfaces::ProviderTxResult<interfaces::ProviderTxSubmission> updateShare(
+        interfaces::Wallet&, const interfaces::SharedUpdateShareRequest&) override
+    {
+        return TestProviderError();
+    }
+    interfaces::ProviderTxResult<interfaces::PreparedSharedConsent> prepareSharedRegistrarUpdate(
+        interfaces::Wallet&, const interfaces::SharedRegistrarUpdatePrepareRequest&) override
+    {
+        return TestProviderError();
+    }
 
     QSemaphore entered;
     QSemaphore proceed;
