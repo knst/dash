@@ -20,7 +20,7 @@ from test_framework.test_framework import (
 from test_framework.util import assert_equal, force_finish_mnsync
 
 # See version.h
-MIN_MASTERNODE_PROTO_VERSION = 70238
+MIN_MASTERNODE_PROTO_VERSION = 70242
 
 class LLMQSimplePoSeTest(DashTestFramework):
     def set_test_params(self):
