@@ -15,6 +15,21 @@ import sys
 
 os.environ['LC_ALL'] = 'C'
 
+
+def available_cpu_count():
+    """Number of CPUs this process may actually run on.
+
+    multiprocessing.cpu_count() reports every CPU the kernel knows about, which
+    is the host's core count even when we are confined to a subset of them (a
+    container or a cpuset-limited LXC guest, as used by the self-hosted CI
+    runners). Oversubscribing cppcheck that way wastes time and memory, so
+    prefer the scheduling affinity mask where the platform exposes one.
+    """
+    try:
+        return len(os.sched_getaffinity(0))
+    except AttributeError:
+        return multiprocessing.cpu_count()
+
 ALWAYS_ENABLED_WARNINGS = (
     "Class '.*' has a constructor with 1 argument that is not explicit.",
     "Struct '.*' has a constructor with 1 argument that is not explicit.",
@@ -98,7 +113,7 @@ def main():
         '--inline-suppr',
         '--suppress=missingIncludeSystem',
         f'--cppcheck-build-dir={cppcheck_dir}',
-        '-j', str(multiprocessing.cpu_count()),
+        '-j', str(available_cpu_count()),
         '--language=c++',
         '--std=c++20',
         '--template=gcc',
