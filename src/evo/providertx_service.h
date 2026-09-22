@@ -44,6 +44,28 @@ interfaces::ProviderTxResult<interfaces::ProviderTxSubmission> UpdateRegistrar(
 interfaces::ProviderTxResult<interfaces::ProviderTxSubmission> Revoke(node::NodeContext& node, interfaces::Wallet& wallet,
                                                                       const interfaces::ProviderRevokeRequest& request);
 
+interfaces::ProviderTxResult<interfaces::PreparedSharedRegistration> PrepareSharedRegistration(
+    node::NodeContext& node, const interfaces::SharedRegistrationRequest& request);
+
+interfaces::ProviderTxResult<interfaces::SharedSignResult> SignShared(node::NodeContext& node, interfaces::Wallet& wallet,
+                                                                      const interfaces::SharedSignRequest& request);
+
+//! `wallet` may be null unless the transaction is a ProUpSharedRegTx
+interfaces::ProviderTxResult<interfaces::ProviderTxSubmission> CombineShared(
+    node::NodeContext& node, interfaces::Wallet* wallet, const interfaces::SharedCombineRequest& request);
+
+interfaces::ProviderTxResult<interfaces::ProviderTxSubmission> DissolveShared(
+    node::NodeContext& node, interfaces::Wallet& wallet, const interfaces::SharedDissolveRequest& request);
+
+interfaces::ProviderTxResult<interfaces::PreparedSharedConsent> PrepareSharedDissolution(
+    node::NodeContext& node, const interfaces::SharedDissolvePrepareRequest& request);
+
+interfaces::ProviderTxResult<interfaces::ProviderTxSubmission> UpdateShare(
+    node::NodeContext& node, interfaces::Wallet& wallet, const interfaces::SharedUpdateShareRequest& request);
+
+interfaces::ProviderTxResult<interfaces::PreparedSharedConsent> PrepareSharedRegistrarUpdate(
+    node::NodeContext& node, interfaces::Wallet& wallet, const interfaces::SharedRegistrarUpdatePrepareRequest& request);
+
 } // namespace evo::provider
 
 #endif // BITCOIN_EVO_PROVIDERTX_SERVICE_H

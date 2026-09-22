@@ -4,7 +4,6 @@
 
 #include <bls/bls.h>
 #include <chainparams.h>
-#include <consensus/tx_verify.h>
 #include <consensus/validation.h>
 #include <core_io.h>
 #include <deploymentstatus.h>
@@ -13,7 +12,6 @@
 #include <evo/dmn_types.h>
 #include <evo/providertx.h>
 #include <evo/providertx_service.h>
-#include <evo/sharedcollateral.h>
 #include <evo/smldiff.h>
 #include <evo/specialtx.h>
 #include <evo/specialtxman.h>
@@ -36,15 +34,11 @@
 #include <algorithm>
 #include <limits>
 #include <optional>
+#include <set>
 #include <string_view>
 
 #ifdef ENABLE_WALLET
 #include <wallet/wallet.h>
-
-extern RPCHelpMan sendrawtransaction();
-namespace wallet {
-extern RPCHelpMan signrawtransactionwithwallet();
-} // namespace wallet
 #endif // ENABLE_WALLET
 
 #ifndef ENABLE_WALLET
@@ -303,13 +297,10 @@ static CBLSSecretKey ParseBLSSecretKey(const std::string& hexKey, const std::str
 }
 
 #ifdef ENABLE_WALLET
-static constexpr std::string_view ZERO_PENALTY_WARNING{
-    "earlyPenalty is zero: any participant can force an early exit at no cost beyond the transaction fee"};
-
 // The shared-masternode helpers and RPCs below all feed into wallet-gated signing (protx
 // shared_sign / shared_dissolve), so they are only compiled with wallet support.
 
-static CollateralShares ParseShares(const UniValue& value, const std::string& paramName)
+static std::vector<interfaces::SharedShareSpec> ParseShares(const UniValue& value, const std::string& paramName)
 {
     if (!value.isArray()) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("%s must be an array", paramName));
@@ -320,7 +311,7 @@ static CollateralShares ParseShares(const UniValue& value, const std::string& pa
                            strprintf("%s must contain between %d and %d entries", paramName, CProRegTx::MIN_SHARES,
                                      CProRegTx::MAX_SHARES));
     }
-    CollateralShares shares;
+    std::vector<interfaces::SharedShareSpec> shares;
     for (size_t i = 0; i < arr.size(); ++i) {
         const UniValue& entry = arr[i];
         if (!entry.isObject()) {
@@ -334,172 +325,47 @@ static CollateralShares ParseShares(const UniValue& value, const std::string& pa
             throw JSONRPCError(RPC_INVALID_PARAMETER,
                                strprintf("%s entries must include numeric amount, refundAddress and ownerAddress", paramName));
         }
-        const CAmount amount = amount_value.getInt<int64_t>();
-        CTxDestination refund_dest = DecodeDestination(refund_value.get_str());
-        if (!IsValidDestination(refund_dest)) {
+        interfaces::SharedShareSpec share;
+        share.amount = amount_value.getInt<int64_t>();
+        share.refund = DecodeDestination(refund_value.get_str());
+        if (!IsValidDestination(share.refund)) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("invalid refund address: %s", refund_value.get_str()));
         }
-        CScript script_reward;
         if (reward_value.isStr() && !reward_value.get_str().empty()) {
-            CTxDestination reward_dest = DecodeDestination(reward_value.get_str());
-            if (!IsValidDestination(reward_dest)) {
+            share.reward = DecodeDestination(reward_value.get_str());
+            if (!IsValidDestination(*share.reward)) {
                 throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("invalid reward address: %s", reward_value.get_str()));
             }
-            script_reward = GetScriptForDestination(reward_dest);
         }
         CTxDestination owner_dest = DecodeDestination(owner_value.get_str());
         const PKHash* owner_pkhash = std::get_if<PKHash>(&owner_dest);
         if (!owner_pkhash) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("invalid share owner address: %s", owner_value.get_str()));
         }
-        shares.emplace_back(amount, GetScriptForDestination(refund_dest), script_reward, ToKeyID(*owner_pkhash));
+        share.owner = ToKeyID(*owner_pkhash);
+        shares.push_back(std::move(share));
     }
     return shares;
 }
 
-//! Builds an unsigned ProDisTx transaction paying each non-actor share its principal plus its
-//! pro-rata slice of the penalty (sequential floor, remainder to the last non-actor entry, which
-//! always satisfies the consensus minimums), with the actor absorbing penalty and fee
-static CMutableTransaction BuildProDisTx(const CDeterministicMN& dmn, uint16_t actorIndex, CAmount penalty,
-                                         CAmount fee, CProDisTx& ptxRet)
+//! Parse a required index parameter that must fit a uint16_t, as every share and actor index does
+static uint16_t ParseShareIndex(const UniValue& value, const std::string& paramName)
 {
-    const auto& shares = dmn.pdmnState->shares;
-    if (actorIndex >= shares.size()) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "actorIndex out of range");
+    const int index{value.getInt<int>()};
+    if (index < 0 || index > std::numeric_limits<uint16_t>::max()) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("%s out of range", paramName));
     }
-    if (fee <= 0) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "fee must be positive");
-    }
-    if (fee > CProDisTx::MAX_FEE) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER,
-                           strprintf("fee exceeds the consensus ceiling of %d duffs", CProDisTx::MAX_FEE));
-    }
-    const CAmount actor_output = shares[actorIndex].amount - penalty - fee;
-    if (actor_output < 0) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "penalty and fee exceed the actor's share");
-    }
-
-    CMutableTransaction tx;
-    tx.nVersion = 3;
-    tx.nType = TRANSACTION_PROVIDER_DISSOLVE;
-    tx.vin.emplace_back(dmn.collateralOutpoint);
-
-    CollateralShares non_actors;
-    for (size_t i = 0; i < shares.size(); i++) {
-        if (i != actorIndex) non_actors.push_back(shares[i]);
-    }
-    const auto bonuses{SplitAmountByShares(penalty, non_actors)};
-    for (size_t i = 0; i < non_actors.size(); i++) {
-        tx.vout.emplace_back(non_actors[i].amount + bonuses[i], non_actors[i].scriptRefund);
-    }
-    if (actor_output > 0) {
-        tx.vout.emplace_back(actor_output, shares[actorIndex].scriptRefund);
-    }
-
-    ptxRet = CProDisTx();
-    ptxRet.proTxHash = dmn.proTxHash;
-    ptxRet.actorIndex = actorIndex;
-    return tx;
+    return static_cast<uint16_t>(index);
 }
 
-template <typename SpecialTxPayload>
-static void FundSpecialTx(interfaces::Wallet& wallet, CMutableTransaction& tx, const SpecialTxPayload& payload,
-                          const CTxDestination& fundDest)
+//! Parse an address a fee is paid from, which the shared masternode RPCs require
+static CTxDestination ParseRequiredFeeSource(const UniValue& value)
 {
-    SetTxPayload(tx, payload);
-    auto funded{wallet.fundTransaction(tx, fundDest)};
-    if (!funded) {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, util::ErrorString(funded).original);
+    CTxDestination fee_source{DecodeDestination(value.get_str())};
+    if (!IsValidDestination(fee_source)) {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Dash address: ") + value.get_str());
     }
-    tx = CMutableTransaction{**funded};
-}
-
-template <typename SpecialTxPayload>
-static void UpdateSpecialTxInputsHash(const CMutableTransaction& tx, SpecialTxPayload& payload)
-{
-    payload.inputsHash = CalcTxInputsHash(CTransaction(tx));
-}
-
-template <typename SpecialTxPayload>
-static void SignSpecialTxPayloadByHash(const CMutableTransaction& tx, SpecialTxPayload& payload, const CKeyID& keyID, const CWallet& wallet)
-{
-    UpdateSpecialTxInputsHash(tx, payload);
-    payload.vchSig.clear();
-
-    const uint256 hash = ::SerializeHash(payload);
-    if (!wallet.SignSpecialTxPayload(hash, keyID, payload.vchSig)) {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "failed to sign special tx");
-    }
-}
-
-static std::string SignAndSendSpecialTx(const JSONRPCRequest& request, CChainstateHelper& chain_helper, const ChainstateManager& chainman, const CMutableTransaction& tx, bool fSubmit)
-{
-    {
-    LOCK(::cs_main);
-
-    TxValidationState state;
-    const CBlockIndex* tip{chainman.ActiveChain().Tip()};
-    const bool is_v24_active{DeploymentActiveAfter(tip, chainman, Consensus::DEPLOYMENT_V24)};
-    if (!chain_helper.special_tx->CheckSpecialTx(CTransaction(tx), tip, is_v24_active,
-                                                 chainman.ActiveChainstate().CoinsTip(), true, state)) {
-        throw std::runtime_error(state.ToString());
-    }
-    } // cs_main
-
-    CDataStream ds(SER_NETWORK, PROTOCOL_VERSION);
-    ds << tx;
-
-    JSONRPCRequest signRequest(request);
-    signRequest.params.setArray();
-    signRequest.params.push_back(HexStr(ds));
-    UniValue signResult = wallet::signrawtransactionwithwallet().HandleRequest(signRequest);
-
-    if (!fSubmit) {
-        return signResult["hex"].get_str();
-    }
-
-    // Submitting a partially signed transaction would only fail later in the mempool with an
-    // opaque script-verification error, so fail here with the actual cause. The typical way to
-    // hit this is running "protx shared_combine" on a wallet other than the one whose coins fund
-    // the transaction: combining changes the payload, which invalidates the fee-input signatures,
-    // and only the funding wallet can re-sign them.
-    if (!signResult["complete"].get_bool()) {
-        std::string sign_errors;
-        if (const UniValue& errors = signResult["errors"]; errors.isArray()) {
-            for (const auto& err : errors.getValues()) {
-                if (!sign_errors.empty()) sign_errors += ", ";
-                sign_errors += err["error"].get_str();
-            }
-        }
-        throw JSONRPCError(RPC_WALLET_ERROR,
-                           strprintf("transaction inputs could not be fully signed by this wallet; run this "
-                                     "command on the wallet that funded the transaction, or finish signing "
-                                     "there with signrawtransactionwithwallet (%s)", sign_errors));
-    }
-
-    JSONRPCRequest sendRequest(request);
-    sendRequest.params.setArray();
-    sendRequest.params.push_back(signResult["hex"].get_str());
-    return ::sendrawtransaction().HandleRequest(sendRequest).get_str();
-}
-
-static std::string SubmitSpecialTx(const JSONRPCRequest& request, CChainstateHelper& chain_helper,
-                                   const ChainstateManager& chainman, const CMutableTransaction& tx)
-{
-    {
-        LOCK(::cs_main);
-        TxValidationState state;
-        const CBlockIndex* tip{chainman.ActiveChain().Tip()};
-        const bool is_v24_active{DeploymentActiveAfter(tip, chainman, Consensus::DEPLOYMENT_V24)};
-        if (!chain_helper.special_tx->CheckSpecialTx(CTransaction(tx), tip, is_v24_active,
-                                                     chainman.ActiveChainstate().CoinsTip(), true, state)) {
-            throw std::runtime_error(state.ToString());
-        }
-    }
-    JSONRPCRequest sendRequest(request);
-    sendRequest.params.setArray();
-    sendRequest.params.push_back(EncodeHexTx(CTransaction(tx)));
-    return ::sendrawtransaction().HandleRequest(sendRequest).get_str();
+    return fee_source;
 }
 
 static CKeyID ParsePubKeyIDFromAddress(const std::string& strAddress, const std::string& paramName)
@@ -646,19 +512,6 @@ static std::vector<std::string> ParseCoreNetInfo(const UniValue& input, bool opt
         result.push_back(entries[index].get_str());
     }
     return result;
-}
-
-template <typename ProTx>
-static void ProcessNetInfoCore(ProTx& ptx, const UniValue& input, const bool optional)
-{
-    CHECK_NONFATAL(ptx.netInfo);
-    const auto entries{ParseCoreNetInfo(input, optional)};
-    for (size_t idx{0}; idx < entries.size(); ++idx) {
-        if (auto ret = ptx.netInfo->AddEntry(NetInfoPurpose::CORE_P2P, entries[idx]); ret != NetInfoStatus::Success) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER,
-                               strprintf("Error setting coreP2PAddrs[%zu] to '%s' (%s)", idx, entries[idx], NISToString(ret)));
-        }
-    }
 }
 
 static interfaces::ProviderPlatformEndpoints ParsePlatformNetInfo(const UniValue& input, std::string_view field_name,
@@ -1391,9 +1244,7 @@ static RPCHelpMan protx_shared_sign()
         RPCExamples{HelpExampleCli("protx", "shared_sign \"tx\"")},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    const NodeContext& node = EnsureAnyNodeContext(request.context);
-    const ChainstateManager& chainman = EnsureChainman(node);
-    CDeterministicMNManager& dmnman = *CHECK_NONFATAL(node.dmnman);
+    NodeContext& node = EnsureAnyNodeContext(request.context);
 
     std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
     if (!pwallet) return UniValue::VNULL;
@@ -1403,80 +1254,28 @@ static RPCHelpMan protx_shared_sign()
     if (!DecodeHexTx(tx, request.params[0].get_str())) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "transaction not deserializable");
     }
+    interfaces::SharedSignRequest typed_request;
+    typed_request.tx = MakeTransactionRef(std::move(tx));
+    typed_request.allow_time_locks = request.params[1].isNull() ? false
+                                                                : ParseBoolV(request.params[1], "allowTimeLocks");
 
-    // The registration consent digest and the dissolution digest both commit to nLockTime and
-    // every input sequence, so a lock the signer failed to notice would be silently baked into
-    // their signature and delay when the transaction can confirm. Require an explicit opt-in for
-    // an absolute lock that is not yet satisfied at the next block, and for any BIP68 relative
-    // lock (special transactions are version 3, so sequences carry relative-lock semantics).
-    // Wallet-funded inputs use a non-final sequence purely for fee sniping discouragement with an
-    // already-satisfied nLockTime, which is not a lock and must not trip this guard.
-    const bool allow_time_locks{request.params[1].isNull() ? false
-                                                           : ParseBoolV(request.params[1], "allowTimeLocks")};
-    const auto require_no_time_lock = [&](const char* what) {
-        if (allow_time_locks) return;
-        const CTransaction ctx{tx};
-        bool has_time_lock{false};
-        {
-            LOCK(::cs_main);
-            const CBlockIndex* tip{chainman.ActiveChain().Tip()};
-            has_time_lock = !IsFinalTx(ctx, tip->nHeight + 1, tip->GetMedianTimePast());
-        }
-        for (const auto& txin : ctx.vin) {
-            has_time_lock |= !(txin.nSequence & CTxIn::SEQUENCE_LOCKTIME_DISABLE_FLAG);
-        }
-        if (has_time_lock) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER,
-                               strprintf("%s carries a lock time or relative lock, which delays when it can "
-                                         "confirm; pass allowTimeLocks=true to sign it anyway", what));
-        }
-    };
+    auto wallet_interface{MakeWalletInterface(node, pwallet)};
+    const auto signed_result{UnwrapOrThrow(evo::provider::SignShared(node, *wallet_interface, typed_request))};
 
-    // Resolve the share table and the digest to sign from the transaction type, and a readable
-    // summary of the terms so a co-signer can review what the signature commits to
-    CollateralShares shares;
-    uint256 sign_hash;
+    // A readable summary of the terms, so a co-signer can review what the signature commits to
+    const CTransaction& signed_tx{*typed_request.tx};
     UniValue ret(UniValue::VOBJ);
-    if (tx.nType == TRANSACTION_PROVIDER_REGISTER) {
-        const auto opt_ptx = GetTxPayload<CProRegTx>(tx);
-        if (!opt_ptx || !opt_ptx->IsShared()) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "transaction is not a shared masternode registration");
-        }
-        require_no_time_lock("registration");
-        shares = opt_ptx->shares;
-        sign_hash = opt_ptx->MakeSharedRegConsentHash(CTransaction(tx));
+    switch (signed_result.kind) {
+    case interfaces::SharedSignResult::Kind::Registration:
         ret.pushKV("type", "registration");
-        ret.pushKV("terms", opt_ptx->ToJson());
-        if (opt_ptx->nEarlyPenalty == 0) {
-            ret.pushKV("warning", std::string{ZERO_PENALTY_WARNING});
-        }
-    } else if (tx.nType == TRANSACTION_PROVIDER_DISSOLVE) {
-        const auto opt_ptx = GetTxPayload<CProDisTx>(tx);
-        if (!opt_ptx) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "transaction payload not deserializable");
-        }
-        // shared_sign only ever signs unanimous dissolutions (built unsigned by shared_dissolve_prepare);
-        // the signing digest commits to the signature count, so signatures produced here would
-        // never verify on a transaction carrying a different count. A unilateral dissolution is
-        // built, signed and submitted in one step by "protx shared_dissolve" and must not pass through
-        // here at all.
-        if (!opt_ptx->vchSigs.empty()) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER,
-                               "transaction already carries dissolution signatures; a unilateral dissolution "
-                               "is created fully signed by \"protx shared_dissolve\" and needs no shared_sign step");
-        }
-        const auto dmn = dmnman.GetListAtChainTip().GetMN(opt_ptx->proTxHash);
-        if (!dmn || !dmn->pdmnState->IsShared()) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "shared masternode not found");
-        }
-        require_no_time_lock("dissolution");
-        shares = dmn->pdmnState->shares;
-        sign_hash = opt_ptx->MakeSignHash(CTransaction(tx), static_cast<uint8_t>(shares.size()));
+        ret.pushKV("terms", CHECK_NONFATAL(GetTxPayload<CProRegTx>(signed_tx))->ToJson());
+        break;
+    case interfaces::SharedSignResult::Kind::Dissolution: {
         ret.pushKV("type", "dissolution");
         // The digest covers the outputs directly, so show them with the payload
-        UniValue terms{opt_ptx->ToJson()};
+        UniValue terms{CHECK_NONFATAL(GetTxPayload<CProDisTx>(signed_tx))->ToJson()};
         UniValue outputs(UniValue::VARR);
-        for (const auto& out : tx.vout) {
+        for (const auto& out : signed_tx.vout) {
             UniValue o(UniValue::VOBJ);
             CTxDestination dest;
             o.pushKV("address", ExtractDestination(out.scriptPubKey, dest) ? EncodeDestination(dest) : HexStr(out.scriptPubKey));
@@ -1485,36 +1284,23 @@ static RPCHelpMan protx_shared_sign()
         }
         terms.pushKV("outputs", outputs);
         ret.pushKV("terms", terms);
-    } else if (tx.nType == TRANSACTION_PROVIDER_UPDATE_SHARED_REGISTRAR) {
-        const auto opt_ptx = GetTxPayload<CProUpSharedRegTx>(tx);
-        if (!opt_ptx) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "transaction payload not deserializable");
-        }
-        const auto dmn = dmnman.GetListAtChainTip().GetMN(opt_ptx->proTxHash);
-        if (!dmn || !dmn->pdmnState->IsShared()) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "shared masternode not found");
-        }
-        shares = dmn->pdmnState->shares;
-        sign_hash = ::SerializeHash(*opt_ptx);
+        break;
+    }
+    case interfaces::SharedSignResult::Kind::RegistrarUpdate:
         ret.pushKV("type", "registrarUpdate");
-        ret.pushKV("terms", opt_ptx->ToJson());
-    } else {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "transaction is not a shared masternode transaction");
+        ret.pushKV("terms", CHECK_NONFATAL(GetTxPayload<CProUpSharedRegTx>(signed_tx))->ToJson());
+        break;
+    }
+    if (signed_result.warning) {
+        ret.pushKV("warning", *signed_result.warning);
     }
 
     UniValue signatures(UniValue::VARR);
-    for (size_t i = 0; i < shares.size(); i++) {
-        std::vector<unsigned char> vchSig;
-        if (!pwallet->SignSpecialTxPayload(sign_hash, shares[i].keyIDOwner, vchSig)) {
-            continue; // this wallet does not hold this share's owner key
-        }
+    for (const auto& signature : signed_result.signatures) {
         UniValue entry(UniValue::VOBJ);
-        entry.pushKV("shareIndex", static_cast<uint64_t>(i));
-        entry.pushKV("signature", EncodeBase64(vchSig));
+        entry.pushKV("shareIndex", static_cast<uint64_t>(signature.share_index));
+        entry.pushKV("signature", EncodeBase64(signature.signature));
         signatures.push_back(entry);
-    }
-    if (signatures.empty()) {
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "none of the share owner keys were found in this wallet");
     }
     ret.pushKV("signatures", signatures);
     return ret;
@@ -1543,63 +1329,23 @@ static RPCHelpMan protx_shared_dissolve()
         RPCExamples{HelpExampleCli("protx", "shared_dissolve \"proTxHash\" 0")},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    const NodeContext& node = EnsureAnyNodeContext(request.context);
-    const ChainstateManager& chainman = EnsureChainman(node);
-    CDeterministicMNManager& dmnman = *CHECK_NONFATAL(node.dmnman);
-    CChainstateHelper& chain_helper = *CHECK_NONFATAL(node.chain_helper);
+    NodeContext& node = EnsureAnyNodeContext(request.context);
 
     std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
     if (!pwallet) return UniValue::VNULL;
     EnsureWalletIsUnlocked(*pwallet);
 
-    const uint256 proTxHash(ParseHashV(request.params[0], "proTxHash"));
-    const int actorIndex{request.params[1].getInt<int>()};
-    if (actorIndex < 0 || actorIndex > std::numeric_limits<uint16_t>::max()) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "actorIndex out of range");
-    }
-    const CAmount fee{request.params[2].isNull() ? 100000 : request.params[2].getInt<int64_t>()};
-    const bool fSubmit{request.params[3].isNull() ? true : ParseBoolV(request.params[3], "submit")};
-
-    const auto dmn = dmnman.GetListAtChainTip().GetMN(proTxHash);
-    if (!dmn || !dmn->pdmnState->IsShared()) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "shared masternode not found");
+    interfaces::SharedDissolveRequest typed_request;
+    typed_request.pro_tx_hash = ParseHashV(request.params[0], "proTxHash");
+    typed_request.actor_index = ParseShareIndex(request.params[1], "actorIndex");
+    typed_request.fee = request.params[2].isNull() ? 100000 : request.params[2].getInt<int64_t>();
+    typed_request.submit = request.params[3].isNull() ? true : ParseBoolV(request.params[3], "submit");
+    if (!request.params[4].isNull()) {
+        typed_request.pay_penalty = ParseBoolV(request.params[4], "payPenalty");
     }
 
-    const bool early{[&]() {
-        const int next_height{WITH_LOCK(::cs_main, return chainman.ActiveChain().Height()) + 1};
-        return next_height - dmn->pdmnState->nRegisteredHeight <
-               static_cast<int64_t>(dmn->pdmnState->nEarlyPeriodBlocks);
-    }()};
-    const bool pay_penalty{request.params[4].isNull() ? early : ParseBoolV(request.params[4], "payPenalty")};
-    if (early && !pay_penalty) {
-        // Deliberate: a zero-penalty standby signed during the early period becomes valid at the
-        // boundary. Warn via error only when it would also be submitted now.
-        if (fSubmit) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER,
-                               "a unilateral dissolution during the early period must pay the penalty; "
-                               "pass submit=false to build a standby for later");
-        }
-    }
-
-    CProDisTx ptx;
-    CMutableTransaction tx = BuildProDisTx(*dmn, static_cast<uint16_t>(actorIndex),
-                                           pay_penalty ? dmn->pdmnState->nEarlyPenalty : 0, fee, ptx);
-
-    std::vector<unsigned char> vchSig;
-    if (!pwallet->SignSpecialTxPayload(ptx.MakeSignHash(CTransaction(tx), /*sig_count=*/1),
-                                       dmn->pdmnState->shares[actorIndex].keyIDOwner, vchSig)) {
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY,
-                           "private key for the actor share's owner address not found in this wallet");
-    }
-    CompactSignature sig;
-    std::copy(vchSig.begin(), vchSig.end(), sig.begin());
-    ptx.vchSigs = {sig};
-    SetTxPayload(tx, ptx);
-
-    if (!fSubmit) {
-        return EncodeHexTx(CTransaction(tx));
-    }
-    return SubmitSpecialTx(request, chain_helper, chainman, tx);
+    auto wallet_interface{MakeWalletInterface(node, pwallet)};
+    return SubmissionToString(UnwrapOrThrow(evo::provider::DissolveShared(node, *wallet_interface, typed_request)));
 },
     };
 }
@@ -1626,59 +1372,26 @@ static RPCHelpMan protx_shared_update_share()
         RPCExamples{HelpExampleCli("protx", "shared_update_share \"proTxHash\" 0 \"" + EXAMPLE_ADDRESS[1] + "\" \"" + EXAMPLE_ADDRESS[0] + "\"")},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    const NodeContext& node = EnsureAnyNodeContext(request.context);
-    const ChainstateManager& chainman = EnsureChainman(node);
-    CDeterministicMNManager& dmnman = *CHECK_NONFATAL(node.dmnman);
-    CChainstateHelper& chain_helper = *CHECK_NONFATAL(node.chain_helper);
+    NodeContext& node = EnsureAnyNodeContext(request.context);
 
     std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
     if (!pwallet) return UniValue::VNULL;
     EnsureWalletIsUnlocked(*pwallet);
 
-    CProUpShareTx ptx;
-    ptx.proTxHash = ParseHashV(request.params[0], "proTxHash");
-    const int shareIndex{request.params[1].getInt<int>()};
-    if (shareIndex < 0 || shareIndex > std::numeric_limits<uint16_t>::max()) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "shareIndex out of range");
-    }
-    ptx.shareIndex = static_cast<uint16_t>(shareIndex);
-
-    const auto dmn = dmnman.GetListAtChainTip().GetMN(ptx.proTxHash);
-    if (!dmn || !dmn->pdmnState->IsShared()) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "shared masternode not found");
-    }
-    if (ptx.shareIndex >= dmn->pdmnState->shares.size()) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "shareIndex out of range");
-    }
-
-    CTxDestination rewardDest = DecodeDestination(request.params[2].get_str());
-    if (!IsValidDestination(rewardDest)) {
+    interfaces::SharedUpdateShareRequest typed_request;
+    typed_request.pro_tx_hash = ParseHashV(request.params[0], "proTxHash");
+    typed_request.share_index = ParseShareIndex(request.params[1], "shareIndex");
+    typed_request.reward = DecodeDestination(request.params[2].get_str());
+    if (!IsValidDestination(typed_request.reward)) {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("invalid reward address: %s", request.params[2].get_str()));
     }
-    ptx.scriptReward = GetScriptForDestination(rewardDest);
-
-    CTxDestination feeSourceDest = DecodeDestination(request.params[3].get_str());
-    if (!IsValidDestination(feeSourceDest)) {
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Dash address: ") + request.params[3].get_str());
-    }
-
-    bool fSubmit{true};
+    typed_request.fee_source = ParseRequiredFeeSource(request.params[3]);
     if (!request.params[4].isNull()) {
-        fSubmit = ParseBoolV(request.params[4], "submit");
+        typed_request.submit = ParseBoolV(request.params[4], "submit");
     }
 
-    CMutableTransaction tx;
-    tx.nVersion = 3;
-    tx.nType = TRANSACTION_PROVIDER_UPDATE_SHARE;
-
-    // make sure we get enough fees added
-    ptx.vchSig.resize(CPubKey::COMPACT_SIGNATURE_SIZE);
-
-    FundSpecialTx(*MakeWalletInterface(node, pwallet), tx, ptx, feeSourceDest);
-    SignSpecialTxPayloadByHash(tx, ptx, dmn->pdmnState->shares[ptx.shareIndex].keyIDOwner, *pwallet);
-    SetTxPayload(tx, ptx);
-
-    return SignAndSendSpecialTx(request, chain_helper, chainman, tx, fSubmit);
+    auto wallet_interface{MakeWalletInterface(node, pwallet)};
+    return SubmissionToString(UnwrapOrThrow(evo::provider::UpdateShare(node, *wallet_interface, typed_request)));
 },
     };
 }
@@ -1706,52 +1419,29 @@ static RPCHelpMan protx_shared_update_registrar_prepare()
         RPCExamples{HelpExampleCli("protx", "shared_update_registrar_prepare \"proTxHash\" \"operatorPubKey\" \"\" \"" + EXAMPLE_ADDRESS[0] + "\"")},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    const NodeContext& node = EnsureAnyNodeContext(request.context);
-    CDeterministicMNManager& dmnman = *CHECK_NONFATAL(node.dmnman);
+    NodeContext& node = EnsureAnyNodeContext(request.context);
 
     std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
     if (!pwallet) return UniValue::VNULL;
     EnsureWalletIsUnlocked(*pwallet);
 
-    CProUpSharedRegTx ptx;
-    ptx.proTxHash = ParseHashV(request.params[0], "proTxHash");
-
-    const auto dmn = dmnman.GetListAtChainTip().GetMN(ptx.proTxHash);
-    if (!dmn || !dmn->pdmnState->IsShared()) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "shared masternode not found");
-    }
-
+    interfaces::SharedRegistrarUpdatePrepareRequest typed_request;
+    typed_request.pro_tx_hash = ParseHashV(request.params[0], "proTxHash");
     if (!request.params[1].get_str().empty()) {
-        ptx.pubKeyOperator.Set(ParseBLSPubKey(request.params[1].get_str(), "operator BLS address", /*specific_legacy_bls_scheme=*/false),
-                               /*specificLegacyScheme=*/false);
-    } else {
-        ptx.pubKeyOperator = dmn->pdmnState->pubKeyOperator;
+        typed_request.operator_key = ParseBLSPubKey(request.params[1].get_str(), "operator BLS address",
+                                                    /*specific_legacy_bls_scheme=*/false);
     }
     if (!request.params[2].get_str().empty()) {
-        ptx.keyIDVoting = ParsePubKeyIDFromAddress(request.params[2].get_str(), "voting address");
-    } else {
-        ptx.keyIDVoting = dmn->pdmnState->keyIDVoting;
+        typed_request.voting_key = ParsePubKeyIDFromAddress(request.params[2].get_str(), "voting address");
     }
+    typed_request.fee_source = ParseRequiredFeeSource(request.params[3]);
 
-    CTxDestination feeSourceDest = DecodeDestination(request.params[3].get_str());
-    if (!IsValidDestination(feeSourceDest)) {
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Dash address: ") + request.params[3].get_str());
-    }
-
-    CMutableTransaction tx;
-    tx.nVersion = 3;
-    tx.nType = TRANSACTION_PROVIDER_UPDATE_SHARED_REGISTRAR;
-
-    // make sure we get enough fees added: one signature per share
-    ptx.vchSigs.assign(dmn->pdmnState->shares.size(), CompactSignature{});
-
-    FundSpecialTx(*MakeWalletInterface(node, pwallet), tx, ptx, feeSourceDest);
-    UpdateSpecialTxInputsHash(tx, ptx);
-    SetTxPayload(tx, ptx);
-
+    auto wallet_interface{MakeWalletInterface(node, pwallet)};
+    const auto prepared{
+        UnwrapOrThrow(evo::provider::PrepareSharedRegistrarUpdate(node, *wallet_interface, typed_request))};
     UniValue ret(UniValue::VOBJ);
-    ret.pushKV("tx", EncodeHexTx(CTransaction(tx)));
-    ret.pushKV("signHash", ::SerializeHash(ptx).ToString());
+    ret.pushKV("tx", EncodeHexTx(*prepared.tx));
+    ret.pushKV("signHash", prepared.sign_hash.ToString());
     return ret;
 },
     };
@@ -1783,10 +1473,7 @@ static RPCHelpMan protx_shared_combine()
         RPCExamples{HelpExampleCli("protx", "shared_combine \"tx\" \"[{\\\"shareIndex\\\":0,\\\"signature\\\":\\\"...\\\"}]\"")},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    const NodeContext& node = EnsureAnyNodeContext(request.context);
-    const ChainstateManager& chainman = EnsureChainman(node);
-    CDeterministicMNManager& dmnman = *CHECK_NONFATAL(node.dmnman);
-    CChainstateHelper& chain_helper = *CHECK_NONFATAL(node.chain_helper);
+    NodeContext& node = EnsureAnyNodeContext(request.context);
 
     CMutableTransaction tx;
     if (!DecodeHexTx(tx, request.params[0].get_str())) {
@@ -1794,99 +1481,32 @@ static RPCHelpMan protx_shared_combine()
     }
 
     // Collect (shareIndex, signature) pairs
-    std::map<size_t, CompactSignature> sigs;
+    interfaces::SharedCombineRequest typed_request;
+    std::set<size_t> share_indexes;
     for (const auto& entry : request.params[1].get_array().getValues()) {
         const int64_t index{entry.find_value("shareIndex").getInt<int64_t>()};
         auto opt_sig = DecodeBase64(entry.find_value("signature").get_str());
         if (index < 0 || !opt_sig.has_value() || opt_sig->size() != CPubKey::COMPACT_SIGNATURE_SIZE) {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "invalid signature entry");
         }
-        CompactSignature sig;
-        std::copy(opt_sig->begin(), opt_sig->end(), sig.begin());
-        if (!sigs.emplace(static_cast<size_t>(index), sig).second) {
+        if (!share_indexes.insert(static_cast<size_t>(index)).second) {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "duplicate shareIndex");
         }
+        typed_request.signatures.push_back({static_cast<size_t>(index), std::move(*opt_sig)});
     }
 
-    const bool fSubmit{request.params[2].isNull() ? false : ParseBoolV(request.params[2], "submit")};
+    typed_request.submit = request.params[2].isNull() ? false : ParseBoolV(request.params[2], "submit");
 
-    if (tx.nType == TRANSACTION_PROVIDER_REGISTER) {
-        auto opt_ptx = GetTxPayload<CProRegTx>(tx);
-        if (!opt_ptx || !opt_ptx->IsShared()) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "transaction is not a shared masternode registration");
-        }
-        if (fSubmit) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "a combined registration still needs its funding inputs signed; submit it with sendrawtransaction afterwards");
-        }
-        if (sigs.size() != opt_ptx->shares.size()) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "a registration requires a signature from every share");
-        }
-        for (const auto& [index, sig] : sigs) {
-            if (index >= opt_ptx->shares.size()) {
-                throw JSONRPCError(RPC_INVALID_PARAMETER, "shareIndex out of range");
-            }
-            opt_ptx->vchJoinSigs[index] = sig;
-        }
-        SetTxPayload(tx, *opt_ptx);
-        return EncodeHexTx(CTransaction(tx));
-    } else if (tx.nType == TRANSACTION_PROVIDER_DISSOLVE) {
-        auto opt_ptx = GetTxPayload<CProDisTx>(tx);
-        if (!opt_ptx) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "transaction payload not deserializable");
-        }
-        const auto dmn = dmnman.GetListAtChainTip().GetMN(opt_ptx->proTxHash);
-        if (!dmn || !dmn->pdmnState->IsShared()) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "shared masternode not found");
-        }
-        const size_t share_count{dmn->pdmnState->shares.size()};
-        // shared_sign only produces signatures over the unanimous digest (which commits to the
-        // signature count), so a one-signature transaction built here could never verify; the
-        // only valid producer of a unilateral dissolution is "protx shared_dissolve"
-        if (sigs.size() != share_count) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER,
-                               "a dissolution combined through shared_combine requires a signature from every "
-                               "share; a unilateral dissolution is created fully signed by \"protx shared_dissolve\"");
-        }
-        opt_ptx->vchSigs.clear();
-        for (size_t i = 0; i < share_count; i++) {
-            const auto it = sigs.find(i);
-            if (it == sigs.end()) {
-                throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("missing signature for share %d", i));
-            }
-            opt_ptx->vchSigs.push_back(it->second);
-        }
-        SetTxPayload(tx, *opt_ptx);
-        if (!fSubmit) {
-            return EncodeHexTx(CTransaction(tx));
-        }
-        return SubmitSpecialTx(request, chain_helper, chainman, tx);
-    } else if (tx.nType == TRANSACTION_PROVIDER_UPDATE_SHARED_REGISTRAR) {
-        auto opt_ptx = GetTxPayload<CProUpSharedRegTx>(tx);
-        if (!opt_ptx) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "transaction payload not deserializable");
-        }
-        const auto dmn = dmnman.GetListAtChainTip().GetMN(opt_ptx->proTxHash);
-        if (!dmn || !dmn->pdmnState->IsShared()) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "shared masternode not found");
-        }
-        const size_t share_count{dmn->pdmnState->shares.size()};
-        if (sigs.size() != share_count) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "a shared registrar update requires a signature from every share");
-        }
-        opt_ptx->vchSigs.clear();
-        for (size_t i = 0; i < share_count; i++) {
-            const auto it = sigs.find(i);
-            if (it == sigs.end()) {
-                throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("missing signature for share %d", i));
-            }
-            opt_ptx->vchSigs.push_back(it->second);
-        }
-        SetTxPayload(tx, *opt_ptx);
-        // Inserting the signatures changed the payload, so the fee inputs signed at prepare time
-        // are stale; SignAndSendSpecialTx re-signs them with this wallet before submitting
-        return SignAndSendSpecialTx(request, chain_helper, chainman, tx, fSubmit);
+    std::unique_ptr<interfaces::Wallet> wallet_interface;
+    if (tx.nType == TRANSACTION_PROVIDER_UPDATE_SHARED_REGISTRAR) {
+        std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
+        if (!pwallet) return UniValue::VNULL;
+        EnsureWalletIsUnlocked(*pwallet);
+        wallet_interface = MakeWalletInterface(node, pwallet);
     }
-    throw JSONRPCError(RPC_INVALID_PARAMETER, "transaction is not a shared masternode transaction");
+    typed_request.tx = MakeTransactionRef(std::move(tx));
+    return SubmissionToString(
+        UnwrapOrThrow(evo::provider::CombineShared(node, wallet_interface.get(), typed_request)));
 },
     };
 }
@@ -2549,32 +2169,21 @@ static RPCHelpMan protx_shared_register_prepare()
         RPCExamples{HelpExampleCli("protx", "shared_register_prepare \"fundingTx\" \"[...]\" \"1.2.3.4:1234\" \"operatorPubKey\" \"" + EXAMPLE_ADDRESS[1] + "\" 0 10000 5000000000")},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    const NodeContext& node = EnsureAnyNodeContext(request.context);
-    const ChainstateManager& chainman = EnsureChainman(node);
+    NodeContext& node = EnsureAnyNodeContext(request.context);
 
-    CMutableTransaction tx;
-    if (!DecodeHexTx(tx, request.params[0].get_str())) {
+    interfaces::SharedRegistrationRequest typed_request;
+    if (!DecodeHexTx(typed_request.funding_tx, request.params[0].get_str())) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "funding transaction not deserializable");
     }
-    tx.nVersion = 3;
-    tx.nType = TRANSACTION_PROVIDER_REGISTER;
-
-    CProRegTx ptx;
-    ptx.nType = MnType::Regular;
-    ptx.nVersion = DeploymentToProtxVersion(WITH_LOCK(::cs_main, return chainman.ActiveChain().Tip()), chainman);
-    if (ptx.nVersion < ProTxVersion::ExtAddr) {
+    if (!evo::provider::GetCapabilities(node).extended_addresses) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "shared masternode registration requires provider transaction version 3");
     }
-    ptx.netInfo = NetInfoInterface::MakeNetInfo(ptx.nVersion);
 
-    ptx.shares = ParseShares(request.params[1], "shares");
-
-    ProcessNetInfoCore(ptx, request.params[2], /*optional=*/true);
-
-    ptx.pubKeyOperator.Set(ParseBLSPubKey(request.params[3].get_str(), "operator BLS address", /*specific_legacy_bls_scheme=*/false),
-                           /*specificLegacyScheme=*/false);
-
-    ptx.keyIDVoting = ParsePubKeyIDFromAddress(request.params[4].get_str(), "voting address");
+    typed_request.shares = ParseShares(request.params[1], "shares");
+    typed_request.net_info.core_p2p = ParseCoreNetInfo(request.params[2], /*optional=*/true);
+    typed_request.operator_key = ParseBLSPubKey(request.params[3].get_str(), "operator BLS address",
+                                                /*specific_legacy_bls_scheme=*/false);
+    typed_request.voting_key = ParsePubKeyIDFromAddress(request.params[4].get_str(), "voting address");
 
     int64_t operatorReward;
     if (!ParseFixedPoint(request.params[5].getValStr(), 2, &operatorReward)) {
@@ -2583,41 +2192,23 @@ static RPCHelpMan protx_shared_register_prepare()
     if (operatorReward < 0 || operatorReward > 10000) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "operatorReward must be between 0 and 10000");
     }
-    ptx.nOperatorReward = operatorReward;
+    typed_request.operator_reward = static_cast<uint16_t>(operatorReward);
 
     const int64_t earlyPeriodBlocks{request.params[6].getInt<int64_t>()};
     if (earlyPeriodBlocks < 0 || earlyPeriodBlocks > CProRegTx::MAX_EARLY_PERIOD_BLOCKS) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "earlyPeriodBlocks out of range");
     }
-    ptx.nEarlyPeriodBlocks = static_cast<uint32_t>(earlyPeriodBlocks);
-    ptx.nEarlyPenalty = request.params[7].getInt<int64_t>();
+    typed_request.early_period_blocks = static_cast<uint32_t>(earlyPeriodBlocks);
+    typed_request.early_penalty = request.params[7].getInt<int64_t>();
 
-    // Append the shared collateral output; the collateral is always internal
-    tx.vout.emplace_back(GetMnType(ptx.nType).collat_amount, SharedCollateralScript());
-    ptx.collateralOutpoint = COutPoint(uint256(), static_cast<uint32_t>(tx.vout.size() - 1));
-
-    // Placeholder consent signatures; filled in by "protx shared_combine"
-    ptx.vchJoinSigs.assign(ptx.shares.size(), CompactSignature{});
-
-    UpdateSpecialTxInputsHash(tx, ptx);
-
-    // Preflight the payload with the same stateless rules consensus applies, so consensus-invalid
-    // terms (bad share sums, penalty bounds, payee reuse, ...) fail here with a clear error
-    // instead of after every participant has signed and the funding inputs are finalized
-    if (TxValidationState state; !ptx.IsTriviallyValid(state)) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER,
-                           strprintf("invalid shared registration terms: %s", state.GetRejectReason()));
-    }
-
-    SetTxPayload(tx, ptx);
-
+    const auto prepared{UnwrapOrThrow(evo::provider::PrepareSharedRegistration(node, typed_request))};
     UniValue ret(UniValue::VOBJ);
-    ret.pushKV("tx", EncodeHexTx(CTransaction(tx)));
-    ret.pushKV("collateralIndex", static_cast<uint64_t>(ptx.collateralOutpoint.n));
-    ret.pushKV("consentHash", ptx.MakeSharedRegConsentHash(CTransaction(tx)).ToString());
-    ret.pushKV("terms", ptx.ToJson());
-    if (ptx.nEarlyPenalty == 0) {
-        ret.pushKV("warning", std::string{ZERO_PENALTY_WARNING});
+    ret.pushKV("tx", EncodeHexTx(*prepared.tx));
+    ret.pushKV("collateralIndex", static_cast<uint64_t>(prepared.collateral_index));
+    ret.pushKV("consentHash", prepared.consent_hash.ToString());
+    ret.pushKV("terms", CHECK_NONFATAL(GetTxPayload<CProRegTx>(*prepared.tx))->ToJson());
+    if (prepared.warning) {
+        ret.pushKV("warning", *prepared.warning);
     }
     return ret;
 },
@@ -2643,30 +2234,17 @@ static RPCHelpMan protx_shared_dissolve_prepare()
         RPCExamples{HelpExampleCli("protx", "shared_dissolve_prepare \"proTxHash\" 0")},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    const NodeContext& node = EnsureAnyNodeContext(request.context);
-    CDeterministicMNManager& dmnman = *CHECK_NONFATAL(node.dmnman);
+    NodeContext& node = EnsureAnyNodeContext(request.context);
 
-    const uint256 proTxHash(ParseHashV(request.params[0], "proTxHash"));
-    const int actorIndex{request.params[1].getInt<int>()};
-    if (actorIndex < 0 || actorIndex > std::numeric_limits<uint16_t>::max()) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "actorIndex out of range");
-    }
-    const CAmount fee{request.params[2].isNull() ? 100000 : request.params[2].getInt<int64_t>()};
+    interfaces::SharedDissolvePrepareRequest typed_request;
+    typed_request.pro_tx_hash = ParseHashV(request.params[0], "proTxHash");
+    typed_request.actor_index = ParseShareIndex(request.params[1], "actorIndex");
+    typed_request.fee = request.params[2].isNull() ? 100000 : request.params[2].getInt<int64_t>();
 
-    const auto dmn = dmnman.GetListAtChainTip().GetMN(proTxHash);
-    if (!dmn || !dmn->pdmnState->IsShared()) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "shared masternode not found");
-    }
-
-    CProDisTx ptx;
-    CMutableTransaction tx = BuildProDisTx(*dmn, static_cast<uint16_t>(actorIndex), /*penalty=*/0, fee, ptx);
-    SetTxPayload(tx, ptx);
-
+    const auto prepared{UnwrapOrThrow(evo::provider::PrepareSharedDissolution(node, typed_request))};
     UniValue ret(UniValue::VOBJ);
-    ret.pushKV("tx", EncodeHexTx(CTransaction(tx)));
-    // Unanimous dissolution: every share owner signs, so the count is the share count
-    ret.pushKV("signHash",
-               ptx.MakeSignHash(CTransaction(tx), static_cast<uint8_t>(dmn->pdmnState->shares.size())).ToString());
+    ret.pushKV("tx", EncodeHexTx(*prepared.tx));
+    ret.pushKV("signHash", prepared.sign_hash.ToString());
     return ret;
 },
     };

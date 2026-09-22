@@ -4,12 +4,14 @@
 
 #include <evo/providertx_service.h>
 
+#include <consensus/tx_verify.h>
 #include <consensus/validation.h>
 #include <deploymentstatus.h>
 #include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
 #include <evo/netinfo.h>
 #include <evo/providertx.h>
+#include <evo/sharedcollateral.h>
 #include <evo/specialtx.h>
 #include <evo/specialtxman.h>
 #include <interfaces/wallet.h>
@@ -27,6 +29,7 @@
 #include <validation.h>
 
 #include <algorithm>
+#include <map>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -41,6 +44,8 @@ using interfaces::CoinLockResult;
 using interfaces::ExistingProviderCollateral;
 using interfaces::FundProviderCollateral;
 using interfaces::PreparedProviderRegistration;
+using interfaces::PreparedSharedConsent;
+using interfaces::PreparedSharedRegistration;
 using interfaces::ProviderNetInfo;
 using interfaces::ProviderPayout;
 using interfaces::ProviderPlatformEndpoints;
@@ -52,6 +57,14 @@ using interfaces::ProviderTxResult;
 using interfaces::ProviderTxSubmission;
 using interfaces::ProviderUpdateRegistrarRequest;
 using interfaces::ProviderUpdateServiceRequest;
+using interfaces::SharedCombineRequest;
+using interfaces::SharedDissolvePrepareRequest;
+using interfaces::SharedDissolveRequest;
+using interfaces::SharedRegistrarUpdatePrepareRequest;
+using interfaces::SharedRegistrationRequest;
+using interfaces::SharedSignRequest;
+using interfaces::SharedSignResult;
+using interfaces::SharedUpdateShareRequest;
 using interfaces::Wallet;
 
 ProviderTxError Error(ProviderTxErrorCode code, std::string message, std::string reject_reason = {},
@@ -355,8 +368,24 @@ std::optional<ProviderTxError> Preflight(node::NodeContext& node, const CTransac
     return std::nullopt;
 }
 
+ProviderTxResult<ProviderTxSubmission> Broadcast(node::NodeContext& node, const CTransactionRef& tx)
+{
+    AssertLockNotHeld(::cs_main);
+    const CAmount max_fee{node::DEFAULT_MAX_RAW_TX_FEE_RATE.GetFee(GetVirtualTransactionSize(*tx))};
+    bilingual_str message;
+    const TransactionError transaction_error{
+        node::BroadcastTransaction(node, tx, message, max_fee, /*relay=*/true, /*wait_callback=*/true)};
+    if (transaction_error != TransactionError::OK) {
+        return Error(ProviderTxErrorCode::BROADCAST_ERROR, message.original, {}, transaction_error);
+    }
+    return ProviderTxSubmission{tx, true};
+}
+
+//! Sign every input this wallet can sign and optionally submit. With `allow_partial`, an
+//! unsubmitted transaction is returned signed as far as this wallet can sign it, for another
+//! wallet to finish.
 ProviderTxResult<ProviderTxSubmission> Finish(node::NodeContext& node, Wallet& wallet, const CMutableTransaction& tx,
-                                              bool submit)
+                                              bool submit, bool allow_partial = false)
 {
     AssertLockNotHeld(::cs_main);
     if (auto error{Preflight(node, CTransaction{tx})}) return *error;
@@ -366,6 +395,7 @@ ProviderTxResult<ProviderTxSubmission> Finish(node::NodeContext& node, Wallet& w
         return Error(wallet.isLocked() ? ProviderTxErrorCode::WALLET_UNLOCK_NEEDED : ProviderTxErrorCode::WALLET_ERROR,
                      util::ErrorString(signed_result).original);
     }
+    if (!submit && allow_partial) return ProviderTxSubmission{signed_result->tx, false};
     if (!signed_result->complete) {
         std::string errors;
         for (const auto& error : signed_result->errors) {
@@ -379,15 +409,14 @@ ProviderTxResult<ProviderTxSubmission> Finish(node::NodeContext& node, Wallet& w
                                errors));
     }
     if (!submit) return ProviderTxSubmission{signed_result->tx, false};
+    return Broadcast(node, signed_result->tx);
+}
 
-    const CAmount max_fee{node::DEFAULT_MAX_RAW_TX_FEE_RATE.GetFee(GetVirtualTransactionSize(*signed_result->tx))};
-    bilingual_str message;
-    const TransactionError transaction_error{
-        node::BroadcastTransaction(node, signed_result->tx, message, max_fee, /*relay=*/true, /*wait_callback=*/true)};
-    if (transaction_error != TransactionError::OK) {
-        return Error(ProviderTxErrorCode::BROADCAST_ERROR, message.original, {}, transaction_error);
-    }
-    return ProviderTxSubmission{signed_result->tx, true};
+//! Submit a transaction that needs no further signing
+ProviderTxResult<ProviderTxSubmission> Submit(node::NodeContext& node, CMutableTransaction tx)
+{
+    if (auto error{Preflight(node, CTransaction{tx})}) return *error;
+    return Broadcast(node, MakeTransactionRef(std::move(tx)));
 }
 
 class CollateralLockGuard
@@ -571,6 +600,119 @@ RegistrationResult BuildRegistration(node::NodeContext& node, Wallet& wallet,
     if (const auto* error{std::get_if<ProviderTxError>(&result)}) return *error;
     collateral_lock.Keep();
     return RegistrationOutcome{std::get<ProviderTxSubmission>(std::move(result))};
+}
+
+constexpr std::string_view ZERO_PENALTY_WARNING{
+    "earlyPenalty is zero: any participant can force an early exit at no cost beyond the transaction fee"};
+
+ProviderTxError SharedMnNotFound()
+{
+    return Error(ProviderTxErrorCode::INVALID_PARAMETER, "shared masternode not found");
+}
+
+//! The shared masternode registered as `pro_tx_hash` at the chain tip, or null
+CDeterministicMNCPtr GetSharedMn(node::NodeContext& node, const uint256& pro_tx_hash)
+{
+    auto dmn{Assert(node.dmnman)->GetListAtChainTip().GetMN(pro_tx_hash)};
+    if (!dmn || !dmn->pdmnState->IsShared()) return nullptr;
+    return dmn;
+}
+
+struct Dissolution {
+    CMutableTransaction tx;
+    CProDisTx payload;
+};
+
+//! Builds an unsigned ProDisTx transaction paying each non-actor share its principal plus its
+//! pro-rata slice of the penalty (sequential floor, remainder to the last non-actor entry, which
+//! always satisfies the consensus minimums), with the actor absorbing penalty and fee
+std::variant<Dissolution, ProviderTxError> BuildDissolution(const CDeterministicMN& dmn, uint16_t actor_index,
+                                                            CAmount penalty, CAmount fee)
+{
+    const auto& shares = dmn.pdmnState->shares;
+    if (actor_index >= shares.size()) {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER, "actorIndex out of range");
+    }
+    if (fee <= 0) {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER, "fee must be positive");
+    }
+    if (fee > CProDisTx::MAX_FEE) {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER,
+                     strprintf("fee exceeds the consensus ceiling of %d duffs", CProDisTx::MAX_FEE));
+    }
+    const CAmount actor_output = shares[actor_index].amount - penalty - fee;
+    if (actor_output < 0) {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER, "penalty and fee exceed the actor's share");
+    }
+
+    Dissolution ret;
+    ret.tx.nVersion = 3;
+    ret.tx.nType = TRANSACTION_PROVIDER_DISSOLVE;
+    ret.tx.vin.emplace_back(dmn.collateralOutpoint);
+
+    CollateralShares non_actors;
+    for (size_t i = 0; i < shares.size(); i++) {
+        if (i != actor_index) non_actors.push_back(shares[i]);
+    }
+    const auto bonuses{SplitAmountByShares(penalty, non_actors)};
+    for (size_t i = 0; i < non_actors.size(); i++) {
+        ret.tx.vout.emplace_back(non_actors[i].amount + bonuses[i], non_actors[i].scriptRefund);
+    }
+    if (actor_output > 0) {
+        ret.tx.vout.emplace_back(actor_output, shares[actor_index].scriptRefund);
+    }
+
+    ret.payload.proTxHash = dmn.proTxHash;
+    ret.payload.actorIndex = actor_index;
+    return ret;
+}
+
+//! True when `tx` carries an absolute lock not yet satisfied at the next block, or any BIP68
+//! relative lock (special transactions are version 3, so sequences carry relative-lock
+//! semantics). Wallet-funded inputs use a non-final sequence purely for fee sniping
+//! discouragement with an already-satisfied nLockTime, which is not a lock.
+bool HasTimeLock(node::NodeContext& node, const CTransaction& tx)
+{
+    AssertLockNotHeld(::cs_main);
+    auto& chainman{*Assert(node.chainman)};
+    bool has_time_lock{false};
+    {
+        LOCK(::cs_main);
+        const CBlockIndex* tip{chainman.ActiveChain().Tip()};
+        has_time_lock = !IsFinalTx(tx, tip->nHeight + 1, tip->GetMedianTimePast());
+    }
+    for (const auto& txin : tx.vin) {
+        has_time_lock |= !(txin.nSequence & CTxIn::SEQUENCE_LOCKTIME_DISABLE_FLAG);
+    }
+    return has_time_lock;
+}
+
+//! Put one signature per share, in share order, into a unanimous ProDisTx or ProUpSharedRegTx
+template <typename Payload>
+std::optional<ProviderTxError> InsertUnanimousSignatures(node::NodeContext& node, CMutableTransaction& tx,
+                                                         const std::map<size_t, CompactSignature>& signatures,
+                                                         std::string count_error)
+{
+    auto payload{GetTxPayload<Payload>(tx)};
+    if (!payload) {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER, "transaction payload not deserializable");
+    }
+    const auto dmn{GetSharedMn(node, payload->proTxHash)};
+    if (!dmn) return SharedMnNotFound();
+    const size_t share_count{dmn->pdmnState->shares.size()};
+    if (signatures.size() != share_count) {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER, std::move(count_error));
+    }
+    payload->vchSigs.clear();
+    for (size_t i = 0; i < share_count; i++) {
+        const auto it = signatures.find(i);
+        if (it == signatures.end()) {
+            return Error(ProviderTxErrorCode::INVALID_PARAMETER, strprintf("missing signature for share %d", i));
+        }
+        payload->vchSigs.push_back(it->second);
+    }
+    SetTxPayload(tx, *payload);
+    return std::nullopt;
 }
 
 } // namespace
@@ -829,6 +971,365 @@ ProviderTxResult<ProviderTxSubmission> Revoke(node::NodeContext& node, Wallet& w
     SignPayload(tx, payload, request.operator_key, payload.nVersion == ProTxVersion::LegacyBLS);
     SetTxPayload(tx, payload);
     return Finish(node, wallet, tx, request.submit);
+}
+
+ProviderTxResult<PreparedSharedRegistration> PrepareSharedRegistration(node::NodeContext& node,
+                                                                       const SharedRegistrationRequest& request)
+{
+    CMutableTransaction tx{request.funding_tx};
+    tx.nVersion = 3;
+    tx.nType = TRANSACTION_PROVIDER_REGISTER;
+
+    CProRegTx payload;
+    payload.nType = MnType::Regular;
+    payload.nVersion = CurrentProviderTxVersion(node);
+    if (payload.nVersion < ProTxVersion::ExtAddr) {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER,
+                     "shared masternode registration requires provider transaction version 3");
+    }
+    payload.netInfo = NetInfoInterface::MakeNetInfo(payload.nVersion);
+
+    if (request.shares.size() < CProRegTx::MIN_SHARES || request.shares.size() > CProRegTx::MAX_SHARES) {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER,
+                     strprintf("shares must contain between %d and %d entries", CProRegTx::MIN_SHARES,
+                               CProRegTx::MAX_SHARES));
+    }
+    for (const auto& share : request.shares) {
+        if (!IsValidDestination(share.refund)) {
+            return Error(ProviderTxErrorCode::INVALID_ADDRESS_OR_KEY,
+                         strprintf("invalid refund address: %s", EncodeDestination(share.refund)));
+        }
+        if (share.reward && !IsValidDestination(*share.reward)) {
+            return Error(ProviderTxErrorCode::INVALID_ADDRESS_OR_KEY,
+                         strprintf("invalid reward address: %s", EncodeDestination(*share.reward)));
+        }
+        payload.shares.emplace_back(share.amount, GetScriptForDestination(share.refund),
+                                    share.reward ? GetScriptForDestination(*share.reward) : CScript{}, share.owner);
+    }
+
+    if (auto error{ApplyNetInfo(payload, request.net_info, /*platform=*/false, /*optional=*/true)}) return *error;
+
+    if (!request.operator_key.IsValid()) {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER, "operator BLS address must be a valid BLS public key");
+    }
+    payload.pubKeyOperator.Set(request.operator_key, /*specificLegacyScheme=*/false);
+    payload.keyIDVoting = request.voting_key;
+    if (request.operator_reward > 10000) {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER, "operatorReward must be between 0 and 10000");
+    }
+    payload.nOperatorReward = request.operator_reward;
+    if (request.early_period_blocks > CProRegTx::MAX_EARLY_PERIOD_BLOCKS) {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER, "earlyPeriodBlocks out of range");
+    }
+    payload.nEarlyPeriodBlocks = request.early_period_blocks;
+    payload.nEarlyPenalty = request.early_penalty;
+
+    // Append the shared collateral output; the collateral is always internal
+    tx.vout.emplace_back(GetMnType(payload.nType).collat_amount, SharedCollateralScript());
+    payload.collateralOutpoint = COutPoint(uint256(), static_cast<uint32_t>(tx.vout.size() - 1));
+
+    // Placeholder consent signatures; filled in by CombineShared()
+    payload.vchJoinSigs.assign(payload.shares.size(), CompactSignature{});
+
+    UpdateInputsHash(tx, payload);
+
+    // Preflight the payload with the same stateless rules consensus applies, so consensus-invalid
+    // terms (bad share sums, penalty bounds, payee reuse, ...) fail here with a clear error
+    // instead of after every participant has signed and the funding inputs are finalized
+    if (TxValidationState state; !payload.IsTriviallyValid(state)) {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER,
+                     strprintf("invalid shared registration terms: %s", state.GetRejectReason()),
+                     state.GetRejectReason());
+    }
+
+    SetTxPayload(tx, payload);
+    PreparedSharedRegistration prepared;
+    prepared.tx = MakeTransactionRef(std::move(tx));
+    prepared.collateral_index = payload.collateralOutpoint.n;
+    prepared.consent_hash = payload.MakeSharedRegConsentHash(*prepared.tx);
+    if (payload.nEarlyPenalty == 0) prepared.warning = std::string{ZERO_PENALTY_WARNING};
+    return prepared;
+}
+
+ProviderTxResult<SharedSignResult> SignShared(node::NodeContext& node, Wallet& wallet, const SharedSignRequest& request)
+{
+    if (auto error{CheckWallet(wallet)}) return *error;
+    if (!request.tx) {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER, "transaction not deserializable");
+    }
+    const CTransaction& tx{*request.tx};
+
+    // The registration consent digest and the dissolution digest both commit to nLockTime and
+    // every input sequence, so a lock the signer failed to notice would be silently baked into
+    // their signature and delay when the transaction can confirm. Require an explicit opt-in.
+    const auto check_time_lock = [&](std::string_view what) -> std::optional<ProviderTxError> {
+        if (request.allow_time_locks || !HasTimeLock(node, tx)) return std::nullopt;
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER,
+                     strprintf("%s carries a lock time or relative lock, which delays when it can confirm; pass "
+                               "allowTimeLocks=true to sign it anyway",
+                               what));
+    };
+
+    // Resolve the share table and the digest to sign from the transaction type
+    SharedSignResult result;
+    CollateralShares shares;
+    uint256 sign_hash;
+    if (tx.nType == TRANSACTION_PROVIDER_REGISTER) {
+        const auto payload{GetTxPayload<CProRegTx>(tx)};
+        if (!payload || !payload->IsShared()) {
+            return Error(ProviderTxErrorCode::INVALID_PARAMETER, "transaction is not a shared masternode registration");
+        }
+        if (auto error{check_time_lock("registration")}) return *error;
+        shares = payload->shares;
+        sign_hash = payload->MakeSharedRegConsentHash(tx);
+        result.kind = SharedSignResult::Kind::Registration;
+        if (payload->nEarlyPenalty == 0) result.warning = std::string{ZERO_PENALTY_WARNING};
+    } else if (tx.nType == TRANSACTION_PROVIDER_DISSOLVE) {
+        const auto payload{GetTxPayload<CProDisTx>(tx)};
+        if (!payload) {
+            return Error(ProviderTxErrorCode::INVALID_PARAMETER, "transaction payload not deserializable");
+        }
+        // Only unanimous dissolutions (built unsigned by PrepareSharedDissolution()) are signed
+        // here; the signing digest commits to the signature count, so signatures produced here
+        // would never verify on a transaction carrying a different count. A unilateral
+        // dissolution is built, signed and submitted in one step by DissolveShared().
+        if (!payload->vchSigs.empty()) {
+            return Error(ProviderTxErrorCode::INVALID_PARAMETER,
+                         "transaction already carries dissolution signatures; a unilateral dissolution is created "
+                         "fully signed by \"protx shared_dissolve\" and needs no shared_sign step");
+        }
+        const auto dmn{GetSharedMn(node, payload->proTxHash)};
+        if (!dmn) return SharedMnNotFound();
+        if (auto error{check_time_lock("dissolution")}) return *error;
+        shares = dmn->pdmnState->shares;
+        sign_hash = payload->MakeSignHash(tx, static_cast<uint8_t>(shares.size()));
+        result.kind = SharedSignResult::Kind::Dissolution;
+    } else if (tx.nType == TRANSACTION_PROVIDER_UPDATE_SHARED_REGISTRAR) {
+        const auto payload{GetTxPayload<CProUpSharedRegTx>(tx)};
+        if (!payload) {
+            return Error(ProviderTxErrorCode::INVALID_PARAMETER, "transaction payload not deserializable");
+        }
+        const auto dmn{GetSharedMn(node, payload->proTxHash)};
+        if (!dmn) return SharedMnNotFound();
+        shares = dmn->pdmnState->shares;
+        sign_hash = ::SerializeHash(*payload);
+        result.kind = SharedSignResult::Kind::RegistrarUpdate;
+    } else {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER, "transaction is not a shared masternode transaction");
+    }
+
+    for (size_t i = 0; i < shares.size(); i++) {
+        std::vector<unsigned char> signature;
+        // A share whose owner key this wallet does not hold is skipped
+        if (!wallet.signSpecialTxPayload(sign_hash, shares[i].keyIDOwner, signature)) continue;
+        result.signatures.push_back({i, std::move(signature)});
+    }
+    if (result.signatures.empty()) {
+        return Error(ProviderTxErrorCode::INVALID_ADDRESS_OR_KEY, "none of the share owner keys were found in this wallet");
+    }
+    return result;
+}
+
+ProviderTxResult<ProviderTxSubmission> CombineShared(node::NodeContext& node, Wallet* wallet,
+                                                     const SharedCombineRequest& request)
+{
+    if (!request.tx) {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER, "transaction not deserializable");
+    }
+    std::map<size_t, CompactSignature> signatures;
+    for (const auto& entry : request.signatures) {
+        if (entry.signature.size() != CPubKey::COMPACT_SIGNATURE_SIZE) {
+            return Error(ProviderTxErrorCode::INVALID_PARAMETER, "invalid signature entry");
+        }
+        CompactSignature signature;
+        std::copy(entry.signature.begin(), entry.signature.end(), signature.begin());
+        if (!signatures.emplace(entry.share_index, signature).second) {
+            return Error(ProviderTxErrorCode::INVALID_PARAMETER, "duplicate shareIndex");
+        }
+    }
+
+    CMutableTransaction tx{*request.tx};
+    if (tx.nType == TRANSACTION_PROVIDER_REGISTER) {
+        auto payload{GetTxPayload<CProRegTx>(tx)};
+        if (!payload || !payload->IsShared()) {
+            return Error(ProviderTxErrorCode::INVALID_PARAMETER, "transaction is not a shared masternode registration");
+        }
+        if (request.submit) {
+            return Error(ProviderTxErrorCode::INVALID_PARAMETER,
+                         "a combined registration still needs its funding inputs signed; submit it with "
+                         "sendrawtransaction afterwards");
+        }
+        if (signatures.size() != payload->shares.size()) {
+            return Error(ProviderTxErrorCode::INVALID_PARAMETER, "a registration requires a signature from every share");
+        }
+        for (const auto& [index, signature] : signatures) {
+            if (index >= payload->shares.size()) {
+                return Error(ProviderTxErrorCode::INVALID_PARAMETER, "shareIndex out of range");
+            }
+            payload->vchJoinSigs[index] = signature;
+        }
+        SetTxPayload(tx, *payload);
+        return ProviderTxSubmission{MakeTransactionRef(std::move(tx)), false};
+    }
+    if (tx.nType == TRANSACTION_PROVIDER_DISSOLVE) {
+        // SignShared() only produces signatures over the unanimous digest (which commits to the
+        // signature count), so a one-signature transaction built here could never verify; the
+        // only valid producer of a unilateral dissolution is DissolveShared()
+        if (auto error{InsertUnanimousSignatures<CProDisTx>(
+                node, tx, signatures,
+                "a dissolution combined through shared_combine requires a signature from every share; a "
+                "unilateral dissolution is created fully signed by \"protx shared_dissolve\"")}) {
+            return *error;
+        }
+        if (!request.submit) return ProviderTxSubmission{MakeTransactionRef(std::move(tx)), false};
+        return Submit(node, std::move(tx));
+    }
+    if (tx.nType == TRANSACTION_PROVIDER_UPDATE_SHARED_REGISTRAR) {
+        if (auto error{InsertUnanimousSignatures<CProUpSharedRegTx>(
+                node, tx, signatures, "a shared registrar update requires a signature from every share")}) {
+            return *error;
+        }
+        if (wallet == nullptr) {
+            return Error(ProviderTxErrorCode::WALLET_ERROR,
+                         "a shared registrar update must be combined by the wallet that funded it");
+        }
+        if (auto error{CheckWallet(*wallet)}) return *error;
+        // Inserting the signatures changed the payload, so the fee inputs signed at prepare time
+        // are stale; re-sign them with this wallet
+        return Finish(node, *wallet, tx, request.submit, /*allow_partial=*/true);
+    }
+    return Error(ProviderTxErrorCode::INVALID_PARAMETER, "transaction is not a shared masternode transaction");
+}
+
+ProviderTxResult<ProviderTxSubmission> DissolveShared(node::NodeContext& node, Wallet& wallet,
+                                                      const SharedDissolveRequest& request)
+{
+    if (auto error{CheckWallet(wallet)}) return *error;
+    const auto dmn{GetSharedMn(node, request.pro_tx_hash)};
+    if (!dmn) return SharedMnNotFound();
+
+    const int next_height{WITH_LOCK(::cs_main, return Assert(node.chainman)->ActiveChain().Height()) + 1};
+    const bool early{next_height - dmn->pdmnState->nRegisteredHeight <
+                     static_cast<int64_t>(dmn->pdmnState->nEarlyPeriodBlocks)};
+    const bool pay_penalty{request.pay_penalty.value_or(early)};
+    // Deliberate: a zero-penalty standby signed during the early period becomes valid at the
+    // boundary. Refuse only when it would also be submitted now.
+    if (early && !pay_penalty && request.submit) {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER,
+                     "a unilateral dissolution during the early period must pay the penalty; pass submit=false to "
+                     "build a standby for later");
+    }
+
+    auto built{BuildDissolution(*dmn, request.actor_index, pay_penalty ? dmn->pdmnState->nEarlyPenalty : 0,
+                                request.fee)};
+    if (const auto* error{std::get_if<ProviderTxError>(&built)}) return *error;
+    auto& [tx, payload]{std::get<Dissolution>(built)};
+
+    std::vector<unsigned char> signature;
+    if (!wallet.signSpecialTxPayload(payload.MakeSignHash(CTransaction(tx), /*sig_count=*/1),
+                                     dmn->pdmnState->shares[request.actor_index].keyIDOwner, signature)) {
+        return Error(ProviderTxErrorCode::INVALID_ADDRESS_OR_KEY,
+                     "private key for the actor share's owner address not found in this wallet");
+    }
+    CompactSignature compact;
+    std::copy(signature.begin(), signature.end(), compact.begin());
+    payload.vchSigs = {compact};
+    SetTxPayload(tx, payload);
+
+    if (!request.submit) return ProviderTxSubmission{MakeTransactionRef(std::move(tx)), false};
+    return Submit(node, std::move(tx));
+}
+
+ProviderTxResult<PreparedSharedConsent> PrepareSharedDissolution(node::NodeContext& node,
+                                                                 const SharedDissolvePrepareRequest& request)
+{
+    const auto dmn{GetSharedMn(node, request.pro_tx_hash)};
+    if (!dmn) return SharedMnNotFound();
+
+    auto built{BuildDissolution(*dmn, request.actor_index, /*penalty=*/0, request.fee)};
+    if (const auto* error{std::get_if<ProviderTxError>(&built)}) return *error;
+    auto& [tx, payload]{std::get<Dissolution>(built)};
+    SetTxPayload(tx, payload);
+
+    auto prepared{MakeTransactionRef(std::move(tx))};
+    // Unanimous dissolution: every share owner signs, so the count is the share count
+    const uint256 sign_hash{payload.MakeSignHash(*prepared, static_cast<uint8_t>(dmn->pdmnState->shares.size()))};
+    return PreparedSharedConsent{std::move(prepared), sign_hash};
+}
+
+ProviderTxResult<ProviderTxSubmission> UpdateShare(node::NodeContext& node, Wallet& wallet,
+                                                   const SharedUpdateShareRequest& request)
+{
+    if (auto error{CheckWallet(wallet)}) return *error;
+    const auto dmn{GetSharedMn(node, request.pro_tx_hash)};
+    if (!dmn) return SharedMnNotFound();
+    if (request.share_index >= dmn->pdmnState->shares.size()) {
+        return Error(ProviderTxErrorCode::INVALID_PARAMETER, "shareIndex out of range");
+    }
+    if (!IsValidDestination(request.reward)) {
+        return Error(ProviderTxErrorCode::INVALID_ADDRESS_OR_KEY,
+                     strprintf("invalid reward address: %s", EncodeDestination(request.reward)));
+    }
+    if (!IsValidDestination(request.fee_source)) {
+        return Error(ProviderTxErrorCode::INVALID_ADDRESS_OR_KEY,
+                     "Invalid Dash address: " + EncodeDestination(request.fee_source));
+    }
+
+    CProUpShareTx payload;
+    payload.proTxHash = request.pro_tx_hash;
+    payload.shareIndex = request.share_index;
+    payload.scriptReward = GetScriptForDestination(request.reward);
+    // make sure we get enough fees added
+    payload.vchSig.resize(CPubKey::COMPACT_SIGNATURE_SIZE);
+
+    CMutableTransaction tx;
+    tx.nVersion = 3;
+    tx.nType = TRANSACTION_PROVIDER_UPDATE_SHARE;
+    auto funded_result{Fund(wallet, std::move(tx), payload, request.fee_source)};
+    if (const auto* error{std::get_if<ProviderTxError>(&funded_result)}) return *error;
+    tx = std::get<CMutableTransaction>(std::move(funded_result));
+    if (auto error{SignPayload(tx, payload, dmn->pdmnState->shares[request.share_index].keyIDOwner, wallet)}) {
+        return *error;
+    }
+    SetTxPayload(tx, payload);
+    return Finish(node, wallet, tx, request.submit, /*allow_partial=*/true);
+}
+
+ProviderTxResult<PreparedSharedConsent> PrepareSharedRegistrarUpdate(node::NodeContext& node, Wallet& wallet,
+                                                                     const SharedRegistrarUpdatePrepareRequest& request)
+{
+    if (auto error{CheckWallet(wallet)}) return *error;
+    const auto dmn{GetSharedMn(node, request.pro_tx_hash)};
+    if (!dmn) return SharedMnNotFound();
+
+    CProUpSharedRegTx payload;
+    payload.proTxHash = request.pro_tx_hash;
+    if (request.operator_key) {
+        if (!request.operator_key->IsValid()) {
+            return Error(ProviderTxErrorCode::INVALID_PARAMETER, "operator BLS address must be a valid BLS public key");
+        }
+        payload.pubKeyOperator.Set(*request.operator_key, /*specificLegacyScheme=*/false);
+    } else {
+        payload.pubKeyOperator = dmn->pdmnState->pubKeyOperator;
+    }
+    payload.keyIDVoting = request.voting_key.value_or(dmn->pdmnState->keyIDVoting);
+    if (!IsValidDestination(request.fee_source)) {
+        return Error(ProviderTxErrorCode::INVALID_ADDRESS_OR_KEY,
+                     "Invalid Dash address: " + EncodeDestination(request.fee_source));
+    }
+
+    // make sure we get enough fees added: one signature per share
+    payload.vchSigs.assign(dmn->pdmnState->shares.size(), CompactSignature{});
+
+    CMutableTransaction tx;
+    tx.nVersion = 3;
+    tx.nType = TRANSACTION_PROVIDER_UPDATE_SHARED_REGISTRAR;
+    auto funded_result{Fund(wallet, std::move(tx), payload, request.fee_source)};
+    if (const auto* error{std::get_if<ProviderTxError>(&funded_result)}) return *error;
+    tx = std::get<CMutableTransaction>(std::move(funded_result));
+    UpdateInputsHash(tx, payload);
+    SetTxPayload(tx, payload);
+    return PreparedSharedConsent{MakeTransactionRef(std::move(tx)), ::SerializeHash(payload)};
 }
 
 } // namespace evo::provider
