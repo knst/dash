@@ -845,6 +845,46 @@ BOOST_FIXTURE_TEST_CASE(credit_pool_snapshot_persisted_after_transactionless_con
     BOOST_CHECK_EQUAL(snapshot.currentLimit, pool.currentLimit);
 }
 
+BOOST_AUTO_TEST_CASE(credit_pool_unlock_limit_v24)
+{
+    // From v24 the limit is relative and net: 20% of the balance at the window start, never less
+    // than 2000 DASH and with no upper bound, less the drop the pool already took inside the
+    // window, never above the pool
+    const auto limit = [](const CAmount balance, const CAmount balance_window_start) {
+        return CCreditPoolManager::UnlockLimitV24(balance, balance_window_start);
+    };
+    BOOST_CHECK_EQUAL(limit(15000 * COIN, 15000 * COIN), 3000 * COIN);
+    BOOST_CHECK_EQUAL(limit(5000 * COIN, 5000 * COIN), 2000 * COIN);
+    BOOST_CHECK_EQUAL(limit(40000 * COIN, 40000 * COIN), 8000 * COIN);
+
+    // The drop already taken inside the window comes out of the allowance
+    BOOST_CHECK_EQUAL(limit(14000 * COIN, 15000 * COIN), 2000 * COIN);
+    BOOST_CHECK_EQUAL(limit(12000 * COIN + 1, 15000 * COIN), 1);
+    BOOST_CHECK_EQUAL(limit(12000 * COIN, 15000 * COIN), 0);
+    BOOST_CHECK_EQUAL(limit(11000 * COIN, 15000 * COIN), 0);
+    // The floor covers small pools entirely
+    BOOST_CHECK_EQUAL(limit(100 * COIN, 100 * COIN), 100 * COIN);
+
+    // Growth inside the window is withdrawable on top of the allowed drop: a deposit followed by
+    // its withdrawal consumes no budget
+    BOOST_CHECK_EQUAL(limit(16000 * COIN, 15000 * COIN), 4000 * COIN);
+    BOOST_CHECK_EQUAL(limit(45000 * COIN, 40000 * COIN), 13000 * COIN);
+
+    // Never more than the pool holds
+    BOOST_CHECK_EQUAL(limit(500 * COIN, 500 * COIN), 500 * COIN);
+    BOOST_CHECK_EQUAL(limit(0, 5000 * COIN), 0);
+
+    // No balance at the window start: the chain is shorter than the window or the ancestor predates
+    // the credit pool, so the whole pool is a deposit inside the window
+    BOOST_CHECK_EQUAL(limit(123 * COIN, 0), 123 * COIN);
+    BOOST_CHECK_EQUAL(limit(0, 0), 0);
+
+    // Integer truncation only ever rounds the allowance down
+    BOOST_CHECK_EQUAL(limit(10000 * COIN + 4, 10000 * COIN + 4), 2000 * COIN);
+    BOOST_CHECK_EQUAL(limit(10000 * COIN + 5, 10000 * COIN + 5), 2000 * COIN + 1);
+    BOOST_CHECK_EQUAL(limit(MAX_MONEY, MAX_MONEY), MAX_MONEY * 20 / 100);
+}
+
 BOOST_FIXTURE_TEST_CASE(credit_pool_package_atomicity, TestChain100Setup)
 {
     LOCK(cs_main);

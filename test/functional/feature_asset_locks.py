@@ -800,25 +800,82 @@ class AssetLocksTest(DashTestFramework):
 
         self.test_admissible_asset_unlock_ancestor_package(node_wallet, pubkey)
 
-        asset_unlock_tx = self.create_assetunlock(620, 4000 * COIN + 1, pubkey)
+        self.log.info("The v24 limit is 20% of the balance one window ago, at least 2000, net of the window's drop")
+        limit = self.check_v24_unlock_limit(node)
+        assert_greater_than(limit, 2000 * COIN)
+
+        # Far over the limit, so the rewards of the next blocks cannot make it minable while it
+        # waits in the mempool next to the unlocks below
+        asset_unlock_tx = self.create_assetunlock(620, limit + 100 * COIN, pubkey)
         txid_in_block = self.send_tx(asset_unlock_tx)
         self.log.info(f"{txid_in_block} should not be mined")
         tip_hash = self.generate(node, 1)[0]
         assert txid_in_block not in node.getblock(tip_hash)['tx']
 
-        asset_unlock_tx = self.create_assetunlock(621, 3999 * COIN, pubkey)
+        # The block grew the pool by the Platform reward, which is withdrawable on top
+        limit = self.check_v24_unlock_limit(node)
+        asset_unlock_tx = self.create_assetunlock(621, limit, pubkey)
         txid_in_block = self.send_tx(asset_unlock_tx)
         self.log.info(f"{txid_in_block} should be mined")
         tip_hash = self.generate(node, 1)[0]
         assert txid_in_block in node.getblock(tip_hash)['tx']
 
-        asset_unlock_tx = self.create_assetunlock(622, COIN, pubkey)
+        self.log.info("Deposits inside the window refill the limit: a lock is withdrawable again at once")
+        limit = self.check_v24_unlock_limit(node)
+        # Only the flow of one block is left: the Platform reward the pool gained, less what the
+        # window start moved
+        lock_amount = 10 * COIN
+        assert_greater_than(lock_amount // 2, limit)
+        coin = node_wallet.listunspent(query_options={'minimumAmount': 11}).pop()
+        lock_tx = self.create_assetlock(coin, lock_amount, pubkey, version=2)
+        self.send_tx(lock_tx)
+        self.generate(node, 1)
+        refilled_limit = self.check_v24_unlock_limit(node)
+        # The window start moved one block too, so the balance it compares against shifted by
+        # that block's own flow; the lock itself is fully withdrawable again
+        assert_greater_than_or_equal(refilled_limit, lock_amount + limit - 2 * COIN)
+        assert_greater_than(refilled_limit, limit)
+        asset_unlock_tx = self.create_assetunlock(623, refilled_limit, pubkey)
+        txid_in_block = self.send_tx(asset_unlock_tx)
+        self.log.info(f"{txid_in_block} should be mined")
+        tip_hash = self.generate(node, 1)[0]
+        assert txid_in_block in node.getblock(tip_hash)['tx']
+
+        limit = self.check_v24_unlock_limit(node)
+        # index 622 was skipped above so that this unlock, which is never mined, is the one the
+        # ancestor package test below holds on to; far over the limit for the same reason as 620
+        asset_unlock_tx = self.create_assetunlock(622, limit + 100 * COIN, pubkey)
         txid_in_block = self.send_tx(asset_unlock_tx)
         self.log.info(f"{txid_in_block} should not be mined")
         tip_hash = self.generate(node, 1)[0]
         assert txid_in_block not in node.getblock(tip_hash)['tx']
 
         self.test_asset_unlock_ancestor_package(node_wallet, asset_unlock_tx, txid_in_block)
+
+    def check_v24_unlock_limit(self, node):
+        tip = node.getblockcount()
+        window_start = tip - blocks_in_one_day
+        balance = self.get_credit_pool_balance()
+        window_start_balance = self.get_credit_pool_balance(block_hash=node.getblockhash(window_start))
+        allowed_drop = max(window_start_balance * 20 // 100, 2000 * COIN)
+        expected_limit = min(max(allowed_drop - (window_start_balance - balance), 0), balance)
+        expected = {
+            'height': tip,
+            'blockhash': node.getbestblockhash(),
+            'balance': Decimal(balance) / COIN,
+            'currentlimit': Decimal(expected_limit) / COIN,
+            'window': {
+                'blocks': blocks_in_one_day,
+                'height': window_start,
+                'balance': Decimal(window_start_balance) / COIN,
+                'unlocked': node.getcreditpoolinfo()['window']['unlocked'],
+            },
+        }
+        assert_equal(node.getcreditpoolinfo(), expected)
+        assert_equal(node.getcreditpoolinfo(tip), expected)
+        assert_raises_rpc_error(-8, "Block height out of range", node.getcreditpoolinfo, tip + 1)
+        assert_raises_rpc_error(-8, "Block height out of range", node.getcreditpoolinfo, -1)
+        return expected_limit
 
     def create_asset_unlock_child(self, node_wallet, asset_unlock_tx, asset_unlock_txid):
         child_value = Decimal(asset_unlock_tx.vout[0].nValue - tiny_amount) / COIN
@@ -864,8 +921,8 @@ class AssetLocksTest(DashTestFramework):
         node_wallet.sporkupdate("SPORK_2_INSTANTSEND_ENABLED", 0)
         self.wait_for_sporks_same()
 
-        # The withdrawal window is exhausted by the earlier 3999 DASH unlock, so v2 instances
-        # created here stay unminable in the mempool until the window clears
+        # The withdrawal window is exhausted by test_v24_fork, so v2 instances created here stay
+        # unminable in the mempool until the window clears
         index = 800
         listener = node_wallet.add_p2p_connection(InvListener())
         # A peer at the current protocol version supplies the first instance; refreshes of the
@@ -888,7 +945,11 @@ class AssetLocksTest(DashTestFramework):
 
         self.log.info("Pending withdrawals exceed the limit, so the unlock is not locked while an ordinary tx is")
         pending = node_wallet.getmempoolinfo()['pendingassetunlocks']
-        assert_greater_than(pending, 4000)  # the leftover 4001 DASH unlock alone exceeds the daily limit
+        # the leftover over-limit unlocks of test_v24_fork exceed a whole window's allowed drop
+        info = node_wallet.getcreditpoolinfo()
+        allowed_drop = max(info['window']['balance'] * 20 / 100, 2000)
+        assert_greater_than(pending, allowed_drop)
+        assert_greater_than(pending, info['currentlimit'])
         is_txid = node_wallet.sendtoaddress(node_wallet.getnewaddress(), 1)
         self.wait_for_instantlock(is_txid)
         assert_equal(node_wallet.getrawtransaction(stable_txid, 1)['instantlock'], False)
@@ -985,6 +1046,8 @@ class AssetLocksTest(DashTestFramework):
         mempool = node_wallet.getrawmempool()
         assert stable_txid in mempool
         assert child_txid in mempool
+        self.log.info("A whole window later the allowance has regenerated to at least the 2000 DASH floor")
+        assert_greater_than_or_equal(node_wallet.getcreditpoolinfo()['currentlimit'], 2000)
 
         self.log.info("Both expired instances fit the cleared limit but are not minable, so neither is locked")
         assert_equal(node_wallet.getmempoolinfo()['pendingassetunlocks'], 2 * Decimal(unlock_a.vout[0].nValue + tiny_amount) / COIN)
