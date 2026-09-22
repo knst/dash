@@ -131,35 +131,11 @@ appended to `test/util/data/non-backported.txt`.
 Pick the test type by what it can observe, not by where it is easiest to
 write.
 
-- A unit test (`src/test/`, `src/wallet/test/` with Boost; `src/qt/test/`
-  with QTest) isolates one function or class: every input is named in the
-  test, every assertion checks a documented return value or state. Use the
-  standard fixtures (`BasicTestingSetup`, `TestingSetup`), not `friend`,
-  injected internal state, or private members. If the behavior cannot be
-  observed without private-state surgery, extract it into a directly
-  testable function or write a functional test.
-- A functional test (`test/functional/`) proves a user-visible outcome over
-  RPC or P2P: a block accepted, a lock formed, a peer banned. It is the home
-  for anything that depends on several subsystems together.
-- A regression test must fail without the fix and pass with it, and must
-  observe the behavior the change claims. Asserting on a cache entry, a
-  seen-set size, or a returned container because the real outcome is
-  unreachable in the fixture is not coverage; test at the layer where the
-  outcome is visible.
-- One scenario per test case, or a table of inputs with expected values.
-  Every special-cased path gets its own negative case check.  A new scenario
-  goes into the file that already tests that scope; a new file is for a new
-  scope or new fixture. Add a test only when catching the regression is more
-  valuable than efforts for maintenance test line as long as it exists.
-  New files increases compilation time. Name tests after the testing scenario.
-- Do not fake a test. Some changes are proven by the diff: pass-by-reference,
-  a typo, stray newline, or wrong category in a log line, a misspelled RPC
-  help string, a missing `const`, a renamed local, an include reordering.
-  Others cannot be tested deterministically: performance, races and other
-  multi-threading bugs, timing- or scheduler-dependent behavior. In both
-  cases say in the PR how the change was verified, and claim only what was
-  actually run: mutation checks and "fails without the fix" belong in the
-  PR only when performed and reproducible from the description.
+- A unit test (`src/test/`, `src/wallet/test/` with Boost; `src/qt/test/` with QTest) checks one function or class through the standard fixtures (`BasicTestingSetup`, `TestingSetup`) and its public surface, (not `friend` or injected private state); if the behavior can't be observed that way, extract a testable function or write a functional test.
+- A functional test (`test/functional/`) proves a user-visible outcome over RPC or P2P — a block accepted, a lock formed, a peer banned — and is the home for anything spanning several subsystems.
+- A regression test must fail without the fix, pass with it, and observe the actual claimed behavior rather than a reachable proxy like a cache entry, seen-set size, or returned container.
+- Use one scenario (or one input table) per test case with a negative case for every special-cased path, put it in the file that already covers that scope, and add it only when catching the regression outweighs its maintenance and compile cost, naming it after the scenario.
+- Don't force a test: when a change is self-evident from the diff (typo, missing `const`, log category, renamed local) or untestable deterministically (performance, races, timing), state in the PR how you actually verified it, and claim mutation checks or "fails without the fix" only when you really ran them.
 
 ## Test Commands
 
