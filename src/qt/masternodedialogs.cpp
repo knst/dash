@@ -87,20 +87,6 @@ std::vector<std::string> ToStringVector(const QStringList& entries)
     return result;
 }
 
-QString ProviderTxErrorText(const interfaces::ProviderTxError& error)
-{
-    QString text{QString::fromStdString(error.message.translated)};
-    if (error.code == interfaces::ProviderTxErrorCode::FUNDING_ERROR) {
-        text = text.isEmpty() ? QObject::tr("The transaction could not be funded.")
-                              : QObject::tr("The transaction could not be funded: %1").arg(text);
-    }
-    const QString reject_reason{QString::fromStdString(error.reject_reason)};
-    if (!reject_reason.isEmpty() && !text.contains(reject_reason)) {
-        text += QObject::tr("\n\nNetwork rejection: %1").arg(reject_reason);
-    }
-    return text;
-}
-
 bool OperatorKeyMatches(const CBLSSecretKey& secret_key, const std::vector<unsigned char>& public_key)
 {
     return secret_key.IsValid() && !public_key.empty() &&
@@ -335,7 +321,7 @@ void MasternodeActionDialog::finishSubmission(MasternodeOperationRunner::Submiss
     }
     setBusy(false);
     if (const auto* error{std::get_if<interfaces::ProviderTxError>(&result)}) {
-        showError(ProviderTxErrorText(*error));
+        showError(MasternodeOperationRunner::errorText(*error));
         return;
     }
     const auto& submission{std::get<interfaces::ProviderTxSubmission>(result)};
@@ -465,7 +451,7 @@ std::optional<interfaces::ProviderNetInfo> UpdateServiceDialog::buildNetInfo(QSt
     }
     if (const auto validation_error{
             m_node.evo().validateProviderNetInfo(net_info, m_type, m_capabilities.version, /*optional=*/false)}) {
-        error = ProviderTxErrorText(*validation_error);
+        error = MasternodeOperationRunner::errorText(*validation_error);
         return std::nullopt;
     }
     return net_info;

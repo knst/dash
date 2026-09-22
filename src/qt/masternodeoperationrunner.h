@@ -8,6 +8,7 @@
 #include <interfaces/providertx.h>
 
 #include <QObject>
+#include <QString>
 
 #include <functional>
 #include <memory>
@@ -34,8 +35,14 @@ class MasternodeOperationRunner : public QObject
 public:
     using SubmissionResult = interfaces::ProviderTxResult<interfaces::ProviderTxSubmission>;
     using PrepareResult = interfaces::ProviderTxResult<interfaces::PreparedProviderRegistration>;
+    using SharedRegistrationResult = interfaces::ProviderTxResult<interfaces::PreparedSharedRegistration>;
+    using SharedSigningResult = interfaces::ProviderTxResult<interfaces::SharedSignResult>;
+    using SharedConsentResult = interfaces::ProviderTxResult<interfaces::PreparedSharedConsent>;
     using SubmissionCallback = std::function<void(SubmissionResult)>;
     using PrepareCallback = std::function<void(PrepareResult)>;
+    using SharedRegistrationCallback = std::function<void(SharedRegistrationResult)>;
+    using SharedSignCallback = std::function<void(SharedSigningResult)>;
+    using SharedConsentCallback = std::function<void(SharedConsentResult)>;
 
     MasternodeOperationRunner(interfaces::EVO& evo, interfaces::Wallet& wallet, QObject* parent = nullptr);
     ~MasternodeOperationRunner() override;
@@ -47,6 +54,19 @@ public:
     bool updateMasternodeService(interfaces::ProviderUpdateServiceRequest request, SubmissionCallback callback);
     bool updateMasternodeRegistrar(interfaces::ProviderUpdateRegistrarRequest request, SubmissionCallback callback);
     bool revokeMasternode(interfaces::ProviderRevokeRequest request, SubmissionCallback callback);
+
+    bool prepareSharedRegistration(interfaces::SharedRegistrationRequest request, SharedRegistrationCallback callback);
+    bool signShared(interfaces::SharedSignRequest request, SharedSignCallback callback);
+    bool combineShared(interfaces::SharedCombineRequest request, SubmissionCallback callback);
+    bool dissolveShared(interfaces::SharedDissolveRequest request, SubmissionCallback callback);
+    bool prepareSharedDissolution(interfaces::SharedDissolvePrepareRequest request, SharedConsentCallback callback);
+    bool updateShare(interfaces::SharedUpdateShareRequest request, SubmissionCallback callback);
+    bool prepareSharedRegistrarUpdate(interfaces::SharedRegistrarUpdatePrepareRequest request,
+                                      SharedConsentCallback callback);
+
+    //! User-displayable text for a failed operation: the node's message, with a plain explanation
+    //! in front of it for the rejections a user can act on
+    static QString errorText(const interfaces::ProviderTxError& error);
 
     bool isBusy() const { return m_busy; }
     //! Wait for a running operation and synchronously deliver its result on the
