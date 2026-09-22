@@ -729,7 +729,9 @@ public:
         for (const auto& output : outputs) {
             result.emplace_back();
             auto it = m_wallet->mapWallet.find(output.hash);
-            if (it != m_wallet->mapWallet.end()) {
+            // The outpoint may come from user input; an index past the end is
+            // simply not a coin of this wallet
+            if (it != m_wallet->mapWallet.end() && output.n < it->second.tx->vout.size()) {
                 int depth = m_wallet->GetTxDepthInMainChain(it->second);
                 if (depth >= 0) {
                     result.back() = MakeWalletTxOut(*m_wallet, it->second, output.n, depth);
