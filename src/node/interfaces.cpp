@@ -104,6 +104,8 @@ using interfaces::MnList;
 using interfaces::MnListPtr;
 using interfaces::Node;
 using interfaces::PreparedProviderRegistration;
+using interfaces::PreparedSharedConsent;
+using interfaces::PreparedSharedRegistration;
 using interfaces::ProviderNetInfo;
 using interfaces::ProviderRegistrationRequest;
 using interfaces::ProviderRevokeRequest;
@@ -113,6 +115,14 @@ using interfaces::ProviderTxResult;
 using interfaces::ProviderTxSubmission;
 using interfaces::ProviderUpdateRegistrarRequest;
 using interfaces::ProviderUpdateServiceRequest;
+using interfaces::SharedCombineRequest;
+using interfaces::SharedDissolvePrepareRequest;
+using interfaces::SharedDissolveRequest;
+using interfaces::SharedRegistrarUpdatePrepareRequest;
+using interfaces::SharedRegistrationRequest;
+using interfaces::SharedSignRequest;
+using interfaces::SharedSignResult;
+using interfaces::SharedUpdateShareRequest;
 using interfaces::Wallet;
 using interfaces::WalletLoader;
 
@@ -296,6 +306,35 @@ public:
     ProviderTxResult<ProviderTxSubmission> revokeMasternode(Wallet& wallet, const ProviderRevokeRequest& request) override
     {
         return evo::provider::Revoke(context(), wallet, request);
+    }
+    ProviderTxResult<PreparedSharedRegistration> prepareSharedRegistration(const SharedRegistrationRequest& request) override
+    {
+        return evo::provider::PrepareSharedRegistration(context(), request);
+    }
+    ProviderTxResult<SharedSignResult> signShared(Wallet& wallet, const SharedSignRequest& request) override
+    {
+        return evo::provider::SignShared(context(), wallet, request);
+    }
+    ProviderTxResult<ProviderTxSubmission> combineShared(Wallet& wallet, const SharedCombineRequest& request) override
+    {
+        return evo::provider::CombineShared(context(), &wallet, request);
+    }
+    ProviderTxResult<ProviderTxSubmission> dissolveShared(Wallet& wallet, const SharedDissolveRequest& request) override
+    {
+        return evo::provider::DissolveShared(context(), wallet, request);
+    }
+    ProviderTxResult<PreparedSharedConsent> prepareSharedDissolution(const SharedDissolvePrepareRequest& request) override
+    {
+        return evo::provider::PrepareSharedDissolution(context(), request);
+    }
+    ProviderTxResult<ProviderTxSubmission> updateShare(Wallet& wallet, const SharedUpdateShareRequest& request) override
+    {
+        return evo::provider::UpdateShare(context(), wallet, request);
+    }
+    ProviderTxResult<PreparedSharedConsent> prepareSharedRegistrarUpdate(
+        Wallet& wallet, const SharedRegistrarUpdatePrepareRequest& request) override
+    {
+        return evo::provider::PrepareSharedRegistrarUpdate(context(), wallet, request);
     }
     void setContext(NodeContext* context) override
     {
