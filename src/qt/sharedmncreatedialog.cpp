@@ -397,6 +397,9 @@ QWidget* SharedMnCreateDialog::createParticipantsPage()
 
     m_me_group = new QButtonGroup(page);
     m_me_group->setExclusive(true);
+    // Choosing "me" answers a validation error the same way editing a cell does
+    connect(m_me_group, qOverload<QAbstractButton*>(&QButtonGroup::buttonClicked), this,
+            [this](QAbstractButton*) { onPageEdited(); });
 
     auto* row{new QHBoxLayout()};
     m_add_share_button = new QPushButton(tr("Add Participant"), page);

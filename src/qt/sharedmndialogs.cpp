@@ -323,11 +323,12 @@ UpdateShareDialog::UpdateShareDialog(interfaces::Node& node, WalletModel* wallet
     m_sender{new ProTxSender(node, this)}
 {
     connect(m_sender, &ProTxSender::finished, this, [this](const ProTxResult& res) {
-        setBusy(false);
         if (res.ok) {
+            setBusy(false);
             accept();
         } else {
-            showError(res.message);
+            // Releases the unlock taken in submit(); the dialog stays open
+            abortOperation(res.message);
         }
     });
     auto* form = new QFormLayout();
@@ -1875,6 +1876,9 @@ RotateSharedKeysDialog::RotateSharedKeysDialog(interfaces::Node& node, WalletMod
         later->setVisible(true);
     }
     SharedMnSizeFromContent(this, 760);
+    // validateForm() re-hides the warnings; these two only ever show a result
+    m_result_edit->setVisible(false);
+    m_status_label->setVisible(false);
     validateForm();
 }
 

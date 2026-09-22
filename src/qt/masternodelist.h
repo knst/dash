@@ -120,6 +120,8 @@ private:
     QAction* m_action_standby{nullptr};
     QAction* m_action_filter_owner{nullptr};
     WalletModel* walletModel{nullptr};
+    //! Whether the v24 rules were active the last time the node was asked
+    bool m_v24_active{false};
 
     void setMasternodeList(MasternodeData&& data, QSet<QString>&& owned_mns, QHash<QString, int>&& my_share_counts);
     void updateRegistrationAvailability();

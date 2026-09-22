@@ -257,7 +257,10 @@ void MasternodeList::updateRegistrationAvailability()
         ui->btnRegisterMasternode->setToolTip(tr("Register a new masternode or EvoNode using this wallet"));
     }
 
-    const bool v24_active{clientModel != nullptr && clientModel->node().isV24Active()};
+    // isV24Active() takes cs_main and this runs on every block; activation is
+    // monotonic, so ask only until it is
+    if (!m_v24_active && clientModel != nullptr) m_v24_active = clientModel->node().isV24Active();
+    const bool v24_active{clientModel != nullptr && m_v24_active};
     const bool can_shared{can_register && v24_active};
     ui->btnSharedMasternode->setEnabled(can_shared);
     if (walletModel == nullptr) {
