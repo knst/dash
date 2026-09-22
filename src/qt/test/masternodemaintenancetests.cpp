@@ -610,7 +610,7 @@ QString MakeRegistrarEnvelope(const uint256& pro_tx_hash, const COutPoint& fee_i
     payload.proTxHash = pro_tx_hash;
     CBLSSecretKey operator_secret;
     operator_secret.MakeNewKey();
-    payload.pubKeyOperator.Set(operator_secret.GetPublicKey(), /*bls_legacy_scheme=*/false);
+    payload.pubKeyOperator.Set(operator_secret.GetPublicKey(), /*specificLegacyScheme=*/false);
     SetTxPayload(tx, payload);
 
     UniValue json(UniValue::VOBJ);
@@ -680,9 +680,9 @@ void MasternodeMaintenanceTests::updateShareRewardValidation()
     m_node.setContext(&test.m_node);
     auto source{MakeSharedSource({400 * COIN, 300 * COIN, 300 * COIN}, 5 * COIN, /*early_period_blocks=*/1000)};
     MasternodeEntry entry{source, "collateral", 50};
-    const auto shares{entry.shares()};
+    const auto& shares{entry.shares()};
 
-    const QString voting{entry.votingAddress()};
+    const QString& voting{entry.votingAddress()};
     const QString owner{QString::fromStdString(EncodeDestination(PKHash(shares.front().keyIDOwner)))};
     CKeyID unrelated;
     unrelated.SetHex("7e");
@@ -922,7 +922,7 @@ void MasternodeMaintenanceTests::dissolveRequestMustReturnPrincipal()
     const std::vector<CAmount> amounts{400 * COIN, 300 * COIN, 300 * COIN};
     auto source{MakeSharedSource(amounts, 5 * COIN, /*early_period_blocks=*/1000)};
     MasternodeEntry entry{source, "collateral", 50};
-    const auto shares{entry.shares()};
+    const auto& shares{entry.shares()};
     const uint256& protx{source->getProTxHash()};
 
     DissolveDialog dialog(m_node, /*wallet_model=*/nullptr, entry, /*current_height=*/100, /*parent=*/nullptr);

@@ -688,10 +688,10 @@ void MnShareSessionTests::parallelFundingSignatureMerge()
     };
     const auto alice_copy{signed_copy({0, 1}, OP_1)};
     QVERIFY2(alice_copy.has_value(), qPrintable(error));
-    const MnShareSession alice{*alice_copy};
+    const MnShareSession& alice{*alice_copy};
     const auto bob_copy{signed_copy({2, 3}, OP_2)};
     QVERIFY2(bob_copy.has_value(), qPrintable(error));
-    const MnShareSession bob{*bob_copy};
+    const MnShareSession& bob{*bob_copy};
 
     // Both participants sign the same unsigned transaction independently.
     // The coordinator can merge their replies in either order and obtains one
@@ -718,7 +718,7 @@ void MnShareSessionTests::parallelFundingSignatureMerge()
     // transaction difference, are conflicts rather than last-writer-wins.
     const auto conflicting_copy{signed_copy({0}, OP_2)};
     QVERIFY2(conflicting_copy.has_value(), qPrintable(error));
-    MnShareSession conflicting{*conflicting_copy};
+    const MnShareSession& conflicting{*conflicting_copy};
     MnShareSession conflict_target{alice};
     const QString conflict_target_before{conflict_target.toJsonString()};
     QCOMPARE(int(conflict_target.mergeEnvelope(conflicting, error)), int(MnShareSession::MergeResult::Conflict));

@@ -74,8 +74,8 @@ struct WalletOptions {
 std::shared_ptr<CWallet> MakeWallet(interfaces::Node& node, WalletContext& context, const std::string& name,
                                     const WalletOptions& options)
 {
-    const auto wallet{std::make_shared<CWallet>(node.context()->chain.get(), node.context()->coinjoin_loader.get(),
-                                                name, gArgs, CreateMockWalletDatabase())};
+    auto wallet{std::make_shared<CWallet>(node.context()->chain.get(), node.context()->coinjoin_loader.get(), name,
+                                          gArgs, CreateMockWalletDatabase())};
     wallet->LoadWallet();
     wallet->SetWalletFlag(WALLET_FLAG_DESCRIPTORS);
     const CBlockIndex* const tip{options.setup == nullptr
@@ -208,7 +208,7 @@ PreparedRegistration PrepareRegistration(const MnShareSession& session, const CB
     }
     payload.vchJoinSigs.assign(payload.shares.size(), CompactSignature{});
     payload.keyIDVoting = ToKeyID(std::get<PKHash>(DecodeDestination(session.terms().votingAddress.toStdString())));
-    payload.pubKeyOperator.Set(operator_secret.GetPublicKey(), /*bls_legacy_scheme=*/false);
+    payload.pubKeyOperator.Set(operator_secret.GetPublicKey(), /*specificLegacyScheme=*/false);
     payload.nOperatorReward = session.terms().operatorReward;
     payload.nEarlyPeriodBlocks = session.terms().earlyPeriodBlocks;
     payload.nEarlyPenalty = session.terms().earlyPenalty;
