@@ -628,19 +628,14 @@ bool MasternodeList::isOwnedBy(interfaces::Wallet& wallet, const std::set<COutPo
         return true;
     }
 
-    // A shared masternode has a null keyIDOwner; its share owner keys take its place
-    const auto share_owner_key_ids{entry.shareOwnerKeyIdsRaw()};
-    if (std::any_of(share_owner_key_ids.begin(), share_owner_key_ids.end(),
-                    [&](const auto& key_id) { return wallet.isSpendable(PKHash(key_id)); })) {
-        return true;
-    }
-
-    // A participant whose rewards go to another wallet still owns the share
-    // through its immutable refund destination, which is where the principal
-    // returns on dissolution
-    const auto share_refund_scripts{entry.shareRefundScriptsRaw()};
-    return std::any_of(share_refund_scripts.begin(), share_refund_scripts.end(),
-                       [&](const auto& script) { return wallet.isSpendable(script); });
+    // A shared masternode has a null keyIDOwner; its share owner keys take its
+    // place. A participant whose rewards go to another wallet still owns the
+    // share through its immutable refund destination, which is where the
+    // principal returns on dissolution.
+    const auto& shares{entry.shares()};
+    return std::any_of(shares.begin(), shares.end(), [&](const auto& share) {
+        return wallet.isSpendable(PKHash(share.keyIDOwner)) || wallet.isSpendable(share.scriptRefund);
+    });
 }
 
 void MasternodeList::setMasternodeList(MasternodeData&& list, QSet<QString>&& owned_mns,
@@ -753,7 +748,9 @@ void MasternodeList::extraInfoDIP3_clicked()
         }
     }
     auto* dialog = new DescriptionDialog(tr("Details for Masternode %1").arg(entry->proTxHash()),
-                                         entry->toHtml(m_model->currentHeight(), my_share_indexes), /*parent=*/this);
+                                         entry->toHtml(m_model->currentHeight(), my_share_indexes,
+                                                       SharedMnDisplayUnit(walletModel)),
+                                         /*parent=*/this);
     dialog->resize(1000, 500);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();

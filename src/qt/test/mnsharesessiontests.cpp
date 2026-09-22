@@ -4,6 +4,8 @@
 
 #include <qt/test/mnsharesessiontests.h>
 
+#include <qt/test/masternodetestutil.h>
+
 #include <qt/mnsharesession.h>
 #include <qt/sharedmnrpc.h>
 
@@ -30,16 +32,11 @@
 #include <vector>
 
 namespace {
-QString FreshP2PKHAddress(CKey& key_out)
-{
-    key_out.MakeNewKey(/*fCompressed=*/true);
-    return QString::fromStdString(EncodeDestination(PKHash(key_out.GetPubKey())));
-}
-
-QString FakeTxid(char c)
-{
-    return QString(64, QChar::fromLatin1(c));
-}
+using MasternodeTestUtil::FakeTxid;
+using MasternodeTestUtil::DraftReply;
+using MasternodeTestUtil::PrepareRegistration;
+using MasternodeTestUtil::PreparedRegistration;
+using MasternodeTestUtil::FreshP2PKHAddress;
 
 MnShareSession::Share MakeShare(CAmount amount, const QString& owner, const QString& refund,
                                 const QString& reward = {})
@@ -63,12 +60,12 @@ MnShareSession ValidSession(std::vector<CKey>& owner_keys)
     const char* labels[]{"alice", "bob", "carol"};
     const CAmount amounts[]{400 * COIN, 350 * COIN, 250 * COIN};
     for (size_t i = 0; i < 3; ++i) {
-        MnShareSession::Share share{MakeShare(amounts[i], FreshP2PKHAddress(owner_keys[i]), FreshP2PKHAddress(dummy))};
+        MnShareSession::Share share{MakeShare(amounts[i], FreshP2PKHAddress(&owner_keys[i]), FreshP2PKHAddress(&dummy))};
         share.label = QString::fromLatin1(labels[i]);
         session.shares().push_back(share);
     }
     CKey voting_key;
-    session.terms().votingAddress = FreshP2PKHAddress(voting_key);
+    session.terms().votingAddress = FreshP2PKHAddress(&voting_key);
     session.terms().earlyPeriodBlocks = 5000;
     session.terms().earlyPenalty = 5 * COIN;
     for (size_t i = 0; i < 3; ++i) {
@@ -85,7 +82,7 @@ MnShareSession ValidSession(std::vector<CKey>& owner_keys)
         }
         if (i + 1 < 3) {
             contribution.hasChange = true;
-            contribution.changeAddress = FreshP2PKHAddress(dummy);
+            contribution.changeAddress = FreshP2PKHAddress(&dummy);
             contribution.changeAmount = COIN;
         }
         QString error;
@@ -98,53 +95,6 @@ MnShareSession ValidSession(std::vector<CKey>& owner_keys)
 //! `session`: the funding transaction the session already describes, with the
 //! shared collateral output appended and the CProRegTx payload attached. The
 //! caller must have put `operator_secret`'s public key in the session's terms.
-struct Prepared {
-    QString txHex;
-    QString consentHashHex;
-    uint256 consentHash;
-    int collateralIndex{0};
-    CMutableTransaction tx;
-    CProRegTx payload;
-};
-
-Prepared PrepareRegistration(const MnShareSession& session, const CBLSSecretKey& operator_secret)
-{
-    Prepared prepared;
-    CProRegTx& payload{prepared.payload};
-    payload.nVersion = ProTxVersion::ExtAddr;
-    payload.nType = MnType::Regular;
-    payload.netInfo = NetInfoInterface::MakeNetInfo(payload.nVersion);
-    for (const auto& share : session.shares()) {
-        payload.shares.emplace_back(
-            share.amount, GetScriptForDestination(DecodeDestination(share.refundAddress.toStdString())),
-            share.rewardAddress.isEmpty()
-                ? CScript()
-                : GetScriptForDestination(DecodeDestination(share.rewardAddress.toStdString())),
-            ToKeyID(std::get<PKHash>(DecodeDestination(share.ownerAddress.toStdString()))));
-    }
-    for (const QString& entry : session.terms().coreP2PAddrs.split(QLatin1Char(','), Qt::SkipEmptyParts)) {
-        payload.netInfo->AddEntry(NetInfoPurpose::CORE_P2P, entry.toStdString());
-    }
-    payload.vchJoinSigs.assign(payload.shares.size(), CompactSignature{});
-    payload.keyIDVoting = ToKeyID(std::get<PKHash>(DecodeDestination(session.terms().votingAddress.toStdString())));
-    payload.pubKeyOperator.Set(operator_secret.GetPublicKey(), /*bls_legacy_scheme=*/false);
-    payload.nOperatorReward = session.terms().operatorReward;
-    payload.nEarlyPeriodBlocks = session.terms().earlyPeriodBlocks;
-    payload.nEarlyPenalty = session.terms().earlyPenalty;
-
-    CMutableTransaction& tx{prepared.tx};
-    if (!DecodeHexTx(tx, session.fundingTxHex().toStdString())) return prepared;
-    tx.nVersion = 3;
-    tx.nType = TRANSACTION_PROVIDER_REGISTER;
-    tx.vout.emplace_back(GetMnType(MnType::Regular).collat_amount, SharedCollateralScript());
-    prepared.collateralIndex = static_cast<int>(tx.vout.size() - 1);
-    payload.collateralOutpoint = COutPoint(uint256(), static_cast<uint32_t>(prepared.collateralIndex));
-    SetTxPayload(tx, payload);
-    prepared.consentHash = payload.MakeSharedRegConsentHash(CTransaction(tx));
-    prepared.consentHashHex = QString::fromStdString(prepared.consentHash.ToString());
-    prepared.txHex = QString::fromStdString(EncodeHexTx(CTransaction(tx)));
-    return prepared;
-}
 
 //! A fresh basic-scheme operator key recorded in `session`'s terms
 CBLSSecretKey SetFreshOperatorKey(MnShareSession& session)
@@ -159,54 +109,8 @@ CBLSSecretKey SetFreshOperatorKey(MnShareSession& session)
 //! no addresses and no funding yet
 MnShareSession InvitationSession()
 {
-    MnShareSession session;
-    CKey voting_key;
-    for (const char* name : {"alice", "bob", "carol", "dave"}) {
-        MnShareSession::Share share;
-        share.label = QString::fromLatin1(name);
-        share.amount = 250 * COIN;
-        session.shares().push_back(share);
-    }
-    session.terms().votingAddress = FreshP2PKHAddress(voting_key);
-    session.terms().earlyPeriodBlocks = 5000;
-    session.terms().earlyPenalty = 5 * COIN;
-    session.setCoordinatorLabel("alice");
-    return session;
-}
-
-//! One participant's reply to `invitation`: their own share row filled in and
-//! their own funding contribution recorded
-MnShareSession DraftReply(const MnShareSession& invitation, int share_index, const QString& txid)
-{
-    MnShareSession reply{invitation};
-    CKey owner_key;
-    CKey refund_key;
-    CKey change_key;
-    reply.shares()[share_index].ownerAddress = FreshP2PKHAddress(owner_key);
-    reply.shares()[share_index].refundAddress = FreshP2PKHAddress(refund_key);
-
-    MnShareSession::Contribution contribution;
-    contribution.label = invitation.shares()[share_index].label;
-    MnShareSession::Input input;
-    input.txid = txid;
-    input.vout = 0;
-    contribution.inputs.push_back(input);
-    contribution.hasChange = true;
-    contribution.changeAddress = FreshP2PKHAddress(change_key);
-    contribution.changeAmount = COIN;
-    QString error;
-    if (!reply.addContribution(contribution, error)) {
-        // Surfaced by the caller's absorb assertions if it ever happens
-        return invitation;
-    }
-    // A reply is an answer to the invitation, not a new draft: the coordinator
-    // decides the revision, so hand back exactly the revision that was sent.
-    MnShareSession normalised{invitation};
-    UniValue json{reply.toJson()};
-    json.pushKV("revision", invitation.revision());
-    QString parse_error;
-    if (!normalised.fromJson(json, parse_error)) return invitation;
-    return normalised;
+    return MasternodeTestUtil::MakeInvitation(
+        {{"alice", 250 * COIN}, {"bob", 250 * COIN}, {"carol", 250 * COIN}, {"dave", 250 * COIN}});
 }
 
 } // anonymous namespace
@@ -463,15 +367,15 @@ void MnShareSessionTests::lockedTermsAdoption()
     MnShareSession coordinator{invitation};
     CKey alice_owner;
     CKey alice_refund;
-    coordinator.shares()[0].ownerAddress = FreshP2PKHAddress(alice_owner);
-    coordinator.shares()[0].refundAddress = FreshP2PKHAddress(alice_refund);
+    coordinator.shares()[0].ownerAddress = FreshP2PKHAddress(&alice_owner);
+    coordinator.shares()[0].refundAddress = FreshP2PKHAddress(&alice_refund);
     for (const MnShareSession* reply : {&bob, &carol, &dave}) {
         QCOMPARE(int(coordinator.absorbDraftReply(*reply, error)), int(MnShareSession::MergeResult::Merged));
     }
 
     // Lock the collected terms the way shared_register_prepare would
     const MnShareSession collected{coordinator}; // the draft everybody answered
-    const Prepared prepared{PrepareRegistration(coordinator, operator_secret)};
+    const PreparedRegistration prepared{PrepareRegistration(coordinator, operator_secret)};
     QVERIFY2(coordinator.freeze(prepared.txHex, prepared.consentHashHex, prepared.collateralIndex, error),
              qPrintable(error));
 
@@ -486,7 +390,7 @@ void MnShareSessionTests::lockedTermsAdoption()
     // Terms that quietly changed his refund address are refused
     MnShareSession swapped_refund{bob};
     CKey attacker;
-    swapped_refund.shares()[1].refundAddress = FreshP2PKHAddress(attacker);
+    swapped_refund.shares()[1].refundAddress = FreshP2PKHAddress(&attacker);
     QVERIFY(!swapped_refund.adoptLockedTerms(coordinator, error));
     QVERIFY(!error.isEmpty());
     QCOMPARE(int(swapped_refund.stage()), int(MnShareSession::Stage::Draft));
@@ -513,7 +417,7 @@ void MnShareSessionTests::lockedTermsAdoption()
     // is refused rather than merged: nothing would be left to compare against.
     MnShareSession edited{collected};
     edited.terms().earlyPenalty = 6 * COIN;
-    const Prepared edited_prepared{PrepareRegistration(edited, operator_secret)};
+    const PreparedRegistration edited_prepared{PrepareRegistration(edited, operator_secret)};
     QVERIFY2(edited.freeze(edited_prepared.txHex, edited_prepared.consentHashHex, edited_prepared.collateralIndex,
                            error),
              qPrintable(error));
@@ -527,7 +431,7 @@ void MnShareSessionTests::lockedTermsAdoption()
     MnShareSession reshuffled{collected};
     reshuffled.shares()[2].amount += 10 * COIN;
     reshuffled.shares()[3].amount -= 10 * COIN;
-    const Prepared reshuffled_prepared{PrepareRegistration(reshuffled, operator_secret)};
+    const PreparedRegistration reshuffled_prepared{PrepareRegistration(reshuffled, operator_secret)};
     QVERIFY2(reshuffled.freeze(reshuffled_prepared.txHex, reshuffled_prepared.consentHashHex,
                                reshuffled_prepared.collateralIndex, error),
              qPrintable(error));
@@ -618,7 +522,7 @@ void MnShareSessionTests::signatureVerification()
     // Build the shared registration the way shared_register_prepare would: the
     // session's funding transaction with the collateral output appended and the
     // share table in its payload
-    const Prepared prepared{PrepareRegistration(session, operator_secret)};
+    const PreparedRegistration prepared{PrepareRegistration(session, operator_secret)};
     const CProRegTx& payload{prepared.payload};
     const CMutableTransaction& tx{prepared.tx};
     const uint256 consent_hash{prepared.consentHash};
@@ -696,7 +600,7 @@ void MnShareSessionTests::frozenEnvelopeMatchesFunding()
     MnShareSession session{ValidSession(owner_keys)};
     session.terms().coreP2PAddrs = QStringLiteral("127.0.0.1:19999");
     const CBLSSecretKey operator_secret{SetFreshOperatorKey(session)};
-    const Prepared prepared{PrepareRegistration(session, operator_secret)};
+    const PreparedRegistration prepared{PrepareRegistration(session, operator_secret)};
 
     QString error;
     MnShareSession frozen{session};
@@ -724,7 +628,7 @@ void MnShareSessionTests::frozenEnvelopeMatchesFunding()
     CKey thief;
     CMutableTransaction redirected{prepared.tx};
     redirected.vout[1].scriptPubKey =
-        GetScriptForDestination(DecodeDestination(FreshP2PKHAddress(thief).toStdString()));
+        GetScriptForDestination(DecodeDestination(FreshP2PKHAddress(&thief).toStdString()));
     QVERIFY(!rejected.fromJson(envelope_with_tx(redirected, prepared.collateralIndex), error));
     QVERIFY2(error.contains("funding"), qPrintable(error));
 
@@ -765,7 +669,7 @@ void MnShareSessionTests::parallelFundingSignatureMerge()
     MnShareSession combined{ValidSession(owner_keys)};
     const CBLSSecretKey operator_secret{SetFreshOperatorKey(combined)};
 
-    const Prepared prepared{PrepareRegistration(combined, operator_secret)};
+    const PreparedRegistration prepared{PrepareRegistration(combined, operator_secret)};
     const CProRegTx& payload{prepared.payload};
     const CMutableTransaction& tx{prepared.tx};
     const uint256 consent_hash{prepared.consentHash};

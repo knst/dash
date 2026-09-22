@@ -4,6 +4,8 @@
 
 #include <qt/test/masternodewidgettests.h>
 
+#include <qt/test/masternodetestutil.h>
+
 #include <bls/bls.h>
 #include <chainparams.h>
 #include <evo/providertx.h>
@@ -202,18 +204,6 @@ public:
     MnType getType() const override { return MnType::Regular; }
     UniValue toJson() const override { return UniValue{UniValue::VOBJ}; }
     const CKeyID& getKeyIdOwner() const override { return m_owner; }
-    std::vector<CKeyID> getShareOwnerKeyIds() const override
-    {
-        std::vector<CKeyID> ret;
-        for (const auto& share : m_shares) ret.push_back(share.keyIDOwner);
-        return ret;
-    }
-    std::vector<CScript> getShareRefundScripts() const override
-    {
-        std::vector<CScript> ret;
-        for (const auto& share : m_shares) ret.push_back(share.scriptRefund);
-        return ret;
-    }
     const CKeyID& getKeyIdVoting() const override { return m_voting; }
     const COutPoint& getCollateralOutpoint() const override { return m_collateral; }
     const CScript& getScriptPayout() const override { return m_payout; }
@@ -561,11 +551,9 @@ void MasternodeWidgetTests::feeSourcePickerEligibility()
     QVERIFY(wallet->AddToWallet(funding_tx, wallet::TxStateConfirmed{tip->GetBlockHash(), tip->nHeight, /*index=*/0}) !=
             nullptr);
 
-    OptionsModel options_model(m_node);
-    bilingual_str options_error;
-    QVERIFY(options_model.Init(options_error));
-    ClientModel client_model(m_node, &options_model);
-    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), client_model);
+    MasternodeTestUtil::GuiModels models{m_node};
+    QVERIFY2(models.ok, qPrintable(QString::fromStdString(models.error.translated)));
+    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), models.client);
     FeeSourcePicker picker;
     picker.setWalletModel(&wallet_model);
 
@@ -623,11 +611,9 @@ void MasternodeWidgetTests::registeredCollateralExclusion()
     QVERIFY(wallet->AddToWallet(funding_tx, wallet::TxStateConfirmed{tip->GetBlockHash(), tip->nHeight, /*index=*/0}) !=
             nullptr);
 
-    OptionsModel options_model(m_node);
-    bilingual_str options_error;
-    QVERIFY(options_model.Init(options_error));
-    ClientModel client_model(m_node, &options_model);
-    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), client_model);
+    MasternodeTestUtil::GuiModels models{m_node};
+    QVERIFY2(models.ok, qPrintable(QString::fromStdString(models.error.translated)));
+    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), models.client);
     RegisterMasternodeWizard wizard(m_node, &wallet_model);
     wizard.m_col_wallet->setChecked(true);
 
@@ -907,11 +893,9 @@ void MasternodeWidgetTests::masternodeListRegistrationAvailability()
     const auto wallet{std::make_shared<CWallet>(m_node.context()->chain.get(), m_node.context()->coinjoin_loader.get(),
                                                 "", gArgs, CreateMockWalletDatabase())};
     wallet->LoadWallet();
-    OptionsModel options_model(m_node);
-    bilingual_str options_error;
-    QVERIFY(options_model.Init(options_error));
-    ClientModel client_model(m_node, &options_model);
-    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), client_model);
+    MasternodeTestUtil::GuiModels models{m_node};
+    QVERIFY2(models.ok, qPrintable(QString::fromStdString(models.error.translated)));
+    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), models.client);
 
     MasternodeList list;
     auto* const register_button{list.findChild<QPushButton*>("btnRegisterMasternode")};
@@ -928,7 +912,7 @@ void MasternodeWidgetTests::masternodeListRegistrationAvailability()
     QVERIFY(!register_button->isEnabled());
     QVERIFY(register_button->toolTip().contains("node is ready", Qt::CaseInsensitive));
 
-    list.setClientModel(&client_model);
+    list.setClientModel(&models.client);
     QVERIFY(register_button->isEnabled());
 
     owned_checkbox->setChecked(true);
@@ -959,10 +943,10 @@ void MasternodeWidgetTests::masternodeListRegistrationAvailability()
         shared_button->setEnabled(!v24_active);
         shared_button->setToolTip(QStringLiteral("stale"));
         if (via_blocks) {
-            Q_EMIT client_model.numBlocksChanged(101, QDateTime::currentDateTime(), QString{}, 1.0, SyncType::BLOCK_SYNC,
+            Q_EMIT models.client.numBlocksChanged(101, QDateTime::currentDateTime(), QString{}, 1.0, SyncType::BLOCK_SYNC,
                                                  SynchronizationState::POST_INIT);
         } else {
-            Q_EMIT client_model.masternodeListChanged();
+            Q_EMIT models.client.masternodeListChanged();
         }
         QCOMPARE(shared_button->isEnabled(), v24_active);
         QCOMPARE(shared_button->toolTip(), shared_tooltip);
@@ -975,7 +959,7 @@ void MasternodeWidgetTests::masternodeListRegistrationAvailability()
     // Detaching the model takes its connections with it: a late tip signal
     // must not reach a list that is no longer showing this node.
     shared_button->setToolTip(QStringLiteral("stale"));
-    Q_EMIT client_model.masternodeListChanged();
+    Q_EMIT models.client.masternodeListChanged();
     QCOMPARE(shared_button->toolTip(), QStringLiteral("stale"));
 
     // Reapplying the no-wallet state must preserve both the guard and its
@@ -1004,11 +988,9 @@ void MasternodeWidgetTests::sharedMasternodeOwnedFilter()
         refund = *refund_result;
     }
 
-    OptionsModel options_model(m_node);
-    bilingual_str options_error;
-    QVERIFY(options_model.Init(options_error));
-    ClientModel client_model(m_node, &options_model);
-    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), client_model);
+    MasternodeTestUtil::GuiModels models{m_node};
+    QVERIFY2(models.ok, qPrintable(QString::fromStdString(models.error.translated)));
+    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), models.client);
 
     // This wallet holds the refund destination of the second share only: its
     // rewards are paid elsewhere, so neither a payout script nor an owner or
@@ -1046,15 +1028,13 @@ void MasternodeWidgetTests::sharedMasternodeContextMenu()
     const auto* owner_hash{std::get_if<PKHash>(&owner)};
     QVERIFY(owner_hash != nullptr);
 
-    OptionsModel options_model(m_node);
-    bilingual_str options_error;
-    QVERIFY(options_model.Init(options_error));
-    ClientModel client_model(m_node, &options_model);
-    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), client_model);
+    MasternodeTestUtil::GuiModels models{m_node};
+    QVERIFY2(models.ok, qPrintable(QString::fromStdString(models.error.translated)));
+    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), models.client);
 
     MasternodeList list;
     list.setWalletModel(&wallet_model);
-    list.setClientModel(&client_model);
+    list.setClientModel(&models.client);
 
     const std::vector<interfaces::MnShare> theirs{{400 * COIN, TestScript(0x41), CScript{}, TestKeyID(0x42)},
                                                   {600 * COIN, TestScript(0x43), CScript{}, TestKeyID(0x44)}};
@@ -1223,11 +1203,9 @@ void MasternodeWidgetTests::wizardInteractionLifecycle()
     const auto wallet{std::make_shared<CWallet>(m_node.context()->chain.get(), m_node.context()->coinjoin_loader.get(),
                                                 "", gArgs, CreateMockWalletDatabase())};
     wallet->LoadWallet();
-    OptionsModel options_model(m_node);
-    bilingual_str options_error;
-    QVERIFY(options_model.Init(options_error));
-    ClientModel client_model(m_node, &options_model);
-    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), client_model);
+    MasternodeTestUtil::GuiModels models{m_node};
+    QVERIFY2(models.ok, qPrintable(QString::fromStdString(models.error.translated)));
+    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), models.client);
     RegisterMasternodeWizard wizard(m_node, &wallet_model);
 
     // Cancel, Escape, Back and a window close cannot tear down state owned by
@@ -1309,11 +1287,9 @@ void MasternodeWidgetTests::registrationResultStates()
     const auto wallet{std::make_shared<CWallet>(m_node.context()->chain.get(), m_node.context()->coinjoin_loader.get(),
                                                 "", gArgs, CreateMockWalletDatabase())};
     wallet->LoadWallet();
-    OptionsModel options_model(m_node);
-    bilingual_str options_error;
-    QVERIFY(options_model.Init(options_error));
-    ClientModel client_model(m_node, &options_model);
-    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), client_model);
+    MasternodeTestUtil::GuiModels models{m_node};
+    QVERIFY2(models.ok, qPrintable(QString::fromStdString(models.error.translated)));
+    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), models.client);
 
     RegisterMasternodeWizard wizard(m_node, &wallet_model);
     wizard.m_col_external->setChecked(true);

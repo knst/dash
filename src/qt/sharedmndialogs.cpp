@@ -166,23 +166,6 @@ QWidget* MakeProTxHeader(const QString& pro_tx_hash, QWidget* parent)
         pro_tx_hash, parent);
 }
 
-//! Put `body` in a frameless scroll area so a dialog never clips its own
-//! content when the share table or the approvals board grows
-QScrollArea* MakeScroll(QWidget* body, QWidget* parent)
-{
-    auto* scroll = new QScrollArea(parent);
-    scroll->setObjectName(QStringLiteral("mnWizardScroll"));
-    scroll->setWidgetResizable(true);
-    scroll->setFrameShape(QFrame::NoFrame);
-    // Never silently clip sideways: a bar the user can reach beats a column
-    // that simply is not there
-    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    scroll->viewport()->setAutoFillBackground(false);
-    body->setParent(scroll);
-    scroll->setWidget(body);
-    return scroll;
-}
-
 //! The "who gets what" table every dissolution screen shows: one row per
 //! share, naming the address the principal returns to and the amount that
 //! arrives there
@@ -389,13 +372,8 @@ UpdateShareDialog::UpdateShareDialog(interfaces::Node& node, WalletModel* wallet
     SharedMnFitWrappedLabels(this);
     SharedMnSizeFromContent(this, std::max(minimumWidth(), sizeHint().width()));
 
-    if (!m_is_shared) {
-        showError(tr("This masternode is not shared and has no share table."));
-    } else if (!m_v24_active) {
-        showError(V24InactiveMessage());
-    } else if (m_share_combo->count() == 0) {
-        showError(NoShareKeysMessage());
-    }
+    // validate() runs the same three gates and then either refines the message
+    // or clears it, so the initial state needs nothing more than this call
     validate();
 }
 
@@ -465,17 +443,13 @@ void UpdateShareDialog::useRefundAddress()
 
 void UpdateShareDialog::useNewAddress()
 {
-    if (m_wallet_model == nullptr) {
-        showError(tr("No wallet is available."));
+    QString error;
+    const QString address{MasternodeWidgetUtil::freshAddress(m_wallet_model, error)};
+    if (address.isEmpty()) {
+        showError(error);
         return;
     }
-    auto dest{m_wallet_model->wallet().getNewDestination(/*label=*/"")};
-    if (!dest) {
-        showError(tr("Could not generate a new address: %1")
-                      .arg(QString::fromStdString(util::ErrorString(dest).translated)));
-        return;
-    }
-    m_reward_edit->setText(QString::fromStdString(EncodeDestination(*dest)));
+    m_reward_edit->setText(address);
 }
 
 void UpdateShareDialog::submit()
@@ -1212,7 +1186,7 @@ QWidget* DissolveDialog::buildNowTab()
     layout->addWidget(m_now_status);
 
     layout->addStretch();
-    return MakeScroll(tab, this);
+    return MasternodeWidgetUtil::makeScroll(tab, this);
 }
 
 void DissolveDialog::updateNowPreview()
@@ -1439,7 +1413,7 @@ QWidget* DissolveDialog::buildTogetherTab()
     layout->addWidget(m_un_status);
 
     layout->addStretch();
-    return MakeScroll(tab, this);
+    return MasternodeWidgetUtil::makeScroll(tab, this);
 }
 
 void DissolveDialog::updateTogetherPayouts()
@@ -1631,7 +1605,7 @@ QWidget* DissolveDialog::buildStandbyTab()
     layout->addWidget(m_sb_status);
 
     layout->addStretch();
-    return MakeScroll(tab, this);
+    return MasternodeWidgetUtil::makeScroll(tab, this);
 }
 
 void DissolveDialog::createStandby()
@@ -1883,7 +1857,7 @@ RotateSharedKeysDialog::RotateSharedKeysDialog(interfaces::Node& node, WalletMod
     layout->addWidget(m_status_label);
     layout->addStretch();
 
-    outer->addWidget(MakeScroll(body, this));
+    outer->addWidget(MasternodeWidgetUtil::makeScroll(body, this));
 
     auto* close_buttons = new QDialogButtonBox(QDialogButtonBox::Close, this);
     connect(close_buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);

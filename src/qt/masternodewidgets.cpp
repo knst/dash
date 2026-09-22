@@ -9,6 +9,7 @@
 #include <key_io.h>
 #include <script/standard.h>
 #include <support/cleanse.h>
+#include <util/result.h>
 #include <util/strencodings.h>
 
 #include <qt/bitcoinunits.h>
@@ -24,6 +25,7 @@
 #include <QPushButton>
 #include <QRadioButton>
 #include <QRegularExpression>
+#include <QScrollArea>
 #include <QVBoxLayout>
 #include <QVariant>
 
@@ -123,6 +125,66 @@ OptionCard makeOptionCard(QWidget* parent, QWidget* header, const QString& hint)
     ret.body_layout->setSpacing(ROW_SPACING);
     card_layout->addWidget(ret.body);
     return ret;
+}
+
+QLabel* makePageTitle(const QString& text, QWidget* parent) { return makeTitle(text, parent, PAGE_TITLE_SIZE); }
+
+QLabel* makeBlockTitle(const QString& text, QWidget* parent) { return makeTitle(text, parent); }
+
+QVBoxLayout* makePageLayout(QWidget* page)
+{
+    auto* layout{new QVBoxLayout(page)};
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(GROUP_SPACING);
+    return layout;
+}
+
+QVBoxLayout* makeBlock(QVBoxLayout* page_layout)
+{
+    auto* block{new QVBoxLayout()};
+    block->setSpacing(TITLE_SPACING);
+    page_layout->addLayout(block);
+    return block;
+}
+
+QScrollArea* makeScroll(QWidget* body, QWidget* parent, Qt::ScrollBarPolicy horizontal)
+{
+    auto* scroll{new QScrollArea(parent)};
+    scroll->setObjectName(QStringLiteral("mnWizardScroll"));
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setHorizontalScrollBarPolicy(horizontal);
+    scroll->viewport()->setAutoFillBackground(false);
+    body->setParent(scroll);
+    scroll->setWidget(body);
+    return scroll;
+}
+
+ScrollBody makeScrollBody(QWidget* page, QVBoxLayout* page_layout, Qt::ScrollBarPolicy horizontal)
+{
+    ScrollBody ret;
+    ret.container = new QWidget(page);
+    ret.layout = new QVBoxLayout(ret.container);
+    ret.layout->setContentsMargins(0, 0, ROW_SPACING, 0);
+    ret.layout->setSpacing(GROUP_SPACING);
+    page_layout->addWidget(makeScroll(ret.container, page, horizontal), /*stretch=*/1);
+    return ret;
+}
+
+QString freshAddress(WalletModel* wallet_model, QString& error)
+{
+    error.clear();
+    if (wallet_model == nullptr) {
+        error = QObject::tr("No wallet is available.");
+        return {};
+    }
+    auto dest{wallet_model->wallet().getNewDestination(/*label=*/"")};
+    if (!dest) {
+        error = QObject::tr("Could not generate a new address: %1")
+                    .arg(QString::fromStdString(util::ErrorString(dest).translated));
+        return {};
+    }
+    return QString::fromStdString(EncodeDestination(*dest));
 }
 
 } // namespace MasternodeWidgetUtil

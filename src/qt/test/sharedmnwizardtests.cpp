@@ -4,6 +4,8 @@
 
 #include <qt/test/sharedmnwizardtests.h>
 
+#include <qt/test/masternodetestutil.h>
+
 #include <qt/bitcoinamountfield.h>
 #include <qt/clientmodel.h>
 #include <qt/masternodewidgets.h>
@@ -61,130 +63,23 @@ using wallet::CreateMockWalletDatabase;
 using wallet::RemoveWallet;
 using wallet::WALLET_FLAG_DESCRIPTORS;
 using wallet::WalletContext;
+using MasternodeTestUtil::FakeTxid;
+using MasternodeTestUtil::FreshOperatorPubKey;
+using MasternodeTestUtil::FreshP2PKHAddress;
+using MasternodeTestUtil::DraftReply;
+using MasternodeTestUtil::MakeSpendingWallet;
+using MasternodeTestUtil::PrepareRegistration;
+using MasternodeTestUtil::PreparedRegistration;
+using MasternodeTestUtil::WalletGuard;
 using wallet::WalletDescriptor;
 
 namespace {
-QString FreshP2PKHAddress(CKey& key_out)
-{
-    key_out.MakeNewKey(/*fCompressed=*/true);
-    return QString::fromStdString(EncodeDestination(PKHash(key_out.GetPubKey())));
-}
-
-QString FakeTxid(char c)
-{
-    return QString(64, QChar::fromLatin1(c));
-}
-
-//! A named descriptor wallet that can spend from `key`, registered in the
-//! node's wallet context. The role check only asks the wallet what it can
-//! spend and what it is called, so no chain scan is needed.
-std::shared_ptr<CWallet> MakeSpendingWallet(interfaces::Node& node, WalletContext& context, const std::string& name,
-                                           const CKey& key)
-{
-    const auto wallet{std::make_shared<CWallet>(node.context()->chain.get(), node.context()->coinjoin_loader.get(),
-                                                name, gArgs, CreateMockWalletDatabase())};
-    wallet->LoadWallet();
-    wallet->SetWalletFlag(WALLET_FLAG_DESCRIPTORS);
-    {
-        LOCK(wallet->cs_wallet);
-        wallet->SetupDescriptorScriptPubKeyMans("", "");
-        FlatSigningProvider provider;
-        std::string error;
-        std::unique_ptr<Descriptor> descriptor{
-            Parse("combo(" + EncodeSecret(key) + ")", provider, error, /*require_checksum=*/false)};
-        if (!descriptor) return nullptr;
-        WalletDescriptor wallet_descriptor(std::move(descriptor), 0, 0, 1, 1);
-        if (!wallet->AddWalletDescriptor(wallet_descriptor, provider, "", false)) return nullptr;
-    }
-    AddWallet(context, wallet);
-    return wallet;
-}
-
-//! Unregisters the wallet even when a QVERIFY returns early: a wallet left in
-//! the context makes the fixture teardown hang
-class WalletGuard
-{
-public:
-    WalletGuard(WalletContext& context, std::shared_ptr<CWallet> wallet) :
-        m_context{context},
-        m_wallet{std::move(wallet)}
-    {
-    }
-    ~WalletGuard()
-    {
-        if (m_wallet) RemoveWallet(m_context, m_wallet, /*load_on_start=*/std::nullopt);
-    }
-
-private:
-    WalletContext& m_context;
-    std::shared_ptr<CWallet> m_wallet;
-};
-
-QString FreshOperatorPubKey()
-{
-    CBLSSecretKey secret;
-    secret.MakeNewKey();
-    return QString::fromStdString(secret.GetPublicKey().ToString(/*specificLegacyScheme=*/false));
-}
-
 
 //! A coordinator's invitation: three named shares with amounts and terms, but
 //! no addresses and no funding yet
 MnShareSession InvitationSession()
 {
-    MnShareSession session;
-    CKey voting_key;
-    const std::pair<const char*, CAmount> rows[]{
-        {"alice", 400 * COIN},
-        {"bob", 350 * COIN},
-        {"carol", 250 * COIN},
-    };
-    for (const auto& [name, amount] : rows) {
-        MnShareSession::Share share;
-        share.label = QString::fromLatin1(name);
-        share.amount = amount;
-        session.shares().push_back(share);
-    }
-    session.terms().votingAddress = FreshP2PKHAddress(voting_key);
-    session.terms().earlyPeriodBlocks = 5000;
-    session.terms().earlyPenalty = 5 * COIN;
-    session.setCoordinatorLabel(QStringLiteral("alice"));
-    return session;
-}
-
-//! One participant's reply: their own share row filled in and their own
-//! funding contribution recorded, at the revision the invitation was sent at
-MnShareSession DraftReply(const MnShareSession& invitation, int share_index, const QString& txid,
-                          CKey* owner_key_out = nullptr)
-{
-    MnShareSession reply{invitation};
-    CKey owner_key;
-    CKey refund_key;
-    CKey change_key;
-    reply.shares()[share_index].ownerAddress = FreshP2PKHAddress(owner_key);
-    reply.shares()[share_index].refundAddress = FreshP2PKHAddress(refund_key);
-    if (owner_key_out != nullptr) *owner_key_out = owner_key;
-
-    MnShareSession::Contribution contribution;
-    contribution.label = invitation.shares()[share_index].label;
-    MnShareSession::Input input;
-    input.txid = txid;
-    input.vout = 0;
-    contribution.inputs.push_back(input);
-    contribution.hasChange = true;
-    contribution.changeAddress = FreshP2PKHAddress(change_key);
-    contribution.changeAmount = COIN;
-    QString error;
-    if (!reply.addContribution(contribution, error)) return invitation;
-
-    // A reply answers the invitation rather than starting a new draft, so it
-    // carries back exactly the revision it was sent at.
-    MnShareSession normalised{invitation};
-    UniValue json{reply.toJson()};
-    json.pushKV("revision", invitation.revision());
-    QString parse_error;
-    if (!normalised.fromJson(json, parse_error)) return invitation;
-    return normalised;
+    return MasternodeTestUtil::MakeInvitation({{"alice", 400 * COIN}, {"bob", 350 * COIN}, {"carol", 250 * COIN}});
 }
 
 //! `draft` locked the way shared_register_prepare would lock it, with every
@@ -197,45 +92,13 @@ MnShareSession FrozenSession(const MnShareSession& draft, const std::vector<CKey
     session.terms().operatorPubKey =
         QString::fromStdString(operator_secret.GetPublicKey().ToString(/*specificLegacyScheme=*/false));
 
-    CProRegTx payload;
-    payload.nVersion = ProTxVersion::ExtAddr;
-    payload.nType = MnType::Regular;
-    payload.netInfo = NetInfoInterface::MakeNetInfo(payload.nVersion);
-    for (const auto& share : session.shares()) {
-        const CTxDestination owner{DecodeDestination(share.ownerAddress.toStdString())};
-        const CTxDestination refund{DecodeDestination(share.refundAddress.toStdString())};
-        payload.shares.emplace_back(share.amount, GetScriptForDestination(refund), CScript(),
-                                    ToKeyID(std::get<PKHash>(owner)));
-    }
-    payload.vchJoinSigs.assign(payload.shares.size(), CompactSignature{});
-    payload.keyIDVoting =
-        ToKeyID(std::get<PKHash>(DecodeDestination(session.terms().votingAddress.toStdString())));
-    payload.pubKeyOperator.Set(operator_secret.GetPublicKey(), /*bls_legacy_scheme=*/false);
-    payload.nOperatorReward = session.terms().operatorReward;
-    payload.nEarlyPeriodBlocks = session.terms().earlyPeriodBlocks;
-    payload.nEarlyPenalty = session.terms().earlyPenalty;
-
-    // Exactly what shared_register_prepare builds: the draft's own funding
-    // transaction with the shared collateral output appended
-    CMutableTransaction tx;
-    if (!DecodeHexTx(tx, session.fundingTxHex().toStdString())) return draft;
-    tx.nVersion = 3;
-    tx.nType = TRANSACTION_PROVIDER_REGISTER;
-    tx.vout.emplace_back(GetMnType(MnType::Regular).collat_amount, SharedCollateralScript());
-    const int collateral_index{static_cast<int>(tx.vout.size() - 1)};
-    payload.collateralOutpoint = COutPoint(uint256(), static_cast<uint32_t>(collateral_index));
-    SetTxPayload(tx, payload);
-
-    const uint256 consent_hash{payload.MakeSharedRegConsentHash(CTransaction(tx))};
+    const PreparedRegistration prepared{PrepareRegistration(session, operator_secret)};
     QString error;
-    if (!session.freeze(QString::fromStdString(EncodeHexTx(CTransaction(tx))),
-                        QString::fromStdString(consent_hash.ToString()), collateral_index, error)) {
-        return draft;
-    }
+    if (!session.freeze(prepared.txHex, prepared.consentHashHex, prepared.collateralIndex, error)) return draft;
     if (!sign_all) return session;
     for (size_t i = 0; i < owner_keys.size() && i < session.shares().size(); ++i) {
         std::vector<unsigned char> signature;
-        if (!CHashSigner::SignHash(consent_hash, owner_keys[i], signature)) return session;
+        if (!CHashSigner::SignHash(prepared.consentHash, owner_keys[i], signature)) return session;
         session.addSignature(static_cast<int>(i), QString::fromStdString(EncodeBase64(signature)), error);
     }
     return session;
@@ -329,11 +192,9 @@ void SharedMnWizardTests::coordinatorResumesSavedSession()
     QVERIFY(wallet != nullptr);
     WalletGuard guard{context, wallet};
 
-    OptionsModel options_model(m_node);
-    bilingual_str options_error;
-    QVERIFY2(options_model.Init(options_error), qPrintable(QString::fromStdString(options_error.translated)));
-    ClientModel client_model(m_node, &options_model);
-    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), client_model);
+    MasternodeTestUtil::GuiModels models{m_node};
+    QVERIFY2(models.ok, qPrintable(QString::fromStdString(models.error.translated)));
+    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), models.client);
     QCOMPARE(wallet_model.getWalletName(), QStringLiteral("coord"));
 
     // A session as the coordinator would have saved it from the invite page:
@@ -345,7 +206,7 @@ void SharedMnWizardTests::coordinatorResumesSavedSession()
     CKey refund_key;
     invitation.shares()[0].ownerAddress =
         QString::fromStdString(EncodeDestination(PKHash(coordinator_key.GetPubKey())));
-    invitation.shares()[0].refundAddress = FreshP2PKHAddress(refund_key);
+    invitation.shares()[0].refundAddress = FreshP2PKHAddress(&refund_key);
     MnShareSession::Contribution mine;
     mine.label = QStringLiteral("alice");
     MnShareSession::Input input;
@@ -418,11 +279,9 @@ void SharedMnWizardTests::coordinatorResumesFullySignedSession()
     const auto wallet{MakeSpendingWallet(m_node, context, "coord", owner_keys[0])};
     QVERIFY(wallet != nullptr);
     WalletGuard guard{context, wallet};
-    OptionsModel options_model(m_node);
-    bilingual_str options_error;
-    QVERIFY2(options_model.Init(options_error), qPrintable(QString::fromStdString(options_error.translated)));
-    ClientModel client_model(m_node, &options_model);
-    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), client_model);
+    MasternodeTestUtil::GuiModels models{m_node};
+    QVERIFY2(models.ok, qPrintable(QString::fromStdString(models.error.translated)));
+    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), models.client);
 
     // The coordinator has no waiting page, so a fully signed session must come
     // back on the page that broadcasts it rather than on the landing page
@@ -540,7 +399,7 @@ void SharedMnWizardTests::refusesToSignCoinsOutsideOwnContribution()
     stolen.vout = 0;
     mallory.inputs.push_back(stolen);
     mallory.hasChange = true;
-    mallory.changeAddress = FreshP2PKHAddress(attacker_key);
+    mallory.changeAddress = FreshP2PKHAddress(&attacker_key);
     mallory.changeAmount = 9 * COIN;
     QVERIFY2(draft.addContribution(mallory, error), qPrintable(error));
 
@@ -552,11 +411,9 @@ void SharedMnWizardTests::refusesToSignCoinsOutsideOwnContribution()
     const QString frozen_hex{session.protxHex()};
     QVERIFY2(session.setCombinedTx(frozen_hex, error), qPrintable(error));
 
-    OptionsModel options_model(m_node);
-    bilingual_str options_error;
-    QVERIFY2(options_model.Init(options_error), qPrintable(QString::fromStdString(options_error.translated)));
-    ClientModel client_model(m_node, &options_model);
-    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), client_model);
+    MasternodeTestUtil::GuiModels models{m_node};
+    QVERIFY2(models.ok, qPrintable(QString::fromStdString(models.error.translated)));
+    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), models.client);
 
     SharedMnCreateDialog dialog(m_node, &wallet_model, /*parent=*/nullptr);
     dialog.handleImportedText(session.toJsonString());
@@ -597,11 +454,9 @@ void SharedMnWizardTests::savingWaitsForTheOperatorKeyBackup()
     const auto wallet{MakeSpendingWallet(m_node, context, "coord", coordinator_key)};
     QVERIFY(wallet != nullptr);
     WalletGuard guard{context, wallet};
-    OptionsModel options_model(m_node);
-    bilingual_str options_error;
-    QVERIFY2(options_model.Init(options_error), qPrintable(QString::fromStdString(options_error.translated)));
-    ClientModel client_model(m_node, &options_model);
-    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), client_model);
+    MasternodeTestUtil::GuiModels models{m_node};
+    QVERIFY2(models.ok, qPrintable(QString::fromStdString(models.error.translated)));
+    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), models.client);
 
     SharedMnCreateDialog dialog(m_node, &wallet_model, /*parent=*/nullptr);
     dialog.m_role = SharedMnCreateDialog::Role::Coordinator;
@@ -666,11 +521,9 @@ void SharedMnWizardTests::coordinatorCanRetryOwnApproval()
     const auto wallet{MakeSpendingWallet(m_node, context, "coord", owner_keys[0])};
     QVERIFY(wallet != nullptr);
     WalletGuard guard{context, wallet};
-    OptionsModel options_model(m_node);
-    bilingual_str options_error;
-    QVERIFY2(options_model.Init(options_error), qPrintable(QString::fromStdString(options_error.translated)));
-    ClientModel client_model(m_node, &options_model);
-    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), client_model);
+    MasternodeTestUtil::GuiModels models{m_node};
+    QVERIFY2(models.ok, qPrintable(QString::fromStdString(models.error.translated)));
+    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), models.client);
 
     SharedMnCreateDialog dialog(m_node, &wallet_model, /*parent=*/nullptr);
     dialog.m_session = frozen;

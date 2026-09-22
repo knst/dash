@@ -14,6 +14,7 @@
 #include <QStringList>
 #include <QVector>
 
+#include <map>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -239,8 +240,6 @@ private:
     void replaceSession(const MnShareSession& imported);
 
     // Funding
-    //! Fresh receive address from the wallet, or empty with `error` set
-    QString freshAddress(QString& error) const;
     //! Confirmed, unlocked, spendable wallet coins covering `target`, largest
     //! first, with the change kept above the dust threshold when possible
     bool selectCoins(CAmount target, CoinSelection& selection, QString& error) const;
@@ -296,8 +295,11 @@ private:
     bool needsOwnApproval() const;
     bool hasDetails(int share_index) const;
     bool hasFunding(int share_index) const;
-    //! Signed funding inputs of a share, as "signed of total"
-    std::pair<int, int> fundingSignatureCount(int share_index) const;
+    //! Signed funding inputs of a share, as "signed of total". Takes the map
+    //! from InputSignatureMap() because every caller asks about several shares
+    //! in a row and decoding the registration once per share is wasteful.
+    std::pair<int, int> fundingSignatureCount(int share_index,
+                                              const std::map<QString, bool>& signature_map) const;
     bool allDetailsCollected() const;
     bool allApproved() const;
     bool allFundingSigned() const;

@@ -4,6 +4,8 @@
 
 #include <qt/test/masternodemaintenancetests.h>
 
+#include <qt/test/masternodetestutil.h>
+
 #include <bls/bls.h>
 #include <chainparams.h>
 #include <interfaces/node.h>
@@ -64,6 +66,8 @@ using wallet::CreateMockWalletDatabase;
 using wallet::RemoveWallet;
 using wallet::WALLET_FLAG_DESCRIPTORS;
 using wallet::WalletContext;
+using MasternodeTestUtil::MakeCoinbaseWallet;
+using MasternodeTestUtil::WalletGuard;
 using wallet::WalletDescriptor;
 using wallet::WalletRescanReserver;
 
@@ -114,22 +118,6 @@ public:
         return result;
     }
     const CKeyID& getKeyIdOwner() const override { return m_owner; }
-    std::vector<CKeyID> getShareOwnerKeyIds() const override
-    {
-        std::vector<CKeyID> ids;
-        for (const auto& share : m_shares) {
-            ids.push_back(share.keyIDOwner);
-        }
-        return ids;
-    }
-    std::vector<CScript> getShareRefundScripts() const override
-    {
-        std::vector<CScript> scripts;
-        for (const auto& share : m_shares) {
-            scripts.push_back(share.scriptRefund);
-        }
-        return scripts;
-    }
     bool isShared() const override { return !m_shares.empty(); }
     std::vector<interfaces::MnShare> getShares() const override { return m_shares; }
     const uint32_t& getEarlyPeriodBlocks() const override { return m_early_period_blocks; }
@@ -243,66 +231,6 @@ private:
     std::string m_platform_p2p{"127.0.0.1:26656"};
     std::string m_platform_https{"api.example.com:443"};
     std::string m_platform_node_id{"1111111111111111111111111111111111111111"};
-};
-
-
-//! A descriptor wallet holding `test`'s coinbase key and its coins, registered
-//! in the node's wallet context. With `encrypt` it is left locked, which is the
-//! normal state of a masternode owner's wallet.
-std::shared_ptr<CWallet> MakeCoinbaseWallet(interfaces::Node& node, WalletContext& context, TestChain100Setup& test,
-                                           const std::string& name, bool encrypt)
-{
-    const auto wallet{std::make_shared<CWallet>(node.context()->chain.get(), node.context()->coinjoin_loader.get(),
-                                                name, gArgs, CreateMockWalletDatabase())};
-    wallet->LoadWallet();
-    wallet->SetWalletFlag(WALLET_FLAG_DESCRIPTORS);
-    const CBlockIndex* const tip{WITH_LOCK(node.context()->chainman->GetMutex(),
-                                           return node.context()->chainman->ActiveChain().Tip())};
-    {
-        LOCK(wallet->cs_wallet);
-        wallet->SetupDescriptorScriptPubKeyMans("", "");
-        FlatSigningProvider provider;
-        std::string error;
-        std::unique_ptr<Descriptor> descriptor{
-            Parse("combo(" + EncodeSecret(test.coinbaseKey) + ")", provider, error, /*require_checksum=*/false)};
-        if (!descriptor) return nullptr;
-        WalletDescriptor wallet_descriptor(std::move(descriptor), 0, 0, 1, 1);
-        if (!wallet->AddWalletDescriptor(wallet_descriptor, provider, "", false)) return nullptr;
-        wallet->SetAddressBook(PKHash(test.coinbaseKey.GetPubKey()), "", "receive");
-        wallet->SetLastBlockProcessed(tip->nHeight, tip->GetBlockHash());
-    }
-    {
-        WalletRescanReserver reserver(*wallet);
-        reserver.reserve();
-        if (wallet->ScanForWalletTransactions(Params().GetConsensus().hashGenesisBlock, /*start_height=*/0,
-                                              /*max_height=*/{}, reserver, /*fUpdate=*/true, /*save_progress=*/false)
-                .status != CWallet::ScanResult::SUCCESS) {
-            return nullptr;
-        }
-    }
-    if (encrypt && !wallet->EncryptWallet("test passphrase")) return nullptr;
-    AddWallet(context, wallet);
-    return wallet;
-}
-
-//! Unregisters the wallet even when a QVERIFY returns early: a wallet left in
-//! the context makes the fixture teardown hang
-class WalletGuard
-{
-public:
-    WalletGuard(WalletContext& context, std::shared_ptr<CWallet> wallet) :
-        m_context{context},
-        m_wallet{std::move(wallet)}
-    {
-    }
-    ~WalletGuard()
-    {
-        if (m_wallet) RemoveWallet(m_context, m_wallet, /*load_on_start=*/std::nullopt);
-    }
-
-private:
-    WalletContext& m_context;
-    std::shared_ptr<CWallet> m_wallet;
 };
 
 } // anonymous namespace
@@ -797,11 +725,9 @@ void MasternodeMaintenanceTests::updateShareUnlocksTheWallet()
     QVERIFY(wallet != nullptr);
     WalletGuard guard{context, wallet};
 
-    OptionsModel options_model(m_node);
-    bilingual_str options_error;
-    QVERIFY2(options_model.Init(options_error), qPrintable(QString::fromStdString(options_error.translated)));
-    ClientModel client_model(m_node, &options_model);
-    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), client_model);
+    MasternodeTestUtil::GuiModels models{m_node};
+    QVERIFY2(models.ok, qPrintable(QString::fromStdString(models.error.translated)));
+    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), models.client);
     QCOMPARE(int(wallet_model.getEncryptionStatus()), int(WalletModel::Locked));
 
     auto source{MakeSharedSource({400 * COIN, 300 * COIN, 300 * COIN}, 5 * COIN, /*early_period_blocks=*/1000)};
@@ -933,11 +859,9 @@ void MasternodeMaintenanceTests::rotationSenderComesFromTheInputs()
     QVERIFY(wallet != nullptr);
     WalletGuard guard{context, wallet};
 
-    OptionsModel options_model(m_node);
-    bilingual_str options_error;
-    QVERIFY2(options_model.Init(options_error), qPrintable(QString::fromStdString(options_error.translated)));
-    ClientModel client_model(m_node, &options_model);
-    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), client_model);
+    MasternodeTestUtil::GuiModels models{m_node};
+    QVERIFY2(models.ok, qPrintable(QString::fromStdString(models.error.translated)));
+    WalletModel wallet_model(interfaces::MakeWallet(context, wallet), models.client);
 
     auto source{MakeSharedSource({400 * COIN, 300 * COIN, 300 * COIN}, 5 * COIN, /*early_period_blocks=*/1000)};
     source->setShareOwner(0, ToKeyID(PKHash(test.coinbaseKey.GetPubKey())));
@@ -973,7 +897,7 @@ void MasternodeMaintenanceTests::rotationSenderComesFromTheInputs()
     }
     AddWallet(context, other_wallet);
     WalletGuard other_guard{context, other_wallet};
-    WalletModel other_model(interfaces::MakeWallet(context, other_wallet), client_model);
+    WalletModel other_model(interfaces::MakeWallet(context, other_wallet), models.client);
 
     RotateSharedKeysDialog theirs(m_node, &other_model, entry, /*parent=*/nullptr);
     theirs.preloadEnvelope(envelope);

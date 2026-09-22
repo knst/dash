@@ -71,10 +71,12 @@ using MasternodeWidgetUtil::CARD_PADDING;
 using MasternodeWidgetUtil::GROUP_SPACING;
 using MasternodeWidgetUtil::ROW_SPACING;
 using MasternodeWidgetUtil::TITLE_SPACING;
+using MasternodeWidgetUtil::makeBlock;
+using MasternodeWidgetUtil::makeBlockTitle;
 using MasternodeWidgetUtil::makeCard;
-
-//! Point size of a page heading, as in RegisterMasternodeWizard
-constexpr double PAGE_TITLE_SIZE{14};
+using MasternodeWidgetUtil::makeHint;
+using MasternodeWidgetUtil::makePageLayout;
+using MasternodeWidgetUtil::makePageTitle;
 
 //! Default network fee the coordinator adds on top of its own share. 0.001
 //! DASH covers even a maximal eight-share registration.
@@ -92,63 +94,6 @@ constexpr int CONFIRM_MINIMUM_WIDTH{460};
 //! inside whatever width a layout hands it, so it needs one of its own.
 constexpr int AMOUNT_FIELD_WIDTH{300};
 
-QLabel* MakeTitle(const QString& text, QWidget* parent)
-{
-    return MasternodeWidgetUtil::makeTitle(text, parent, PAGE_TITLE_SIZE);
-}
-
-//! Heading of one block inside a page, in the page's own text size
-QLabel* MakeLabel(const QString& text, QWidget* parent)
-{
-    return MasternodeWidgetUtil::makeTitle(text, parent);
-}
-
-QLabel* MakeHint(const QString& text, QWidget* parent)
-{
-    return MasternodeWidgetUtil::makeHint(text, parent);
-}
-
-//! Vertical layout of a page: the dialog supplies the margins, the page only
-//! keeps the rhythm between its groups.
-QVBoxLayout* MakePageLayout(QWidget* page)
-{
-    auto* layout{new QVBoxLayout(page)};
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(GROUP_SPACING);
-    return layout;
-}
-
-//! One group inside a page: label, hint and controls sit closer together than
-//! the groups themselves do.
-QVBoxLayout* MakeBlock(QVBoxLayout* page_layout)
-{
-    auto* block{new QVBoxLayout()};
-    block->setSpacing(TITLE_SPACING);
-    page_layout->addLayout(block);
-    return block;
-}
-
-//! Scroll area in the wizard's style, for pages whose content outgrows the
-//! dialog. Returns the container the caller fills; its layout is already set.
-QWidget* MakeScrollBody(QWidget* page, QVBoxLayout* page_layout)
-{
-    auto* scroll{new QScrollArea(page)};
-    scroll->setObjectName(QStringLiteral("mnWizardScroll"));
-    scroll->setWidgetResizable(true);
-    scroll->setFrameShape(QFrame::NoFrame);
-    // Never silently clip sideways: a bar the user can reach beats a term
-    // sheet column that simply is not there
-    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    scroll->viewport()->setAutoFillBackground(false);
-    auto* container{new QWidget(scroll)};
-    auto* layout{new QVBoxLayout(container)};
-    layout->setContentsMargins(0, 0, ROW_SPACING, 0);
-    layout->setSpacing(GROUP_SPACING);
-    scroll->setWidget(container);
-    page_layout->addWidget(scroll, /*stretch=*/1);
-    return container;
-}
-
 //! Card with a bold title, returning the layout its body goes into
 QVBoxLayout* MakeTitledCard(QWidget* parent, QVBoxLayout* parent_layout, const QString& title)
 {
@@ -156,7 +101,7 @@ QVBoxLayout* MakeTitledCard(QWidget* parent, QVBoxLayout* parent_layout, const Q
     auto* box{new QVBoxLayout(card)};
     box->setContentsMargins(CARD_PADDING, CARD_PADDING, CARD_PADDING, CARD_PADDING);
     box->setSpacing(TITLE_SPACING);
-    if (!title.isEmpty()) box->addWidget(MakeLabel(title, card));
+    if (!title.isEmpty()) box->addWidget(makeBlockTitle(title, card));
     parent_layout->addWidget(card);
     return box;
 }
@@ -279,7 +224,7 @@ SharedMnCreateDialog::SharedMnCreateDialog(interfaces::Node& node, WalletModel* 
     m_pages->insertWidget(PageWaitBroadcast, createWaitingPage(PageWaitBroadcast));
     m_pages->insertWidget(PageComplete, createCompletePage());
 
-    m_progress_label = MakeHint(QString(), this);
+    m_progress_label = makeHint(QString(), this);
     m_error_label = new QLabel(this);
     m_error_label->setWordWrap(true);
     m_error_label->setTextFormat(Qt::PlainText);
@@ -287,7 +232,7 @@ SharedMnCreateDialog::SharedMnCreateDialog(interfaces::Node& node, WalletModel* 
     // Both lines only exist when they have something to say; reserving room for
     // them on every page costs the scroll body two lines it needs more
     m_error_label->setVisible(false);
-    m_status_label = MakeHint(QString(), this);
+    m_status_label = makeHint(QString(), this);
     m_status_label->setTextFormat(Qt::PlainText);
     m_status_label->setVisible(false);
 
@@ -361,6 +306,8 @@ SharedMnCreateDialog::SharedMnCreateDialog(interfaces::Node& node, WalletModel* 
     GUIUtil::disableMacFocusRect(this);
     GUIUtil::updateFonts();
     SharedMnFitWrappedLabels(this);
+    // Unlike the single-page sibling dialogs this one stacks 13 pages, so
+    // SharedMnSizeFromContent() would size every page to the tallest one
     setMinimumSize(700, 560);
     resize(900, 740);
 }
@@ -376,16 +323,16 @@ SharedMnCreateDialog::~SharedMnCreateDialog()
 QWidget* SharedMnCreateDialog::createLandingPage()
 {
     auto* page{new QWidget(this)};
-    auto* layout{MakePageLayout(page)};
-    layout->addWidget(MakeTitle(tr("Shared masternode"), page));
-    layout->addWidget(MakeHint(tr("Several people fund one masternode together. One person coordinates; everyone else "
+    auto* layout{makePageLayout(page)};
+    layout->addWidget(makePageTitle(tr("Shared masternode"), page));
+    layout->addWidget(makeHint(tr("Several people fund one masternode together. One person coordinates; everyone else "
                                   "pastes what they receive and copies back a reply. Nothing reaches the network "
                                   "until the final broadcast."),
                                page));
 
     // Why the flow cannot start is a sentence on the page, not a tooltip on a
     // button the user cannot see the state of.
-    m_landing_gate = MakeHint(QString(), page);
+    m_landing_gate = makeHint(QString(), page);
     m_landing_gate->setStyleSheet(GUIUtil::getThemedStyleQString(GUIUtil::ThemedStyle::TS_WARNING));
     m_landing_gate->setVisible(false);
     layout->addWidget(m_landing_gate);
@@ -393,7 +340,7 @@ QWidget* SharedMnCreateDialog::createLandingPage()
     {
         auto* box{MakeTitledCard(page, layout, tr("Start"))};
         auto* card{box->parentWidget()};
-        box->addWidget(MakeHint(tr("You will enter who takes part and the masternode settings, then invite the "
+        box->addWidget(makeHint(tr("You will enter who takes part and the masternode settings, then invite the "
                                    "others."),
                                 card));
         auto* row{new QHBoxLayout()};
@@ -407,7 +354,7 @@ QWidget* SharedMnCreateDialog::createLandingPage()
     {
         auto* box{MakeTitledCard(page, layout, tr("Continue"))};
         auto* card{box->parentWidget()};
-        box->addWidget(MakeHint(tr("Paste an invitation, locked terms, a signing request or any reply you received — "
+        box->addWidget(makeHint(tr("Paste an invitation, locked terms, a signing request or any reply you received — "
                                    "the app will know what to do."),
                                 card));
         auto* row{new QHBoxLayout()};
@@ -428,9 +375,9 @@ QWidget* SharedMnCreateDialog::createLandingPage()
 QWidget* SharedMnCreateDialog::createParticipantsPage()
 {
     auto* page{new QWidget(this)};
-    auto* layout{MakePageLayout(page)};
-    layout->addWidget(MakeTitle(tr("Participants"), page));
-    layout->addWidget(MakeHint(tr("Who takes part, and how much each contributes. Amounts must add up to exactly %1; "
+    auto* layout{makePageLayout(page)};
+    layout->addWidget(makePageTitle(tr("Participants"), page));
+    layout->addWidget(makeHint(tr("Who takes part, and how much each contributes. Amounts must add up to exactly %1; "
                                   "every share is at least %2.")
                                    .arg(FormatAmount(m_wallet_model, GetMnType(MnType::Regular).collat_amount),
                                         FormatAmount(m_wallet_model, CCollateralShare::MIN_AMOUNT)),
@@ -487,7 +434,7 @@ QWidget* SharedMnCreateDialog::createParticipantsPage()
     for (QPushButton* const button : {m_add_share_button, m_remove_share_button}) {
         SharedMnMakeSecondary(button);
     }
-    m_sum_label = MakeHint(QString(), page);
+    m_sum_label = makeHint(QString(), page);
     // The meter is one short reading; wrapping it leaves the tick alone on a
     // second line where it reads as a stray glyph
     m_sum_label->setWordWrap(false);
@@ -499,18 +446,17 @@ QWidget* SharedMnCreateDialog::createParticipantsPage()
 QWidget* SharedMnCreateDialog::createSettingsPage()
 {
     auto* page{new QWidget(this)};
-    auto* layout{MakePageLayout(page)};
-    layout->addWidget(MakeTitle(tr("Masternode settings"), page));
-    layout->addWidget(MakeHint(tr("These apply to the whole masternode and are the same for every participant."),
+    auto* layout{makePageLayout(page)};
+    layout->addWidget(makePageTitle(tr("Masternode settings"), page));
+    layout->addWidget(makeHint(tr("These apply to the whole masternode and are the same for every participant."),
                                page));
 
-    auto* body{MakeScrollBody(page, layout)};
-    auto* body_layout{qobject_cast<QVBoxLayout*>(body->layout())};
+    auto [body, body_layout]{MasternodeWidgetUtil::makeScrollBody(page, layout)};
 
     {
-        auto* block{MakeBlock(body_layout)};
-        block->addWidget(MakeLabel(tr("Service addresses:"), body));
-        block->addWidget(MakeHint(tr("Public addresses the masternode serves the Core P2P network on, separated by "
+        auto* block{makeBlock(body_layout)};
+        block->addWidget(makeBlockTitle(tr("Service addresses:"), body));
+        block->addWidget(makeHint(tr("Public addresses the masternode serves the Core P2P network on, separated by "
                                      "commas or spaces. May be left empty and set later with a service update."),
                                   body));
         m_service_edit = new QLineEdit(body);
@@ -519,9 +465,9 @@ QWidget* SharedMnCreateDialog::createSettingsPage()
     }
 
     {
-        auto* block{MakeBlock(body_layout)};
-        block->addWidget(MakeLabel(tr("Operator key:"), body));
-        block->addWidget(MakeHint(tr("Whoever runs the server needs the secret key. Only the public key is registered "
+        auto* block{makeBlock(body_layout)};
+        block->addWidget(makeBlockTitle(tr("Operator key:"), body));
+        block->addWidget(makeHint(tr("Whoever runs the server needs the secret key. Only the public key is registered "
                                      "on-chain."),
                                   body));
         m_operator_widget = new OperatorKeyWidget(body);
@@ -545,9 +491,9 @@ QWidget* SharedMnCreateDialog::createSettingsPage()
     }
 
     {
-        auto* block{MakeBlock(body_layout)};
-        block->addWidget(MakeLabel(tr("Node run by:"), body));
-        block->addWidget(MakeHint(tr("Recorded in the terms so everyone knows who can start and revive the node."),
+        auto* block{makeBlock(body_layout)};
+        block->addWidget(makeBlockTitle(tr("Node run by:"), body));
+        block->addWidget(makeHint(tr("Recorded in the terms so everyone knows who can start and revive the node."),
                                   body));
         m_node_run_by_edit = new QLineEdit(body);
         m_node_run_by_edit->setPlaceholderText(tr("Name of the participant who keeps the operator secret"));
@@ -555,9 +501,9 @@ QWidget* SharedMnCreateDialog::createSettingsPage()
     }
 
     {
-        auto* block{MakeBlock(body_layout)};
-        block->addWidget(MakeLabel(tr("Voting address:"), body));
-        block->addWidget(MakeHint(tr("Votes on governance proposals for the whole masternode (P2PKH)."), body));
+        auto* block{makeBlock(body_layout)};
+        block->addWidget(makeBlockTitle(tr("Voting address:"), body));
+        block->addWidget(makeHint(tr("Votes on governance proposals for the whole masternode (P2PKH)."), body));
         auto* row{new QHBoxLayout()};
         m_voting_edit = new QValidatedLineEdit(body);
         GUIUtil::setupAddressWidget(m_voting_edit, this);
@@ -566,7 +512,7 @@ QWidget* SharedMnCreateDialog::createSettingsPage()
         SharedMnMakeSecondary(fresh);
         connect(fresh, &QPushButton::clicked, this, [this] {
             QString error;
-            const QString address{freshAddress(error)};
+            const QString address{MasternodeWidgetUtil::freshAddress(m_wallet_model, error)};
             if (address.isEmpty()) {
                 showError(error);
             } else {
@@ -578,9 +524,9 @@ QWidget* SharedMnCreateDialog::createSettingsPage()
     }
 
     {
-        auto* block{MakeBlock(body_layout)};
-        block->addWidget(MakeLabel(tr("Operator reward:"), body));
-        block->addWidget(MakeHint(tr("Share of the reward promised to whoever runs the server."), body));
+        auto* block{makeBlock(body_layout)};
+        block->addWidget(makeBlockTitle(tr("Operator reward:"), body));
+        block->addWidget(makeHint(tr("Share of the reward promised to whoever runs the server."), body));
         m_operator_reward_spin = new QDoubleSpinBox(body);
         m_operator_reward_spin->setRange(0.0, 100.0);
         m_operator_reward_spin->setDecimals(2);
@@ -590,7 +536,7 @@ QWidget* SharedMnCreateDialog::createSettingsPage()
         row->addWidget(m_operator_reward_spin);
         row->addStretch();
         block->addLayout(row);
-        m_operator_reward_warning = MakeHint(tr("The operator will permanently receive this share of all rewards "
+        m_operator_reward_warning = makeHint(tr("The operator will permanently receive this share of all rewards "
                                                 "before anything is split between the participants."),
                                              body);
         m_operator_reward_warning->setStyleSheet(GUIUtil::getThemedStyleQString(GUIUtil::ThemedStyle::TS_WARNING));
@@ -608,17 +554,16 @@ QWidget* SharedMnCreateDialog::createSettingsPage()
 QWidget* SharedMnCreateDialog::createExitTermsPage()
 {
     auto* page{new QWidget(this)};
-    auto* layout{MakePageLayout(page)};
-    layout->addWidget(MakeTitle(tr("Exit terms"), page));
-    layout->addWidget(MakeHint(tr("What happens if one participant wants out before the others."), page));
+    auto* layout{makePageLayout(page)};
+    layout->addWidget(makePageTitle(tr("Exit terms"), page));
+    layout->addWidget(makeHint(tr("What happens if one participant wants out before the others."), page));
 
-    auto* body{MakeScrollBody(page, layout)};
-    auto* body_layout{qobject_cast<QVBoxLayout*>(body->layout())};
+    auto [body, body_layout]{MasternodeWidgetUtil::makeScrollBody(page, layout)};
 
     {
         auto* box{MakeTitledCard(body, body_layout, tr("How leaving works"))};
         auto* card{box->parentWidget()};
-        box->addWidget(MakeHint(tr("Anyone can dissolve the masternode on their own at any time, and everyone gets "
+        box->addWidget(makeHint(tr("Anyone can dissolve the masternode on their own at any time, and everyone gets "
                                    "their principal back. During the early period, whoever dissolves alone pays the "
                                    "early-exit penalty out of their own share and it is split among the others. If "
                                    "everyone agrees, dissolving is free at any time."),
@@ -626,9 +571,9 @@ QWidget* SharedMnCreateDialog::createExitTermsPage()
     }
 
     {
-        auto* block{MakeBlock(body_layout)};
-        block->addWidget(MakeLabel(tr("Early period:"), body));
-        block->addWidget(MakeHint(tr("Blocks after registration during which leaving alone costs the penalty."), body));
+        auto* block{makeBlock(body_layout)};
+        block->addWidget(makeBlockTitle(tr("Early period:"), body));
+        block->addWidget(makeHint(tr("Blocks after registration during which leaving alone costs the penalty."), body));
         auto* row{new QHBoxLayout()};
         m_early_period_spin = new QSpinBox(body);
         m_early_period_spin->setRange(0, static_cast<int>(CProRegTx::MAX_EARLY_PERIOD_BLOCKS));
@@ -638,7 +583,7 @@ QWidget* SharedMnCreateDialog::createExitTermsPage()
             onPageEdited();
         });
         row->addWidget(m_early_period_spin);
-        m_early_period_hint = MakeHint(QString(), body);
+        m_early_period_hint = makeHint(QString(), body);
         row->addWidget(m_early_period_hint, /*stretch=*/1);
         block->addLayout(row);
 
@@ -666,9 +611,9 @@ QWidget* SharedMnCreateDialog::createExitTermsPage()
     }
 
     {
-        auto* block{MakeBlock(body_layout)};
-        block->addWidget(MakeLabel(tr("Early-exit penalty:"), body));
-        m_early_penalty_hint = MakeHint(QString(), body);
+        auto* block{makeBlock(body_layout)};
+        block->addWidget(makeBlockTitle(tr("Early-exit penalty:"), body));
+        m_early_penalty_hint = makeHint(QString(), body);
         block->addWidget(m_early_penalty_hint);
         m_early_penalty_field = new BitcoinAmountField(body);
         // Without a width of its own the field is centred inside whatever the
@@ -682,9 +627,9 @@ QWidget* SharedMnCreateDialog::createExitTermsPage()
         row->addWidget(m_early_penalty_field);
         row->addStretch();
         block->addLayout(row);
-        m_early_preview = MakeHint(QString(), body);
+        m_early_preview = makeHint(QString(), body);
         block->addWidget(m_early_preview);
-        m_early_warning = MakeHint(QString(), body);
+        m_early_warning = makeHint(QString(), body);
         m_early_warning->setStyleSheet(GUIUtil::getThemedStyleQString(GUIUtil::ThemedStyle::TS_WARNING));
         m_early_warning->setVisible(false);
         block->addWidget(m_early_warning);
@@ -696,20 +641,19 @@ QWidget* SharedMnCreateDialog::createExitTermsPage()
 QWidget* SharedMnCreateDialog::createContributionPage()
 {
     auto* page{new QWidget(this)};
-    auto* layout{MakePageLayout(page)};
-    m_contribution_title = MakeTitle(tr("Your contribution"), page);
+    auto* layout{makePageLayout(page)};
+    m_contribution_title = makePageTitle(tr("Your contribution"), page);
     layout->addWidget(m_contribution_title);
-    layout->addWidget(MakeHint(tr("Addresses and coins for your share. Only you see the coins; the others only see "
+    layout->addWidget(makeHint(tr("Addresses and coins for your share. Only you see the coins; the others only see "
                                   "the resulting transaction inputs."),
                                page));
 
-    auto* body{MakeScrollBody(page, layout)};
-    auto* body_layout{qobject_cast<QVBoxLayout*>(body->layout())};
+    auto [body, body_layout]{MasternodeWidgetUtil::makeScrollBody(page, layout)};
 
     {
         auto* box{MakeTitledCard(body, body_layout, tr("Your share"))};
         auto* card{box->parentWidget()};
-        m_contribution_you = MakeHint(QString(), card);
+        m_contribution_you = makeHint(QString(), card);
         box->addWidget(m_contribution_you);
 
         m_who_am_i_row = new QWidget(card);
@@ -728,8 +672,8 @@ QWidget* SharedMnCreateDialog::createContributionPage()
 
         const auto address_row = [this, card, box](const QString& label, const QString& hint,
                                                    QValidatedLineEdit*& edit) {
-            box->addWidget(MakeLabel(label, card));
-            box->addWidget(MakeHint(hint, card));
+            box->addWidget(makeBlockTitle(label, card));
+            box->addWidget(makeHint(hint, card));
             auto* row{new QHBoxLayout()};
             edit = new QValidatedLineEdit(card);
             GUIUtil::setupAddressWidget(edit, this);
@@ -739,7 +683,7 @@ QWidget* SharedMnCreateDialog::createContributionPage()
             QValidatedLineEdit* const target{edit};
             connect(fresh, &QPushButton::clicked, this, [this, target] {
                 QString error;
-                const QString address{freshAddress(error)};
+                const QString address{MasternodeWidgetUtil::freshAddress(m_wallet_model, error)};
                 if (address.isEmpty()) {
                     showError(error);
                 } else {
@@ -764,7 +708,7 @@ QWidget* SharedMnCreateDialog::createContributionPage()
     {
         auto* box{MakeTitledCard(body, body_layout, tr("Coins"))};
         auto* card{box->parentWidget()};
-        m_coins_label = MakeHint(QString(), card);
+        m_coins_label = makeHint(QString(), card);
         box->addWidget(m_coins_label);
 
         m_fee_box = new QWidget(card);
@@ -801,17 +745,16 @@ QWidget* SharedMnCreateDialog::createContributionPage()
 QWidget* SharedMnCreateDialog::createSecretPage()
 {
     auto* page{new QWidget(this)};
-    auto* layout{MakePageLayout(page)};
-    layout->addWidget(MakeTitle(tr("Save operator key"), page));
-    layout->addWidget(MakeHint(tr("Save this generated key before inviting anyone. It is kept nowhere else and "
+    auto* layout{makePageLayout(page)};
+    layout->addWidget(makePageTitle(tr("Save operator key"), page));
+    layout->addWidget(makeHint(tr("Save this generated key before inviting anyone. It is kept nowhere else and "
                                   "cannot be recovered from the wallet."),
                                page));
 
-    auto* body{MakeScrollBody(page, layout)};
-    auto* body_layout{qobject_cast<QVBoxLayout*>(body->layout())};
+    auto [body, body_layout]{MasternodeWidgetUtil::makeScrollBody(page, layout)};
     auto* box{MakeTitledCard(body, body_layout, tr("Operator secret key"))};
     auto* card{box->parentWidget()};
-    auto* note{MakeHint(tr("Save it now — the invitation cannot go out until you confirm it."), card)};
+    auto* note{makeHint(tr("Save it now — the invitation cannot go out until you confirm it."), card)};
     note->setStyleSheet(GUIUtil::getThemedStyleQString(GUIUtil::ThemedStyle::TS_WARNING));
     box->addWidget(note);
     m_secret_edit = new QLineEdit(card);
@@ -826,7 +769,7 @@ QWidget* SharedMnCreateDialog::createSecretPage()
     connect(copy_secret, &QPushButton::clicked, this, [this] { GUIUtil::setClipboard(m_secret_edit->text()); });
     secret_row->addWidget(copy_secret);
     box->addLayout(secret_row);
-    box->addWidget(MakeHint(tr("Add this line to dash.conf on the masternode server:"), card));
+    box->addWidget(makeHint(tr("Add this line to dash.conf on the masternode server:"), card));
     auto* conf_row{new QHBoxLayout()};
     m_conf_line_edit = new QLineEdit(card);
     m_conf_line_edit->setReadOnly(true);
@@ -837,8 +780,8 @@ QWidget* SharedMnCreateDialog::createSecretPage()
     connect(copy, &QPushButton::clicked, this, [this] { GUIUtil::setClipboard(m_conf_line_edit->text()); });
     conf_row->addWidget(copy);
     box->addLayout(conf_row);
-    box->addWidget(MakeHint(tr("The invitation you are about to send contains only the public key."), card));
-    box->addWidget(MakeHint(tr("Type the last 4 characters of the secret key to confirm you saved it:"), card));
+    box->addWidget(makeHint(tr("The invitation you are about to send contains only the public key."), card));
+    box->addWidget(makeHint(tr("Type the last 4 characters of the secret key to confirm you saved it:"), card));
     m_confirm_edit = new QLineEdit(card);
     m_confirm_edit->setMaxLength(4);
     m_confirm_edit->setMaximumWidth(120);
@@ -859,14 +802,13 @@ SharedMnStatusBoard* SharedMnCreateDialog::addBoard(Page page, QWidget* parent, 
 QWidget* SharedMnCreateDialog::createInvitePage()
 {
     auto* page{new QWidget(this)};
-    auto* layout{MakePageLayout(page)};
-    layout->addWidget(MakeTitle(tr("Invite participants"), page));
-    layout->addWidget(MakeHint(tr("Send the same invitation to everyone. Each person reserves their coins and sends "
+    auto* layout{makePageLayout(page)};
+    layout->addWidget(makePageTitle(tr("Invite participants"), page));
+    layout->addWidget(makeHint(tr("Send the same invitation to everyone. Each person reserves their coins and sends "
                                   "you back their details."),
                                page));
 
-    auto* body{MakeScrollBody(page, layout)};
-    auto* body_layout{qobject_cast<QVBoxLayout*>(body->layout())};
+    auto [body, body_layout]{MasternodeWidgetUtil::makeScrollBody(page, layout)};
     addBoard(PageInvite, body, body_layout);
 
     auto* row{new QHBoxLayout()};
@@ -880,7 +822,7 @@ QWidget* SharedMnCreateDialog::createInvitePage()
     row->addStretch();
     body_layout->addLayout(row);
 
-    m_invite_edit_warning = MakeHint(tr("You changed the draft. Participants who already replied must reply again."),
+    m_invite_edit_warning = makeHint(tr("You changed the draft. Participants who already replied must reply again."),
                                      body);
     m_invite_edit_warning->setStyleSheet(GUIUtil::getThemedStyleQString(GUIUtil::ThemedStyle::TS_WARNING));
     m_invite_edit_warning->setVisible(false);
@@ -893,9 +835,9 @@ QWidget* SharedMnCreateDialog::createInvitePage()
         m_lock_confirm_card = box->parentWidget();
         m_lock_terms_label = MakeSheetLabel(m_lock_confirm_card);
         box->addWidget(m_lock_terms_label);
-        m_lock_funding_label = MakeHint(QString(), m_lock_confirm_card);
+        m_lock_funding_label = makeHint(QString(), m_lock_confirm_card);
         box->addWidget(m_lock_funding_label);
-        box->addWidget(MakeHint(tr("Locking fixes every address, amount and coin. Afterwards nobody can edit — only "
+        box->addWidget(makeHint(tr("Locking fixes every address, amount and coin. Afterwards nobody can edit — only "
                                    "unlock, which discards all approvals."),
                                 m_lock_confirm_card));
         m_lock_confirm_card->setVisible(false);
@@ -907,16 +849,15 @@ QWidget* SharedMnCreateDialog::createInvitePage()
 QWidget* SharedMnCreateDialog::createApprovalsPage()
 {
     auto* page{new QWidget(this)};
-    auto* layout{MakePageLayout(page)};
-    m_approvals_title = MakeTitle(tr("Approvals"), page);
+    auto* layout{makePageLayout(page)};
+    m_approvals_title = makePageTitle(tr("Approvals"), page);
     layout->addWidget(m_approvals_title);
-    m_approvals_purpose = MakeHint(QString(), page);
+    m_approvals_purpose = makeHint(QString(), page);
     layout->addWidget(m_approvals_purpose);
 
-    auto* body{MakeScrollBody(page, layout)};
-    auto* body_layout{qobject_cast<QVBoxLayout*>(body->layout())};
+    auto [body, body_layout]{MasternodeWidgetUtil::makeScrollBody(page, layout)};
 
-    m_prepare_warning_label = MakeHint(QString(), body);
+    m_prepare_warning_label = makeHint(QString(), body);
     m_prepare_warning_label->setStyleSheet(GUIUtil::getThemedStyleQString(GUIUtil::ThemedStyle::TS_WARNING));
     m_prepare_warning_label->setVisible(false);
     body_layout->addWidget(m_prepare_warning_label);
@@ -946,17 +887,16 @@ QWidget* SharedMnCreateDialog::createApprovalsPage()
 QWidget* SharedMnCreateDialog::createSignaturesPage()
 {
     auto* page{new QWidget(this)};
-    auto* layout{MakePageLayout(page)};
-    m_signatures_title = MakeTitle(tr("Signatures"), page);
+    auto* layout{makePageLayout(page)};
+    m_signatures_title = makePageTitle(tr("Signatures"), page);
     layout->addWidget(m_signatures_title);
-    m_signatures_purpose = MakeHint(QString(), page);
+    m_signatures_purpose = makeHint(QString(), page);
     layout->addWidget(m_signatures_purpose);
 
-    auto* body{MakeScrollBody(page, layout)};
-    auto* body_layout{qobject_cast<QVBoxLayout*>(body->layout())};
+    auto [body, body_layout]{MasternodeWidgetUtil::makeScrollBody(page, layout)};
     addBoard(PageSignatures, body, body_layout);
 
-    m_signatures_summary = MakeHint(QString(), body);
+    m_signatures_summary = makeHint(QString(), body);
     body_layout->addWidget(m_signatures_summary);
 
     auto* row{new QHBoxLayout()};
@@ -972,24 +912,23 @@ QWidget* SharedMnCreateDialog::createSignaturesPage()
 QWidget* SharedMnCreateDialog::createWaitingPage(Page page_id)
 {
     auto* page{new QWidget(this)};
-    auto* layout{MakePageLayout(page)};
+    auto* layout{makePageLayout(page)};
     WaitingPage widgets;
-    widgets.title = MakeTitle(QString(), page);
+    widgets.title = makePageTitle(QString(), page);
     layout->addWidget(widgets.title);
 
-    auto* body{MakeScrollBody(page, layout)};
-    auto* body_layout{qobject_cast<QVBoxLayout*>(body->layout())};
+    auto [body, body_layout]{MasternodeWidgetUtil::makeScrollBody(page, layout)};
 
     {
         auto* box{MakeTitledCard(body, body_layout, tr("What you sent"))};
-        widgets.sent = MakeHint(QString(), box->parentWidget());
+        widgets.sent = makeHint(QString(), box->parentWidget());
         widgets.sent->setTextFormat(Qt::PlainText);
         box->addWidget(widgets.sent);
     }
     {
         auto* box{MakeTitledCard(body, body_layout, tr("What comes next"))};
         auto* card{box->parentWidget()};
-        widgets.next = MakeHint(QString(), card);
+        widgets.next = makeHint(QString(), card);
         box->addWidget(widgets.next);
         auto* row{new QHBoxLayout()};
         auto* paste{new QPushButton(tr("Paste From Clipboard"), card)};
@@ -1019,11 +958,10 @@ QWidget* SharedMnCreateDialog::createWaitingPage(Page page_id)
 QWidget* SharedMnCreateDialog::createCompletePage()
 {
     auto* page{new QWidget(this)};
-    auto* layout{MakePageLayout(page)};
-    layout->addWidget(MakeTitle(tr("Shared masternode registered"), page));
+    auto* layout{makePageLayout(page)};
+    layout->addWidget(makePageTitle(tr("Shared masternode registered"), page));
 
-    auto* body{MakeScrollBody(page, layout)};
-    auto* body_layout{qobject_cast<QVBoxLayout*>(body->layout())};
+    auto [body, body_layout]{MasternodeWidgetUtil::makeScrollBody(page, layout)};
 
     {
         auto* box{MakeTitledCard(body, body_layout, tr("What happened"))};
@@ -1037,7 +975,7 @@ QWidget* SharedMnCreateDialog::createCompletePage()
         copy_row->addWidget(copy_hash);
         copy_row->addStretch();
         box->addLayout(copy_row);
-        box->addWidget(MakeHint(tr("It appears under Masternodes after one confirmation."), card));
+        box->addWidget(makeHint(tr("It appears under Masternodes after one confirmation."), card));
     }
 
     {
@@ -1045,22 +983,22 @@ QWidget* SharedMnCreateDialog::createCompletePage()
         auto* card{box->parentWidget()};
         m_keep_owner = new QCheckBox(tr("Your share owner key"), card);
         box->addWidget(m_keep_owner);
-        m_keep_owner_hint = MakeHint(QString(), card);
+        m_keep_owner_hint = makeHint(QString(), card);
         m_keep_owner_hint->setTextFormat(Qt::PlainText);
         box->addWidget(m_keep_owner_hint);
 
         m_keep_operator = new QCheckBox(tr("Operator secret key"), card);
         box->addWidget(m_keep_operator);
-        m_keep_operator_hint = MakeHint(QString(), card);
+        m_keep_operator_hint = makeHint(QString(), card);
         m_keep_operator_hint->setTextFormat(Qt::PlainText);
         box->addWidget(m_keep_operator_hint);
 
         m_keep_standby = new QCheckBox(tr("Standby dissolution"), card);
         box->addWidget(m_keep_standby);
-        box->addWidget(MakeHint(tr("A signed dissolution you keep offline. It recovers your principal even if this "
+        box->addWidget(makeHint(tr("A signed dissolution you keep offline. It recovers your principal even if this "
                                    "wallet is lost. Create it after the first confirmation."),
                                 card));
-        box->addWidget(MakeHint(tr("Create it from the Masternodes list (right-click the masternode) once the "
+        box->addWidget(makeHint(tr("Create it from the Masternodes list (right-click the masternode) once the "
                                    "registration is confirmed, and store it with your refund-address backup, "
                                    "separately from this wallet."),
                                 card));
@@ -1233,7 +1171,7 @@ void SharedMnCreateDialog::enterPage(Page page)
     case PageSettings:
         if (m_voting_edit->text().isEmpty() && m_wallet_model != nullptr) {
             QString error;
-            const QString address{freshAddress(error)};
+            const QString address{MasternodeWidgetUtil::freshAddress(m_wallet_model, error)};
             if (!address.isEmpty()) m_voting_edit->setText(address);
         }
         break;
@@ -1247,7 +1185,7 @@ void SharedMnCreateDialog::enterPage(Page page)
         for (QValidatedLineEdit* const edit : {m_owner_edit, m_refund_edit}) {
             if (!edit->text().isEmpty() || m_wallet_model == nullptr) continue;
             QString error;
-            const QString address{freshAddress(error)};
+            const QString address{MasternodeWidgetUtil::freshAddress(m_wallet_model, error)};
             if (!address.isEmpty()) edit->setText(address);
         }
         refreshContributionPage();
@@ -1941,12 +1879,13 @@ void SharedMnCreateDialog::refreshSignaturesPage()
                     : tr("Signs the coins you reserved. Your signature only spends them into this registration."));
     m_copy_signing_button->setVisible(coordinator);
 
-    const auto [signed_inputs, total_inputs]{fundingSignatureCount(m_my_share)};
+    const auto signature_map{InputSignatureMap(m_session.protxHex())};
+    const auto [signed_inputs, total_inputs]{fundingSignatureCount(m_my_share, signature_map)};
     if (coordinator) {
         int done{0};
         int total{0};
         for (size_t i = 0; i < m_session.shares().size(); ++i) {
-            const auto [share_signed, share_total]{fundingSignatureCount(static_cast<int>(i))};
+            const auto [share_signed, share_total]{fundingSignatureCount(static_cast<int>(i), signature_map)};
             done += share_signed;
             total += share_total;
         }
@@ -2037,35 +1976,49 @@ void SharedMnCreateDialog::refreshBoards()
     for (size_t i = 0; i < shares.size(); ++i) {
         rows.push_back({ShareName(m_session, static_cast<int>(i)), shares[i].amount, QString()});
     }
+    // Every board shows the same per-share state and differs only in its summary
+    // line, so the cells are computed once here rather than once per board
+    const auto state = [](bool done) {
+        return done ? SharedMnStatusBoard::State::Done : SharedMnStatusBoard::State::Pending;
+    };
+    const auto signature_map{InputSignatureMap(m_session.protxHex())};
+    struct Cells {
+        SharedMnStatusBoard::State details;
+        SharedMnStatusBoard::State funding;
+        SharedMnStatusBoard::State approval;
+        SharedMnStatusBoard::State signatures;
+        QString signature_note;
+    };
+    std::vector<Cells> cells;
+    cells.reserve(shares.size());
     int replied{0};
     int approved{0};
     int fully_signed{0};
+    for (int i = 0; i < static_cast<int>(shares.size()); ++i) {
+        const bool has_details{hasDetails(i)};
+        const bool has_funding{hasFunding(i)};
+        if (has_details && has_funding) ++replied;
+        const bool has_signature{!m_session.signatureFor(i).isEmpty()};
+        if (has_signature) ++approved;
+        const auto [done, total]{fundingSignatureCount(i, signature_map)};
+        const bool signed_off{total > 0 && done == total};
+        if (signed_off) ++fully_signed;
+        cells.push_back({state(has_details), state(has_funding), state(has_signature), state(signed_off),
+                         total > 0 ? tr("%1 of %2 inputs").arg(done).arg(total) : QString()});
+    }
+
+    const int count{static_cast<int>(shares.size())};
     for (const auto& [board_page, board] : m_boards) {
         board->setShares(rows);
         board->setYouRow(m_my_share);
-        replied = 0;
-        approved = 0;
-        fully_signed = 0;
-        for (int i = 0; i < static_cast<int>(shares.size()); ++i) {
-            board->setCell(i, 0, hasDetails(i) ? SharedMnStatusBoard::State::Done
-                                               : SharedMnStatusBoard::State::Pending);
-            board->setCell(i, 1, hasFunding(i) ? SharedMnStatusBoard::State::Done
-                                               : SharedMnStatusBoard::State::Pending);
-            if (hasDetails(i) && hasFunding(i)) ++replied;
-            const bool has_signature{!m_session.signatureFor(i).isEmpty()};
-            if (has_signature) ++approved;
-            board->setCell(i, 2, has_signature ? SharedMnStatusBoard::State::Done
-                                               : SharedMnStatusBoard::State::Pending);
-            const auto [done, total]{fundingSignatureCount(i)};
-            const bool signed_off{total > 0 && done == total};
-            if (signed_off) ++fully_signed;
-            board->setCell(i, 3,
-                           signed_off ? SharedMnStatusBoard::State::Done : SharedMnStatusBoard::State::Pending,
-                           total > 0 ? tr("%1 of %2 inputs").arg(done).arg(total) : QString());
+        for (int i = 0; i < count; ++i) {
+            board->setCell(i, 0, cells[i].details);
+            board->setCell(i, 1, cells[i].funding);
+            board->setCell(i, 2, cells[i].approval);
+            board->setCell(i, 3, cells[i].signatures, cells[i].signature_note);
         }
         // Each board counts the round its own page is about: approvals are two
         // rounds away from the invitation, and signatures one round past them
-        const int count{static_cast<int>(shares.size())};
         switch (board_page) {
         case PageInvite:
             board->setSummary(tr("%1 of %2 replied").arg(replied).arg(count));
@@ -2980,22 +2933,6 @@ void SharedMnCreateDialog::absorbSession(const MnShareSession& imported)
     }
 }
 
-QString SharedMnCreateDialog::freshAddress(QString& error) const
-{
-    error.clear();
-    if (m_wallet_model == nullptr) {
-        error = tr("No wallet is available.");
-        return {};
-    }
-    auto dest{m_wallet_model->wallet().getNewDestination(/*label=*/"")};
-    if (!dest) {
-        error = tr("Could not generate a new address: %1")
-                    .arg(QString::fromStdString(util::ErrorString(dest).translated));
-        return {};
-    }
-    return QString::fromStdString(EncodeDestination(*dest));
-}
-
 CAmount SharedMnCreateDialog::contributionTarget() const
 {
     if (m_my_share < 0 || static_cast<size_t>(m_my_share) >= m_session.shares().size()) return 0;
@@ -3099,7 +3036,7 @@ void SharedMnCreateDialog::reserveCoins()
     contribution.label = share.label;
     contribution.inputs = selection.inputs;
     if (selection.change > 0) {
-        const QString change_address{freshAddress(error)};
+        const QString change_address{MasternodeWidgetUtil::freshAddress(m_wallet_model, error)};
         if (change_address.isEmpty()) {
             showError(error);
             return;
@@ -3377,11 +3314,11 @@ bool SharedMnCreateDialog::hasFunding(int share_index) const
                        [&label](const auto& contribution) { return contribution.label == label; });
 }
 
-std::pair<int, int> SharedMnCreateDialog::fundingSignatureCount(int share_index) const
+std::pair<int, int> SharedMnCreateDialog::fundingSignatureCount(int share_index,
+                                                                const std::map<QString, bool>& signature_map) const
 {
     if (share_index < 0 || static_cast<size_t>(share_index) >= m_session.shares().size()) return {0, 0};
     const QString label{m_session.shares()[share_index].label};
-    const auto signature_map{InputSignatureMap(m_session.protxHex())};
     int done{0};
     int total{0};
     for (const auto& contribution : m_session.contributions()) {

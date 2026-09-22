@@ -77,15 +77,13 @@ MasternodeEntry::MasternodeEntry(const interfaces::MnEntryCPtr& dmn, const QStri
         m_service_key = QByteArray(reinterpret_cast<const char*>(addr_key.data()), addr_key.size());
     }
 
-    // A shared masternode has a null keyIDOwner; its share owner keys take its place
-    QStringList owner_addresses;
-    if (const CKeyID& key_id_owner{dmn->getKeyIdOwner()}; !key_id_owner.IsNull()) {
-        owner_addresses << QString::fromStdString(EncodeDestination(PKHash(key_id_owner)));
-    }
-    for (const auto& key_id : dmn->getShareOwnerKeyIds()) {
-        owner_addresses << QString::fromStdString(EncodeDestination(PKHash(key_id)));
-    }
-    m_owner_address = owner_addresses.isEmpty() ? QObject::tr("UNKNOWN") : owner_addresses.join(", ");
+    // A shared masternode has a null keyIDOwner and its share owners take that
+    // role instead, so every reader of m_owner_address is guarded by !isShared()
+    // and this stays UNKNOWN for them
+    const CKeyID& key_id_owner{dmn->getKeyIdOwner()};
+    m_owner_address = key_id_owner.IsNull()
+                          ? QObject::tr("UNKNOWN")
+                          : QString::fromStdString(EncodeDestination(PKHash(key_id_owner)));
 
     if (m_shared) {
         // A fingerprint of the mutable share state (reward scripts, penalty terms) so
@@ -196,7 +194,8 @@ std::vector<unsigned char> MasternodeEntry::operatorPubKeyBytes() const
     return key.ToByteVector(/*specificLegacyScheme=*/false);
 }
 
-QString MasternodeEntry::toHtml(int current_height, const QSet<int>& my_share_indexes) const
+QString MasternodeEntry::toHtml(int current_height, const QSet<int>& my_share_indexes,
+                                BitcoinUnits::Unit unit) const
 {
     QString ret;
     ret.reserve(4000);
@@ -263,7 +262,7 @@ QString MasternodeEntry::toHtml(int current_height, const QSet<int>& my_share_in
             const double pct{total > 0 ? 100.0 * share.amount / total : 0.0};
             ret += "<tr><td valign='top'>" + QString::number(number) + "</td><td valign='top'>" + participant +
                    "</td><td valign='top'>" +
-                   BitcoinUnits::formatWithUnit(BitcoinUnits::Unit::DASH, share.amount).toHtmlEscaped() + " (" +
+                   BitcoinUnits::formatWithUnit(unit, share.amount).toHtmlEscaped() + " (" +
                    QString::number(pct, 'f', 1) + "%)</td><td>" + QObject::tr("Owner") + ": " + owner + "<br>" +
                    QObject::tr("Reward") + ": " + reward + "<br>" + QObject::tr("Refund") + ": " +
                    refund.toHtmlEscaped() + "</td></tr>";
@@ -286,7 +285,7 @@ QString MasternodeEntry::toHtml(int current_height, const QSet<int>& my_share_in
             ret += "<b>" + QObject::tr("Early period") + ":</b> " + QObject::tr("ended (block %1)").arg(early_until) + "<br>";
         }
         ret += "<b>" + QObject::tr("Early-exit penalty") + ":</b> " +
-               BitcoinUnits::formatWithUnit(BitcoinUnits::Unit::DASH, m_early_penalty).toHtmlEscaped() + "<br>";
+               BitcoinUnits::formatWithUnit(unit, m_early_penalty).toHtmlEscaped() + "<br>";
 
         const auto standby_record{MasternodeStandby::SavedDate(m_protx_hash)};
         const QString standby{standby_record.saved

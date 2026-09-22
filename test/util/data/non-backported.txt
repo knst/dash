@@ -53,6 +53,7 @@ src/qt/protxsender.*
 src/qt/test/providertransactiontests.cpp
 src/qt/test/providertransactiontests.h
 src/qt/test/masternodemaintenancetests.*
+src/qt/test/masternodetestutil.*
 src/qt/test/masternodewidgettests.*
 src/qt/test/mnsharesessiontests.*
 src/qt/test/sharedmnwalkthroughtests.*

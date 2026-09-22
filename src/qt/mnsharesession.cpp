@@ -4,7 +4,6 @@
 
 #include <qt/mnsharesession.h>
 
-#include <arith_uint256.h>
 #include <chainparams.h>
 #include <core_io.h>
 #include <crypto/sha256.h>
@@ -1635,15 +1634,8 @@ MnShareSession::PenaltyPreview MnShareSession::PenaltyPreviewFor(const std::vect
             preview.payouts[i] = actor_output;
             continue;
         }
-        CAmount bonus;
-        if (i == last_non_actor) {
-            bonus = preview.penalty - distributed;
-        } else {
-            arith_uint256 v{static_cast<uint64_t>(preview.penalty)};
-            v *= arith_uint256{static_cast<uint64_t>(share_amounts[i])};
-            v /= arith_uint256{static_cast<uint64_t>(non_actor_total)};
-            bonus = static_cast<CAmount>(v.GetLow64());
-        }
+        const CAmount bonus{i == last_non_actor ? preview.penalty - distributed
+                                                : ProRataFloor(preview.penalty, share_amounts[i], non_actor_total)};
         distributed += bonus;
         preview.payouts[i] = share_amounts[i] + bonus;
     }

@@ -7,6 +7,7 @@
 
 #include <evo/dmn_types.h>
 #include <interfaces/node.h>
+#include <qt/bitcoinunits.h>
 
 #include <QAbstractTableModel>
 #include <QByteArray>
@@ -97,8 +98,6 @@ public:
     uint16_t operatorRewardPct() const { return m_operator_reward_pct; }
 
     const CKeyID& keyIdOwnerRaw() const { return m_dmn->getKeyIdOwner(); }
-    std::vector<CKeyID> shareOwnerKeyIdsRaw() const { return m_dmn->getShareOwnerKeyIds(); }
-    std::vector<CScript> shareRefundScriptsRaw() const { return m_dmn->getShareRefundScripts(); }
     const CKeyID& keyIdVotingRaw() const { return m_dmn->getKeyIdVoting(); }
     const COutPoint& collateralOutpointRaw() const { return m_dmn->getCollateralOutpoint(); }
     const CScript& scriptOperatorPayoutRaw() const { return m_dmn->getScriptOperatorPayout(); }
@@ -138,7 +137,8 @@ public:
                         m_platform_node_id, m_platform_p2p_addresses, m_platform_https_addresses,
                         m_shares_fingerprint);
     }
-    QString toHtml(int current_height = 0, const QSet<int>& my_share_indexes = {}) const;
+    QString toHtml(int current_height = 0, const QSet<int>& my_share_indexes = {},
+                   BitcoinUnits::Unit unit = BitcoinUnits::Unit::DASH) const;
 };
 
 using MasternodeEntryList = std::vector<std::shared_ptr<MasternodeEntry>>;

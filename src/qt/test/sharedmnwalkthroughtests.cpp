@@ -4,6 +4,8 @@
 
 #include <qt/test/sharedmnwalkthroughtests.h>
 
+#include <qt/test/masternodetestutil.h>
+
 #include <bls/bls.h>
 #include <chain.h>
 #include <chainparams.h>
@@ -73,6 +75,9 @@ using wallet::CreateMockWalletDatabase;
 using wallet::RemoveWallet;
 using wallet::WALLET_FLAG_DESCRIPTORS;
 using wallet::WalletContext;
+using MasternodeTestUtil::FreshOperatorPubKey;
+using MasternodeTestUtil::MakeTestWallet;
+using MasternodeTestUtil::WalletGuard;
 using wallet::WalletRescanReserver;
 
 namespace {
@@ -231,43 +236,6 @@ private:
     QList<Shot> m_queued;
 };
 
-//! Unregisters the test wallets even when a QVERIFY/QCOMPARE returns early:
-//! a wallet left in the context makes the fixture teardown hang.
-class WalletGuard
-{
-public:
-    explicit WalletGuard(WalletContext& context) :
-        m_context{context}
-    {
-    }
-    ~WalletGuard()
-    {
-        for (const auto& wallet : m_wallets) {
-            RemoveWallet(m_context, wallet, /*load_on_start=*/std::nullopt);
-        }
-    }
-    void keep(std::shared_ptr<CWallet> wallet) { m_wallets.push_back(std::move(wallet)); }
-
-private:
-    WalletContext& m_context;
-    std::vector<std::shared_ptr<CWallet>> m_wallets;
-};
-
-std::shared_ptr<CWallet> CreateTestWallet(interfaces::Node& node, WalletContext& context, const std::string& name)
-{
-    const auto wallet{std::make_shared<CWallet>(node.context()->chain.get(), node.context()->coinjoin_loader.get(),
-                                                name, gArgs, CreateMockWalletDatabase())};
-    wallet->LoadWallet();
-    wallet->SetWalletFlag(WALLET_FLAG_DESCRIPTORS);
-    {
-        LOCK(wallet->cs_wallet);
-        wallet->SetupDescriptorScriptPubKeyMans("", "");
-    }
-    wallet->SetBroadcastTransactions(true);
-    AddWallet(context, wallet);
-    return wallet;
-}
-
 void SyncWallet(interfaces::Node& node, CWallet& wallet)
 {
     const CBlockIndex* const tip{WITH_LOCK(node.context()->chainman->GetMutex(),
@@ -335,14 +303,6 @@ QString TakeClipboardEnvelope(QString& fingerprint)
     return text;
 }
 
-//! A fresh basic-scheme BLS public key, for the key-rotation dialog
-QString FreshOperatorPubKey()
-{
-    CBLSSecretKey secret;
-    secret.MakeNewKey();
-    return QString::fromStdString(secret.GetPublicKey().ToString(/*specificLegacyScheme=*/false));
-}
-
 } // anonymous namespace
 
 void SharedMnWalkthroughTests::initTestCase()
@@ -391,9 +351,9 @@ void SharedMnWalkthroughTests::walkthrough()
     // Three separate descriptor wallets: the dialogs route every RPC through
     // ProTxSender to "/wallet/<name>", so each role must have its own.
     WalletGuard wallets{context};
-    const auto coord_wallet{CreateTestWallet(m_node, context, "coord")};
-    const auto alice_wallet{CreateTestWallet(m_node, context, "alice")};
-    const auto bob_wallet{CreateTestWallet(m_node, context, "bob")};
+    const auto coord_wallet{MakeTestWallet(m_node, context, "coord", /*broadcast=*/true)};
+    const auto alice_wallet{MakeTestWallet(m_node, context, "alice", /*broadcast=*/true)};
+    const auto bob_wallet{MakeTestWallet(m_node, context, "bob", /*broadcast=*/true)};
     for (const auto& wallet : {coord_wallet, alice_wallet, bob_wallet}) {
         wallets.keep(wallet);
     }
@@ -425,13 +385,11 @@ void SharedMnWalkthroughTests::walkthrough()
                                 .arg(balance)));
     }
 
-    OptionsModel options_model(m_node);
-    bilingual_str options_error;
-    QVERIFY(options_model.Init(options_error));
-    ClientModel client_model(m_node, &options_model);
-    WalletModel coord_model(interfaces::MakeWallet(context, coord_wallet), client_model);
-    WalletModel alice_model(interfaces::MakeWallet(context, alice_wallet), client_model);
-    WalletModel bob_model(interfaces::MakeWallet(context, bob_wallet), client_model);
+    MasternodeTestUtil::GuiModels models{m_node};
+    QVERIFY2(models.ok, qPrintable(QString::fromStdString(models.error.translated)));
+    WalletModel coord_model(interfaces::MakeWallet(context, coord_wallet), models.client);
+    WalletModel alice_model(interfaces::MakeWallet(context, alice_wallet), models.client);
+    WalletModel bob_model(interfaces::MakeWallet(context, bob_wallet), models.client);
     // The dialogs spend through the wallet model, which compares against the
     // cached balance the GUI's poll timer maintains.
     for (WalletModel* model : {&coord_model, &alice_model, &bob_model}) {
@@ -842,8 +800,8 @@ void SharedMnWalkthroughTests::walkthrough()
 
     MasternodeList list;
     list.setWalletModel(&coord_model);
-    list.setClientModel(&client_model);
-    auto* const feed{client_model.feedMasternode()};
+    list.setClientModel(&models.client);
+    auto* const feed{models.client.feedMasternode()};
     QVERIFY(feed != nullptr);
     feed->fetch();
     QMetaObject::invokeMethod(&list, "updateMasternodeList", Qt::DirectConnection);
@@ -887,7 +845,7 @@ void SharedMnWalkthroughTests::walkthrough()
         rendered->setWordWrap(true);
         rendered->setMargin(12);
         rendered->setAlignment(Qt::AlignTop | Qt::AlignLeft);
-        rendered->setText(shared_entry->toHtml(ChainHeight(m_node), my_shares));
+        rendered->setText(shared_entry->toHtml(ChainHeight(m_node), my_shares, SharedMnDisplayUnit(&coord_model)));
         details.setWidget(rendered);
         details.setWidgetResizable(true);
         Shots().captureAt(&details, "masternodes", "30-details-html",
