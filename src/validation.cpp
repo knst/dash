@@ -2275,7 +2275,7 @@ DisconnectResult Chainstate::DisconnectBlock(const CBlock& block, const CBlockIn
 
     MNListUpdates mnlist_updates;
     if (!m_chain_helper->special_tx->UndoSpecialTxsInBlock(*this, block, pindex, mnlist_updates)) {
-        error("DisconnectBlock(): UndoSpecialTxsInBlock failed");
+        LogError("DisconnectBlock(): UndoSpecialTxsInBlock failed\n");
         return DISCONNECT_FAILED;
     }
 
@@ -5286,8 +5286,9 @@ bool ChainstateManager::LoadBlockIndex()
         // its EvoDB markers, so the standard rebuild advice recovers.
         if (const auto base_hash{SnapshotBlockhash()}) {
             if (!m_blockman.LookupBlockIndex(*base_hash)) {
-                return error("[snapshot] base block %s of the active snapshot chainstate is missing from the block index",
-                             base_hash->ToString());
+                LogError("[snapshot] base block %s of the active snapshot chainstate is missing from the block index\n",
+                         base_hash->ToString());
+                return false;
             }
         }
 
