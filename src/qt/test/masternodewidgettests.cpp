@@ -209,6 +209,7 @@ public:
     {
         if (m_shares.empty()) return {m_payout};
         std::vector<CScript> ret;
+        ret.reserve(m_shares.size());
         for (const auto& share : m_shares) ret.push_back(share.rewardScript());
         return ret;
     }
