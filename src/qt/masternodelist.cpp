@@ -19,7 +19,6 @@
 #include <qt/masternodedialogs.h>
 #include <qt/masternodewidgets.h>
 #include <qt/masternodewizard.h>
-#include <qt/protxsender.h>
 #include <qt/sharedmncreatedialog.h>
 #include <qt/sharedmndialogs.h>
 #include <qt/sharedmnwidgets.h>
@@ -30,7 +29,6 @@
 #include <QDebug>
 #include <QHeaderView>
 #include <QMessageBox>
-#include <QPointer>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QThread>
@@ -372,20 +370,9 @@ void MasternodeList::broadcastStandbyDissolution(const QString& tx_hex)
         return;
     }
 
-    // The list can be destroyed while the loop below runs (closing the wallet
-    // deletes the owning WalletView), so the sender is not parented to it and
-    // nothing touches `this` afterwards without checking it is still alive.
-    ProTxSender sender(clientModel->node(), /*parent=*/nullptr);
-    UniValue params(UniValue::VOBJ);
-    params.pushKV("hexstring", tx_hex.trimmed().toStdString());
-    const QPointer<MasternodeList> self{this};
-    setEnabled(false);
-    const ProTxResult result{
-        sender.executeAndWait(QStringLiteral("sendrawtransaction"), params, /*wallet_model=*/nullptr)};
-    if (self.isNull()) return;
-    setEnabled(true);
-    if (!result.ok) {
-        QMessageBox::critical(this, tr("Broadcast failed"), result.message);
+    if (const QString error{SharedMnBroadcast(clientModel->node(), MakeTransactionRef(std::move(tx)))};
+        !error.isEmpty()) {
+        QMessageBox::critical(this, tr("Broadcast failed"), error);
         return;
     }
     QMessageBox::information(this, tr("Standby dissolution sent"), tr("Transaction: %1").arg(txid));
