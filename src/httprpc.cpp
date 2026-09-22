@@ -251,11 +251,10 @@ static bool HTTPReq_JSONRPC(const CoreContext& context, HTTPRequest* req)
                     if (!valRequest[reqIdx].isObject()) {
                         throw JSONRPCError(RPC_INVALID_REQUEST, "Invalid Request object");
                     } else {
-                        const UniValue& request = valRequest[reqIdx].get_obj();
-                        // Parse method
-                        std::string strMethod = request.find_value("method").get_str();
-                        if (!whitelisted(jreq)) {
-                            LogPrintf("RPC User %s not allowed to call method %s\n", jreq.authUser, strMethod);
+                        JSONRPCRequest element{jreq};
+                        element.parse(valRequest[reqIdx]);
+                        if (!whitelisted(element)) {
+                            LogPrintf("RPC User %s not allowed to call method %s\n", jreq.authUser, element.strMethod);
                             return rpcRequest.send_reply(HTTP_FORBIDDEN);
                         }
                     }

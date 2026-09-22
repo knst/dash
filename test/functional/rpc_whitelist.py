@@ -17,12 +17,7 @@ import http.client
 import re
 import urllib.parse
 
-def rpccall(node, user, method):
-    url = urllib.parse.urlparse(node.url)
-    headers = {"Authorization": "Basic " + str_to_b64str('{}:{}'.format(user[0], user[3]))}
-    conn = http.client.HTTPConnection(url.hostname, url.port)
-    conn.connect()
-
+def rpcquery(method):
     # composite commands are presented without space in whitelist
     # but space can't be omitted when using CLI/http rpc
     # for sack of test, substitute missing space for quorum composite command
@@ -30,12 +25,23 @@ def rpccall(node, user, method):
     if re.match(r"^quorum[^ ]", method):
         params = [method[6:]]
         method = "quorum"
-    query = {"method" : method, "params" : params}
+    return {"method" : method, "params" : params}
 
-    conn.request('POST', '/', json.dumps(query), headers)
+def rpcpost(node, user, body):
+    url = urllib.parse.urlparse(node.url)
+    headers = {"Authorization": "Basic " + str_to_b64str('{}:{}'.format(user[0], user[3]))}
+    conn = http.client.HTTPConnection(url.hostname, url.port)
+    conn.connect()
+    conn.request('POST', '/', json.dumps(body), headers)
     resp = conn.getresponse()
     conn.close()
     return resp
+
+def rpccall(node, user, method):
+    return rpcpost(node, user, rpcquery(method))
+
+def rpcbatch(node, user, methods):
+    return rpcpost(node, user, [rpcquery(method) for method in methods])
 
 
 class RPCWhitelistTest(BitcoinTestFramework):
@@ -53,6 +59,8 @@ class RPCWhitelistTest(BitcoinTestFramework):
             ["user1", "50358aa884c841648e0700b073c32b2e$b73e95fff0748cc0b517859d2ca47d9bac1aa78231f3e48fa9222b612bd2083e", "getbestblockhash,getblockcount,", "12345"],
             ["user2", "8650ba41296f62092377a38547f361de$4620db7ba063ef4e2f7249853e9f3c5c3592a9619a759e3e6f1c63f2e22f1d21", "getblockcount", "54321"],
             ["platform-user", "8650ba41296f62092377a38547f361de$4620db7ba063ef4e2f7249853e9f3c5c3592a9619a759e3e6f1c63f2e22f1d21", "getblockcount,quorumlist", "54321"],
+            # ", " separated list yields an empty whitelist entry
+            ["user3", "8650ba41296f62092377a38547f361de$4620db7ba063ef4e2f7249853e9f3c5c3592a9619a759e3e6f1c63f2e22f1d21", "getblockcount, getbestblockhash", "54321"],
         ]
         # For exceptions
         self.strange_users = [
@@ -96,6 +104,12 @@ class RPCWhitelistTest(BitcoinTestFramework):
             for permission in self.never_allowed:
                 self.log.info("[" + user[0] + "]: Testing a non permitted permission (" + permission + ")")
                 assert_equal(403, rpccall(self.nodes[0], user, permission).status)
+            self.log.info("[" + user[0] + "]: Testing a batch of permitted permissions")
+            assert_equal(200, rpcbatch(self.nodes[0], user, permissions).status)
+            for permission in self.never_allowed:
+                self.log.info("[" + user[0] + "]: Testing a batch with a non permitted permission (" + permission + ")")
+                assert_equal(403, rpcbatch(self.nodes[0], user, [permission]).status)
+                assert_equal(403, rpcbatch(self.nodes[0], user, permissions + [permission]).status)
         # Now test the strange users
         for permission in self.never_allowed:
             self.log.info("Strange test 1")
