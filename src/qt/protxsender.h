@@ -42,14 +42,18 @@ public:
     explicit ProTxSender(interfaces::Node& node, QObject* parent = nullptr);
     ~ProTxSender() override;
 
-    //! True while a command is executing
-    bool isBusy() const { return m_busy; }
-
     //! Execute `method` (the full command name, e.g. "protx register_fund") with
     //! named `params` against `wallet_model`'s wallet (nullptr for node-level
     //! commands). The outcome arrives via finished(). Returns false when a
     //! command is already in flight.
     bool execute(const QString& method, const UniValue& params, const WalletModel* wallet_model);
+
+    //! execute() and wait for the outcome in a nested event loop on the calling
+    //! thread, so the window keeps repainting and whatever the caller holds on
+    //! its stack (an UnlockContext, which cannot be moved) stays alive. The
+    //! caller must guard against re-entry from that loop, as the dialogs do
+    //! with a busy flag. A command already in flight comes back as a failure.
+    ProTxResult executeAndWait(const QString& method, const UniValue& params, const WalletModel* wallet_model);
 
     //! Map an RPC error to a message a user can act on
     static QString translateError(int code, const QString& message);

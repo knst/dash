@@ -16,7 +16,6 @@
 #include <QVector>
 
 #include <map>
-#include <memory>
 #include <optional>
 #include <vector>
 
@@ -325,10 +324,11 @@ private:
     bool allApproved() const;
     bool allFundingSigned() const;
 
-    //! Execute one RPC command on the bridge, waiting in a nested event loop on
-    //! the GUI thread (which keeps the non-movable unlock context alive when
-    //! needs_unlock). Returns false when the call could not be started.
-    bool runRpc(const QString& method, const UniValue& params, bool needs_unlock, ProTxResult& result);
+    //! Run one RPC command with the busy indicator up, asking for the wallet
+    //! unlock first when needs_unlock. Returns why it failed as a sentence
+    //! ready for "...failed: %1", or an empty string with `result` filled in.
+    QString runRpc(const QString& method, const UniValue& params, const QString& busy_text, bool needs_unlock,
+                   ProTxResult& result);
     //! Replace the session's transaction hex in place (newly signed funding
     //! inputs) without changing the stage, via an envelope round-trip
     bool replaceSessionProTx(const QString& tx_hex, QString& error);

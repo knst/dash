@@ -38,7 +38,6 @@
 #include <QComboBox>
 #include <QDateTime>
 #include <QDoubleSpinBox>
-#include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
 #include <QFrame>
@@ -62,7 +61,7 @@
 
 #include <algorithm>
 #include <map>
-#include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -2246,13 +2245,11 @@ void SharedMnCreateDialog::lockTerms()
     params.pushKV("earlyPenalty", terms.earlyPenalty);
 
     // shared_register_prepare only assembles the transaction; no keys involved
-    setBusy(true, tr("Preparing…"));
     ProTxResult result;
-    const bool ran{runRpc(shared_mn_rpc::REGISTER_PREPARE, params, /*needs_unlock=*/false, result)};
-    setBusy(false);
-    if (!ran) return;
-    if (!result.ok) {
-        showError(tr("Preparing the registration failed: %1").arg(result.message));
+    const QString failure{runRpc(shared_mn_rpc::REGISTER_PREPARE, params, tr("Preparing…"), /*needs_unlock=*/false,
+                                 result)};
+    if (!failure.isEmpty()) {
+        showError(tr("Preparing the registration failed: %1").arg(failure));
         return;
     }
     const UniValue& tx{result.value.find_value("tx")};
@@ -2299,16 +2296,10 @@ bool SharedMnCreateDialog::signOwnConsent(QString& error)
     }
     UniValue params(UniValue::VOBJ);
     params.pushKV("tx", m_session.protxHex().toStdString());
-    setBusy(true, tr("Approving…"));
     ProTxResult result;
-    const bool ran{runRpc(shared_mn_rpc::SIGN, params, /*needs_unlock=*/true, result)};
-    setBusy(false);
-    if (!ran) {
-        error = tr("Approving failed: %1").arg(tr("the wallet stayed locked."));
-        return false;
-    }
-    if (!result.ok) {
-        error = tr("Approving failed: %1").arg(result.message);
+    const QString failure{runRpc(shared_mn_rpc::SIGN, params, tr("Approving…"), /*needs_unlock=*/true, result)};
+    if (!failure.isEmpty()) {
+        error = tr("Approving failed: %1").arg(failure);
         return false;
     }
     const UniValue& signatures{result.value.isObject() ? result.value.find_value("signatures") : NullUniValue};
@@ -2364,16 +2355,11 @@ bool SharedMnCreateDialog::combineApprovals(QString& error)
     params.pushKV("signatures", signatures);
     params.pushKV("submit", false);
 
-    setBusy(true, tr("Combining approvals…"));
     ProTxResult result;
-    const bool ran{runRpc(shared_mn_rpc::COMBINE, params, /*needs_unlock=*/false, result)};
-    setBusy(false);
-    if (!ran) {
-        error = tr("Combining approvals failed: %1").arg(tr("the request could not be started."));
-        return false;
-    }
-    if (!result.ok) {
-        error = tr("Combining approvals failed: %1").arg(result.message);
+    const QString failure{runRpc(shared_mn_rpc::COMBINE, params, tr("Combining approvals…"), /*needs_unlock=*/false,
+                                 result)};
+    if (!failure.isEmpty()) {
+        error = tr("Combining approvals failed: %1").arg(failure);
         return false;
     }
     if (!result.value.isStr()) {
@@ -2496,16 +2482,11 @@ bool SharedMnCreateDialog::signOwnFundingInputs(bool& complete, QString& error)
     const QString before{m_session.protxHex()};
     UniValue params(UniValue::VOBJ);
     params.pushKV("hexstring", before.toStdString());
-    setBusy(true, tr("Signing your contribution…"));
     ProTxResult result;
-    const bool ran{runRpc(QStringLiteral("signrawtransactionwithwallet"), params, /*needs_unlock=*/true, result)};
-    setBusy(false);
-    if (!ran) {
-        error = tr("Signing failed: %1").arg(tr("the wallet stayed locked."));
-        return false;
-    }
-    if (!result.ok) {
-        error = tr("Signing failed: %1").arg(result.message);
+    const QString failure{runRpc(QStringLiteral("signrawtransactionwithwallet"), params,
+                                 tr("Signing your contribution…"), /*needs_unlock=*/true, result)};
+    if (!failure.isEmpty()) {
+        error = tr("Signing failed: %1").arg(failure);
         return false;
     }
     const UniValue& hex{result.value.find_value("hex")};
@@ -2633,13 +2614,11 @@ void SharedMnCreateDialog::broadcastRegistration()
 
     UniValue params(UniValue::VOBJ);
     params.pushKV("hexstring", m_session.protxHex().toStdString());
-    setBusy(true, tr("Broadcasting…"));
     ProTxResult result;
-    const bool ran{runRpc(QStringLiteral("sendrawtransaction"), params, /*needs_unlock=*/false, result)};
-    setBusy(false);
-    if (!ran) return;
-    if (!result.ok) {
-        showError(tr("Broadcast failed: %1").arg(result.message));
+    const QString failure{runRpc(QStringLiteral("sendrawtransaction"), params, tr("Broadcasting…"),
+                                 /*needs_unlock=*/false, result)};
+    if (!failure.isEmpty()) {
+        showError(tr("Broadcast failed: %1").arg(failure));
         return;
     }
     if (QString error; !m_session.setBroadcast(error)) {
@@ -3403,26 +3382,20 @@ bool SharedMnCreateDialog::allFundingSigned() const
            m_session.stage() == MnShareSession::Stage::Broadcast;
 }
 
-bool SharedMnCreateDialog::runRpc(const QString& method, const UniValue& params, bool needs_unlock,
-                                  ProTxResult& result)
+QString SharedMnCreateDialog::runRpc(const QString& method, const UniValue& params, const QString& busy_text,
+                                     bool needs_unlock, ProTxResult& result)
 {
-    // UnlockContext is neither copyable nor movable: keep it on this stack
-    // frame and wait in a nested event loop until the worker thread reports back
-    std::unique_ptr<UnlockHolder> unlock;
+    std::optional<UnlockHolder> unlock;
     if (needs_unlock) {
-        if (!canSign()) return false;
-        unlock = std::make_unique<UnlockHolder>(*m_wallet_model);
-        if (!unlock->ctx.isValid()) return false;
+        if (!canSign()) return tr("this wallet is watch-only and cannot sign.");
+        unlock.emplace(*m_wallet_model);
+        if (!unlock->ctx.isValid()) return tr("the wallet stayed locked.");
     }
-
-    QEventLoop loop;
-    connect(m_sender, &ProTxSender::finished, &loop, [&](const ProTxResult& r) {
-        result = r;
-        loop.quit();
-    });
-    if (!m_sender->execute(method, params, m_wallet_model)) return false;
-    loop.exec();
-    return true;
+    setBusy(true, busy_text);
+    result = m_sender->executeAndWait(method, params, m_wallet_model);
+    setBusy(false);
+    if (result.ok) return {};
+    return result.message.isEmpty() ? tr("the node gave no reason.") : result.message;
 }
 
 bool SharedMnCreateDialog::replaceSessionProTx(const QString& tx_hex, QString& error)

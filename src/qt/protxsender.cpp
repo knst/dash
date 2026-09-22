@@ -9,6 +9,7 @@
 #include <rpc/protocol.h>
 #include <util/threadnames.h>
 
+#include <QEventLoop>
 #include <QUrl>
 
 namespace {
@@ -99,6 +100,23 @@ bool ProTxSender::execute(const QString& method, const UniValue& params, const W
         });
     });
     return true;
+}
+
+ProTxResult ProTxSender::executeAndWait(const QString& method, const UniValue& params, const WalletModel* wallet_model)
+{
+    ProTxResult result;
+    QEventLoop loop;
+    // The loop is the connection's context, so the connection dies with it
+    connect(this, &ProTxSender::finished, &loop, [&](const ProTxResult& r) {
+        result = r;
+        loop.quit();
+    });
+    if (!execute(method, params, wallet_model)) {
+        result.message = tr("Another command is still running.");
+        return result;
+    }
+    loop.exec();
+    return result;
 }
 
 QString ProTxSender::translateError(int code, const QString& message)

@@ -41,7 +41,6 @@
 #include <QDate>
 #include <QDateTime>
 #include <QDialogButtonBox>
-#include <QEventLoop>
 #include <QFile>
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -891,28 +890,12 @@ bool SharedMnDialog::runCommand(const QString& method, const UniValue& params, P
     m_busy = true;
     setEnabled(false);
     QApplication::setOverrideCursor(Qt::WaitCursor);
-
-    ProTxResult outcome;
-    QEventLoop loop;
-    connect(m_sender, &ProTxSender::finished, &loop, [&](const ProTxResult& r) {
-        outcome = r;
-        loop.quit();
-    });
-    const bool started{m_sender->execute(method, params, m_wallet_model)};
-    if (started) {
-        // The unlock context cannot be moved, so wait here on the GUI thread to
-        // keep it alive until the worker thread reports back
-        loop.exec();
-    }
-
+    // Waits on the GUI thread, which keeps the unlock context above alive
+    const ProTxResult outcome{m_sender->executeAndWait(method, params, m_wallet_model)};
     QApplication::restoreOverrideCursor();
     setEnabled(true);
     m_busy = false;
 
-    if (!started) {
-        error = tr("Another command is still running.");
-        return false;
-    }
     if (!outcome.ok) {
         error = outcome.message;
         return false;

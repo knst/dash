@@ -28,7 +28,6 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QDebug>
-#include <QEventLoop>
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QPointer>
@@ -379,16 +378,10 @@ void MasternodeList::broadcastStandbyDissolution(const QString& tx_hex)
     ProTxSender sender(clientModel->node(), /*parent=*/nullptr);
     UniValue params(UniValue::VOBJ);
     params.pushKV("hexstring", tx_hex.trimmed().toStdString());
-    ProTxResult result;
-    QEventLoop loop;
-    connect(&sender, &ProTxSender::finished, &loop, [&](const ProTxResult& r) {
-        result = r;
-        loop.quit();
-    });
-    if (!sender.execute(QStringLiteral("sendrawtransaction"), params, /*wallet_model=*/nullptr)) return;
     const QPointer<MasternodeList> self{this};
     setEnabled(false);
-    loop.exec();
+    const ProTxResult result{
+        sender.executeAndWait(QStringLiteral("sendrawtransaction"), params, /*wallet_model=*/nullptr)};
     if (self.isNull()) return;
     setEnabled(true);
     if (!result.ok) {
