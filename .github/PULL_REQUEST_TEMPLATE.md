@@ -6,11 +6,16 @@ follow the format described in
 
 _Do not manually line wrap text; allow the GitHub UI to dynamically wrap lines._
 
-_Pull requests without a rationale and clear improvement may be closed
-immediately.
-[CONTRIBUTING.md](https://github.com/dashpay/dash/blob/HEAD/CONTRIBUTING.md)
+_[CONTRIBUTING.md](https://github.com/dashpay/dash/blob/HEAD/CONTRIBUTING.md)
 describes what is expected of a pull request, including tests, refactoring and
 backports._
+
+_Pull requests without a rationale and clear improvement may be closed
+immediately._
+
+_Please provide clear motivation for your patch and explain how it improves
+Dash Core user experience or Dash Core developer experience
+significantly:_
 
 
 ## Issue being fixed or feature implemented
