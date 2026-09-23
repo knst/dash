@@ -441,7 +441,7 @@ bool SuperblockManager::AddTrigger(std::shared_ptr<CGovernanceObject> obj, int c
     uint256 nHash = obj->GetHash();
 
     LOCK(cs_sb);
-    if (m_triggers.count(nHash)) {
+    if (m_triggers.contains(nHash)) {
         LogPrint(BCLog::GOBJECT, "SuperblockManager::%s -- Already have hash, nHash = %s, size = %s\n", __func__,
                  nHash.GetHex(), m_triggers.size());
         return false;

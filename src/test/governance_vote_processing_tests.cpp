@@ -355,6 +355,8 @@ BOOST_AUTO_TEST_CASE(invalid_signature_does_not_suppress_valid_vote)
     uint256 hash_to_request;
     BOOST_CHECK(!govman.ProcessVote(forged, exception, hash_to_request));
     BOOST_CHECK_EQUAL(exception.GetNodePenalty(), 20);
+    vote_rec_t vote_record;
+    BOOST_CHECK(!stored->GetCurrentMNVotes(mn_collateral, vote_record));
 
     CGovernanceVote legitimate{forged};
     SignWithVotingKey(legitimate, mn_voting_key);
@@ -369,6 +371,8 @@ BOOST_AUTO_TEST_CASE(invalid_signature_does_not_suppress_valid_vote)
     SignWithOperatorKey(forged_bls, attacker_operator_key);
     BOOST_CHECK(!govman.ProcessVote(forged_bls, exception, hash_to_request));
     BOOST_CHECK_EQUAL(exception.GetNodePenalty(), 20);
+    BOOST_REQUIRE(stored->GetCurrentMNVotes(mn_collateral, vote_record));
+    BOOST_CHECK(!vote_record.mapInstances.contains(VOTE_SIGNAL_VALID));
 
     CGovernanceVote legitimate_bls{forged_bls};
     SignWithOperatorKey(legitimate_bls, mn_operator_key);
@@ -383,7 +387,7 @@ BOOST_AUTO_TEST_CASE(invalid_signature_does_not_suppress_valid_vote)
 //
 // Rate checks are live on this path (unlike the orphan replay above, which disables them), so each
 // vote below has to be the first *accepted* one for its (masternode, signal) pair: a rejected vote
-// leaves last_update at epoch 0, but a second accepted vote for the same signal would be turned
+// leaves no vote instance behind, but a second accepted vote for the same signal would be turned
 // away by the 1h GOVERNANCE_UPDATE_MIN limit instead of the rule under test.
 BOOST_AUTO_TEST_CASE(proposal_funding_votes_require_the_voting_key)
 {

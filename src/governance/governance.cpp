@@ -526,7 +526,8 @@ std::shared_ptr<CGovernanceObject> CGovernanceManager::FindGovernanceObject(cons
 std::shared_ptr<CGovernanceObject> CGovernanceManager::FindGovernanceObjectInternal(const uint256& nHash)
 {
     AssertLockHeld(cs_store);
-    if (mapObjects.count(nHash)) return mapObjects[nHash];
+    auto it = mapObjects.find(nHash);
+    if (it != mapObjects.end()) return it->second;
     return nullptr;
 }
 
@@ -698,11 +699,7 @@ void CGovernanceManager::MasternodeRateUpdate(const CGovernanceObject& govobj)
     if (govobj.GetObjectType() != GovernanceObject::TRIGGER) return;
 
     const COutPoint& masternodeOutpoint = govobj.GetMasternodeOutpoint();
-    auto it = mapLastMasternodeObject.find(masternodeOutpoint);
-
-    if (it == mapLastMasternodeObject.end()) {
-        it = mapLastMasternodeObject.insert(txout_m_t::value_type(masternodeOutpoint, last_object_rec(true))).first;
-    }
+    auto it = mapLastMasternodeObject.try_emplace(masternodeOutpoint, /*fStatusOKIn=*/true).first;
 
     int64_t nTimestamp = govobj.GetCreationTime();
     it->second.triggerBuffer.AddTimestamp(nTimestamp);
@@ -951,15 +948,10 @@ std::pair<std::vector<uint256>, std::vector<uint256>> CGovernanceManager::FetchG
 
         for (const auto& [nHash, govobj] : mapObjects) {
             if (Assert(govobj)->IsSetCachedDelete()) continue;
-            if (mapAskedRecently.count(nHash)) {
-                for (auto it = mapAskedRecently[nHash].begin(); it != mapAskedRecently[nHash].end();) {
-                    if (it->second < nNow) {
-                        mapAskedRecently[nHash].erase(it++);
-                    } else {
-                        ++it;
-                    }
-                }
-                if (mapAskedRecently[nHash].size() >= nPeersPerHashMax) continue;
+            if (auto asked_it = mapAskedRecently.find(nHash); asked_it != mapAskedRecently.end()) {
+                auto& asked_peers = asked_it->second;
+                std::erase_if(asked_peers, [&](const auto& asked) { return asked.second < nNow; });
+                if (asked_peers.size() >= nPeersPerHashMax) continue;
             }
 
             if (govobj->GetObjectType() == GovernanceObject::TRIGGER) {
