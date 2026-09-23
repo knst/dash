@@ -9,6 +9,7 @@ feature_llmq_rotation.py
 Checks LLMQs Quorum Rotation
 
 '''
+import copy
 import struct
 from io import BytesIO
 
@@ -17,6 +18,7 @@ from test_framework.messages import (
     CBlock,
     CBlockHeader,
     CCbTx,
+    CFinalCommitmentPayload,
     CMerkleBlock,
     MAX_BASE_BLOCK_HASHES,
     QuorumId,
@@ -229,6 +231,8 @@ class LLMQQuorumRotationTest(DashTestFramework):
         self.log.info("h("+str(self.nodes[0].getblockcount())+") new_quorum_list:"+str(new_quorum_list))
         assert new_quorum_list != quorum_list
 
+        self.test_duplicate_rotated_commitment(quorum_info_3_0, llmq_type)
+
         self.log.info("Invalidate the quorum")
         self.bump_mocktime(5)
         self.nodes[0].sporkupdate("SPORK_19_CHAINLOCKS_ENABLED", 4070908800)
@@ -275,6 +279,58 @@ class LLMQQuorumRotationTest(DashTestFramework):
         assert_equal(rpc_qr_info["mnListDiffAtHMinus3C"]["baseBlockHash"], genesis_blockhash)
 
         self.test_getqrinfo_base_block_hashes_limit(int(best_block_hash, 16), int(hmc_base_blockhash, 16))
+
+    def test_duplicate_rotated_commitment(self, quorum_info, llmq_type):
+        self.log.info("A block mining one rotated commitment twice instead of its sibling is rejected")
+        node = self.nodes[0]
+        tip = node.getbestblockhash()
+        mined_block_hash = quorum_info["minedBlock"]
+        parent_hash = node.getblockheader(mined_block_hash)["previousblockhash"]
+        block = from_hex(CBlock(), node.getblock(mined_block_hash, 0))
+
+        qc_txs = {}
+        for tx in block.vtx:
+            if tx.nType != 6:
+                continue
+            qc_payload = CFinalCommitmentPayload()
+            qc_payload.deserialize(BytesIO(tx.vExtraPayload))
+            if qc_payload.commitment.llmqType == llmq_type:
+                qc_txs[qc_payload.commitment.quorumIndex] = (tx, qc_payload.commitment)
+        assert_equal(sorted(qc_txs), [0, 1])
+
+        # Without index 1's new commitment, the previous cycle's index 1 commitment stays active.
+        def active_commitment_hashes(block_hash):
+            return {hash256(qc.serialize()): qc for qc in self.test_node.getmnlistdiff(0, int(block_hash, 16)).newQuorums}
+        active_hashes = active_commitment_hashes(mined_block_hash)
+        previous_index_1 = [h for h, qc in active_commitment_hashes(parent_hash).items()
+                            if qc.llmqType == llmq_type and qc.quorumIndex == 1]
+        assert_equal(len(previous_index_1), 1)
+        del active_hashes[hash256(qc_txs[1][1].serialize())]
+        active_hashes[previous_index_1[0]] = None
+
+        dup_tx = copy.deepcopy(qc_txs[0][0])
+        dup_tx.nLockTime = 1
+        dup_tx.rehash()
+        block.vtx[block.vtx.index(qc_txs[1][0])] = dup_tx
+
+        cbtx = CCbTx()
+        cbtx.deserialize(BytesIO(block.vtx[0].vExtraPayload))
+        cbtx.merkleRootQuorums = CBlock.get_merkle_root(sorted(active_hashes))
+        block.vtx[0].vExtraPayload = cbtx.serialize()
+        block.vtx[0].rehash()
+        block.hashMerkleRoot = block.calc_merkle_root()
+        block.solve()
+
+        self.bump_mocktime(5)
+        node.sporkupdate("SPORK_19_CHAINLOCKS_ENABLED", 4070908800)
+        self.wait_for_sporks_same()
+        node.invalidateblock(mined_block_hash)
+        assert_equal(node.submitblock(block.serialize().hex()), "bad-qc-dup")
+        node.reconsiderblock(mined_block_hash)
+        assert_equal(node.getbestblockhash(), tip)
+        self.bump_mocktime(5)
+        node.sporkupdate("SPORK_19_CHAINLOCKS_ENABLED", 0)
+        self.wait_for_sporks_same()
 
     def test_getqrinfo_base_block_hashes_limit(self, blockRequestHash, baseBlockHash):
         self.log.info("Test getqrinfo baseBlockHashes limit over P2P")

@@ -28,6 +28,8 @@
 
 #include <algorithm>
 #include <map>
+#include <set>
+#include <utility>
 
 static void PreComputeQuorumMembers(CDeterministicMNManager& dmnman, llmq::CQuorumSnapshotManager& qsnapman,
                                     const ChainstateManager& chainman, const CBlockIndex* pindex, bool reset_cache)
@@ -247,6 +249,18 @@ bool CQuorumBlockProcessor::ProcessBlock(Chainstate& chainstate, const CBlock& b
         }
         if (IsQuorumRotationEnabled(params, pindex)) {
             LogPrintf("[ProcessBlock] h[%d] numCommitmentsRequired[%d] numCommitmentsInNewBlock[%d]\n", pindex->nHeight, numCommitmentsRequired, numCommitmentsInNewBlock);
+        }
+    }
+
+    // ProcessCommitment accepts a commitment identical to the stored one, so
+    // rotation's multiple commitments per type need an explicit per-block check.
+    // It runs before any commitment is processed, because ProcessCommitment
+    // updates in-memory state that a rejected block would not restore.
+    // Null commitments stay exempt: they were never subject to bad-qc-dup.
+    std::set<std::pair<Consensus::LLMQType, uint256>> seen_quorums;
+    for (const auto& [_, qc] : qcs) {
+        if (!qc.IsNull() && !seen_quorums.emplace(qc.llmqType, qc.quorumHash).second) {
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-qc-dup");
         }
     }
 
