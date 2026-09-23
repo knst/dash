@@ -45,12 +45,11 @@ Short version, in order of preference:
   `Assert` returns its argument: `assert(ptr != nullptr); obj = *ptr;` becomes
   `obj = *Assert(ptr);`
 - `CHECK_NONFATAL(cond)` / `NONFATAL_UNREACHABLE()` for internal logic bugs on
-  a path with a caller to report to. Required in RPC code, enforced
-  (best-effort) by `test/lint/lint-assertions.py` for `src/rpc/` and
+  a path with a caller to report to. Required in RPC code for `src/rpc/` and
   `src/wallet/rpc*`.
 
 The production-crash guidance above does not apply to C++ regression and
-unit-test sources under `src/test/` and `src/wallet/test/`. They compile into test
+unit-test sources under `src/test/`, `src/qt/test/`, `src/wallet/test/`. They compile into test
 binaries, not user-facing `dashd` or `dash-qt`; `assert`, `Assert`, `Assume`,
 and related fatal test checks are all acceptable. Do not flag the choice among
 them as a production-crash risk.
@@ -70,7 +69,7 @@ not checks at all: return an error, `AbortNode()`, or `InitError()`.
 - `src/llmq/`, `src/masternode/`, `src/evo/`, `src/governance/`,
   `src/coinjoin/`, `src/instantsend/`, `src/spork*` - Dash-specific systems.
 - `src/test/`, `src/wallet/test/`, `src/qt/test/` - C++ unit tests.
-- `test/functional/` - Python functional tests for `dashd` and `dash-qt`.
+- `test/functional/` - Python functional tests for `dashd`.
 - `test/lint/` - static checks.
 - `depends/` - dependency build system.
 - `ci/`, `.github/` - CI entry points and GitHub workflows.
@@ -119,28 +118,28 @@ Useful developer configure flags:
             --enable-werror
 ```
 
-Generate `compile_commands.json`:
-
-```bash
-JOBS="$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu)"
-JOBS="$(( JOBS > 1 ? JOBS - 1 : 1 ))"
-bear -- make -j"$JOBS"
-```
+To generate `compile_commands.json` or run clang-tidy, see
+`doc/developer-notes.md` under "Running clang-tidy".
 
 When adding, removing, or renaming C++ source files, update the build system in
 the same change. Most source/test files need `src/Makefile.am` or
-`src/Makefile.test.include` updates, and some backports also require matching
-CI/lint list changes.
+`src/Makefile.test.include` updates, and new Dash-specific files must also be
+appended to `test/util/data/non-backported.txt`.
+
+## Writing Tests
+
+Pick the test type by what it can observe, not by where it is easiest to
+write.
+
+- A unit test (`src/test/`, `src/wallet/test/` with Boost; `src/qt/test/` with QTest) checks one function or class through the standard fixtures (`BasicTestingSetup`, `TestingSetup`) and its public surface, (not `friend` or injected private state); if the behavior can't be observed that way, extract a testable function or write a functional test.
+- A functional test (`test/functional/`) proves a user-visible outcome over RPC or P2P — a block accepted, a lock formed, a peer banned — and is the home for anything spanning several subsystems.
+- A regression test must fail without the fix, pass with it, and observe the actual claimed behavior rather than a reachable proxy like a cache entry, seen-set size, or returned container.
+- Use one scenario (or one input table) per test case with a negative case for every special-cased path, put it in the file that already covers that scope, and add it only when catching the regression outweighs its maintenance and compile cost, naming it after the scenario.
+- Don't force a test: when a change is self-evident from the diff (typo, missing `const`, log category, renamed local) or untestable deterministically (performance, races, timing), state in the PR how you actually verified it, and claim mutation checks or "fails without the fix" only when you really ran them.
 
 ## Test Commands
 
-Choose tests based on the files touched. Do not claim broad validation if only a
-targeted test was run. Prefer adding test cases to existing files over creating a
-new unit or functional test file. Only create a new test file when the additions
-would make an existing file overly complicated, when a separate file yields
-clearly improved performance (e.g. parallel execution or isolation), or when the
-subject being tested is distinctly separate and does not logically belong in an
-existing file. Fewer files reduce test setup overhead and compilation time.
+Choose tests based on the files touched.
 
 ```bash
 # All unit tests
@@ -247,16 +246,16 @@ Be extra careful around:
   relevant future work/cycle base instead of only the current tip;
 - time, mocktime, scheduler, and interrupt/shutdown behavior.
 
-For these areas, prefer small tests that prove the invariant being changed.
-
 ## PR Hygiene
 
-- When creating pull requests, follow `.github/PULL_REQUEST_TEMPLATE.md` for the description and ensure the PR title satisfies the active linter in `.github/workflows/semantic-pull-request.yml` (using Conventional Commits, including `backport:` for Bitcoin Core backports).
+- Follow `.github/PULL_REQUEST_TEMPLATE.md`: remove its italicized prompts,
+  fill in the required sections, and keep the checklist accurate for the
+  change. The title must satisfy `.github/workflows/semantic-pull-request.yml`
+  (Conventional Commits, with `backport:` for Bitcoin Core backports).
 - Use atomic commits. Each commit should make sense on its own and generally
   build and pass tests. An intentionally non-building commit (e.g. a
   regression test landing before its fix) is fine if called out explicitly so
   it isn't mistaken for an oversight.
-- Remove the italicized helper prompts from `.github/PULL_REQUEST_TEMPLATE.md`, fill in the required sections, and keep the checklist accurate for the change.
 - Do not put `@` mentions in PR descriptions; they are copied into merge
   commits and notify users repeatedly.
 - Explain what changed and why. For bug fixes, include the failure mode and why
