@@ -310,6 +310,8 @@ BOOST_FIXTURE_TEST_CASE(generation_retries_retired_checkpoint_signer, QuorumProo
     WITH_LOCK(cs_main, chain.SetTip(*tip));
 
     // Missing history is a hard error, not a reason to skip to another target.
+    // A state read once is memoized by block hash, so start from a cold cache.
+    llmq::ClearProofStateCacheForTesting();
     WITH_LOCK(cs_main, chain[checkpoint_height]->nStatus &= ~BLOCK_HAVE_DATA);
     BOOST_CHECK_EXCEPTION(Generate(checkpoint_height + 1), UniValue, [](const UniValue& error) {
         return error["message"].get_str().find("historical block unavailable") != std::string::npos;
@@ -345,6 +347,39 @@ BOOST_FIXTURE_TEST_CASE(consensus_valid_envelopes_are_provable, QuorumProofGener
 
     const auto state = proof->Verify(llmq::QuorumProofBuilder::StateAt(checkpoint));
     BOOST_CHECK_EQUAL(state.height, uint32_t(entry->height));
+
+    // The RPC reuses the target block's own state instead of re-verifying the
+    // proof; Build() only returns a proof whose verified state is exactly that.
+    BOOST_CHECK(state == llmq::QuorumProofBuilder::StateAt(chain[state.height]));
+
+    // The memoized active set is the committed set: its leaves are sorted and
+    // hash to the block's own quorum root.
+    const auto active = builder.ActiveCommitments(checkpoint);
+    std::vector<uint256> active_leaves;
+    for (const auto& commitment : active)
+        active_leaves.push_back(::SerializeHash(commitment));
+    BOOST_CHECK(std::is_sorted(active_leaves.begin(), active_leaves.end()));
+    BOOST_CHECK(ComputeMerkleRoot(active_leaves) == llmq::QuorumProofBuilder::StateAt(checkpoint).quorumRoot);
+
+    // Encoding with the caller's verified state is byte-identical to verifying again,
+    // and a state that is not the proof's own target is refused.
+    const auto target_set = builder.ActiveCommitments(chain[state.height]);
+    BOOST_REQUIRE(!target_set.empty());
+    std::vector<uint256> leaves;
+    for (const auto& commitment : target_set)
+        leaves.push_back(::SerializeHash(commitment));
+    CDataStream raw(SER_NETWORK, PROTOCOL_VERSION);
+    raw << target_set.front();
+    const llmq::ProofProjection record{0,
+                                       {UCharCast(raw.data()), UCharCast(raw.data()) + raw.size()},
+                                       llmq::ProofMerklePath::Build(leaves, 0)};
+    BOOST_CHECK(llmq::EncodeBootstrap(*proof, {record}) == llmq::EncodeBootstrap(*proof, state, {record}));
+    auto wrong = state;
+    wrong.quorumRoot = uint256::ONE;
+    BOOST_CHECK_THROW(llmq::EncodeBootstrap(*proof, wrong, {record}), std::runtime_error);
+    wrong = state;
+    wrong.height -= 1;
+    BOOST_CHECK_THROW(llmq::EncodeBootstrap(*proof, wrong, {record}), std::runtime_error);
     BOOST_CHECK(state.blockHash == proof->target.header.GetHash());
 }
 BOOST_AUTO_TEST_CASE(real_testnet_wire_and_crypto) {

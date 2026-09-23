@@ -28,6 +28,7 @@
 #include <util/helpers.h>
 
 #include <chainparams.h>
+#include <consensus/merkle.h>
 #include <core_io.h>
 #include <deploymentstatus.h>
 #include <index/txindex.h>
@@ -41,6 +42,7 @@
 #include <validation.h>
 
 #include <iomanip>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -71,6 +73,42 @@ std::shared_ptr<const CChain> GetProofChainSnapshot(const ChainstateManager& cha
         g_proof_chain_tip = tip;
     }
     return g_proof_chain_snapshot;
+}
+
+/** The simplified masternode list at a block, with its entry hashes: the leaves of
+ *  that block's masternode root. Every request that opens EvoNode records at the
+ *  same target needs them, and hashing every entry costs more than the lookup. */
+struct MasternodeLeaves {
+    std::shared_ptr<const CSimplifiedMNList> sml;
+    std::vector<uint256> leaves;
+};
+
+std::mutex g_mn_leaves_mutex;
+std::map<uint256, MasternodeLeaves> g_mn_leaves; // keyed by block hash; a few recent targets
+
+MasternodeLeaves GetMasternodeLeaves(CDeterministicMNManager& dmnman, const CBlockIndex* target,
+                                     const uint256& masternode_root)
+{
+    const uint256 key = target->GetBlockHash();
+    {
+        std::lock_guard lock(g_mn_leaves_mutex);
+        if (const auto it = g_mn_leaves.find(key); it != g_mn_leaves.end()) return it->second;
+    }
+    const auto list = WITH_LOCK(cs_main, return dmnman.GetListForBlock(target));
+    MasternodeLeaves result{list.to_sml(), {}};
+    result.leaves.reserve(result.sml->mnList.size());
+    for (const auto& entry : result.sml->mnList)
+        result.leaves.push_back(entry->CalcHash());
+    // Keep only a list that is the one the block commits to.
+    bool mutated{false};
+    if (ComputeMerkleRoot(result.leaves, &mutated) != masternode_root || mutated) {
+        throw std::runtime_error("Masternode list does not match the target block");
+    }
+    std::lock_guard lock(g_mn_leaves_mutex);
+    // Only recent targets are requested; drop everything rather than track recency.
+    if (g_mn_leaves.size() >= 8) g_mn_leaves.clear();
+    g_mn_leaves.emplace(key, result);
+    return result;
 }
 } // namespace
 
@@ -1566,6 +1604,9 @@ static RPCHelpMan getquorumproofchain()
                     next = int64_t(target_signature.getHeight()) + 1;
                 }
                 if (!proof) throw std::runtime_error("No bridge to snapshot within search budget");
+                // Build() already verified the proof and matched the result against the
+                // chain; the target is exactly the state at the target block.
+                const auto state = llmq::QuorumProofBuilder::StateAt(target);
                 std::vector<llmq::ProofProjection> records;
                 if (!quorumText.empty()) {
                     const auto hash = uint256S(quorumText);
@@ -1587,11 +1628,8 @@ static RPCHelpMan getquorumproofchain()
                     if (!found) throw std::runtime_error("Requested quorum is not in the target root");
                 }
                 if (nodeCount > 0) {
-                    const auto list = WITH_LOCK(cs_main, return CHECK_NONFATAL(node.dmnman)->GetListForBlock(target));
-                    const auto sml = list.to_sml();
-                    std::vector<uint256> leaves;
-                    for (const auto& entry : sml->mnList)
-                        leaves.push_back(entry->CalcHash());
+                    const auto [sml, leaves] = GetMasternodeLeaves(*CHECK_NONFATAL(node.dmnman), target,
+                                                                   state.masternodeRoot);
                     int included = 0;
                     for (size_t i = 0; i < sml->mnList.size() && included < nodeCount; ++i) {
                         const auto& entry = *sml->mnList[i];
@@ -1611,8 +1649,9 @@ static RPCHelpMan getquorumproofchain()
                 }
                 UniValue result(UniValue::VOBJ);
                 result.pushKV("proof_hex", HexStr(proof->Encode()));
-                result.pushKV("bootstrap_hex", records.empty() ? "" : HexStr(llmq::EncodeBootstrap(*proof, records)));
-                result.pushKV("target", proof->Verify(proof->anchor).ToJson());
+                result.pushKV("bootstrap_hex",
+                              records.empty() ? "" : HexStr(llmq::EncodeBootstrap(*proof, state, records)));
+                result.pushKV("target", state.ToJson());
                 return result;
             } catch (const std::exception& e) {
                 throw JSONRPCError(RPC_MISC_ERROR, e.what());

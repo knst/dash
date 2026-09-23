@@ -48,6 +48,12 @@ public:
         LOCK(m_mutex);
         m_entries.insert(key, value);
     }
+
+    void Clear() EXCLUSIVE_LOCKS_REQUIRED(!m_mutex)
+    {
+        LOCK(m_mutex);
+        m_entries.clear();
+    }
 };
 
 static void Require(bool condition, const char* message)
@@ -409,8 +415,19 @@ ProofState QuorumProofChain::Verify(const ProofState& trusted) const
 
 std::vector<unsigned char> EncodeBootstrap(const QuorumProofChain& proof, const std::vector<ProofProjection>& records)
 {
+    return EncodeBootstrap(proof, proof.Verify(proof.anchor), records);
+}
+
+std::vector<unsigned char> EncodeBootstrap(const QuorumProofChain& proof, const ProofState& state,
+                                           const std::vector<ProofProjection>& records)
+{
     Require(!records.empty() && records.size() <= 16, "projection count");
-    const auto state = proof.Verify(proof.anchor);
+    // No BLS work: this re-reads only the target coinbase the proof carries.
+    const auto cb = Coinbase(proof.coinbase, proof.target);
+    Require(state.network == proof.anchor.network && state.height == proof.target.height &&
+                state.blockHash == proof.target.header.GetHash() && state.masternodeRoot == cb.merkle_root_mn_list &&
+                state.quorumRoot == cb.merkle_root_quorums,
+            "state does not match proof target");
     CDataStream out(SER_NETWORK, PROTOCOL_VERSION);
     WriteBlob(out, proof.Encode());
     out << uint8_t(records.size());
@@ -458,7 +475,13 @@ ProofState ProofState::FromJson(const UniValue& value)
 std::vector<CFinalCommitment> QuorumProofBuilder::ActiveCommitments(const CBlockIndex* index) const
 {
     Require(index != nullptr, "missing block index");
+    // The active set at a block is a function of that block's history, and it is
+    // checked against the block's own quorum root below before it is kept. Every
+    // proof from one checkpoint needs the same set, as does every quorum record at
+    // one target. Reading it decodes each commitment's BLS key and signatures.
+    static ProofCache<std::vector<CFinalCommitment>, 64> sets;
     std::vector<CFinalCommitment> result;
+    if (sets.Get(index->GetBlockHash(), result)) return result;
     {
         LOCK(cs_main);
         for (const auto& [type, indexes] : m_quorum_block_processor.GetMinedAndActiveCommitmentsUntilBlock(index)) {
@@ -469,25 +492,51 @@ std::vector<CFinalCommitment> QuorumProofBuilder::ActiveCommitments(const CBlock
             }
         }
     }
-    std::sort(result.begin(), result.end(), [](const auto& a, const auto& b) { return SerializeHash(a) < SerializeHash(b); });
+    std::vector<std::pair<uint256, size_t>> order;
+    order.reserve(result.size());
+    for (size_t i = 0; i < result.size(); ++i)
+        order.emplace_back(SerializeHash(result[i]), i);
+    std::sort(order.begin(), order.end());
+    std::vector<CFinalCommitment> sorted;
     std::vector<uint256> hashes;
+    sorted.reserve(result.size());
     hashes.reserve(result.size());
-    for (const auto& commitment : result) hashes.push_back(SerializeHash(commitment));
-    Require(ComputeMerkleRoot(hashes) == StateAt(index).quorumRoot, "active quorum root mismatch");
-    return result;
+    for (const auto& [hash, i] : order) {
+        sorted.push_back(std::move(result[i]));
+        hashes.push_back(hash);
+    }
+    bool mutated{false};
+    Require(ComputeMerkleRoot(hashes, &mutated) == StateAt(index).quorumRoot && !mutated,
+            "active quorum root mismatch");
+    sets.Insert(index->GetBlockHash(), sorted);
+    return sorted;
 }
+
+static ProofCache<ProofState, 256>& StateCache()
+{
+    static ProofCache<ProofState, 256> cache;
+    return cache;
+}
+
+void ClearProofStateCacheForTesting() { StateCache().Clear(); }
 
 ProofState QuorumProofBuilder::StateAt(const CBlockIndex* index)
 {
     Require(index != nullptr && index->nHeight > 0, "invalid checkpoint block");
     const auto network = Params().NetworkIDString();
     Require(network == "main" || network == "test", "proofs support mainnet/testnet");
+    // A block hash fixes the coinbase, and the network is fixed for the process.
+    // Every request reads the checkpoint's state and the target's more than once.
+    ProofState cached;
+    if (StateCache().Get(index->GetBlockHash(), cached)) return cached;
     CBlock block;
     Require(node::ReadBlockFromDisk(block, index, Params().GetConsensus()) && !block.vtx.empty(), "historical block unavailable");
     ProofCertificate cert{uint32_t(index->nHeight), block.GetBlockHeader(), {}};
     auto cb = Coinbase(ProofTransaction::Build(block, 0), cert);
-    return {uint8_t(network == "main" ? 0 : 1), uint32_t(index->nHeight), index->GetBlockHash(), cb.merkle_root_mn_list,
-            cb.merkle_root_quorums};
+    const ProofState state{uint8_t(network == "main" ? 0 : 1), uint32_t(index->nHeight), index->GetBlockHash(),
+                           cb.merkle_root_mn_list, cb.merkle_root_quorums};
+    StateCache().Insert(index->GetBlockHash(), state);
+    return state;
 }
 
 std::optional<CFinalCommitment> QuorumProofBuilder::DetermineChainlockSigningCommitment(int32_t height) const
