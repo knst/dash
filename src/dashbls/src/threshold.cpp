@@ -7,8 +7,7 @@
 #include "threshold.hpp"
 
 #include "schemes.hpp"
-
-#include <memory>
+#include "bn_helpers.hpp"
 
 static std::unique_ptr<bls::CoreMPL> pThresholdScheme(new bls::LegacySchemeMPL);
 
@@ -175,18 +174,15 @@ namespace bls {
             throw std::length_error("At least 2 coefficients required");
         }
 
-        bn_t x;
-        bn_new(x);
-        bn_read_bin(x, id.begin(), Poly::nIdSize);
-        ops.ModOrder(x);
+        BnGuard x;
+        bn_read_bin(x.val, id.begin(), Poly::nIdSize);
+        ops.ModOrder(x.val);
 
         BLSType y = vecIn.back();
         for (int i = (int) vecIn.size() - 2; i >= 0; i--) {
-            y = ops.Mul(y, x);
+            y = ops.Mul(y, x.val);
             y = ops.Add(y, vecIn[i]);
         }
-
-        bn_free(x);
 
         return y;
     }
@@ -209,54 +205,35 @@ namespace bls {
         */
         const size_t k = vec.size();
 
-        bn_t *delta = new bn_t[k];
-        bn_t *ids2 = new bn_t[k];
+        BnArrayGuard delta(k);
+        BnArrayGuard ids2(k);
 
         for (size_t i = 0; i < k; i++) {
-            bn_new(delta[i]);
-            bn_new(ids2[i]);
             bn_read_bin(ids2[i], ids[i].begin(), Poly::nIdSize);
             ops.ModOrder(ids2[i]);
         }
 
-        bn_t a, b, v;
-        bn_new(a);
-        bn_new(b);
-        bn_new(v);
+        BnGuard a, b, v;
 
-        auto cleanup = [&](){
-            bn_free(a);
-            bn_free(b);
-            bn_free(v);
-            for (size_t i = 0; i < k; i++) {
-                bn_free(delta[i]);
-                bn_free(ids2[i]);
-            }
-            delete[] delta;
-            delete[] ids2;
-        };
-
-        bn_copy(a, ids2[0]);
+        bn_copy(a.val, ids2[0]);
         for (size_t i = 1; i < k; i++) {
-            ops.MulFP(a, a, ids2[i]);
+            ops.MulFP(a.val, a.val, ids2[i]);
         }
-        if (bn_is_zero(a)) {
-            cleanup();
+        if (bn_is_zero(a.val)) {
             throw std::invalid_argument("Zero id");
         }
         for (size_t i = 0; i < k; i++) {
-            bn_copy(b, ids2[i]);
+            bn_copy(b.val, ids2[i]);
             for (size_t j = 0; j < k; j++) {
                 if (j != i) {
-                    ops.SubFP(v, ids2[j], ids2[i]);
-                    if (bn_is_zero(v)) {
-                        cleanup();
+                    ops.SubFP(v.val, ids2[j], ids2[i]);
+                    if (bn_is_zero(v.val)) {
                         throw std::invalid_argument("Duplicate id");
                     }
-                    ops.MulFP(b, b, v);
+                    ops.MulFP(b.val, b.val, v.val);
                 }
             }
-            ops.DivFP(delta[i], a, b);
+            ops.DivFP(delta[i], a.val, b.val);
         }
 
         /*
@@ -266,8 +243,6 @@ namespace bls {
         for (size_t i = 0; i < k; i++) {
             r = ops.Add(r, ops.Mul(vec[i], delta[i]));
         }
-
-        cleanup();
 
         return r;
     }

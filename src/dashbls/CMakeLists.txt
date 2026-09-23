@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.14.0 FATAL_ERROR)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.18.0 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 99)
@@ -145,6 +145,6 @@ else()
   # emscripten can't build python bindings, it produces only javascript
   # add_subdirectory(contrib/pybind11)
   if(BUILD_BLS_PYTHON_BINDINGS)
-    add_subdirectory(python-bindings)
+    add_subdirectory(binds/python)
   endif()
 endif()
