@@ -108,7 +108,7 @@ RPCResult GetRpcResult(const std::string& key, bool optional, const std::string&
         const auto& ret{it->second};
         return RPCResult{ret.m_type, override_name.empty() ? ret.m_key_name : override_name, optional, ret.m_description, ret.m_inner};
     }
-    throw NonFatalCheckError(strprintf("Requested invalid RPCResult for nonexistent key \"%s\"", key).c_str(),
+    throw NonFatalCheckError(strprintf("Requested invalid RPCResult for nonexistent key \"%s\"", key),
                              __FILE__, __LINE__, __func__);
 }
 
