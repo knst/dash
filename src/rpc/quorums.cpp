@@ -1462,7 +1462,7 @@ static RPCHelpMan getchainlockbyheight()
                 }
                 UniValue result(UniValue::VOBJ);
                 result.pushKV("height", height);
-                result.pushKV("blockhash", entry->clsig.getBlockHash().ToString());
+                result.pushKV("blockhash", entry->block_hash.ToString());
                 result.pushKV("signature", entry->Signed().getSig().ToString());
                 result.pushKV("cbtx_height", entry->carrier->nHeight);
                 return result;

@@ -5,7 +5,9 @@
 #ifndef BITCOIN_CHAINLOCK_CLSIG_H
 #define BITCOIN_CHAINLOCK_CLSIG_H
 
+#include <bls/bls.h>
 #include <chainlock/chainlock.h>
+#include <uint256.h>
 
 #include <array>
 #include <cstdint>
@@ -26,19 +28,23 @@ enum class VerifyRecSigStatus : uint8_t;
 } // namespace llmq
 
 namespace chainlock {
+/** A ChainLock certificate carried by a historical coinbase. The signature is
+ *  kept as bytes: decoding a BLS point dominates the cost of reading a carrier,
+ *  and binary search only needs heights. Signed() decodes it (and throws if the
+ *  bytes are not a valid signature). */
 struct CoinbaseChainLock {
-    ChainLockSig clsig;
+    int32_t height{-1};
+    uint256 block_hash;
     const CBlockIndex* carrier{nullptr};
-    /** Serialized signature as it appears in the carrier coinbase. `clsig` holds
-     *  height and block hash only; call Signed() for a copy with the decoded
-     *  signature. Decoding a BLS point is the costly part of reading a carrier. */
-    std::array<uint8_t, 96> signature_bytes{};
+    std::array<uint8_t, CBLSSignature::SerSize> signature_bytes{};
     ChainLockSig Signed() const;
 };
 
 /** Reads historical signatures from a fixed, validated chain view.
- * Cache lifetime is one request; missing block data throws instead of implying
- * that a certificate does not exist. Disk reads do not hold cs_main.
+ * What each carrier block says is memoized process-wide by block hash, so a
+ * carrier read once stays available even if its block data is later removed;
+ * data that was never read and is missing throws instead of implying that a
+ * certificate does not exist. Disk reads do not hold cs_main.
  */
 class CoinbaseChainLockReader
 {

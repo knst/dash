@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <bls/bls.h>
 #include <test/util/llmq_tests.h>
 #include <test/util/net.h>
 #include <test/util/setup_common.h>
@@ -119,8 +120,8 @@ BOOST_FIXTURE_TEST_CASE(historical_coinbase_lookup_from_disk, RegTestingSetup)
             continue;
         }
         BOOST_REQUIRE(entry);
-        BOOST_CHECK_EQUAL(entry->clsig.getHeight(), expected);
-        BOOST_CHECK(entry->clsig.getBlockHash() == chain[expected]->GetBlockHash());
+        BOOST_CHECK_EQUAL(entry->height, expected);
+        BOOST_CHECK(entry->block_hash == chain[expected]->GetBlockHash());
         BOOST_CHECK(entry->Signed().getSig() == signature);
         const int carrier = expected == activation + 1    ? activation + 20
                             : expected == activation + 65 ? activation + 80
@@ -134,7 +135,7 @@ BOOST_FIXTURE_TEST_CASE(historical_coinbase_lookup_from_disk, RegTestingSetup)
     const auto late = long_gap.Find(activation + 100, activation + 16999);
     BOOST_REQUIRE(late);
     BOOST_CHECK_EQUAL(late->carrier->nHeight, activation + 17000);
-    BOOST_CHECK_EQUAL(late->clsig.getHeight(), activation + 16999);
+    BOOST_CHECK_EQUAL(late->height, activation + 16999);
     BOOST_CHECK(!long_gap.Find(activation + 100, activation + 16998));
     // A new request on a shorter chain must not reuse the old request's cache.
     CChain shorter;
@@ -142,6 +143,20 @@ BOOST_FIXTURE_TEST_CASE(historical_coinbase_lookup_from_disk, RegTestingSetup)
     chainlock::CoinbaseChainLockReader after_disconnect(shorter);
     BOOST_CHECK(!after_disconnect.Find(activation + 65, activation + 65));
     BOOST_REQUIRE(after_disconnect.Find(activation + 1, activation + 1));
+
+    // What a carrier says must not depend on the process-wide BLS scheme flag at
+    // the time it is first read, because the answer is kept for the process.
+    chainlock::ClearCoinbaseChainLockCacheForTesting();
+    const bool scheme = bls::bls_legacy_scheme.load();
+    bls::bls_legacy_scheme.store(!scheme);
+    const auto under_other = chainlock::CoinbaseChainLockReader(chain).Read(activation + 40);
+    bls::bls_legacy_scheme.store(scheme);
+    BOOST_REQUIRE(under_other);
+    BOOST_CHECK_EQUAL(under_other->height, activation + 1);
+    const auto after = chainlock::CoinbaseChainLockReader(chain).Read(activation + 40);
+    BOOST_REQUIRE(after);
+    BOOST_CHECK(after->Signed().getSig() == signature);
+    BOOST_CHECK_EQUAL(after->height, activation + 1);
 
     // A carrier's certificate is a fact about its block hash, so once read it is
     // served from the process-wide memo even if the block data goes away...

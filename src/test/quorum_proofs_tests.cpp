@@ -217,6 +217,24 @@ struct QuorumProofGenerationSetup : TestingSetup {
                 llmq::CFinalCommitmentTxPayload qc;
                 qc.nHeight = height;
                 qc.commitment = commitments.back();
+                if (mine_nonstandard_handoff && height == handoff_height) {
+                    // Decoys ahead of the real commitment: the same quorum hash under
+                    // another type, and another quorum hash under the same type. The
+                    // prover must still pick exactly the real one.
+                    for (int decoy = 0; decoy < 2; ++decoy) {
+                        CMutableTransaction other;
+                        other.nVersion = 3;
+                        other.nType = TRANSACTION_QUORUM_COMMITMENT;
+                        auto payload = qc;
+                        if (decoy == 0) {
+                            payload.commitment.llmqType = Consensus::LLMQType::LLMQ_400_60;
+                        } else {
+                            payload.commitment.quorumHash = uint256::ONE;
+                        }
+                        SetTxPayload(other, payload);
+                        block.vtx.push_back(MakeTransactionRef(other));
+                    }
+                }
                 SetTxPayload(tx, qc);
                 block.vtx.push_back(MakeTransactionRef(tx));
             }
@@ -275,7 +293,7 @@ BOOST_FIXTURE_TEST_CASE(generation_retries_retired_checkpoint_signer, QuorumProo
                                      *m_node.chainman, reader);
     const auto first = reader.Find(checkpoint_height + 1, chain.Height());
     BOOST_REQUIRE(first);
-    BOOST_CHECK_EQUAL(first->clsig.getHeight(), checkpoint_height + 1);
+    BOOST_CHECK_EQUAL(first->height, checkpoint_height + 1);
     BOOST_CHECK(!builder.Build(checkpoint, first->Signed()));
 
     const auto result = Generate(checkpoint_height + 1);
@@ -318,13 +336,15 @@ BOOST_FIXTURE_TEST_CASE(consensus_valid_envelopes_are_provable, QuorumProofGener
     CDataStream stream(proof->links[0].mining.transaction, SER_NETWORK, PROTOCOL_VERSION);
     CMutableTransaction mining;
     stream >> mining;
+    // Two decoy commitments were mined ahead of it in the same block.
+    BOOST_CHECK_EQUAL(proof->links[0].mining.path.index, 3U);
     BOOST_CHECK_EQUAL(mining.nVersion, 4);
     BOOST_CHECK_EQUAL(mining.nLockTime, 1U);
     BOOST_CHECK(!mining.vin.empty());
     BOOST_CHECK(!mining.vout.empty());
 
     const auto state = proof->Verify(llmq::QuorumProofBuilder::StateAt(checkpoint));
-    BOOST_CHECK_EQUAL(state.height, uint32_t(entry->clsig.getHeight()));
+    BOOST_CHECK_EQUAL(state.height, uint32_t(entry->height));
     BOOST_CHECK(state.blockHash == proof->target.header.GetHash());
 }
 BOOST_AUTO_TEST_CASE(real_testnet_wire_and_crypto) {

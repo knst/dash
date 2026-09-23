@@ -183,20 +183,30 @@ static MiningPayload ParseMiningPayload(const std::vector<unsigned char>& bytes)
     result.envelope_ok = tx->IsSpecialTxVersion() && tx->nType == TRANSACTION_QUORUM_COMMITMENT;
     if (result.envelope_ok) {
         if (auto payload = GetTxPayload<CFinalCommitmentTxPayload>(*tx)) {
-            result.payload_ok = true;
-            result.version = payload->nVersion;
-            result.height = payload->nHeight;
-            result.commitment = ConsensusBytes(payload->commitment);
+            auto commitment = ConsensusBytes(payload->commitment);
+            // ParseCommitment rejects these anyway; do not let a caller-supplied
+            // proof park up to ~100 KB per entry in this cache first.
+            if (commitment.size() <= 1024) {
+                result.payload_ok = true;
+                result.version = payload->nVersion;
+                result.height = payload->nHeight;
+                result.commitment = std::move(commitment);
+            }
         }
     }
     cache.Insert(key, result);
     return result;
 }
 
-/** Coinbase envelope and payload, memoized by transaction bytes for the same reason. */
+/** Coinbase envelope and the payload fields Verify reads, memoized by transaction bytes. */
 struct CoinbasePayload {
     bool envelope_ok{false};
-    std::optional<CCbTx> payload;
+    bool payload_ok{false};
+    CCbTx::Version version{CCbTx::Version::INVALID};
+    int32_t height{0};
+    uint32_t best_cl_height_diff{0};
+    uint256 merkle_root_mn_list;
+    uint256 merkle_root_quorums;
 };
 
 static CoinbasePayload ParseCoinbasePayload(const std::vector<unsigned char>& bytes)
@@ -208,21 +218,30 @@ static CoinbasePayload ParseCoinbasePayload(const std::vector<unsigned char>& by
     const auto tx = ParseTransaction(bytes);
     result.envelope_ok = tx->IsCoinBase() && tx->IsSpecialTxVersion() && tx->nType == TRANSACTION_COINBASE &&
                          !tx->vin[0].scriptSig.empty() && tx->vin[0].scriptSig.size() <= 100 && !tx->vout.empty();
-    if (result.envelope_ok) result.payload = GetTxPayload<CCbTx>(*tx);
+    if (result.envelope_ok) {
+        if (const auto payload = GetTxPayload<CCbTx>(*tx)) {
+            result.payload_ok = true;
+            result.version = payload->nVersion;
+            result.height = payload->nHeight;
+            result.best_cl_height_diff = payload->bestCLHeightDiff;
+            result.merkle_root_mn_list = payload->merkleRootMNList;
+            result.merkle_root_quorums = payload->merkleRootQuorums;
+        }
+    }
     cache.Insert(key, result);
     return result;
 }
 
-static CCbTx Coinbase(const ProofTransaction& proof, const ProofCertificate& cert)
+static CoinbasePayload Coinbase(const ProofTransaction& proof, const ProofCertificate& cert)
 {
     Require(proof.path.index == 0 && proof.Verify(cert.header), "coinbase inclusion");
-    const auto parsed = ParseCoinbasePayload(proof.transaction);
-    Require(parsed.envelope_ok, "coinbase envelope");
-    const auto& payload = parsed.payload;
-    Require(payload && payload->nVersion >= CCbTx::Version::CLSIG_AND_BALANCE &&
-            payload->nHeight == int64_t(cert.height) && payload->bestCLHeightDiff < cert.height &&
-            !payload->merkleRootQuorums.IsNull(), "coinbase payload");
-    return *payload;
+    const auto payload = ParseCoinbasePayload(proof.transaction);
+    Require(payload.envelope_ok, "coinbase envelope");
+    Require(payload.payload_ok && payload.version >= CCbTx::Version::CLSIG_AND_BALANCE &&
+                payload.height == int64_t(cert.height) && payload.best_cl_height_diff < cert.height &&
+                !payload.merkle_root_quorums.IsNull(),
+            "coinbase payload");
+    return payload;
 }
 
 bool ProofMerklePath::Verify(uint256 leaf, const uint256& root) const
@@ -385,7 +404,7 @@ ProofState QuorumProofChain::Verify(const ProofState& trusted) const
     }
     Require(target.Verify(signer, height, kind), "final ChainLock signature/height");
     auto cb = Coinbase(coinbase, target);
-    return {anchor.network, target.height, target.header.GetHash(), cb.merkleRootMNList, cb.merkleRootQuorums};
+    return {anchor.network, target.height, target.header.GetHash(), cb.merkle_root_mn_list, cb.merkle_root_quorums};
 }
 
 std::vector<unsigned char> EncodeBootstrap(const QuorumProofChain& proof, const std::vector<ProofProjection>& records)
@@ -467,7 +486,8 @@ ProofState QuorumProofBuilder::StateAt(const CBlockIndex* index)
     Require(node::ReadBlockFromDisk(block, index, Params().GetConsensus()) && !block.vtx.empty(), "historical block unavailable");
     ProofCertificate cert{uint32_t(index->nHeight), block.GetBlockHeader(), {}};
     auto cb = Coinbase(ProofTransaction::Build(block, 0), cert);
-    return {uint8_t(network == "main" ? 0 : 1), uint32_t(index->nHeight), index->GetBlockHash(), cb.merkleRootMNList, cb.merkleRootQuorums};
+    return {uint8_t(network == "main" ? 0 : 1), uint32_t(index->nHeight), index->GetBlockHash(), cb.merkle_root_mn_list,
+            cb.merkle_root_quorums};
 }
 
 std::optional<CFinalCommitment> QuorumProofBuilder::DetermineChainlockSigningCommitment(int32_t height) const
@@ -572,8 +592,7 @@ std::optional<QuorumProofChain> QuorumProofBuilder::Build(const CBlockIndex* che
             "checkpoint/target not on chain");
     Require(targetIndex->GetBlockHash() == target.getBlockHash(), "target ChainLock block mismatch");
     auto certificate = [&](const chainlock::CoinbaseChainLock& entry) {
-        return ProofCertificate{uint32_t(entry.clsig.getHeight()), chain[entry.clsig.getHeight()]->GetBlockHeader(),
-                                entry.Signed().getSig()};
+        return ProofCertificate{uint32_t(entry.height), chain[entry.height]->GetBlockHeader(), entry.Signed().getSig()};
     };
     QuorumProofChain proof;
     proof.anchor = StateAt(checkpoint);
@@ -607,7 +626,7 @@ std::optional<QuorumProofChain> QuorumProofBuilder::Build(const CBlockIndex* che
             if (height > mined->nHeight + 8 && best) break;
             const auto entry = m_chainlocks.Find(height, maximum);
             if (!entry) break;
-            height = entry->clsig.getHeight();
+            height = entry->height;
             if (height > mined->nHeight + 8 && best) break;
             auto signer = DetermineChainlockSigningCommitment(height);
             if (!signer || signer->quorumHash == needed->quorumHash) continue;
