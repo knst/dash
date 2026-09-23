@@ -495,8 +495,9 @@ void FuncProUpRegTxV3OnLegacyValid(TestChainSetup& setup)
     auto utxos = BuildSimpleUtxoMap(setup.m_coinbase_txns);
     CKey owner_key;
     CBLSSecretKey operator_key;
-    auto tx_reg = CreateProRegTx(chainman, utxos, 1, GenerateRandomAddress(),
-                                 setup.coinbaseKey, owner_key, operator_key);
+    // The update below carries this address into ExtNetInfo, so it must be one ExtNetInfo accepts
+    auto tx_reg = CreateProRegTx(chainman, utxos, 19999, GenerateRandomAddress(), setup.coinbaseKey, owner_key,
+                                 operator_key);
     const auto proTxHash = tx_reg.GetHash();
     setup.CreateAndProcessBlock({tx_reg}, coinbase_pk);
     sync_dmn_tip();
@@ -539,6 +540,10 @@ void FuncProUpRegTxV3OnLegacyValid(TestChainSetup& setup)
                                     IsV24Active(chainman), val_state, /*check_sigs=*/true));
     }
     BOOST_CHECK(val_state.IsValid());
+
+    setup.CreateAndProcessBlock({tx}, coinbase_pk);
+    sync_dmn_tip();
+    BOOST_CHECK_EQUAL(dmnman.GetListAtChainTip().GetMN(proTxHash)->pdmnState->nVersion, ProTxVersion::ExtAddr);
 };
 
 void FuncProUpRegTxV2CannotBypassV3PayoutCollateralReuse(TestChainSetup& setup)
@@ -2296,6 +2301,16 @@ void FuncEvoNodeMigratesPlatformHTTPS443(TestChainV24SignalBeforeV19Setup& setup
         setup.ProcessBlock({tx});
         check_https_entry("after BasicBLS ProUpServTx");
     }
+
+    // Other privileged ports still cannot be carried into ExtAddr
+    {
+        const auto tx = CreateBasicEvoProUpServTx(setup, proTxHash, "1.1.1.4", 80, operator_key);
+        TxValidationState val_state;
+        LOCK(cs_main);
+        BOOST_CHECK(!CheckProUpServTx(CTransaction(tx), chainman.ActiveChain().Tip(), dmnman, chainman.GetConsensus(),
+                                      IsV24Active(chainman), val_state, /*check_sigs=*/true));
+        BOOST_CHECK_EQUAL(val_state.GetRejectReason(), "bad-protx-netinfo-version");
+    }
 }
 
 BOOST_AUTO_TEST_CASE(evonode_migrates_platform_https_443)
@@ -2304,6 +2319,53 @@ BOOST_AUTO_TEST_CASE(evonode_migrates_platform_https_443)
     FuncEvoNodeMigratesPlatformHTTPS443(setup);
 }
 
+// Off mainnet a BasicBLS EvoNode may hold a Platform HTTPS port that ExtNetInfo rejects. A registrar
+// update migrating it to ExtAddr must be refused up front: once in the mempool it would otherwise be
+// selected into every block template and make block assembly fail.
+void FuncEvoNodeMigrationRejectsBadPlatformPort(TestChainV24SignalBeforeV19Setup& setup)
+{
+    auto& chainman = setup.chainman;
+    auto& dmnman = setup.dmnman;
+
+    setup.MineToV19();
+    CKey owner_key;
+    owner_key.MakeNewKey(true);
+    CBLSSecretKey operator_key;
+    operator_key.MakeNewKey();
+    const auto proTxHash = RegisterBasicEvoNode(setup, "1.1.1.5", 6667, owner_key, operator_key);
+    setup.MineToV24();
+
+    const auto tx = CreateExtAddrProUpRegTx(setup, proTxHash, owner_key, operator_key);
+    {
+        TxValidationState val_state;
+        LOCK(cs_main);
+        BOOST_CHECK(!CheckProUpRegTx(CTransaction(tx), chainman.ActiveChain().Tip(), dmnman,
+                                     chainman.ActiveChainstate().CoinsTip(), chainman.GetConsensus(),
+                                     IsV24Active(chainman), val_state, /*check_sigs=*/true));
+        BOOST_CHECK_EQUAL(val_state.GetRejectReason(), "bad-protx-netinfo-version");
+    }
+
+    auto& mempool = *Assert(setup.m_node.mempool.get());
+    TestMemPoolEntryHelper entry;
+    {
+        LOCK2(cs_main, mempool.cs);
+        mempool.addUnchecked(entry.Fee(50000).Time(Now<NodeSeconds>()).FromTx(tx));
+        BOOST_REQUIRE(mempool.exists(tx.GetHash()));
+    }
+    const auto block_template = node::BlockAssembler{chainman.ActiveChainstate(), setup.m_node, &mempool}.CreateNewBlock(
+        setup.coinbase_pk);
+    BOOST_REQUIRE(block_template != nullptr);
+    for (const auto& block_tx : block_template->block.vtx) {
+        BOOST_CHECK(block_tx->GetHash() != tx.GetHash());
+    }
+    BOOST_CHECK_EQUAL(dmnman.GetListAtChainTip().GetMN(proTxHash)->pdmnState->nVersion, ProTxVersion::BasicBLS);
+}
+
+BOOST_AUTO_TEST_CASE(evonode_migration_rejects_bad_platform_port)
+{
+    TestChainV24SignalBeforeV19Setup setup;
+    FuncEvoNodeMigrationRejectsBadPlatformPort(setup);
+}
 
 // The SAME masternode, two registrar updates in one block, version-crossing. tx1 rotates a
 // legacy MN to a new key at v2 (making it BasicBLS); tx2 then rotates it to another new key at v1.
