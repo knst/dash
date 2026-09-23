@@ -56,6 +56,13 @@ struct ProofProjection {
     ProofMerklePath path;
 };
 std::vector<unsigned char> EncodeBootstrap(const QuorumProofChain& proof, const std::vector<ProofProjection>& records);
+/** As above, for a proof whose Verify(proof.anchor) result the caller already holds. */
+std::vector<unsigned char> EncodeBootstrap(const QuorumProofChain& proof, const ProofState& verified,
+                                           const std::vector<ProofProjection>& records);
+/** Checkpoint and target states are memoized by block hash; a state read once
+ *  stays available even if the block's data is later removed. */
+void ClearProofStateCacheForTesting();
+
 class QuorumProofBuilder
 {
     const CQuorumBlockProcessor& m_quorum_block_processor;

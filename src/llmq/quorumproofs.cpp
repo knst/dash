@@ -48,6 +48,12 @@ public:
         LOCK(m_mutex);
         m_entries.insert(key, value);
     }
+
+    void Clear() EXCLUSIVE_LOCKS_REQUIRED(!m_mutex)
+    {
+        LOCK(m_mutex);
+        m_entries.clear();
+    }
 };
 
 static void Require(bool condition, const char* message)
@@ -162,18 +168,86 @@ static CTransactionRef ParseTransaction(const std::vector<unsigned char>& bytes)
     return MakeTransactionRef(tx);
 }
 
-static CCbTx Coinbase(const ProofTransaction& proof, const ProofCertificate& cert)
+/** The fields Verify needs from a mined commitment transaction. Parsing the
+ *  payload decodes the commitment's BLS key and signatures; the result is a pure
+ *  function of the transaction bytes, so it is memoized across verifications. */
+struct MiningPayload {
+    bool envelope_ok{false};
+    bool payload_ok{false};
+    uint16_t version{0};
+    uint32_t height{0};
+    std::vector<unsigned char> commitment;
+};
+
+static MiningPayload ParseMiningPayload(const std::vector<unsigned char>& bytes)
+{
+    const auto key = Hash(bytes);
+    static ProofCache<MiningPayload, 4096> cache;
+    MiningPayload result;
+    if (cache.Get(key, result)) return result;
+    const auto tx = ParseTransaction(bytes);
+    result.envelope_ok = tx->IsSpecialTxVersion() && tx->nType == TRANSACTION_QUORUM_COMMITMENT;
+    if (result.envelope_ok) {
+        if (auto payload = GetTxPayload<CFinalCommitmentTxPayload>(*tx)) {
+            auto commitment = ConsensusBytes(payload->commitment);
+            // ParseCommitment rejects these anyway; do not let a caller-supplied
+            // proof park up to ~100 KB per entry in this cache first.
+            if (commitment.size() <= 1024) {
+                result.payload_ok = true;
+                result.version = payload->nVersion;
+                result.height = payload->nHeight;
+                result.commitment = std::move(commitment);
+            }
+        }
+    }
+    cache.Insert(key, result);
+    return result;
+}
+
+/** Coinbase envelope and the payload fields Verify reads, memoized by transaction bytes. */
+struct CoinbasePayload {
+    bool envelope_ok{false};
+    bool payload_ok{false};
+    CCbTx::Version version{CCbTx::Version::INVALID};
+    int32_t height{0};
+    uint32_t best_cl_height_diff{0};
+    uint256 merkle_root_mn_list;
+    uint256 merkle_root_quorums;
+};
+
+static CoinbasePayload ParseCoinbasePayload(const std::vector<unsigned char>& bytes)
+{
+    const auto key = Hash(bytes);
+    static ProofCache<CoinbasePayload, 1024> cache;
+    CoinbasePayload result;
+    if (cache.Get(key, result)) return result;
+    const auto tx = ParseTransaction(bytes);
+    result.envelope_ok = tx->IsCoinBase() && tx->IsSpecialTxVersion() && tx->nType == TRANSACTION_COINBASE &&
+                         !tx->vin[0].scriptSig.empty() && tx->vin[0].scriptSig.size() <= 100 && !tx->vout.empty();
+    if (result.envelope_ok) {
+        if (const auto payload = GetTxPayload<CCbTx>(*tx)) {
+            result.payload_ok = true;
+            result.version = payload->nVersion;
+            result.height = payload->nHeight;
+            result.best_cl_height_diff = payload->bestCLHeightDiff;
+            result.merkle_root_mn_list = payload->merkleRootMNList;
+            result.merkle_root_quorums = payload->merkleRootQuorums;
+        }
+    }
+    cache.Insert(key, result);
+    return result;
+}
+
+static CoinbasePayload Coinbase(const ProofTransaction& proof, const ProofCertificate& cert)
 {
     Require(proof.path.index == 0 && proof.Verify(cert.header), "coinbase inclusion");
-    const auto tx = ParseTransaction(proof.transaction);
-    Require(tx->IsCoinBase() && tx->IsSpecialTxVersion() && tx->nType == TRANSACTION_COINBASE &&
-            !tx->vin[0].scriptSig.empty() && tx->vin[0].scriptSig.size() <= 100 && !tx->vout.empty(),
-            "coinbase envelope");
-    auto payload = GetTxPayload<CCbTx>(*tx);
-    Require(payload && payload->nVersion >= CCbTx::Version::CLSIG_AND_BALANCE &&
-            payload->nHeight == int64_t(cert.height) && payload->bestCLHeightDiff < cert.height &&
-            !payload->merkleRootQuorums.IsNull(), "coinbase payload");
-    return *payload;
+    const auto payload = ParseCoinbasePayload(proof.transaction);
+    Require(payload.envelope_ok, "coinbase envelope");
+    Require(payload.payload_ok && payload.version >= CCbTx::Version::CLSIG_AND_BALANCE &&
+                payload.height == int64_t(cert.height) && payload.best_cl_height_diff < cert.height &&
+                !payload.merkle_root_quorums.IsNull(),
+            "coinbase payload");
+    return payload;
 }
 
 bool ProofMerklePath::Verify(uint256 leaf, const uint256& root) const
@@ -324,25 +398,36 @@ ProofState QuorumProofChain::Verify(const ProofState& trusted) const
             descendant = &*it;
         }
         Require(link.mining.path.index != 0 && link.mining.Verify(*descendant), "mining inclusion");
-        auto tx = ParseTransaction(link.mining.transaction);
-        Require(tx->IsSpecialTxVersion() && tx->nType == TRANSACTION_QUORUM_COMMITMENT,
-                "quorum transaction envelope");
-        auto payload = GetTxPayload<CFinalCommitmentTxPayload>(*tx);
-        Require(payload && payload->nVersion == 1 && payload->nHeight == link.certificate.height - link.ancestors.size(), "quorum mining height");
-        auto next = ParseCommitment(ConsensusBytes(payload->commitment), kind);
+        const auto mining = ParseMiningPayload(link.mining.transaction);
+        Require(mining.envelope_ok, "quorum transaction envelope");
+        Require(mining.payload_ok && mining.version == 1 &&
+                    mining.height == link.certificate.height - link.ancestors.size(),
+                "quorum mining height");
+        auto next = ParseCommitment(mining.commitment, kind);
         Require(next.quorumHash != signer.quorumHash, "redundant signer");
         signer = std::move(next);
         height = link.certificate.height;
     }
     Require(target.Verify(signer, height, kind), "final ChainLock signature/height");
     auto cb = Coinbase(coinbase, target);
-    return {anchor.network, target.height, target.header.GetHash(), cb.merkleRootMNList, cb.merkleRootQuorums};
+    return {anchor.network, target.height, target.header.GetHash(), cb.merkle_root_mn_list, cb.merkle_root_quorums};
 }
 
 std::vector<unsigned char> EncodeBootstrap(const QuorumProofChain& proof, const std::vector<ProofProjection>& records)
 {
+    return EncodeBootstrap(proof, proof.Verify(proof.anchor), records);
+}
+
+std::vector<unsigned char> EncodeBootstrap(const QuorumProofChain& proof, const ProofState& state,
+                                           const std::vector<ProofProjection>& records)
+{
     Require(!records.empty() && records.size() <= 16, "projection count");
-    const auto state = proof.Verify(proof.anchor);
+    // No BLS work: this re-reads only the target coinbase the proof carries.
+    const auto cb = Coinbase(proof.coinbase, proof.target);
+    Require(state.network == proof.anchor.network && state.height == proof.target.height &&
+                state.blockHash == proof.target.header.GetHash() && state.masternodeRoot == cb.merkle_root_mn_list &&
+                state.quorumRoot == cb.merkle_root_quorums,
+            "state does not match proof target");
     CDataStream out(SER_NETWORK, PROTOCOL_VERSION);
     WriteBlob(out, proof.Encode());
     out << uint8_t(records.size());
@@ -390,7 +475,13 @@ ProofState ProofState::FromJson(const UniValue& value)
 std::vector<CFinalCommitment> QuorumProofBuilder::ActiveCommitments(const CBlockIndex* index) const
 {
     Require(index != nullptr, "missing block index");
+    // The active set at a block is a function of that block's history, and it is
+    // checked against the block's own quorum root below before it is kept. Every
+    // proof from one checkpoint needs the same set, as does every quorum record at
+    // one target. Reading it decodes each commitment's BLS key and signatures.
+    static ProofCache<std::vector<CFinalCommitment>, 64> sets;
     std::vector<CFinalCommitment> result;
+    if (sets.Get(index->GetBlockHash(), result)) return result;
     {
         LOCK(cs_main);
         for (const auto& [type, indexes] : m_quorum_block_processor.GetMinedAndActiveCommitmentsUntilBlock(index)) {
@@ -401,24 +492,51 @@ std::vector<CFinalCommitment> QuorumProofBuilder::ActiveCommitments(const CBlock
             }
         }
     }
-    std::sort(result.begin(), result.end(), [](const auto& a, const auto& b) { return SerializeHash(a) < SerializeHash(b); });
+    std::vector<std::pair<uint256, size_t>> order;
+    order.reserve(result.size());
+    for (size_t i = 0; i < result.size(); ++i)
+        order.emplace_back(SerializeHash(result[i]), i);
+    std::sort(order.begin(), order.end());
+    std::vector<CFinalCommitment> sorted;
     std::vector<uint256> hashes;
+    sorted.reserve(result.size());
     hashes.reserve(result.size());
-    for (const auto& commitment : result) hashes.push_back(SerializeHash(commitment));
-    Require(ComputeMerkleRoot(hashes) == StateAt(index).quorumRoot, "active quorum root mismatch");
-    return result;
+    for (const auto& [hash, i] : order) {
+        sorted.push_back(std::move(result[i]));
+        hashes.push_back(hash);
+    }
+    bool mutated{false};
+    Require(ComputeMerkleRoot(hashes, &mutated) == StateAt(index).quorumRoot && !mutated,
+            "active quorum root mismatch");
+    sets.Insert(index->GetBlockHash(), sorted);
+    return sorted;
 }
+
+static ProofCache<ProofState, 256>& StateCache()
+{
+    static ProofCache<ProofState, 256> cache;
+    return cache;
+}
+
+void ClearProofStateCacheForTesting() { StateCache().Clear(); }
 
 ProofState QuorumProofBuilder::StateAt(const CBlockIndex* index)
 {
     Require(index != nullptr && index->nHeight > 0, "invalid checkpoint block");
     const auto network = Params().NetworkIDString();
     Require(network == "main" || network == "test", "proofs support mainnet/testnet");
+    // A block hash fixes the coinbase, and the network is fixed for the process.
+    // Every request reads the checkpoint's state and the target's more than once.
+    ProofState cached;
+    if (StateCache().Get(index->GetBlockHash(), cached)) return cached;
     CBlock block;
     Require(node::ReadBlockFromDisk(block, index, Params().GetConsensus()) && !block.vtx.empty(), "historical block unavailable");
     ProofCertificate cert{uint32_t(index->nHeight), block.GetBlockHeader(), {}};
     auto cb = Coinbase(ProofTransaction::Build(block, 0), cert);
-    return {uint8_t(network == "main" ? 0 : 1), uint32_t(index->nHeight), index->GetBlockHash(), cb.merkleRootMNList, cb.merkleRootQuorums};
+    const ProofState state{uint8_t(network == "main" ? 0 : 1), uint32_t(index->nHeight), index->GetBlockHash(),
+                           cb.merkle_root_mn_list, cb.merkle_root_quorums};
+    StateCache().Insert(index->GetBlockHash(), state);
+    return state;
 }
 
 std::optional<CFinalCommitment> QuorumProofBuilder::DetermineChainlockSigningCommitment(int32_t height) const
@@ -430,16 +548,29 @@ std::optional<CFinalCommitment> QuorumProofBuilder::DetermineChainlockSigningCom
     // This hash commits to the entire selection history, including its branch.
     // The type and request height fix the remaining signing-selection inputs.
     const auto key = (CHashWriter(SER_GETHASH, 0) << start->GetBlockHash() << params->type << height).GetHash();
-    static ProofCache<CFinalCommitment, 8192> cache;
+    // Two levels: every candidate height needs an entry, but thousands of heights
+    // share a few dozen commitments. Heights map to a commitment's content hash,
+    // which cannot alias across branches, and each commitment is stored once.
+    // A year of testnet (hourly quorums) is ~80k candidate heights.
+    static ProofCache<uint256, 131072> selected;
+    static ProofCache<CFinalCommitment, 4096> commitments;
+    uint256 commitment_hash;
     CFinalCommitment cached;
-    if (cache.Get(key, cached)) return cached;
-    LOCK(cs_main);
-    // The commitment database follows the active chain. Do not populate a
-    // snapshot's cache from another branch if a reorg raced this request.
-    Require(m_chainman.ActiveChain().Contains(start), "proof chain changed during construction");
-    auto result = SelectCommitmentForSigning(*params, m_chain, m_qman, chainlock::GenSigRequestId(height), height,
-                                             SIGN_HEIGHT_OFFSET);
-    if (result) cache.Insert(key, *result);
+    if (selected.Get(key, commitment_hash) && commitments.Get(commitment_hash, cached)) return cached;
+    std::optional<CFinalCommitment> result;
+    {
+        LOCK(cs_main);
+        // The commitment database follows the active chain. Do not populate a
+        // snapshot's cache from another branch if a reorg raced this request.
+        Require(m_chainman.ActiveChain().Contains(start), "proof chain changed during construction");
+        result = SelectCommitmentForSigning(*params, m_chain, m_qman, chainlock::GenSigRequestId(height), height,
+                                            SIGN_HEIGHT_OFFSET);
+    }
+    if (result) {
+        commitment_hash = ::SerializeHash(*result);
+        commitments.Insert(commitment_hash, *result);
+        selected.Insert(key, commitment_hash);
+    }
     return result;
 }
 
@@ -464,6 +595,42 @@ static const CBlockIndex* MinedCommitmentBlock(const CQuorumBlockProcessor& proc
     return mined;
 }
 
+/** The mining transaction of one quorum commitment, with its Merkle path.
+ *  Every proof whose route passes through a quorum needs this exact result; it
+ *  depends only on the mining block's contents, so it is memoized by block hash.
+ *  A miss reads the block and scans its commitments by type and quorum hash
+ *  before fully deserializing any payload (a mining block holds dozens of
+ *  commitments, each carrying BLS points that are costly to decode). */
+static ProofTransaction MiningTransaction(const CBlockIndex* mined, Consensus::LLMQType kind, const uint256& quorum)
+{
+    const auto key = (CHashWriter(SER_GETHASH, 0) << mined->GetBlockHash() << kind << quorum).GetHash();
+    static ProofCache<ProofTransaction, 2048> cache;
+    ProofTransaction cached;
+    if (cache.Get(key, cached)) return cached;
+    CBlock block;
+    Require(node::ReadBlockFromDisk(block, mined, Params().GetConsensus()), "mining block unavailable");
+    for (size_t i = 1; i < block.vtx.size(); ++i) {
+        const auto& tx = *block.vtx[i];
+        if (tx.nType != TRANSACTION_QUORUM_COMMITMENT) continue;
+        // CFinalCommitmentTxPayload: nVersion u16, nHeight u32, then the commitment,
+        // which starts with nVersion u16, llmqType u8, quorumHash. Compare the
+        // prefix first; only a candidate match pays for full deserialization.
+        const auto& raw = tx.vExtraPayload;
+        if (raw.size() < 2 + 4 + 2 + 1 + 32 || raw[2 + 4 + 2] != uint8_t(kind) ||
+            !std::equal(quorum.begin(), quorum.end(), raw.begin() + 2 + 4 + 2 + 1)) {
+            continue;
+        }
+        const auto payload = GetTxPayload<CFinalCommitmentTxPayload>(tx);
+        if (payload && !payload->commitment.IsNull() && payload->commitment.llmqType == kind &&
+            payload->commitment.quorumHash == quorum) {
+            auto proof = ProofTransaction::Build(block, i);
+            cache.Insert(key, proof);
+            return proof;
+        }
+    }
+    throw std::runtime_error("mining transaction unavailable");
+}
+
 std::optional<QuorumProofChain> QuorumProofBuilder::Build(const CBlockIndex* checkpoint,
                                                           const chainlock::ChainLockSig& target) const
 {
@@ -474,8 +641,7 @@ std::optional<QuorumProofChain> QuorumProofBuilder::Build(const CBlockIndex* che
             "checkpoint/target not on chain");
     Require(targetIndex->GetBlockHash() == target.getBlockHash(), "target ChainLock block mismatch");
     auto certificate = [&](const chainlock::CoinbaseChainLock& entry) {
-        return ProofCertificate{uint32_t(entry.clsig.getHeight()), chain[entry.clsig.getHeight()]->GetBlockHeader(),
-                                entry.clsig.getSig()};
+        return ProofCertificate{uint32_t(entry.height), chain[entry.height]->GetBlockHeader(), entry.Signed().getSig()};
     };
     QuorumProofChain proof;
     proof.anchor = StateAt(checkpoint);
@@ -498,19 +664,7 @@ std::optional<QuorumProofChain> QuorumProofBuilder::Build(const CBlockIndex* che
         const auto* mined = MinedCommitmentBlock(m_quorum_block_processor, chain, blocks, kind, needed->quorumHash);
         Require(mined != nullptr, "mining block unavailable");
         if (mined->nHeight <= checkpoint->nHeight) return std::nullopt;
-        CBlock block;
-        Require(node::ReadBlockFromDisk(block, mined, Params().GetConsensus()), "mining block unavailable");
-        std::optional<ProofTransaction> mining;
-        for (size_t i = 1; i < block.vtx.size(); ++i) {
-            if (block.vtx[i]->nType != TRANSACTION_QUORUM_COMMITMENT) continue;
-            const auto payload = GetTxPayload<CFinalCommitmentTxPayload>(*block.vtx[i]);
-            if (payload && !payload->commitment.IsNull() && payload->commitment.llmqType == kind &&
-                payload->commitment.quorumHash == needed->quorumHash) {
-                mining = ProofTransaction::Build(block, i);
-                break;
-            }
-        }
-        Require(mining.has_value(), "mining transaction unavailable");
+        const auto mining = MiningTransaction(mined, kind, needed->quorumHash);
         std::optional<ProofLink> best;
         std::optional<CFinalCommitment> predecessor;
         double bestScore = std::numeric_limits<double>::infinity();
@@ -521,7 +675,7 @@ std::optional<QuorumProofChain> QuorumProofBuilder::Build(const CBlockIndex* che
             if (height > mined->nHeight + 8 && best) break;
             const auto entry = m_chainlocks.Find(height, maximum);
             if (!entry) break;
-            height = entry->clsig.getHeight();
+            height = entry->height;
             if (height > mined->nHeight + 8 && best) break;
             auto signer = DetermineChainlockSigningCommitment(height);
             if (!signer || signer->quorumHash == needed->quorumHash) continue;
@@ -529,12 +683,12 @@ std::optional<QuorumProofChain> QuorumProofBuilder::Build(const CBlockIndex* che
             if (!previous || previous->nHeight >= mined->nHeight || (previous->nHeight <= checkpoint->nHeight && !seedHashes.count(signer->quorumHash))) continue;
             auto cert = certificate(*entry);
             if (!cert.Verify(*signer, checkpoint->nHeight, kind)) continue;
-            const auto cost = 180 + 4 + mining->transaction.size() + 9 + 32 * mining->path.siblings.size() + 2 +
+            const auto cost = 180 + 4 + mining.transaction.size() + 9 + 32 * mining.path.siblings.size() + 2 +
                               80 * (height - mined->nHeight);
             const double score = double(cost) / (mined->nHeight - std::max(checkpoint->nHeight, previous->nHeight));
             if (score >= bestScore) continue;
             bestScore = score;
-            best = ProofLink{cert, *mining, {}};
+            best = ProofLink{cert, mining, {}};
             predecessor = std::move(signer);
         }
         Require(best && predecessor, "no B-only route within proof budget");
