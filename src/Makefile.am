@@ -1043,6 +1043,7 @@ libbitcoin_util_a_SOURCES = \
   random.cpp \
   randomenv.cpp \
   stacktraces.cpp \
+  streams.cpp \
   support/cleanse.cpp \
   support/lockedpool.cpp \
   sync.cpp \
@@ -1373,6 +1374,7 @@ libdashkernel_la_SOURCES = \
   script/standard.cpp \
   shutdown.cpp \
   spork.cpp \
+  streams.cpp \
   support/cleanse.cpp \
   support/lockedpool.cpp \
   sync.cpp \
