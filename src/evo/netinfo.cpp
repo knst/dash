@@ -449,7 +449,7 @@ NetInfoStatus ExtNetInfo::ProcessCandidate(const NetInfoPurpose purpose, const N
     return NetInfoStatus::Success;
 }
 
-NetInfoStatus ExtNetInfo::ValidateService(const CService& service)
+NetInfoStatus ExtNetInfo::ValidateService(const NetInfoPurpose purpose, const CService& service)
 {
     if (!service.IsValid()) {
         return NetInfoStatus::BadAddress;
@@ -467,7 +467,9 @@ NetInfoStatus ExtNetInfo::ValidateService(const CService& service)
             return NetInfoStatus::BadPort;
         }
     } else {
-        if (service_port == 0 || IsBadPort(service_port)) {
+        const bool is_allowed_https_port{purpose == NetInfoPurpose::PLATFORM_HTTPS &&
+                                         IsAllowedPlatformHTTPPort(service_port)};
+        if (service_port == 0 || (IsBadPort(service_port) && !is_allowed_https_port)) {
             return NetInfoStatus::BadPort;
         }
     }
@@ -519,7 +521,7 @@ NetInfoStatus ExtNetInfo::AddEntry(const NetInfoPurpose purpose, const std::stri
             CNetAddr netaddr;
             if (netaddr.SetSpecial(addr)) {
                 const CService service{netaddr, port};
-                const auto ret{ValidateService(service)};
+                const auto ret{ValidateService(purpose, service)};
                 if (ret == NetInfoStatus::Success) {
                     return ProcessCandidate(purpose, NetInfoEntry{service});
                 }
@@ -539,7 +541,7 @@ NetInfoStatus ExtNetInfo::AddEntry(const NetInfoPurpose purpose, const std::stri
     // IP:port safe, try to parse it as IP:port
     if (auto service_opt{Lookup(addr, /*portDefault=*/port, /*fAllowLookup=*/false)}) {
         const auto service{MaybeFlipIPv6toCJDNS(*service_opt)};
-        const auto ret{ValidateService(service)};
+        const auto ret{ValidateService(purpose, service)};
         if (ret == NetInfoStatus::Success) {
             return ProcessCandidate(purpose, NetInfoEntry{service});
         }
@@ -613,7 +615,7 @@ NetInfoStatus ExtNetInfo::Validate() const
                 return NetInfoStatus::Malformed;
             }
             if (const auto& service_opt{entry.GetAddrPort()}) {
-                if (auto ret{ValidateService(*service_opt)}; ret != NetInfoStatus::Success) {
+                if (auto ret{ValidateService(purpose, *service_opt)}; ret != NetInfoStatus::Success) {
                     // Stores CService underneath but doesn't pass validation rules
                     return ret;
                 }

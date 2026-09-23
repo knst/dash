@@ -53,6 +53,15 @@ static const std::vector<TestEntry> addr_vals_main{
     // - ExtNetInfo can store Platform HTTPS addresses *as domains* alongside privacy network domains
     {{NetInfoPurpose::PLATFORM_HTTPS, "example.com:9999"}, NetInfoStatus::MaxLimit, NetInfoStatus::Success},
     {{NetInfoPurpose::PLATFORM_HTTPS, "pg6mmjiyjmcrsslvykfwnntlaru7p5svn6y2ymmju6nubxndf4pscryd.onion:9999"}, NetInfoStatus::MaxLimit, NetInfoStatus::Success},
+    // - Port 443 (HTTPS) is below the privileged ports threshold (1023) but allowed for Platform HTTPS
+    //   addresses, whether stored as an address or as a domain
+    // - Other privileged ports remain disallowed for Platform HTTPS, as does 443 for every other purpose
+    {{NetInfoPurpose::PLATFORM_HTTPS, "1.1.1.1:443"}, NetInfoStatus::MaxLimit, NetInfoStatus::Success},
+    {{NetInfoPurpose::PLATFORM_HTTPS, "[2606:4700:4700::1111]:443"}, NetInfoStatus::MaxLimit, NetInfoStatus::Success},
+    {{NetInfoPurpose::PLATFORM_HTTPS, "pg6mmjiyjmcrsslvykfwnntlaru7p5svn6y2ymmju6nubxndf4pscryd.onion:443"}, NetInfoStatus::MaxLimit, NetInfoStatus::Success},
+    {{NetInfoPurpose::PLATFORM_HTTPS, "1.1.1.1:80"}, NetInfoStatus::MaxLimit, NetInfoStatus::BadPort},
+    {{NetInfoPurpose::PLATFORM_P2P, "1.1.1.1:443"}, NetInfoStatus::MaxLimit, NetInfoStatus::BadPort},
+    {{NetInfoPurpose::CORE_P2P, "1.1.1.1:443"}, NetInfoStatus::BadPort, NetInfoStatus::BadPort},
     // Incorrect IPv4 address
     {{NetInfoPurpose::CORE_P2P, "1.1.1.256:9999"}, NetInfoStatus::BadInput, NetInfoStatus::BadInput},
     // Missing address
@@ -686,6 +695,23 @@ BOOST_FIXTURE_TEST_CASE(extnetinfo_validate_deser, RegTestingSetup)
         ExtNetInfo netInfo;
         ds >> netInfo;
         BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::BadInput);
+    }
+
+    // Port 443 is only permitted for Platform HTTPS addresses
+    for (const auto& [purpose, expected] : std::vector<std::pair<NetInfoPurpose, NetInfoStatus>>{
+             {NetInfoPurpose::PLATFORM_HTTPS, NetInfoStatus::Success},
+             {NetInfoPurpose::PLATFORM_P2P, NetInfoStatus::BadPort},
+             {NetInfoPurpose::CORE_P2P, NetInfoStatus::BadPort},
+         }) {
+        CDataStream ds(SER_DISK, CLIENT_VERSION);
+        write_header(ds, 1);
+        ds << purpose;
+        WriteCompactSize(ds, 1);
+        ds << NetInfoEntry{LookupNumeric("1.1.1.1", 443)};
+
+        ExtNetInfo netInfo;
+        ds >> netInfo;
+        BOOST_CHECK_EQUAL(netInfo.Validate(), expected);
     }
 }
 
