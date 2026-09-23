@@ -235,14 +235,15 @@ RPCHelpMan sendtoaddress()
                     {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "The Dash address to send to.\n"
                                 "A DIP-18 Dash Platform address makes this an asset lock transaction."},
                     {"amount", RPCArg::Type::AMOUNT, RPCArg::Optional::NO, "The amount in " + CURRENCY_UNIT + " to send. eg 0.1"},
-                    {"comment", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, "A comment used to store what the transaction is for.\n"
+                    {"comment", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "A comment used to store what the transaction is for.\n"
                                          "This is not part of the transaction, just kept in your wallet."},
-                    {"comment_to", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, "A comment to store the name of the person or organization\n"
+                    {"comment_to", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "A comment to store the name of the person or organization\n"
                                          "to which you're sending the transaction. This is not part of the \n"
                                          "transaction, just kept in your wallet."},
                     {"subtractfeefromamount", RPCArg::Type::BOOL, RPCArg::Default{false}, "The fee will be deducted from the amount being sent.\n"
                                          "The recipient will receive less amount of Dash than you enter in the amount field."},
-                    {"use_is", RPCArg::Type::BOOL, RPCArg::Default{false}, "Deprecated and ignored"},
+                    {"use_is", RPCArg::Type::BOOL, RPCArg::Default{false}, "Deprecated and ignored",
+                     RPCArgOptions{.skip_type_check = true}},
                     {"use_cj", RPCArg::Type::BOOL, RPCArg::Default{false}, "Use CoinJoin funds only"},
                     {"conf_target", RPCArg::Type::NUM, RPCArg::DefaultHint{"wallet -txconfirmtarget"}, "Confirmation target in blocks"},
                     {"estimate_mode", RPCArg::Type::STR, RPCArg::Default{"unset"}, "The fee estimate mode, must be one of (case insensitive):\n"
@@ -334,20 +335,23 @@ RPCHelpMan sendtoaddress()
 RPCHelpMan sendmany()
 {
     return RPCHelpMan{"sendmany",
-                "\nSend multiple times. Amounts are double-precision floating point numbers." +
+        "Send multiple times. Amounts are double-precision floating point numbers." +
         HELP_REQUIRING_PASSPHRASE,
                 {
-                    {"dummy", RPCArg::Type::STR, RPCArg::Optional::NO, "Must be set to \"\" for backwards compatibility.", RPCArgOptions{.oneline_description="\"\""}},
+                    {"dummy", RPCArg::Type::STR, RPCArg::Default{"\"\""}, "Must be set to \"\" for backwards compatibility.",
+                     RPCArgOptions{
+                         .oneline_description = "\"\"",
+                     }},
                     {"amounts", RPCArg::Type::OBJ_USER_KEYS, RPCArg::Optional::NO, "The addresses and amounts",
                         {
                             {"address", RPCArg::Type::AMOUNT, RPCArg::Optional::NO, "The Dash address is the key, the numeric amount (can be string) in " + CURRENCY_UNIT + " is the value.\n"
                                         "A DIP-18 Dash Platform address makes this an asset lock transaction"},
                         },
                     },
-                    {"minconf", RPCArg::Type::NUM, RPCArg::Optional::OMITTED_NAMED_ARG, "Ignored dummy value"},
-                    {"addlocked", RPCArg::Type::BOOL, RPCArg::Optional::OMITTED_NAMED_ARG, "Ignored dummy value"},
-                    {"comment", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, "A comment"},
-                    {"subtractfeefrom", RPCArg::Type::ARR, RPCArg::Optional::OMITTED_NAMED_ARG, "The addresses.\n"
+                    {"minconf", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "Ignored dummy value"},
+                    {"addlocked", RPCArg::Type::BOOL, RPCArg::Optional::OMITTED, "Ignored dummy value"},
+                    {"comment", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "A comment"},
+                    {"subtractfeefrom", RPCArg::Type::ARR, RPCArg::Optional::OMITTED, "The addresses.\n"
                                        "The fee will be equally deducted from the amount of each selected address.\n"
                                        "Those recipients will receive less Dash than you enter in their corresponding amount field.\n"
                                        "If no addresses are specified here, the sender pays the fee.",
@@ -355,7 +359,8 @@ RPCHelpMan sendmany()
                             {"address", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Subtract fee from this address"},
                         },
                     },
-                    {"use_is", RPCArg::Type::BOOL, RPCArg::Default{false}, "Deprecated and ignored"},
+                    {"use_is", RPCArg::Type::BOOL, RPCArg::Default{false}, "Deprecated and ignored",
+                     RPCArgOptions{.skip_type_check = true}},
                     {"use_cj", RPCArg::Type::BOOL, RPCArg::Default{false}, "Use CoinJoin funds only"},
                     {"conf_target", RPCArg::Type::NUM, RPCArg::DefaultHint{"wallet -txconfirmtarget"}, "Confirmation target in blocks"},
                     {"estimate_mode", RPCArg::Type::STR, RPCArg::Default{"unset"}, "The fee estimate mode, must be one of (case insensitive):\n"
@@ -477,7 +482,7 @@ static std::vector<RPCArg> FundTxDoc(bool solving_data = true)
                     "\"" + FeeModes("\"\n\"") + "\""},
     };
     if (solving_data) {
-        args.push_back({"solving_data", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED_NAMED_ARG, "Keys and scripts needed for producing a final transaction with a dummy signature.\n"
+        args.push_back({"solving_data", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED, "Keys and scripts needed for producing a final transaction with a dummy signature.\n"
         "Used for fee estimation during coin selection.",
             {
                 {
@@ -762,7 +767,7 @@ RPCHelpMan fundrawtransaction()
                 "Only pay-to-pubkey, multisig, and P2SH versions thereof are currently supported for watch-only\n",
                 {
                     {"hexstring", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The hex string of the raw transaction"},
-                    {"options", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED_NAMED_ARG, "for backward compatibility: passing in a true instead of an object will result in {\"includeWatching\":true}",
+                    {"options", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED, "for backward compatibility: passing in a true instead of an object will result in {\"includeWatching\":true}",
                         Cat<std::vector<RPCArg>>(
                         {
                             {"add_inputs", RPCArg::Type::BOOL, RPCArg::Default{true}, "For a transaction with existing inputs, automatically include more if they are not enough."},
@@ -787,7 +792,7 @@ RPCHelpMan fundrawtransaction()
                                     {"vout_index", RPCArg::Type::NUM, RPCArg::Optional::OMITTED, "The zero-based output index, before a change output is added."},
                                 },
                             },
-                            {"input_sizes", RPCArg::Type::ARR, RPCArg::Optional::OMITTED_NAMED_ARG, "Inputs and their corresponding sizes",
+                            {"input_sizes", RPCArg::Type::ARR, RPCArg::Optional::OMITTED, "Inputs and their corresponding sizes",
                                 {
                                     {"", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED, "",
                                         {
@@ -804,7 +809,10 @@ RPCHelpMan fundrawtransaction()
                             {"use_cj", RPCArg::Type::BOOL, RPCArg::Default{false}, "Use CoinJoin funds only"},
                         },
                         FundTxDoc()),
-                        RPCArgOptions{.oneline_description="options"}},
+                        RPCArgOptions{
+                            .skip_type_check = true,
+                            .oneline_description = "options",
+                        }},
                 },
                 RPCResult{
                     RPCResult::Type::OBJ, "", "",
@@ -826,8 +834,6 @@ RPCHelpMan fundrawtransaction()
                                 },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    RPCTypeCheck(request.params, {UniValue::VSTR, UniValueType(), UniValue::VBOOL});
-
     std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
     if (!pwallet) return UniValue::VNULL;
 
@@ -863,7 +869,7 @@ RPCHelpMan signrawtransactionwithwallet()
         HELP_REQUIRING_PASSPHRASE,
                 {
                     {"hexstring", RPCArg::Type::STR, RPCArg::Optional::NO, "The transaction hex string"},
-                    {"prevtxs", RPCArg::Type::ARR, RPCArg::Optional::OMITTED_NAMED_ARG, "The previous dependent transaction outputs",
+                    {"prevtxs", RPCArg::Type::ARR, RPCArg::Optional::OMITTED, "The previous dependent transaction outputs",
                         {
                             {"", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED, "",
                                 {
@@ -908,8 +914,6 @@ RPCHelpMan signrawtransactionwithwallet()
                 },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    RPCTypeCheck(request.params, {UniValue::VSTR, UniValue::VARR, UniValue::VSTR}, true);
-
     const std::shared_ptr<const CWallet> pwallet = GetWalletForJSONRPCRequest(request);
     if (!pwallet) return UniValue::VNULL;
 
@@ -976,12 +980,12 @@ RPCHelpMan send()
                     "At least one output of either type must be specified.\n"
                     "For convenience, a dictionary, which holds the key-value pairs directly, is also accepted.",
                 OutputsDoc(),
-            },
+                RPCArgOptions{.skip_type_check = true}},
             {"conf_target", RPCArg::Type::NUM, RPCArg::DefaultHint{"wallet -txconfirmtarget"}, "Confirmation target in blocks"},
             {"estimate_mode", RPCArg::Type::STR, RPCArg::Default{"unset"}, "The fee estimate mode, must be one of (case insensitive):\n"
                               "\"" + FeeModes("\"\n\"") + "\""},
             {"fee_rate", RPCArg::Type::AMOUNT, RPCArg::DefaultHint{"not set, fall back to wallet fee estimation"}, "Specify a fee rate in " + CURRENCY_ATOM + "/B."},
-            {"options", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED_NAMED_ARG, "",
+            {"options", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED, "",
                 Cat<std::vector<RPCArg>>(
                 {
                     {"add_inputs", RPCArg::Type::BOOL, RPCArg::DefaultHint{"false when \"inputs\" are specified, true otherwise"},"Automatically include coins from the wallet to cover the target amount.\n"},
@@ -1047,15 +1051,6 @@ RPCHelpMan send()
         },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
         {
-            RPCTypeCheck(request.params, {
-                UniValueType(), // outputs (ARR or OBJ, checked later)
-                UniValue::VNUM, // conf_target
-                UniValue::VSTR, // estimate_mode
-                UniValueType(), // fee_rate, will be checked by AmountFromValue() in SetFeeEstimateMode()
-                UniValue::VOBJ, // options
-                }, true
-            );
-
             std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
             if (!pwallet) return UniValue::VNULL;
 
@@ -1103,7 +1098,7 @@ RPCHelpMan sendall()
              "\"" + FeeModes("\"\n\"") + "\""},
             {"fee_rate", RPCArg::Type::AMOUNT, RPCArg::DefaultHint{"not set, fall back to wallet fee estimation"}, "Specify a fee rate in " + CURRENCY_ATOM + "/B."},
             {
-                "options", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED_NAMED_ARG, "",
+                "options", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED, "",
                 Cat<std::vector<RPCArg>>(
                     {
                         {"add_to_wallet", RPCArg::Type::BOOL, RPCArg::Default{true}, "When false, returns the serialized transaction without broadcasting or adding it to the wallet"},
@@ -1158,15 +1153,6 @@ RPCHelpMan sendall()
         },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
         {
-            RPCTypeCheck(request.params, {
-                UniValue::VARR, // recipients
-                UniValue::VNUM, // conf_target
-                UniValue::VSTR, // estimate_mode
-                UniValueType(), // fee_rate, will be checked by AmountFromValue() in SetFeeEstimateMode()
-                UniValue::VOBJ, // options
-                }, true
-            );
-
             std::shared_ptr<CWallet> const pwallet{GetWalletForJSONRPCRequest(request)};
             if (!pwallet) return UniValue::VNULL;
             // Make sure the results are valid at least up to the most recent block
@@ -1377,8 +1363,6 @@ RPCHelpMan walletprocesspsbt()
                 },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    RPCTypeCheck(request.params, {UniValue::VSTR});
-
     const std::shared_ptr<const CWallet> pwallet = GetWalletForJSONRPCRequest(request);
     if (!pwallet) return UniValue::VNULL;
 
@@ -1441,7 +1425,7 @@ RPCHelpMan walletcreatefundedpsbt()
                 "All existing inputs must either have their previous output transaction be in the wallet\n"
                 "or be in the UTXO set. Solving data must be provided for non-wallet inputs.\n",
                 {
-                    {"inputs", RPCArg::Type::ARR, RPCArg::Optional::OMITTED_NAMED_ARG, "Leave empty to add inputs automatically. See add_inputs option.",
+                    {"inputs", RPCArg::Type::ARR, RPCArg::Optional::OMITTED, "Leave empty to add inputs automatically. See add_inputs option.",
                         {
                             {"", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED, "",
                                 {
@@ -1461,9 +1445,9 @@ RPCHelpMan walletcreatefundedpsbt()
                             "For compatibility reasons, a dictionary, which holds the key-value pairs directly, is also\n"
                             "accepted as second parameter.",
                         OutputsDoc(),
-                    },
+                        RPCArgOptions{.skip_type_check = true}},
                     {"locktime", RPCArg::Type::NUM, RPCArg::Default{0}, "Raw locktime. Non-0 value also locktime-activates inputs"},
-                    {"options", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED_NAMED_ARG, "",
+                    {"options", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED, "",
                         Cat<std::vector<RPCArg>>(
                         {
                             {"add_inputs", RPCArg::Type::BOOL, RPCArg::DefaultHint{"false when \"inputs\" are specified, true otherwise"}, "Automatically include coins from the wallet to cover the target amount.\n"},
@@ -1506,15 +1490,6 @@ RPCHelpMan walletcreatefundedpsbt()
                                 },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    RPCTypeCheck(request.params, {
-        UniValue::VARR,
-        UniValueType(), // ARR or OBJ, checked later
-        UniValue::VNUM,
-        UniValue::VOBJ,
-        UniValue::VBOOL,
-        }, true
-    );
-
     std::shared_ptr<CWallet> const pwallet = GetWalletForJSONRPCRequest(request);
     if (!pwallet) return UniValue::VNULL;
 

@@ -67,8 +67,8 @@ class prevector_tester {
         for (const T& v : const_pre_vector | std::views::reverse) {
             local_check(v == real_vector[--pos]);
         }
-        CDataStream ss1(SER_DISK, 0);
-        CDataStream ss2(SER_DISK, 0);
+        DataStream ss1{};
+        DataStream ss2{};
         ss1 << real_vector;
         ss2 << pre_vector;
         local_check_equal(ss1.size(), ss2.size());

@@ -34,7 +34,7 @@ static RPCHelpMan gettxoutproof()
                     {"txid", RPCArg::Type::STR_HEX, RPCArg::Optional::OMITTED, "A transaction hash"},
                 },
             },
-            {"blockhash", RPCArg::Type::STR_HEX, RPCArg::Optional::OMITTED_NAMED_ARG, "If specified, looks for txid in the block with this hash"},
+            {"blockhash", RPCArg::Type::STR_HEX, RPCArg::Optional::OMITTED, "If specified, looks for txid in the block with this hash"},
         },
         RPCResult{
             RPCResult::Type::STR, "data", "A string that is a serialized, hex-encoded data for the proof."
@@ -114,7 +114,7 @@ static RPCHelpMan gettxoutproof()
                 throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Not all transactions found in specified or retrieved block");
             }
 
-            CDataStream ssMB(SER_NETWORK, PROTOCOL_VERSION);
+            DataStream ssMB{};
             CMerkleBlock mb(block, setTxids);
             ssMB << mb;
             std::string strHex = HexStr(ssMB);
@@ -143,7 +143,7 @@ static RPCHelpMan verifytxoutproof()
         },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
         {
-            CDataStream ssMB(ParseHexV(request.params[0], "proof"), SER_NETWORK, PROTOCOL_VERSION);
+            DataStream ssMB{ParseHexV(request.params[0], "proof")};
             CMerkleBlock merkleBlock;
             ssMB >> merkleBlock;
 

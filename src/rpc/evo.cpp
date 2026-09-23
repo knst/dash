@@ -120,7 +120,8 @@ static RPCArg GetRpcArg(const std::string& strParamName)
                 "Can be set to an empty string, which will require a ProUpServTx afterwards.",
                 {
                     {"address", RPCArg::Type::STR, RPCArg::Optional::NO, ""},
-                }}
+                },
+                RPCArgOptions{.skip_type_check = true}}
         },
         {"coreP2PAddrs_update",
             {"coreP2PAddrs", RPCArg::Type::ARR, RPCArg::Optional::NO,
@@ -129,7 +130,8 @@ static RPCArg GetRpcArg(const std::string& strParamName)
                 "requires upgrading to a version 3 ProTx.",
                 {
                     {"address", RPCArg::Type::STR, RPCArg::Optional::NO, ""},
-                }}
+                },
+                RPCArgOptions{.skip_type_check = true}}
         },
         {"operatorKey",
             {"operatorKey", RPCArg::Type::STR, RPCArg::Optional::NO,
@@ -167,7 +169,8 @@ static RPCArg GetRpcArg(const std::string& strParamName)
         {"operatorReward",
             {"operatorReward", RPCArg::Type::STR, RPCArg::Optional::NO,
                 "The fraction in %% to share with the operator.\n"
-                "The value must be between 0 and 10000."}
+                "The value must be between 0 and 10000.",
+                RPCArgOptions{.skip_type_check = true}}
         },
         {"ownerAddress",
             {"ownerAddress", RPCArg::Type::STR, RPCArg::Optional::NO,
@@ -187,6 +190,7 @@ static RPCArg GetRpcArg(const std::string& strParamName)
                         }},
                 },
                 RPCArgOptions{
+                    .skip_type_check = true,
                     .oneline_description={"\"payoutAddress\" | [{\"address\",\"reward\"},...] (string or array)"},
                     .type_str={"string or array", "string or array"},
                 }}
@@ -204,6 +208,7 @@ static RPCArg GetRpcArg(const std::string& strParamName)
                         }},
                 },
                 RPCArgOptions{
+                    .skip_type_check = true,
                     .oneline_description={"\"payoutAddress\" | [{\"address\",\"reward\"},...] (string or array)"},
                     .type_str={"string or array", "string or array"},
                 }}
@@ -218,7 +223,8 @@ static RPCArg GetRpcArg(const std::string& strParamName)
         },
         {"submit",
             {"submit", RPCArg::Type::BOOL, RPCArg::Default{true},
-                "If true, the resulting transaction is sent to the network."}
+                "If true, the resulting transaction is sent to the network.",
+                RPCArgOptions{.skip_type_check = true}}
         },
         {"votingAddress_register",
             {"votingAddress", RPCArg::Type::STR, RPCArg::Optional::NO,
@@ -244,7 +250,8 @@ static RPCArg GetRpcArg(const std::string& strParamName)
                 "Must be unique on the network. Can be set to an empty string, which will require a ProUpServTx afterwards.",
                 {
                     {"address", RPCArg::Type::STR, RPCArg::Optional::NO, ""},
-                }}
+                },
+                RPCArgOptions{.skip_type_check = true}}
         },
         {"platformP2PAddrs_update",
             {"platformP2PAddrs", RPCArg::Type::ARR, RPCArg::Optional::NO,
@@ -254,7 +261,8 @@ static RPCArg GetRpcArg(const std::string& strParamName)
                 "Must be unique on the network.",
                 {
                     {"address", RPCArg::Type::STR, RPCArg::Optional::NO, ""},
-                }}
+                },
+                RPCArgOptions{.skip_type_check = true}}
         },
         {"platformHTTPSAddrs",
             {"platformHTTPSAddrs", RPCArg::Type::ARR, RPCArg::Optional::NO,
@@ -264,7 +272,8 @@ static RPCArg GetRpcArg(const std::string& strParamName)
                 "Must be unique on the network. Can be set to an empty string, which will require a ProUpServTx afterwards.",
                 {
                     {"address", RPCArg::Type::STR, RPCArg::Optional::NO, ""},
-                }}
+                },
+                RPCArgOptions{.skip_type_check = true}}
         },
         {"platformHTTPSAddrs_update",
             {"platformHTTPSAddrs", RPCArg::Type::ARR, RPCArg::Optional::NO,
@@ -274,7 +283,8 @@ static RPCArg GetRpcArg(const std::string& strParamName)
                 "Must be unique on the network.",
                 {
                     {"address", RPCArg::Type::STR, RPCArg::Optional::NO, ""},
-                }}
+                },
+                RPCArgOptions{.skip_type_check = true}}
         },
     };
 
@@ -1225,7 +1235,8 @@ static RPCHelpMan protx_shared_sign()
         + HELP_REQUIRING_PASSPHRASE,
         {
             {"tx", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The serialized transaction in hex format."},
-            {"allowTimeLocks", RPCArg::Type::BOOL, RPCArg::Default{false}, "Sign a registration or dissolution carrying an unsatisfied lock time or a relative (BIP68) input lock. The signed digest commits to these fields, so a lock a co-signer failed to notice delays when the transaction can confirm."},
+            {"allowTimeLocks", RPCArg::Type::BOOL, RPCArg::Default{false}, "Sign a registration or dissolution carrying an unsatisfied lock time or a relative (BIP68) input lock. The signed digest commits to these fields, so a lock a co-signer failed to notice delays when the transaction can confirm.",
+             RPCArgOptions{.skip_type_check = true}},
         },
         RPCResult{RPCResult::Type::OBJ, "", "",
         {
@@ -1322,8 +1333,10 @@ static RPCHelpMan protx_shared_dissolve()
             {"proTxHash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The hash of the initial ProRegTx."},
             {"actorIndex", RPCArg::Type::NUM, RPCArg::Optional::NO, "Index into the share table of the dissolving participant."},
             {"fee", RPCArg::Type::NUM, RPCArg::Default{100000}, "Transaction fee in duffs, paid from the actor's share. At most 1000000 duffs (consensus ceiling)."},
-            {"submit", RPCArg::Type::BOOL, RPCArg::Default{true}, "Submit the transaction to the network."},
-            {"payPenalty", RPCArg::Type::BOOL, RPCArg::DefaultHint{"determined by the current height"}, "Pay the early-period penalty. Pass true to build a standby valid at any height, false for one valid only after the early period ends."},
+            {"submit", RPCArg::Type::BOOL, RPCArg::Default{true}, "Submit the transaction to the network.",
+             RPCArgOptions{.skip_type_check = true}},
+            {"payPenalty", RPCArg::Type::BOOL, RPCArg::DefaultHint{"determined by the current height"}, "Pay the early-period penalty. Pass true to build a standby valid at any height, false for one valid only after the early period ends.",
+             RPCArgOptions{.skip_type_check = true}},
         },
         RPCResult{RPCResult::Type::STR_HEX, "result", "The transaction id if submitted, otherwise the signed transaction hex"},
         RPCExamples{HelpExampleCli("protx", "shared_dissolve \"proTxHash\" 0")},
@@ -1361,7 +1374,8 @@ static RPCHelpMan protx_shared_update_share()
             {"shareIndex", RPCArg::Type::NUM, RPCArg::Optional::NO, "Index into the share table of the share to update."},
             {"rewardAddress", RPCArg::Type::STR, RPCArg::Optional::NO, "The new reward address. To reset rewards, provide the share's refund address."},
             {"feeSourceAddress", RPCArg::Type::STR, RPCArg::Optional::NO, "Wallet address to pay the transaction fee from."},
-            {"submit", RPCArg::Type::BOOL, RPCArg::Default{true}, "Submit the transaction to the network."},
+            {"submit", RPCArg::Type::BOOL, RPCArg::Default{true}, "Submit the transaction to the network.",
+             RPCArgOptions{.skip_type_check = true}},
         },
         {
             RPCResult{"if \"submit\" is not set or set to true",
@@ -1467,7 +1481,8 @@ static RPCHelpMan protx_shared_combine()
                     {"signature", RPCArg::Type::STR, RPCArg::Optional::NO, "Base64-encoded signature"},
                 }},
             }},
-            {"submit", RPCArg::Type::BOOL, RPCArg::Default{false}, "Submit the transaction to the network (not available for registrations, whose funding inputs still need signing)."},
+            {"submit", RPCArg::Type::BOOL, RPCArg::Default{false}, "Submit the transaction to the network (not available for registrations, whose funding inputs still need signing).",
+             RPCArgOptions{.skip_type_check = true}},
         },
         RPCResult{RPCResult::Type::STR_HEX, "result", "The transaction id if submitted, otherwise the combined transaction hex"},
         RPCExamples{HelpExampleCli("protx", "shared_combine \"tx\" \"[{\\\"shareIndex\\\":0,\\\"signature\\\":\\\"...\\\"}]\"")},
@@ -1626,7 +1641,8 @@ static RPCHelpMan protx_list()
                 "                 This will also include ProTx which failed PoSe verification.\n"
 #endif
             },
-            {"detailed", RPCArg::Type::BOOL, RPCArg::Default{false}, "If not specified, only the hashes of the ProTx will be returned."},
+            {"detailed", RPCArg::Type::BOOL, RPCArg::Default{false}, "If not specified, only the hashes of the ProTx will be returned.",
+             RPCArgOptions{.skip_type_check = true}},
             {"height", RPCArg::Type::NUM, RPCArg::DefaultHint{"current chain-tip"}, ""},
         },
         RPCResult{
@@ -1840,9 +1856,12 @@ static RPCHelpMan protx_diff()
     return RPCHelpMan{"protx diff",
         "\nCalculates a diff between two deterministic masternode lists. The result also contains proof data.\n",
         {
-            {"baseBlock", RPCArg::Type::STR, RPCArg::Optional::NO, "The starting block hash or height."},
-            {"block", RPCArg::Type::STR, RPCArg::Optional::NO, "The ending block hash or height."},
-            {"extended", RPCArg::Type::BOOL, RPCArg::Optional::OMITTED, "Show additional fields."},
+            {"baseBlock", RPCArg::Type::STR, RPCArg::Optional::NO, "The starting block hash or height.",
+             RPCArgOptions{.skip_type_check = true}},
+            {"block", RPCArg::Type::STR, RPCArg::Optional::NO, "The ending block hash or height.",
+             RPCArgOptions{.skip_type_check = true}},
+            {"extended", RPCArg::Type::BOOL, RPCArg::Optional::OMITTED, "Show additional fields.",
+             RPCArgOptions{.skip_type_check = true}},
         },
         CSimplifiedMNListDiff::GetJsonHelp(/*key=*/"", /*optional=*/false),
         RPCExamples{""},
@@ -1881,8 +1900,10 @@ static RPCHelpMan protx_listdiff()
     return RPCHelpMan{"protx listdiff",
                "\nCalculate a full MN list diff between two masternode lists.\n",
                {
-                       {"baseBlock", RPCArg::Type::STR, RPCArg::Optional::NO, "The starting block hash or height."},
-                       {"block", RPCArg::Type::STR, RPCArg::Optional::NO, "The ending block hash or height."},
+                       {"baseBlock", RPCArg::Type::STR, RPCArg::Optional::NO, "The starting block hash or height.",
+                        RPCArgOptions{.skip_type_check = true}},
+                       {"block", RPCArg::Type::STR, RPCArg::Optional::NO, "The ending block hash or height.",
+                        RPCArgOptions{.skip_type_check = true}},
                },
                 RPCResult {
                     RPCResult::Type::OBJ, "", "",
@@ -2051,8 +2072,10 @@ static RPCHelpMan evodb_verify()
         "This is a read-only operation that does not modify the database.\n"
         "If no heights are specified, defaults to the full range from DIP0003 activation to chain tip.\n",
         {
-            {"startBlock", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "The starting block hash or height (defaults to DIP0003 activation height)."},
-            {"stopBlock", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "The ending block hash or height (defaults to current chain tip)."},
+            {"startBlock", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "The starting block hash or height (defaults to DIP0003 activation height).",
+             RPCArgOptions{.skip_type_check = true}},
+            {"stopBlock", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "The ending block hash or height (defaults to current chain tip).",
+             RPCArgOptions{.skip_type_check = true}},
         },
         RPCResult{
             RPCResult::Type::OBJ, "", "",
@@ -2089,8 +2112,10 @@ static RPCHelpMan evodb_repair()
         "If verification fails, recalculates diffs from blockchain data and replaces corrupted records.\n"
         "If no heights are specified, defaults to the full range from DIP0003 activation to chain tip.\n",
         {
-            {"startBlock", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "The starting block hash or height (defaults to DIP0003 activation height)."},
-            {"stopBlock", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "The ending block hash or height (defaults to current chain tip)."},
+            {"startBlock", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "The starting block hash or height (defaults to DIP0003 activation height).",
+             RPCArgOptions{.skip_type_check = true}},
+            {"stopBlock", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "The ending block hash or height (defaults to current chain tip).",
+             RPCArgOptions{.skip_type_check = true}},
         },
         RPCResult{
             RPCResult::Type::OBJ, "", "",
@@ -2151,10 +2176,12 @@ static RPCHelpMan protx_shared_register_prepare()
                     {"ownerAddress", RPCArg::Type::STR, RPCArg::Optional::NO, "P2PKH address of the immutable share owner key"},
                 }},
             }},
-            {"coreP2PAddrs", RPCArg::Type::STR, RPCArg::Optional::NO, "IP address and port of the masternode, leave empty to bank on a later ProUpServTx."},
+            {"coreP2PAddrs", RPCArg::Type::STR, RPCArg::Optional::NO, "IP address and port of the masternode, leave empty to bank on a later ProUpServTx.",
+             RPCArgOptions{.skip_type_check = true}},
             {"operatorPubKey", RPCArg::Type::STR, RPCArg::Optional::NO, "The operator BLS public key."},
             {"votingAddress", RPCArg::Type::STR, RPCArg::Optional::NO, "The voting key address."},
-            {"operatorReward", RPCArg::Type::STR, RPCArg::Optional::NO, "The fraction in %% to share with the operator (0.00 to 100.00)."},
+            {"operatorReward", RPCArg::Type::STR, RPCArg::Optional::NO, "The fraction in %% to share with the operator (0.00 to 100.00).",
+             RPCArgOptions{.skip_type_check = true}},
             {"earlyPeriodBlocks", RPCArg::Type::NUM, RPCArg::Optional::NO, "Length in blocks of the early period during which unilateral dissolution is penalized (up to 420480)."},
             {"earlyPenalty", RPCArg::Type::NUM, RPCArg::Optional::NO, "Penalty in duffs for unilateral dissolution during the early period (must be below the smallest share, and zero when earlyPeriodBlocks is zero)."},
         },
@@ -2306,7 +2333,8 @@ static RPCHelpMan bls_generate()
         "bls generate",
         "\nReturns a BLS secret/public key pair.\n",
         {
-            {"legacy", RPCArg::Type::BOOL, RPCArg::Default{false}, "(DEPRECATED, can be set if -deprecatedrpc=legacy_mn is passed) Set true to use legacy BLS scheme"},
+            {"legacy", RPCArg::Type::BOOL, RPCArg::Default{false}, "(DEPRECATED, can be set if -deprecatedrpc=legacy_mn is passed) Set true to use legacy BLS scheme",
+             RPCArgOptions{.skip_type_check = true}},
         },
         RPCResult{RPCResult::Type::OBJ,
                   "",
@@ -2342,7 +2370,8 @@ static RPCHelpMan bls_fromsecret()
         "\nParses a BLS secret key and returns the secret/public key pair.\n",
         {
             {"secret", RPCArg::Type::STR, RPCArg::Optional::NO, "The BLS secret key"},
-            {"legacy", RPCArg::Type::BOOL, RPCArg::Default{false}, "Pass true if you need in legacy scheme"},
+            {"legacy", RPCArg::Type::BOOL, RPCArg::Default{false}, "Pass true if you need in legacy scheme",
+             RPCArgOptions{.skip_type_check = true}},
         },
         RPCResult{RPCResult::Type::OBJ,
                   "",

@@ -163,7 +163,7 @@ RPCHelpMan listaddressbalances()
     return RPCHelpMan{"listaddressbalances",
         "\nLists addresses of this wallet and their balances\n",
         {
-            {"minamount", RPCArg::Type::NUM, RPCArg::Default{0}, "Minimum balance in " + CURRENCY_UNIT + " an address should have to be shown in the list"},
+            {"minamount", RPCArg::Type::AMOUNT, RPCArg::Default{0}, "Minimum balance in " + CURRENCY_UNIT + " an address should have to be shown in the list"},
         },
         RPCResult{
                 RPCResult::Type::OBJ_DYN, "", "Balances of addresses",
@@ -210,7 +210,7 @@ RPCHelpMan getbalance()
                 "The available balance is what the wallet considers currently spendable, and is\n"
                 "thus affected by options which limit spendability such as -spendzeroconfchange.\n",
                 {
-                    {"dummy", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, "Remains for backward compatibility. Must be excluded or set to \"*\"."},
+                    {"dummy", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Remains for backward compatibility. Must be excluded or set to \"*\"."},
                     {"minconf", RPCArg::Type::NUM, RPCArg::Default{0}, "Only include transactions confirmed at least this many times."},
                     {"addlocked", RPCArg::Type::BOOL, RPCArg::Default{false}, "Whether to include transactions locked via InstantSend in the wallet's balance."},
                     {"include_watchonly", RPCArg::Type::BOOL, RPCArg::DefaultHint{"true for watch-only wallets, otherwise false"}, "Also include balance in watch-only addresses (see 'importaddress')"},
@@ -560,7 +560,7 @@ RPCHelpMan listunspent()
                     },
                     {"include_unsafe", RPCArg::Type::BOOL, RPCArg::Default{true}, "Include outputs that are not safe to spend\n"
                               "See description of \"safe\" attribute below."},
-                    {"query_options", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED_NAMED_ARG, "JSON with query options",
+                    {"query_options", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED, "JSON with query options",
                         {
                             {"minimumAmount", RPCArg::Type::AMOUNT, RPCArg::Default{0}, "Minimum value of each UTXO in " + CURRENCY_UNIT + ""},
                             {"maximumAmount", RPCArg::Type::AMOUNT, RPCArg::DefaultHint{"unlimited"}, "Maximum value of each UTXO in " + CURRENCY_UNIT + ""},

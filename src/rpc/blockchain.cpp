@@ -502,11 +502,6 @@ static RPCHelpMan getblockfrompeer()
         },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    RPCTypeCheck(request.params, {
-        UniValue::VSTR, // blockhash
-        UniValue::VNUM, // peer_id
-    });
-
     const NodeContext& node = EnsureAnyNodeContext(request.context);
     ChainstateManager& chainman = EnsureChainman(node);
     PeerManager& peerman = EnsurePeerman(node);
@@ -522,7 +517,7 @@ static RPCHelpMan getblockfrompeer()
 
     // Fetching blocks before the node has syncing past their height can prevent block files from
     // being pruned, so we avoid it if the node is in prune mode.
-    if (node::fPruneMode && index->nHeight > WITH_LOCK(chainman.GetMutex(), return chainman.ActiveTip()->nHeight)) {
+    if (chainman.m_blockman.IsPruneMode() && index->nHeight > WITH_LOCK(chainman.GetMutex(), return chainman.ActiveTip()->nHeight)) {
         throw JSONRPCError(RPC_MISC_ERROR, "In prune mode, only blocks that the node has already synced previously can be fetched from a peer");
     }
 
@@ -670,7 +665,7 @@ static RPCHelpMan getblockheader()
 
     if (!fVerbose)
     {
-        CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
+        DataStream ssBlock{};
         ssBlock << pblockindex->GetBlockHeader();
         std::string strHex = HexStr(ssBlock);
         return strHex;
@@ -965,7 +960,8 @@ static RPCHelpMan getblock()
                 "If verbosity is 3, returns an Object with information about block <hash> and information about each transaction, including prevout information for inputs (only for unpruned blocks in the current best chain).\n",
                 {
                     {"blockhash", RPCArg::Type::STR_HEX, RPCArg::Optional::NO, "The block hash"},
-                    {"verbosity|verbose", RPCArg::Type::NUM, RPCArg::Default{1}, "0 for hex-encoded data, 1 for a JSON object, 2 for JSON object with transaction data, and 3 for JSON object with transaction data including prevout information for inputs"},
+                    {"verbosity|verbose", RPCArg::Type::NUM, RPCArg::Default{1}, "0 for hex-encoded data, 1 for a JSON object, 2 for JSON object with transaction data, and 3 for JSON object with transaction data including prevout information for inputs",
+                     RPCArgOptions{.skip_type_check = true}},
                 },
                 {
                     RPCResult{"for verbosity = 0",
@@ -1093,10 +1089,11 @@ static RPCHelpMan pruneblockchain()
                 },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    if (!node::fPruneMode)
-        throw JSONRPCError(RPC_MISC_ERROR, "Cannot prune blocks because node is not in prune mode.");
-
     ChainstateManager& chainman = EnsureAnyChainman(request.context);
+    if (!chainman.m_blockman.IsPruneMode()) {
+        throw JSONRPCError(RPC_MISC_ERROR, "Cannot prune blocks because node is not in prune mode.");
+    }
+
     LOCK(cs_main);
     Chainstate& active_chainstate = chainman.ActiveChainstate();
     CChain& active_chain = active_chainstate.m_chain;
@@ -1182,7 +1179,11 @@ static RPCHelpMan gettxoutsetinfo()
                 "Note this call may take some time if you are not using coinstatsindex.\n",
                 {
                     {"hash_type", RPCArg::Type::STR, RPCArg::Default{"hash_serialized_2"}, "Which UTXO set hash should be calculated. Options: 'hash_serialized_2' (the legacy algorithm), 'muhash', 'none'."},
-                    {"hash_or_height", RPCArg::Type::NUM, RPCArg::DefaultHint{"the current best block"}, "The block hash or height of the target height (only available with coinstatsindex).", RPCArgOptions{.type_str={"", "string or numeric"}}},
+                    {"hash_or_height", RPCArg::Type::NUM, RPCArg::DefaultHint{"the current best block"}, "The block hash or height of the target height (only available with coinstatsindex).",
+                     RPCArgOptions{
+                         .skip_type_check = true,
+                         .type_str = {"", "string or numeric"},
+                     }},
                     {"use_index", RPCArg::Type::BOOL, RPCArg::Default{true}, "Use coinstatsindex, if available."},
                 },
                 RPCResult{
@@ -1608,15 +1609,15 @@ RPCHelpMan getblockchaininfo()
     obj.pushKV("initialblockdownload", active_chainstate.IsInitialBlockDownload());
     obj.pushKV("chainwork", tip.nChainWork.GetHex());
     obj.pushKV("size_on_disk", chainman.m_blockman.CalculateCurrentUsage());
-    obj.pushKV("pruned", node::fPruneMode);
-    if (node::fPruneMode) {
+    obj.pushKV("pruned", chainman.m_blockman.IsPruneMode());
+    if (chainman.m_blockman.IsPruneMode()) {
         obj.pushKV("pruneheight", chainman.m_blockman.GetFirstStoredBlock(tip)->nHeight);
 
         // if 0, execution bypasses the whole if block.
         bool automatic_pruning{args.GetIntArg("-prune", 0) != 1};
         obj.pushKV("automatic_pruning",  automatic_pruning);
         if (automatic_pruning) {
-            obj.pushKV("prune_target_size",  node::nPruneTarget);
+            obj.pushKV("prune_target_size", chainman.m_blockman.GetPruneTarget());
         }
     }
 
@@ -2212,7 +2213,11 @@ static RPCHelpMan getblockstats()
                 "\nCompute per block statistics for a given window. All amounts are in duffs.\n"
                 "It won't work for some heights with pruning.\n",
                 {
-                    {"hash_or_height", RPCArg::Type::NUM, RPCArg::Optional::NO, "The block hash or height of the target block", RPCArgOptions{.type_str={"", "string or numeric"}}},
+                    {"hash_or_height", RPCArg::Type::NUM, RPCArg::Optional::NO, "The block hash or height of the target block",
+                     RPCArgOptions{
+                         .skip_type_check = true,
+                         .type_str = {"", "string or numeric"},
+                     }},
                     {"stats", RPCArg::Type::ARR, RPCArg::DefaultHint{"all values"}, "Values to plot (see result below)",
                         {
                             {"height", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Selected statistic"},
@@ -2707,8 +2712,6 @@ static RPCHelpMan scantxoutset()
         },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
-    RPCTypeCheck(request.params, {UniValue::VSTR, UniValue::VARR});
-
     UniValue result(UniValue::VOBJ);
     if (request.params[0].get_str() == "status") {
         CoinsViewScanReserver reserver;

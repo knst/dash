@@ -177,11 +177,9 @@ BOOST_AUTO_TEST_CASE(SetCandidatesByBlock)
     // Old SetCandidatesByBlock() behavior cycled through vin instead of vout and would therefore miss the
     // orphan because there are more vouts than vins in the transaction the orphan is attempting to spend.
     // Let's check to make sure this isn't happening again.
-    NodeId _originator{-1}; bool more{false};
-    CTransactionRef ref = orphanage.GetTxToReconsider(/*peer=*/-1, _originator, more);
+    CTransactionRef ref = orphanage.GetTxToReconsider(/*peer=*/-1);
     BOOST_CHECK(orphanage.HaveTx(Assert(ref)->GetHash()));
     BOOST_CHECK_EQUAL(ref->GetHash(), orphan.GetHash());
-    BOOST_CHECK(!more);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

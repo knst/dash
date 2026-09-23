@@ -271,7 +271,6 @@ static RPCHelpMan setmocktime()
     // ensure all call sites of GetTime() are accessing this safely.
     LOCK(cs_main);
 
-    RPCTypeCheck(request.params, {UniValue::VNUM});
     const int64_t time{request.params[0].getInt<int64_t>()};
     constexpr int64_t max_time{Ticks<std::chrono::seconds>(std::chrono::nanoseconds::max())};
     if (time < 0 || time > max_time) {
@@ -392,7 +391,7 @@ static RPCHelpMan getaddressmempool()
                 {
                     {"address", RPCArg::Type::STR, RPCArg::Default{""}, "The base58check encoded address"},
                 },
-            },
+                RPCArgOptions{.skip_type_check = true}},
         },
         RPCResult{
             RPCResult::Type::ARR, "", "",
@@ -475,7 +474,7 @@ static RPCHelpMan getaddressutxos()
                 {
                     {"address", RPCArg::Type::STR, RPCArg::Default{""}, "The base58check encoded address"},
                 },
-            },
+                RPCArgOptions{.skip_type_check = true}},
         },
         RPCResult{
             RPCResult::Type::ARR, "", "",
@@ -551,7 +550,7 @@ static RPCHelpMan getaddressdeltas()
                 {
                     {"address", RPCArg::Type::STR, RPCArg::Default{""}, "The base58check encoded address"},
                 },
-            },
+                RPCArgOptions{.skip_type_check = true}},
         },
         RPCResult{
             RPCResult::Type::ARR, "", "",
@@ -643,7 +642,7 @@ static RPCHelpMan getaddressbalance()
                 {
                     {"address", RPCArg::Type::STR, RPCArg::Default{""}, "The base58check encoded address"},
                 },
-            },
+                RPCArgOptions{.skip_type_check = true}},
         },
         RPCResult{
             RPCResult::Type::OBJ, "", "",
@@ -727,7 +726,7 @@ static RPCHelpMan getaddresstxids()
                 {
                     {"address", RPCArg::Type::STR, RPCArg::Default{""}, "The base58check encoded address"},
                 },
-            },
+                RPCArgOptions{.skip_type_check = true}},
         },
         RPCResult{
             RPCResult::Type::ARR, "", "",
@@ -906,8 +905,6 @@ static RPCHelpMan mockscheduler()
         throw std::runtime_error("mockscheduler is for regression testing (-regtest mode) only");
     }
 
-    // check params are valid values
-    RPCTypeCheck(request.params, {UniValue::VNUM});
     int64_t delta_seconds = request.params[0].getInt<int64_t>();
     if (delta_seconds <= 0 || delta_seconds > 3600) {
         throw std::runtime_error("delta_time must be between 1 and 3600 seconds (1 hr)");
@@ -1044,11 +1041,11 @@ static RPCHelpMan logging()
             "  - \"none\", \"0\" : even if other logging categories are specified, ignore all of them.\n"
             ,
                 {
-                    {"include", RPCArg::Type::ARR, RPCArg::Optional::OMITTED_NAMED_ARG, "The of categories to add to debug logging",
+                    {"include", RPCArg::Type::ARR, RPCArg::Optional::OMITTED, "The of categories to add to debug logging",
                         {
                             {"include_category", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "the valid logging category"},
                         }},
-                    {"exclude", RPCArg::Type::ARR, RPCArg::Optional::OMITTED_NAMED_ARG, "The categories to remove from debug logging",
+                    {"exclude", RPCArg::Type::ARR, RPCArg::Optional::OMITTED, "The categories to remove from debug logging",
                         {
                             {"exclude_category", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "the valid logging category"},
                         }},
@@ -1100,16 +1097,16 @@ static RPCHelpMan echo(const std::string& name)
                 "\nThe difference between echo and echojson is that echojson has argument conversion enabled in the client-side table in "
                 "dash-cli and the GUI. There is no server-side difference.",
         {
-            {"arg0", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
-            {"arg1", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
-            {"arg2", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
-            {"arg3", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
-            {"arg4", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
-            {"arg5", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
-            {"arg6", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
-            {"arg7", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
-            {"arg8", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
-            {"arg9", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, ""},
+            {"arg0", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "", RPCArgOptions{.skip_type_check = true}},
+            {"arg1", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "", RPCArgOptions{.skip_type_check = true}},
+            {"arg2", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "", RPCArgOptions{.skip_type_check = true}},
+            {"arg3", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "", RPCArgOptions{.skip_type_check = true}},
+            {"arg4", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "", RPCArgOptions{.skip_type_check = true}},
+            {"arg5", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "", RPCArgOptions{.skip_type_check = true}},
+            {"arg6", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "", RPCArgOptions{.skip_type_check = true}},
+            {"arg7", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "", RPCArgOptions{.skip_type_check = true}},
+            {"arg8", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "", RPCArgOptions{.skip_type_check = true}},
+            {"arg9", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "", RPCArgOptions{.skip_type_check = true}},
         },
                 RPCResult{RPCResult::Type::ANY, "", "Returns whatever was passed in"},
                 RPCExamples{""},
@@ -1182,7 +1179,7 @@ static RPCHelpMan getindexinfo()
     return RPCHelpMan{"getindexinfo",
                 "\nReturns the status of one or all available indices currently running in the node.\n",
                 {
-                    {"index_name", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, "Filter results for an index with a specific name."},
+                    {"index_name", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Filter results for an index with a specific name."},
                 },
                 RPCResult{
                     RPCResult::Type::OBJ_DYN, "", "", {

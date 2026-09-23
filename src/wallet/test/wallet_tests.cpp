@@ -60,15 +60,25 @@ extern RPCHelpMan addmultisigaddress();
 static_assert(DEFAULT_TRANSACTION_MINFEE >= DEFAULT_MIN_RELAY_TX_FEE, "wallet minimum fee is smaller than default relay fee");
 
 namespace {
+class FailCursor : public DatabaseCursor
+{
+private:
+    bool m_pass{true};
+
+public:
+    explicit FailCursor(bool pass) : m_pass(pass) {}
+    Status Next(DataStream& key, DataStream& value) override { return m_pass ? Status::DONE : Status::FAIL; }
+};
+
 /** RAII class that provides access to a FailDatabase. Which fails if needed. */
 class FailBatch : public DatabaseBatch
 {
 private:
     bool m_pass{true};
-    bool ReadKey(CDataStream&&, CDataStream&) override { return m_pass; }
-    bool WriteKey(CDataStream&&, CDataStream&&, bool) override { return m_pass; }
-    bool EraseKey(CDataStream&&) override { return m_pass; }
-    bool HasKey(CDataStream&&) override { return m_pass; }
+    bool ReadKey(DataStream&&, DataStream&) override { return m_pass; }
+    bool WriteKey(DataStream&&, DataStream&&, bool) override { return m_pass; }
+    bool EraseKey(DataStream&&) override { return m_pass; }
+    bool HasKey(DataStream&&) override { return m_pass; }
     bool ErasePrefix(Span<const std::byte>) override { return m_pass; }
 
 public:
@@ -76,13 +86,7 @@ public:
     void Flush() override {}
     void Close() override {}
 
-    bool StartCursor() override { return true; }
-    bool ReadAtCursor(CDataStream&, CDataStream&, bool& complete) override
-    {
-        complete = true;
-        return m_pass;
-    }
-    void CloseCursor() override {}
+    std::unique_ptr<DatabaseCursor> GetNewCursor() override { return std::make_unique<FailCursor>(m_pass); }
     bool TxnBegin() override { return m_pass; }
     bool TxnCommit() override { return m_pass; }
     bool TxnAbort() override { return m_pass; }

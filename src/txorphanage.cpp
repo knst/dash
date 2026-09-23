@@ -152,17 +152,19 @@ void TxOrphanage::LimitOrphans(unsigned int max_orphans_size)
     if (nEvicted > 0) LogPrint(BCLog::MEMPOOL, "orphanage overflow, removed %u tx\n", nEvicted);
 }
 
-void TxOrphanage::AddChildrenToWorkSet(const CTransaction& tx, NodeId peer)
+void TxOrphanage::AddChildrenToWorkSet(const CTransaction& tx)
 {
     LOCK(m_mutex);
 
-    // Get this peer's work set, emplacing an empty set it didn't exist
-    std::set<uint256>& orphan_work_set = m_peer_work_set.try_emplace(peer).first->second;
 
     for (unsigned int i = 0; i < tx.vout.size(); i++) {
         const auto it_by_prev = m_outpoint_to_orphan_it.find(COutPoint(tx.GetHash(), i));
         if (it_by_prev != m_outpoint_to_orphan_it.end()) {
             for (const auto& elem : it_by_prev->second) {
+                // Get this source peer's work set, emplacing an empty set if it didn't exist
+                // (note: if this peer wasn't still connected, we would have removed the orphan tx already)
+                std::set<uint256>& orphan_work_set = m_peer_work_set.try_emplace(elem->second.fromPeer).first->second;
+                // Add this tx to the work set
                 orphan_work_set.insert(elem->first);
             }
         }
@@ -175,7 +177,7 @@ bool TxOrphanage::HaveTx(const uint256& txid) const
     return m_orphans.count(txid);
 }
 
-CTransactionRef TxOrphanage::GetTxToReconsider(NodeId peer, NodeId& originator, bool& more)
+CTransactionRef TxOrphanage::GetTxToReconsider(NodeId peer)
 {
     LOCK(m_mutex);
 
@@ -188,25 +190,46 @@ CTransactionRef TxOrphanage::GetTxToReconsider(NodeId peer, NodeId& originator, 
 
             const auto orphan_it = m_orphans.find(txid);
             if (orphan_it != m_orphans.end()) {
-                more = !work_set.empty();
-                originator = orphan_it->second.fromPeer;
                 return orphan_it->second.tx;
             }
         }
     }
-    more = false;
     return nullptr;
 }
 
 void TxOrphanage::SetCandidatesByBlock(const CBlock& block)
 {
     AssertLockNotHeld(m_mutex);
-    // As these candidates are generated from a block, they have no peer to attribute it to. We use
-    // NodeId -1 for this reason and need to flush the last set before processing this one.
-    WITH_LOCK(m_mutex, m_peer_work_set.try_emplace(NodeId{-1}).first->second.clear());
+    LOCK(m_mutex);
+    // Clear previous block-based candidates (attributed to peer -1).
+    // As these candidates are generated from a block, they have no peer to attribute it to,
+    // so we use NodeId -1 for this reason.
+    m_peer_work_set.try_emplace(NodeId{-1}).first->second.clear();
+
+    // Find all orphans that depend on transactions in this block
     for (const auto& ptx : block.vtx) {
-        AddChildrenToWorkSet(*ptx, /*peer=*/-1);
+        for (unsigned int i = 0; i < ptx->vout.size(); i++) {
+            const auto it_by_prev = m_outpoint_to_orphan_it.find(COutPoint(ptx->GetHash(), i));
+            if (it_by_prev != m_outpoint_to_orphan_it.end()) {
+                for (const auto& elem : it_by_prev->second) {
+                    // Add to block's work set (peer -1), not the originating peer's queue
+                    m_peer_work_set[NodeId{-1}].insert(elem->first);
+                }
+            }
+        }
     }
+}
+
+bool TxOrphanage::HaveTxToReconsider(NodeId peer)
+{
+    LOCK(m_mutex);
+
+    auto work_set_it = m_peer_work_set.find(peer);
+    if (work_set_it != m_peer_work_set.end()) {
+        auto& work_set = work_set_it->second;
+        return !work_set.empty();
+    }
+    return false;
 }
 
 void TxOrphanage::EraseForBlock(const CBlock& block)

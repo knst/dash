@@ -568,8 +568,8 @@ static RPCHelpMan getblocktemplate()
         {
             {"template_request", RPCArg::Type::OBJ, RPCArg::Default{UniValue::VOBJ}, "Format of the template",
             {
-                {"mode", RPCArg::Type::STR, /* treat as named arg */ RPCArg::Optional::OMITTED_NAMED_ARG, "This must be set to \"template\", \"proposal\" (see BIP 23), or omitted"},
-                {"capabilities", RPCArg::Type::ARR, /* treat as named arg */ RPCArg::Optional::OMITTED_NAMED_ARG, "A list of strings",
+                {"mode", RPCArg::Type::STR, /* treat as named arg */ RPCArg::Optional::OMITTED, "This must be set to \"template\", \"proposal\" (see BIP 23), or omitted"},
+                {"capabilities", RPCArg::Type::ARR, /* treat as named arg */ RPCArg::Optional::OMITTED, "A list of strings",
                 {
                     {"str", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "client side supported feature, 'longpoll', 'coinbasevalue', 'proposal', 'serverlist', 'workid'"},
                 }},
@@ -577,8 +577,8 @@ static RPCHelpMan getblocktemplate()
                 {
                         {"str", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "client side supported softfork deployment"},
                 }},
-                {"longpollid", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, "delay processing request until the result would vary significantly from the \"longpollid\" of a prior template"},
-                {"data", RPCArg::Type::STR_HEX, RPCArg::Optional::OMITTED_NAMED_ARG, "proposed block data to check, encoded in hexadecimal; valid only for mode=\"proposal\""},
+                {"longpollid", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "delay processing request until the result would vary significantly from the \"longpollid\" of a prior template"},
+                {"data", RPCArg::Type::STR_HEX, RPCArg::Optional::OMITTED, "proposed block data to check, encoded in hexadecimal; valid only for mode=\"proposal\""},
             },
             RPCArgOptions{.oneline_description="\"template_request\""}},
         },

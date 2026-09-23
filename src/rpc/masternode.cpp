@@ -50,7 +50,8 @@ static RPCHelpMan masternode_connect()
         "Connect to given masternode\n",
         {
             {"address", RPCArg::Type::STR, RPCArg::Optional::NO, "The address of the masternode to connect"},
-            {"v2transport", RPCArg::Type::BOOL, RPCArg::DefaultHint{"set by -v2transport"}, "Attempt to connect using BIP324 v2 transport protocol"},
+            {"v2transport", RPCArg::Type::BOOL, RPCArg::DefaultHint{"set by -v2transport"}, "Attempt to connect using BIP324 v2 transport protocol",
+             RPCArgOptions{.skip_type_check = true}},
         },
         RPCResult{
             RPCResult::Type::STR, "status", "Returns 'successfully connected' if successful"

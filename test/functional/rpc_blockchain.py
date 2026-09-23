@@ -26,6 +26,7 @@ from decimal import Decimal
 import http.client
 import os
 import subprocess
+import textwrap
 
 from test_framework.blocktools import (
     MAX_FUTURE_BLOCK_TIME,
@@ -487,6 +488,17 @@ class BlockchainTest(BitcoinTestFramework):
         hashes_per_second = self.nodes[0].getnetworkhashps(100, 0)
         assert_equal(hashes_per_second, 0)
 
+        assert_raises_rpc_error(
+            -3,
+            textwrap.dedent("""
+            Wrong type passed:
+            {
+                "Position 1 (nblocks)": "JSON value of type string is not of expected type number",
+                "Position 2 (height)": "JSON value of type array is not of expected type number"
+            }
+            """).strip(),
+            lambda: self.nodes[0].getnetworkhashps("a", []),
+        )
         # This should be 2 hashes every 2.6 minutes (156 seconds) or 1/78
         hashes_per_second = self.nodes[0].getnetworkhashps()
         assert abs(hashes_per_second * 78 - 1) < 0.0001

@@ -204,7 +204,7 @@ RPCHelpMan addmultisigaddress()
                             {"key", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Dash address or hex-encoded public key"},
                         },
                         },
-                    {"label", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, "A label to assign the addresses to."},
+                    {"label", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "A label to assign the addresses to."},
                 },
                 RPCResult{
                     RPCResult::Type::OBJ, "", "",
@@ -641,7 +641,7 @@ RPCHelpMan listlabels()
     return RPCHelpMan{"listlabels",
                 "\nReturns the list of all labels, or labels that are assigned to addresses with a specific purpose.\n",
                 {
-                    {"purpose", RPCArg::Type::STR, RPCArg::Optional::OMITTED_NAMED_ARG, "Address purpose to list labels for ('send','receive'). An empty string is the same as not providing this argument."},
+                    {"purpose", RPCArg::Type::STR, RPCArg::Optional::OMITTED, "Address purpose to list labels for ('send','receive'). An empty string is the same as not providing this argument."},
                 },
                 RPCResult{
                     RPCResult::Type::ARR, "", "",
