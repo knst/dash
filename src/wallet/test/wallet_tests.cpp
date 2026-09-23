@@ -26,6 +26,7 @@
 #include <rpc/server.h>
 #include <test/util/logging.h>
 #include <test/util/masternode.h>
+#include <test/util/random.h>
 #include <test/util/setup_common.h>
 #include <txmempool.h>
 #include <util/translation.h>
