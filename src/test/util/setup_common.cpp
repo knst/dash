@@ -483,7 +483,7 @@ TestChainSetup::TestChainSetup(
             /*TestChainDIP3BeforeActivationSetup=*/
             {  430, uint256S("0x0bcefaa33fec56cd84d05d0e76cd6a78badcc20f627d91903646de6a07930a14") },
             /*TestChainV24SignalBeforeV19Setup=*/
-            {  494, uint256S("0x083fa179797ea7e5893198ff1b6eab632526c2eeb6f0ca6c42fcac9cb9bad366") },
+            {  494, uint256S("0x160b1ba2e583f9a99bd78ce2ba57da623ceab7ce7153bfad1df31089186602ac") },
             /*TestChainBRRBeforeActivationSetup=*/
             {  497, uint256S("0x0857a9b5db51835b1c828f019f4c664b5fe6c28ac44a6d868436930f832d31e5") },
         }
