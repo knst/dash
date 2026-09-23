@@ -396,8 +396,6 @@ bool CGovernanceObject::ProcessVote(CMasternodeMetaMan& mn_metaman, bool fRateCh
         return false;
     }
 
-    auto it = mapCurrentMNVotes.emplace(vote.GetMasternodeOutpoint(), vote_rec_t()).first;
-    vote_rec_t& voteRecordRef = it->second;
     vote_signal_enum_t eSignal = vote.GetSignal();
     if (eSignal == VOTE_SIGNAL_NONE) {
         std::string msg{strprintf("CGovernanceObject::%s -- Vote signal: none", __func__)};
@@ -412,20 +410,24 @@ bool CGovernanceObject::ProcessVote(CMasternodeMetaMan& mn_metaman, bool fRateCh
         exception = CGovernanceException(msg, GOVERNANCE_EXCEPTION_PERMANENT_ERROR, 20);
         return false;
     }
-    auto it2 = voteRecordRef.mapInstances.emplace(static_cast<int>(eSignal), vote_instance_t()).first;
-    vote_instance_t& voteInstanceRef = it2->second;
+    vote_instance_t currentInstance;
+    if (const auto it = mapCurrentMNVotes.find(vote.GetMasternodeOutpoint()); it != mapCurrentMNVotes.end()) {
+        if (const auto it2 = it->second.mapInstances.find(static_cast<int>(eSignal)); it2 != it->second.mapInstances.end()) {
+            currentInstance = it2->second;
+        }
+    }
 
     // Reject obsolete votes
-    if (vote.GetTimestamp() < voteInstanceRef.nCreationTime) {
+    if (vote.GetTimestamp() < currentInstance.nCreationTime) {
         std::string msg{strprintf("CGovernanceObject::%s -- Obsolete vote", __func__)};
         LogPrint(BCLog::GOBJECT, "%s\n", msg);
         exception = CGovernanceException(msg, GOVERNANCE_EXCEPTION_NONE);
         return false;
-    } else if (vote.GetTimestamp() == voteInstanceRef.nCreationTime) {
+    } else if (vote.GetTimestamp() == currentInstance.nCreationTime) {
         // Someone is doing something fishy, there can be no two votes from the same masternode
         // with the same timestamp for the same object and signal and yet different hash/outcome.
         std::string msg{strprintf("CGovernanceObject::%s -- Invalid vote, same timestamp for the different outcome", __func__)};
-        if (vote.GetOutcome() < voteInstanceRef.eOutcome) {
+        if (vote.GetOutcome() < currentInstance.eOutcome) {
             // This is an arbitrary comparison, we have to agree on some way
             // to pick the "winning" vote.
             msg += ", rejected";
@@ -437,14 +439,14 @@ bool CGovernanceObject::ProcessVote(CMasternodeMetaMan& mn_metaman, bool fRateCh
         LogPrint(BCLog::GOBJECT, "%s\n", msg);
     }
 
-    auto vote_time_update{voteInstanceRef.last_update};
+    auto vote_time_update{currentInstance.last_update};
     if (fRateChecksEnabled) {
         const auto now{std::chrono::time_point_cast<std::chrono::seconds>(GetAdjustedTime())};
-        if (voteInstanceRef.last_update > now - GOVERNANCE_UPDATE_MIN) {
+        if (currentInstance.last_update > now - GOVERNANCE_UPDATE_MIN) {
             std::string msg{strprintf("CGovernanceObject::%s -- Masternode voting too often, MN outpoint = %s, "
                                       "governance object hash = %s, last update = %d, current time = %d",
                 __func__, vote.GetMasternodeOutpoint().ToStringShort(), GetHash().ToString(),
-                TicksSinceEpoch<std::chrono::seconds>(voteInstanceRef.last_update), TicksSinceEpoch<std::chrono::seconds>(now))};
+                TicksSinceEpoch<std::chrono::seconds>(currentInstance.last_update), TicksSinceEpoch<std::chrono::seconds>(now))};
             LogPrint(BCLog::GOBJECT, "%s\n", msg);
             exception = CGovernanceException(msg, GOVERNANCE_EXCEPTION_TEMPORARY_ERROR);
             return false;
@@ -466,7 +468,8 @@ bool CGovernanceObject::ProcessVote(CMasternodeMetaMan& mn_metaman, bool fRateCh
 
     mn_metaman.AddGovernanceVote(dmn->proTxHash, vote.GetParentHash());
 
-    voteInstanceRef = vote_instance_t(vote.GetOutcome(), vote_time_update, vote.GetTimestamp());
+    mapCurrentMNVotes[vote.GetMasternodeOutpoint()].mapInstances[static_cast<int>(eSignal)] =
+        vote_instance_t(vote.GetOutcome(), vote_time_update, vote.GetTimestamp());
     fileVotes.AddVote(vote);
     fDirtyCache = true;
     // SEND NOTIFICATION TO SCRIPT/ZMQ
