@@ -760,7 +760,7 @@ private:
      *                     will be empty.
      */
     bool ProcessOrphanTx(NodeId node_id)
-        EXCLUSIVE_LOCKS_REQUIRED(!m_peer_mutex);
+        EXCLUSIVE_LOCKS_REQUIRED(!m_object_request_mutex, !m_peer_mutex);
 
     /** Process a single headers message from a peer.
      *
