@@ -1,6 +1,7 @@
 // Copyright (c) 2026 The Dash Core developers
 // Distributed under the MIT software license, see the accompanying file COPYING.
 #include <algorithm>
+#include <array>
 #include <chain.h>
 #include <chainlock/clsig.h>
 #include <chainparams.h>
@@ -17,6 +18,7 @@
 #include <llmq/quorumsman.h>
 #include <llmq/signhash.h>
 #include <node/blockstorage.h>
+#include <saltedhasher.h>
 #include <set>
 #include <shutdown.h>
 #include <stdexcept>

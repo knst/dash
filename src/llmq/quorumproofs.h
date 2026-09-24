@@ -7,7 +7,6 @@
 #include <llmq/quorumproofdata.h>
 #include <optional>
 class CBlockIndex;
-class CDataStream;
 class CDeterministicMNManager;
 class CSimplifiedMNList;
 class ChainstateManager;

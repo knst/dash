@@ -16,7 +16,6 @@
 
 class CChain;
 class CBlockIndex;
-class uint256;
 
 namespace Consensus {
 struct Params;
