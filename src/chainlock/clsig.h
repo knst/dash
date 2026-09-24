@@ -52,7 +52,6 @@ class CoinbaseChainLockReader
     std::map<int, std::optional<CoinbaseChainLock>> m_cache;
 
 public:
-    explicit CoinbaseChainLockReader(const CChain& chain);
     explicit CoinbaseChainLockReader(const CBlockIndex* tip) : m_tip(tip) {}
     std::optional<CoinbaseChainLock> Read(int carrier_height);
     /** First certificate at or above minimum_height, limited by maximum_height. */
