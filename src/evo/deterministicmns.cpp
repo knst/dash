@@ -938,6 +938,15 @@ CDeterministicMNList CDeterministicMNManager::GetListForBlockInternal(gsl::not_n
     return snapshot;
 }
 
+CDeterministicMNList CDeterministicMNManager::GetListForBlock(gsl::not_null<const CBlockIndex*> pindex) EXCLUSIVE_LOCKS_REQUIRED(!cs) {
+    LOCK(cs);
+    auto list = GetListForBlockInternal(pindex);
+    if (tipIndex != nullptr && pindex->nHeight + LIST_DIFFS_CACHE_SIZE < tipIndex->nHeight) {
+        CleanupCache(tipIndex->nHeight);
+    }
+    return list;
+}
+
 CDeterministicMNList CDeterministicMNManager::GetListAtChainTip()
 {
     LOCK(cs);
