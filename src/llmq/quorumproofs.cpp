@@ -6,6 +6,8 @@
 #include <chainparams.h>
 #include <consensus/merkle.h>
 #include <evo/cbtx.h>
+#include <evo/deterministicmns.h>
+#include <evo/simplifiedmns.h>
 #include <evo/specialtx.h>
 #include <hash.h>
 #include <limits>
@@ -537,6 +539,27 @@ ProofState QuorumProofBuilder::StateAt(const CBlockIndex* index)
                            cb.merkle_root_mn_list, cb.merkle_root_quorums};
     StateCache().Insert(index->GetBlockHash(), state);
     return state;
+}
+
+MasternodeLeaves MasternodeLeavesAt(CDeterministicMNManager& dmnman, const CBlockIndex* index)
+{
+    Require(index != nullptr, "missing block index");
+    // Every EvoNode record at one target opens the same list, and hashing its
+    // entries costs more than the lookup. The list is kept only once it hashes
+    // to the block's own masternode root.
+    static ProofCache<MasternodeLeaves, 8> cache;
+    MasternodeLeaves result;
+    if (cache.Get(index->GetBlockHash(), result)) return result;
+    const auto list = WITH_LOCK(cs_main, return dmnman.GetListForBlock(index));
+    result.sml = list.to_sml();
+    result.leaves.reserve(result.sml->mnList.size());
+    for (const auto& entry : result.sml->mnList)
+        result.leaves.push_back(entry->CalcHash());
+    const auto root = QuorumProofBuilder::StateAt(index).masternodeRoot;
+    bool mutated{false};
+    Require(ComputeMerkleRoot(result.leaves, &mutated) == root && !mutated, "masternode root mismatch");
+    cache.Insert(index->GetBlockHash(), result);
+    return result;
 }
 
 std::optional<CFinalCommitment> QuorumProofBuilder::DetermineChainlockSigningCommitment(int32_t height) const

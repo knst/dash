@@ -9,6 +9,8 @@
 class CBlockIndex;
 class CChain;
 class CDataStream;
+class CDeterministicMNManager;
+class CSimplifiedMNList;
 class ChainstateManager;
 namespace chainlock {
 class CoinbaseChainLockReader;
@@ -59,6 +61,14 @@ std::vector<unsigned char> EncodeBootstrap(const QuorumProofChain& proof, const 
 /** As above, for a proof whose Verify(proof.anchor) result the caller already holds. */
 std::vector<unsigned char> EncodeBootstrap(const QuorumProofChain& proof, const ProofState& verified,
                                            const std::vector<ProofProjection>& records);
+/** The simplified masternode list at a block with its entry hashes, the leaves
+ *  of that block's masternode root. */
+struct MasternodeLeaves {
+    std::shared_ptr<const CSimplifiedMNList> sml;
+    std::vector<uint256> leaves;
+};
+/** Memoized by block hash once the list hashes to the block's masternode root. */
+MasternodeLeaves MasternodeLeavesAt(CDeterministicMNManager& dmnman, const CBlockIndex* index);
 /** Checkpoint and target states are memoized by block hash; a state read once
  *  stays available even if the block's data is later removed. */
 void ClearProofStateCacheForTesting();
