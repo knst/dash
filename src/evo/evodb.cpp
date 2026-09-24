@@ -68,6 +68,7 @@ EvoDbIdentity CEvoDB::GetCurrentIdentity() const
 
 std::unique_ptr<CEvoDBScopedCommitter> CEvoDB::BeginTransaction(EvoDbIdentity identity)
 {
+    AssertLockHeld(::cs_main);
     LOCK(cs);
     assert(!active_transaction.has_value());
     active_transaction = identity;
@@ -78,6 +79,7 @@ std::unique_ptr<CEvoDBScopedCommitter> CEvoDB::BeginTransaction(EvoDbIdentity id
 
 void CEvoDB::CommitCurTransaction(EvoDbIdentity identity)
 {
+    AssertLockHeld(::cs_main);
     LOCK(cs);
     assert(active_transaction == identity);
     GetContext(identity).cur_transaction.Commit();
@@ -86,6 +88,7 @@ void CEvoDB::CommitCurTransaction(EvoDbIdentity identity)
 
 void CEvoDB::RollbackCurTransaction(EvoDbIdentity identity)
 {
+    AssertLockHeld(::cs_main);
     LOCK(cs);
     assert(active_transaction == identity);
     GetContext(identity).cur_transaction.Clear();
@@ -94,6 +97,7 @@ void CEvoDB::RollbackCurTransaction(EvoDbIdentity identity)
 
 bool CEvoDB::CommitRootTransaction(EvoDbIdentity identity, bool sync)
 {
+    AssertLockHeld(::cs_main);
     LOCK(cs);
     auto& context = GetContext(identity);
     assert(context.cur_transaction.IsClean());

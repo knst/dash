@@ -35,14 +35,14 @@ Payload PayloadFor(uint32_t height)
     return {static_cast<uint8_t>(height), static_cast<uint8_t>(height >> 8)};
 }
 
-void WritePayload(CEvoDB& db, EvoDbIdentity identity, uint32_t height)
+void WritePayload(CEvoDB& db, EvoDbIdentity identity, uint32_t height) EXCLUSIVE_LOCKS_REQUIRED(::cs_main)
 {
     auto tx = db.BeginTransaction(identity);
     db.Write(PayloadKey(height), PayloadFor(height));
     tx->Commit();
 }
 
-void WriteMarker(CEvoDB& db, EvoDbIdentity identity, const uint256& hash)
+void WriteMarker(CEvoDB& db, EvoDbIdentity identity, const uint256& hash) EXCLUSIVE_LOCKS_REQUIRED(::cs_main)
 {
     auto tx = db.BeginTransaction(identity);
     db.WriteBestBlock(identity, hash);
@@ -55,6 +55,7 @@ BOOST_FIXTURE_TEST_SUITE(evo_db_tests, BasicTestingSetup)
 
 BOOST_AUTO_TEST_CASE(own_overlay_tombstone)
 {
+    LOCK(::cs_main);
     CEvoDB db{util::DbWrapperParams{.path = m_args.GetDataDirBase() / "evodb_tombstone", .memory = true, .wipe = true}};
     const auto key = PayloadKey(1);
 
@@ -81,6 +82,7 @@ BOOST_AUTO_TEST_CASE(own_overlay_tombstone)
 
 BOOST_AUTO_TEST_CASE(transaction_less_access_uses_default_identity)
 {
+    LOCK(::cs_main);
     CEvoDB db{util::DbWrapperParams{.path = m_args.GetDataDirBase() / "evodb_default_identity", .memory = true, .wipe = true}};
     const auto key = PayloadKey(7);
 
@@ -115,6 +117,7 @@ BOOST_AUTO_TEST_CASE(transaction_less_access_uses_default_identity)
 
 BOOST_AUTO_TEST_CASE(write_derived_verifies_other_unflushed_overlay)
 {
+    LOCK(::cs_main);
     const fs::path path = m_args.GetDataDirBase() / "evodb_derived_overlay";
     const auto key = PayloadKey(2);
     const auto payload = PayloadFor(2);
@@ -147,6 +150,7 @@ BOOST_AUTO_TEST_CASE(write_derived_verifies_other_unflushed_overlay)
 
 BOOST_AUTO_TEST_CASE(write_derived_rejects_disk_mismatch)
 {
+    LOCK(::cs_main);
     CEvoDB db{util::DbWrapperParams{.path = m_args.GetDataDirBase() / "evodb_derived_mismatch", .memory = true, .wipe = true}};
     const auto key = PayloadKey(3);
 
@@ -161,6 +165,7 @@ BOOST_AUTO_TEST_CASE(write_derived_rejects_disk_mismatch)
 
 BOOST_AUTO_TEST_CASE(marker_flush_independence)
 {
+    LOCK(::cs_main);
     const fs::path path = m_args.GetDataDirBase() / "evodb_markers";
     {
         CEvoDB db{util::DbWrapperParams{.path = path, .memory = false, .wipe = true}};
@@ -191,6 +196,7 @@ BOOST_AUTO_TEST_CASE(marker_flush_independence)
 
 BOOST_AUTO_TEST_CASE(normal_marker_preserves_legacy_key_bytes)
 {
+    LOCK(::cs_main);
     CEvoDB db{util::DbWrapperParams{.path = m_args.GetDataDirBase() / "evodb_legacy_key", .memory = true, .wipe = true}};
     WriteMarker(db, EvoDbIdentity::NORMAL, BlockHash(20));
     BOOST_REQUIRE(db.CommitRootTransaction(EvoDbIdentity::NORMAL));
@@ -208,6 +214,7 @@ BOOST_AUTO_TEST_CASE(normal_marker_preserves_legacy_key_bytes)
 
 BOOST_AUTO_TEST_CASE(open_transaction_does_not_capture_other_threads)
 {
+    LOCK(::cs_main);
     CEvoDB db{util::DbWrapperParams{.path = m_args.GetDataDirBase() / "evodb_tx_thread", .memory = true, .wipe = true}};
     db.SetDefaultIdentity(EvoDbIdentity::SNAPSHOT);
     WritePayload(db, EvoDbIdentity::SNAPSHOT, 30);
@@ -232,6 +239,7 @@ BOOST_AUTO_TEST_CASE(open_transaction_does_not_capture_other_threads)
 
 BOOST_AUTO_TEST_CASE(snapshot_markers_can_be_discarded)
 {
+    LOCK(::cs_main);
     const fs::path path = m_args.GetDataDirBase() / "evodb_marker_rollback";
     {
         CEvoDB db{util::DbWrapperParams{.path = path, .memory = false, .wipe = true}};
@@ -268,6 +276,7 @@ BOOST_AUTO_TEST_CASE(snapshot_markers_can_be_discarded)
 
 BOOST_AUTO_TEST_CASE(snapshot_marker_promotion_and_discard)
 {
+    LOCK(::cs_main);
     CEvoDB db{util::DbWrapperParams{.path = m_args.GetDataDirBase() / "evodb_promotion", .memory = true, .wipe = true}};
     const uint256 normal_tip = BlockHash(30);
     const uint256 snapshot_tip = BlockHash(300);

@@ -38,6 +38,7 @@ CQuorumManager::CQuorumManager(CBLSWorker& _blsWorker, CDeterministicMNManager& 
     m_chainman{chainman},
     db{util::MakeDbWrapper({db_params.path / "llmq" / "quorumdb", db_params.memory, db_params.wipe, /*cache_size=*/1 << 20})}
 {
+    AssertLockHeld(::cs_main);
     mapQuorumsCache.Init(m_chainman.GetConsensus(), /*limit_by_connections=*/false);
     MigrateOldQuorumDB(_evoDb);
 }

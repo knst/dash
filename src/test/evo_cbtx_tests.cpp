@@ -164,6 +164,7 @@ BOOST_FIXTURE_TEST_CASE(qc_hash_cache_invalidated_by_undoblock, Dip3ActiveSetup)
     constexpr int mined_height = 1;
 
     {
+        LOCK(::cs_main);
         auto dbTx = evoDb.BeginTransaction();
         WriteMinedCommitment(evoDb, qc_a, mined_hash_a, mined_height, /*quorum_height=*/0);
         dbTx->Commit();
