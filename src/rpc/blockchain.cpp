@@ -2485,7 +2485,6 @@ static RPCHelpMan getspecialtxes()
     const NodeContext& node = EnsureAnyNodeContext(request.context);
 
     ChainstateManager& chainman = EnsureChainman(node);
-    LOCK(cs_main);
 
     const CTxMemPool& mempool = EnsureMemPool(node);
     const llmq::CInstantSendManager& isman = EnsureInstantSendManager(node);
@@ -2520,7 +2519,7 @@ static RPCHelpMan getspecialtxes()
         }
     }
 
-    const CBlockIndex* pblockindex = chainman.m_blockman.LookupBlockIndex(blockhash);
+    const CBlockIndex* pblockindex = WITH_LOCK(cs_main, return chainman.m_blockman.LookupBlockIndex(blockhash));
     if (!pblockindex) {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
     }

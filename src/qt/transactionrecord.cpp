@@ -137,7 +137,6 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(interfaces::Nod
             else if (!wtx.is_coinbase && !is_asset_lock && IsDataScript(txout.scriptPubKey))
             {
                 TransactionRecord sub(hash, nTime);
-                sub.credit = txout.nValue;
                 sub.idx = i;
                 sub.involvesWatchAddress = false;
                 sub.strAddress = "";

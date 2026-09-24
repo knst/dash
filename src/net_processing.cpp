@@ -5743,9 +5743,11 @@ void PeerManagerImpl::ProcessMessage(
         // Remove the NOTFOUND objects from the peer
         std::vector<CInv> vInv;
         vRecv >> vInv;
-        // A malicious peer can send a NOTFOUND entry per tracked announcement, so bound the
-        // message size by the announcement cap rather than the (soft) in-flight limit.
-        if (vInv.size() > MAX_PEER_OBJECT_ANNOUNCEMENTS + MAX_BLOCKS_IN_TRANSIT_PER_PEER) {
+        // A malicious peer can send a NOTFOUND entry per tracked announcement, and every
+        // entry costs a tracker lookup under m_object_request_mutex, so bound the message
+        // by the announcement cap. That cap alone exceeds what a message can carry, so
+        // clamp it to MAX_INV_SZ, the bound INV and GETDATA already use.
+        if (vInv.size() > std::min<size_t>(MAX_INV_SZ, MAX_PEER_OBJECT_ANNOUNCEMENTS + MAX_BLOCKS_IN_TRANSIT_PER_PEER)) {
             Misbehaving(*peer, 20, strprintf("notfound message size = %u", vInv.size()));
             return;
         }

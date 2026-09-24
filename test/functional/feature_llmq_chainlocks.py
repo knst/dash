@@ -23,7 +23,7 @@ class LLMQChainLocksTest(DashTestFramework):
         self.add_wallet_options(parser)
 
     def set_test_params(self):
-        self.set_dash_test_params(5, 4)
+        self.set_dash_test_params(5, 4, [["-spentindex"]] * 5)
         self.delay_v20_and_mn_rr(height=200)
 
     def sleep_and_assert_no_cl(self, block_hash, sleep_time=5):
