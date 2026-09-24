@@ -836,7 +836,7 @@ public:
                                                               BuildListFromBlockFunc build_list_func, bool repair)
         EXCLUSIVE_LOCKS_REQUIRED(!cs);
     [[nodiscard]] bool IsRepaired() const;
-    void CompleteRepair();
+    void CompleteRepair() EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     // Migration support for nVersion-first CDeterministicMNStateDiff format
     [[nodiscard]] bool IsMigrationRequired() const EXCLUSIVE_LOCKS_REQUIRED(!cs, ::cs_main);

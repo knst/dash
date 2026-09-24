@@ -1308,6 +1308,7 @@ bool CDeterministicMNManager::IsRepaired() const { return m_evoDb.Exists(DB_LIST
 
 void CDeterministicMNManager::CompleteRepair()
 {
+    AssertLockHeld(::cs_main);
     auto dbTx = m_evoDb.BeginTransaction();
     m_evoDb.Write(DB_LIST_REPAIRED, 1);
     dbTx->Commit();
