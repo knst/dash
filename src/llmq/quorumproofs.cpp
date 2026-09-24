@@ -586,8 +586,7 @@ std::optional<CFinalCommitment> QuorumProofBuilder::DetermineChainlockSigningCom
         // The commitment database follows the active chain. Do not populate a
         // snapshot's cache from another branch if a reorg raced this request.
         Require(m_chainman.ActiveChain().Contains(start), "proof chain changed during construction");
-        result = SelectCommitmentForSigning(*params, m_chain, m_qman, chainlock::GenSigRequestId(height), height,
-                                            SIGN_HEIGHT_OFFSET);
+        result = SelectCommitmentForSigning(*params, m_qman, chainlock::GenSigRequestId(height), start);
     }
     if (result) {
         commitment_hash = ::SerializeHash(*result);

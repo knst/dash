@@ -154,9 +154,9 @@ struct QuorumProofGenerationSetup : TestingSetup {
             payload.nHeight = height;
             if (!commitments.empty()) payload.merkleRootQuorums = SerializeHash(commitments.back());
             if (height > checkpoint_height + 1) {
-                const auto signer = llmq::SelectCommitmentForSigning(params, chain, *m_node.llmq_ctx->qman,
-                                                                     chainlock::GenSigRequestId(height - 1), height - 1,
-                                                                     llmq::SIGN_HEIGHT_OFFSET);
+                const auto signer = llmq::SelectCommitmentForSigning(params, *m_node.llmq_ctx->qman,
+                                                                     chainlock::GenSigRequestId(height - 1),
+                                                                     chain[height - 1 - llmq::SIGN_HEIGHT_OFFSET]);
                 BOOST_REQUIRE(signer);
                 const auto match = std::find_if(commitments.begin(), commitments.end(), [&](const auto& entry) {
                     return entry.quorumHash == signer->quorumHash;
