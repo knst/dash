@@ -938,11 +938,23 @@ CDeterministicMNList CDeterministicMNManager::GetListForBlockInternal(gsl::not_n
     return snapshot;
 }
 
-CDeterministicMNList CDeterministicMNManager::GetListForBlock(gsl::not_null<const CBlockIndex*> pindex) EXCLUSIVE_LOCKS_REQUIRED(!cs) {
+
+CDeterministicMNList CDeterministicMNManager::GetListForBlock(gsl::not_null<const CBlockIndex*> pindex)
+{
+    CDeterministicMNList list;
+    std::exception_ptr lookup_error;
+
     LOCK(cs);
-    auto list = GetListForBlockInternal(pindex);
+    try {
+        list = GetListForBlockInternal(pindex);
+    } catch (...) {
+        lookup_error = std::current_exception();
+    }
     if (tipIndex != nullptr && pindex->nHeight + LIST_DIFFS_CACHE_SIZE < tipIndex->nHeight) {
         CleanupCache(tipIndex->nHeight);
+    }
+    if (lookup_error) {
+        std::rethrow_exception(lookup_error);
     }
     return list;
 }
