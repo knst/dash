@@ -7,7 +7,6 @@
 #include <llmq/quorumproofdata.h>
 #include <optional>
 class CBlockIndex;
-class CChain;
 class CDataStream;
 class CDeterministicMNManager;
 class CSimplifiedMNList;
@@ -77,17 +76,19 @@ class QuorumProofBuilder
 {
     const CQuorumBlockProcessor& m_quorum_block_processor;
     const CQuorumManager& m_qman;
-    const CChain& m_chain;
+    const CBlockIndex* m_tip;
     const ChainstateManager& m_chainman;
     chainlock::CoinbaseChainLockReader& m_chainlocks;
     std::optional<CFinalCommitment> DetermineChainlockSigningCommitment(int32_t height) const;
 
 public:
-    QuorumProofBuilder(const CQuorumBlockProcessor& processor, const CQuorumManager& qman, const CChain& chain,
+    /** Every block the proof touches must be an ancestor of tip, which pins one
+     *  branch for the whole build. */
+    QuorumProofBuilder(const CQuorumBlockProcessor& processor, const CQuorumManager& qman, const CBlockIndex* tip,
                        const ChainstateManager& chainman, chainlock::CoinbaseChainLockReader& chainlocks) :
         m_quorum_block_processor(processor),
         m_qman(qman),
-        m_chain(chain),
+        m_tip(tip),
         m_chainman(chainman),
         m_chainlocks(chainlocks)
     {

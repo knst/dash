@@ -289,7 +289,7 @@ BOOST_FIXTURE_TEST_CASE(generation_retries_retired_checkpoint_signer, QuorumProo
     auto& chain = *WITH_LOCK(cs_main, return &m_node.chainman->ActiveChain());
     const auto* checkpoint = chain[checkpoint_height];
     chainlock::CoinbaseChainLockReader reader(chain);
-    llmq::QuorumProofBuilder builder(*m_node.llmq_ctx->quorum_block_processor, *m_node.llmq_ctx->qman, chain,
+    llmq::QuorumProofBuilder builder(*m_node.llmq_ctx->quorum_block_processor, *m_node.llmq_ctx->qman, chain.Tip(),
                                      *m_node.chainman, reader);
     const auto first = reader.Find(checkpoint_height + 1, chain.Height());
     BOOST_REQUIRE(first);
@@ -327,7 +327,7 @@ BOOST_FIXTURE_TEST_CASE(consensus_valid_envelopes_are_provable, QuorumProofGener
     auto& chain = *WITH_LOCK(cs_main, return &m_node.chainman->ActiveChain());
     const auto* checkpoint = chain[checkpoint_height];
     chainlock::CoinbaseChainLockReader reader(chain);
-    llmq::QuorumProofBuilder builder(*m_node.llmq_ctx->quorum_block_processor, *m_node.llmq_ctx->qman, chain,
+    llmq::QuorumProofBuilder builder(*m_node.llmq_ctx->quorum_block_processor, *m_node.llmq_ctx->qman, chain.Tip(),
                                      *m_node.chainman, reader);
     const auto entry = reader.Find(handoff_height + llmq::SIGN_HEIGHT_OFFSET, chain.Height());
     BOOST_REQUIRE(entry);
