@@ -528,6 +528,13 @@ class AssetLocksTest(DashTestFramework):
         self.generate(node, 1)
         self.check_mempool_result(tx=asset_unlock_tx_too_late,
                 result_expected={'allowed': False, 'reject-reason' : 'bad-assetunlock-too-late'})
+        self.log.info("A peer relaying an unlock outside the tip's height window is not punished")
+        # Validity depends on the tip, so an honest peer a block behind relays it. The
+        # Misbehaving line is logged even for this whitelisted (noban) peer.
+        late_peer = node.add_p2p_connection(P2PInterface())
+        with node.assert_debug_log(expected_msgs=["bad-assetunlock-too-late"], unexpected_msgs=["Misbehaving"]):
+            late_peer.send_and_ping(msg_tx(asset_unlock_tx_too_late))
+        node.disconnect_p2ps()
 
         block_to_reconsider = node.getbestblockhash()
         self.log.info("Test block invalidation with asset unlock tx...")
