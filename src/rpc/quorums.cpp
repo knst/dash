@@ -60,13 +60,7 @@ std::shared_ptr<const CChain> GetProofChainSnapshot(const ChainstateManager& cha
 {
     std::lock_guard lock(g_proof_chain_mutex);
     if (!g_proof_chain_snapshot || g_proof_chain_owner != &chainman || g_proof_chain_tip != tip) {
-        // Snapshots are shared and immutable, so a new tip needs a new object. Seed it
-        // from the previous one: CChain::SetTip then only rewrites heights that changed
-        // (new blocks, or the fork on a reorg) instead of all ~2.5M entries per block.
         auto snapshot = std::make_shared<CChain>();
-        if (g_proof_chain_snapshot && g_proof_chain_owner == &chainman) {
-            snapshot->CopyFrom(*g_proof_chain_snapshot);
-        }
         snapshot->SetTip(*tip);
         g_proof_chain_snapshot = std::move(snapshot);
         g_proof_chain_owner = &chainman;
