@@ -6,6 +6,7 @@
 #define BITCOIN_EVO_EVODB_H
 
 #include <dbwrapper.h>
+#include <kernel/cs_main.h>
 #include <sync.h>
 
 #include <algorithm>
@@ -60,8 +61,8 @@ public:
     CEvoDBScopedCommitter(CEvoDB& _evoDB, EvoDbIdentity identity);
     ~CEvoDBScopedCommitter();
 
-    void Commit();
-    void Rollback();
+    void Commit() EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+    void Rollback() EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 };
 
 class CEvoDB
@@ -113,7 +114,8 @@ public:
     explicit CEvoDB(const util::DbWrapperParams& db_params);
     ~CEvoDB();
 
-    std::unique_ptr<CEvoDBScopedCommitter> BeginTransaction(EvoDbIdentity identity = EvoDbIdentity::NORMAL) EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    std::unique_ptr<CEvoDBScopedCommitter> BeginTransaction(EvoDbIdentity identity = EvoDbIdentity::NORMAL)
+        EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !cs);
 
     /** Whether a block-scoped transaction is open. Writes performed outside one are never
      *  committed and trip the clean-transaction assertion at the next root commit, so callers
@@ -231,7 +233,8 @@ public:
         return result;
     }
 
-    bool CommitRootTransaction(EvoDbIdentity identity = EvoDbIdentity::NORMAL, bool sync = false) EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    bool CommitRootTransaction(EvoDbIdentity identity = EvoDbIdentity::NORMAL, bool sync = false)
+        EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !cs);
 
     bool IsEmpty() { return db->IsEmpty(); }
 
@@ -277,8 +280,8 @@ public:
 private:
     // only CEvoDBScopedCommitter is allowed to invoke these
     friend class CEvoDBScopedCommitter;
-    void CommitCurTransaction(EvoDbIdentity identity) EXCLUSIVE_LOCKS_REQUIRED(!cs);
-    void RollbackCurTransaction(EvoDbIdentity identity) EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    void CommitCurTransaction(EvoDbIdentity identity) EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !cs);
+    void RollbackCurTransaction(EvoDbIdentity identity) EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !cs);
 };
 
 #endif // BITCOIN_EVO_EVODB_H

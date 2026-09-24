@@ -102,7 +102,8 @@ public:
     CQuorumManager& operator=(const CQuorumManager&) = delete;
     explicit CQuorumManager(CBLSWorker& _blsWorker, CDeterministicMNManager& dmnman, CEvoDB& _evoDb,
                             CQuorumBlockProcessor& _quorumBlockProcessor, CQuorumSnapshotManager& qsnapman,
-                            const ChainstateManager& chainman, const util::DbWrapperParams& db_params);
+                            const ChainstateManager& chainman, const util::DbWrapperParams& db_params)
+        EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
     ~CQuorumManager();
 
     void ConnectManagers(gsl::not_null<llmq::QuorumRole*> handler, gsl::not_null<llmq::CDKGSessionManager*> qdkgsman)
@@ -200,7 +201,7 @@ private:
                           const CChain& chain, bool populate_cache = true) const
         EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !cs_db, !m_cs_maps);
 
-    void MigrateOldQuorumDB(CEvoDB& evoDb) const EXCLUSIVE_LOCKS_REQUIRED(!cs_db);
+    void MigrateOldQuorumDB(CEvoDB& evoDb) const EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !cs_db);
 };
 
 // when selecting a quorum for signing and verification, we use CQuorumManager::SelectQuorum with this offset as

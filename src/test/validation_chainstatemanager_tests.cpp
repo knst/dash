@@ -42,6 +42,7 @@ namespace {
 
 void SeedSnapshotMarker(CEvoDB& evodb, const uint256& hash)
 {
+    LOCK(::cs_main);
     auto tx = evodb.BeginTransaction(EvoDbIdentity::SNAPSHOT);
     evodb.WriteBestBlock(EvoDbIdentity::SNAPSHOT, hash);
     tx->Commit();
@@ -57,6 +58,7 @@ static void DashChainstateSetup(ChainstateManager& chainman,
                          bool llmq_dbs_in_memory,
                          bool llmq_dbs_wipe)
 {
+    LOCK(::cs_main);
     node.llmq_ctx.reset();
     node.llmq_ctx = std::make_unique<LLMQContext>(*node.dmnman, *node.evodb, chainman,
                                                   util::DbWrapperParams{.path = node.args->GetDataDirNet(), .memory = llmq_dbs_in_memory, .wipe = llmq_dbs_wipe},
@@ -724,23 +726,26 @@ BOOST_FIXTURE_TEST_CASE(chainstatemanager_evodb_reorg_erase_guard, SnapshotTestS
     // impractical here, so exercise the production erase guard with its real
     // second Chainstate and synthetic commitment keys written through EvoDB.
     {
+        LOCK(::cs_main);
         auto tx = m_node.evodb->BeginTransaction(EvoDbIdentity::SNAPSHOT);
         m_node.evodb->Write(shared_key, shared_block->GetBlockHash());
         m_node.evodb->Write(snapshot_only_key, snapshot_only_block->GetBlockHash());
         tx->Commit();
     }
-    BOOST_REQUIRE(m_node.evodb->CommitRootTransaction(EvoDbIdentity::SNAPSHOT));
+    BOOST_REQUIRE(WITH_LOCK(::cs_main, return m_node.evodb->CommitRootTransaction(EvoDbIdentity::SNAPSHOT)));
 
     {
+        LOCK(::cs_main);
         auto tx = m_node.evodb->BeginTransaction(EvoDbIdentity::SNAPSHOT);
-        BOOST_CHECK(!WITH_LOCK(::cs_main, return llmq::EraseMinedCommitmentIfUnreferenced(
-            *m_node.evodb, *snapshot_chainstate, shared_block, llmq_type, shared_quorum_hash)));
-        BOOST_CHECK(WITH_LOCK(::cs_main, return llmq::EraseMinedCommitmentIfUnreferenced(
-            *m_node.evodb, *snapshot_chainstate, snapshot_only_block, llmq_type, snapshot_only_quorum_hash)));
+        BOOST_CHECK(!llmq::EraseMinedCommitmentIfUnreferenced(*m_node.evodb, *snapshot_chainstate, shared_block,
+                                                              llmq_type, shared_quorum_hash));
+        BOOST_CHECK(llmq::EraseMinedCommitmentIfUnreferenced(*m_node.evodb, *snapshot_chainstate, snapshot_only_block,
+                                                             llmq_type, snapshot_only_quorum_hash));
         tx->Commit();
     }
 
     {
+        LOCK(::cs_main);
         auto tx = m_node.evodb->BeginTransaction(EvoDbIdentity::SNAPSHOT);
         uint256 value;
         BOOST_CHECK(m_node.evodb->Read(shared_key, value));
@@ -774,11 +779,12 @@ BOOST_FIXTURE_TEST_CASE(chainstatemanager_mined_commitment_is_chain_aware, Snaps
     const auto key = std::make_pair(std::string{"q_mc"}, std::make_pair(llmq_type, quorum_hash));
     const llmq::CFinalCommitment seeded_commitment{llmq_params, quorum_hash};
     {
+        LOCK(::cs_main);
         auto tx = m_node.evodb->BeginTransaction(EvoDbIdentity::SNAPSHOT);
         m_node.evodb->Write(key, std::make_pair(seeded_commitment, snapshot_mined_block->GetBlockHash()));
         tx->Commit();
     }
-    BOOST_REQUIRE(m_node.evodb->CommitRootTransaction(EvoDbIdentity::SNAPSHOT));
+    BOOST_REQUIRE(WITH_LOCK(::cs_main, return m_node.evodb->CommitRootTransaction(EvoDbIdentity::SNAPSHOT)));
 
     auto& qblockman = *Assert(m_node.llmq_ctx)->quorum_block_processor;
     auto& qman = *Assert(m_node.llmq_ctx)->qman;
@@ -872,11 +878,12 @@ BOOST_FIXTURE_TEST_CASE(chainstatemanager_snapshot_init_missing_evodb_marker, Sn
     this->SetupSnapshot();
 
     {
+        LOCK(::cs_main);
         auto tx = m_node.evodb->BeginTransaction(EvoDbIdentity::SNAPSHOT);
         m_node.evodb->Erase(std::make_pair(EVODB_BEST_BLOCK, uint8_t{1}));
         tx->Commit();
     }
-    BOOST_REQUIRE(m_node.evodb->CommitRootTransaction(EvoDbIdentity::SNAPSHOT));
+    BOOST_REQUIRE(WITH_LOCK(::cs_main, return m_node.evodb->CommitRootTransaction(EvoDbIdentity::SNAPSHOT)));
 
     ChainstateManager& restarted = this->SimulateNodeRestart();
     WITH_LOCK(::cs_main, restarted.InitializeChainstate(
@@ -1038,6 +1045,7 @@ BOOST_FIXTURE_TEST_CASE(chainstatemanager_snapshot_completion_incorrect_base_mn_
     } dip3_restore{mutable_consensus, old_dip3_height};
 
     {
+        LOCK(::cs_main);
         auto tx = m_node.evodb->BeginTransaction(EvoDbIdentity::SNAPSHOT);
         // Seed an incorrect full base list, not merely an incorrect comparison
         // hash. The key mirrors DB_LIST_SNAPSHOT in evo/deterministicmns.cpp
@@ -1048,7 +1056,7 @@ BOOST_FIXTURE_TEST_CASE(chainstatemanager_snapshot_completion_incorrect_base_mn_
         m_node.evodb->WriteSnapshotBaseMNListHash(incorrect_hash);
         tx->Commit();
     }
-    BOOST_REQUIRE(m_node.evodb->CommitRootTransaction(EvoDbIdentity::SNAPSHOT, /*sync=*/true));
+    BOOST_REQUIRE(WITH_LOCK(::cs_main, return m_node.evodb->CommitRootTransaction(EvoDbIdentity::SNAPSHOT, /*sync=*/true)));
 
     const auto result = WITH_LOCK(::cs_main,
         return chainman.MaybeCompleteSnapshotValidation([](bilingual_str) {}));
@@ -1231,12 +1239,13 @@ BOOST_FIXTURE_TEST_CASE(chainstatemanager_snapshot_completion_without_base_list_
     // must fall back to the UTXO-set hash alone instead of quarantining a
     // valid snapshot.
     {
+        LOCK(::cs_main);
         auto tx = m_node.evodb->BeginTransaction(EvoDbIdentity::SNAPSHOT);
         m_node.evodb->Erase(EVODB_SNAPSHOT_MNLIST_HASH);
         m_node.evodb->Erase(EVODB_BACKGROUND_MNLIST_HASH);
         tx->Commit();
     }
-    BOOST_REQUIRE(m_node.evodb->CommitRootTransaction(EvoDbIdentity::SNAPSHOT, /*sync=*/true));
+    BOOST_REQUIRE(WITH_LOCK(::cs_main, return m_node.evodb->CommitRootTransaction(EvoDbIdentity::SNAPSHOT, /*sync=*/true)));
 
     const auto res = WITH_LOCK(::cs_main,
         return chainman.MaybeCompleteSnapshotValidation([](bilingual_str) {}));
