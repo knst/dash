@@ -495,8 +495,9 @@ void FuncProUpRegTxV3OnLegacyValid(TestChainSetup& setup)
     auto utxos = BuildSimpleUtxoMap(setup.m_coinbase_txns);
     CKey owner_key;
     CBLSSecretKey operator_key;
-    auto tx_reg = CreateProRegTx(chainman, utxos, 1, GenerateRandomAddress(),
-                                 setup.coinbaseKey, owner_key, operator_key);
+    // The update below carries this address into ExtNetInfo, so it must be one ExtNetInfo accepts
+    auto tx_reg = CreateProRegTx(chainman, utxos, 19999, GenerateRandomAddress(), setup.coinbaseKey, owner_key,
+                                 operator_key);
     const auto proTxHash = tx_reg.GetHash();
     setup.CreateAndProcessBlock({tx_reg}, coinbase_pk);
     sync_dmn_tip();
@@ -539,6 +540,10 @@ void FuncProUpRegTxV3OnLegacyValid(TestChainSetup& setup)
                                     IsV24Active(chainman), val_state, /*check_sigs=*/true));
     }
     BOOST_CHECK(val_state.IsValid());
+
+    setup.CreateAndProcessBlock({tx}, coinbase_pk);
+    sync_dmn_tip();
+    BOOST_CHECK_EQUAL(dmnman.GetListAtChainTip().GetMN(proTxHash)->pdmnState->nVersion, ProTxVersion::ExtAddr);
 };
 
 void FuncProUpRegTxV2CannotBypassV3PayoutCollateralReuse(TestChainSetup& setup)
@@ -2165,6 +2170,201 @@ BOOST_AUTO_TEST_CASE(platform_https_addrs_via_node_interface)
 {
     TestChainV24SignalBeforeV19Setup setup;
     FuncPlatformHTTPSAddrsViaNodeInterface(setup);
+}
+
+static uint256 RegisterBasicEvoNode(TestChainV24SignalBeforeV19Setup& setup, const std::string& addr,
+                                    uint16_t platform_http_port, const CKey& owner_key, const CBLSSecretKey& operator_key)
+{
+    CProRegTx pro_reg;
+    pro_reg.nVersion = ProTxVersion::BasicBLS;
+    pro_reg.nType = MnType::Evo;
+    pro_reg.netInfo = NetInfoInterface::MakeNetInfo(pro_reg.nVersion);
+    pro_reg.collateralOutpoint.n = 0;
+    BOOST_REQUIRE_EQUAL(pro_reg.netInfo->AddEntry(NetInfoPurpose::CORE_P2P, strprintf("%s:20300", addr)),
+                        NetInfoStatus::Success);
+    pro_reg.platformNodeID.SetHex("8899aabbccddeeff00112233445566778899aabb");
+    pro_reg.platformP2PPort = 20301;
+    pro_reg.platformHTTPPort = platform_http_port;
+    pro_reg.keyIDOwner = owner_key.GetPubKey().GetID();
+    pro_reg.pubKeyOperator.Set(operator_key.GetPublicKey(), /*specificLegacyScheme=*/false);
+    pro_reg.keyIDVoting = owner_key.GetPubKey().GetID();
+    pro_reg.scriptPayout = GenerateRandomAddress();
+    CMutableTransaction tx;
+    tx.nVersion = 3;
+    tx.nType = TRANSACTION_PROVIDER_REGISTER;
+    const auto spent = FundTransaction(setup.chainman, tx, setup.utxos, pro_reg.scriptPayout, dmn_types::Evo.collat_amount);
+    pro_reg.inputsHash = CalcTxInputsHash(CTransaction(tx));
+    SetTxPayload(tx, pro_reg);
+    SignTransaction(tx, spent, setup.coinbaseKey);
+    setup.ProcessBlock({tx});
+    BOOST_REQUIRE(setup.dmnman.GetListAtChainTip().HasMN(tx.GetHash()));
+    return tx.GetHash();
+}
+
+static CMutableTransaction CreateExtAddrProUpRegTx(TestChainV24SignalBeforeV19Setup& setup, const uint256& proTxHash,
+                                                   const CKey& owner_key, const CBLSSecretKey& operator_key)
+{
+    CProUpRegTx proTx;
+    proTx.nVersion = ProTxVersion::ExtAddr;
+    proTx.proTxHash = proTxHash;
+    proTx.pubKeyOperator.Set(operator_key.GetPublicKey(), /*specificLegacyScheme=*/false);
+    proTx.keyIDVoting = owner_key.GetPubKey().GetID();
+    proTx.payouts = {{GenerateRandomAddress(), MasternodePayoutShare::MAX_REWARD}};
+    CMutableTransaction tx;
+    tx.nVersion = 3;
+    tx.nType = TRANSACTION_PROVIDER_UPDATE_REGISTRAR;
+    const auto spent = FundTransaction(setup.chainman, tx, setup.utxos,
+                                       GetScriptForDestination(PKHash(setup.coinbaseKey.GetPubKey())), 1 * COIN);
+    proTx.inputsHash = CalcTxInputsHash(CTransaction(tx));
+    CHashSigner::SignHash(::SerializeHash(proTx), owner_key, proTx.vchSig);
+    SetTxPayload(tx, proTx);
+    SignTransaction(tx, spent, setup.coinbaseKey);
+    return tx;
+}
+
+static CMutableTransaction CreateBasicEvoProUpServTx(TestChainV24SignalBeforeV19Setup& setup, const uint256& proTxHash,
+                                                     const std::string& addr, uint16_t platform_http_port,
+                                                     const CBLSSecretKey& operator_key)
+{
+    CProUpServTx proTx;
+    proTx.nVersion = ProTxVersion::BasicBLS;
+    proTx.nType = MnType::Evo;
+    proTx.netInfo = NetInfoInterface::MakeNetInfo(proTx.nVersion);
+    proTx.proTxHash = proTxHash;
+    BOOST_REQUIRE_EQUAL(proTx.netInfo->AddEntry(NetInfoPurpose::CORE_P2P, strprintf("%s:20300", addr)),
+                        NetInfoStatus::Success);
+    proTx.platformNodeID.SetHex("8899aabbccddeeff00112233445566778899aabb");
+    proTx.platformP2PPort = 20301;
+    proTx.platformHTTPPort = platform_http_port;
+    CMutableTransaction tx;
+    tx.nVersion = 3;
+    tx.nType = TRANSACTION_PROVIDER_UPDATE_SERVICE;
+    const auto spent = FundTransaction(setup.chainman, tx, setup.utxos,
+                                       GetScriptForDestination(PKHash(setup.coinbaseKey.GetPubKey())), 1 * COIN);
+    proTx.inputsHash = CalcTxInputsHash(CTransaction(tx));
+    proTx.sig = operator_key.Sign(::SerializeHash(proTx), /*specificLegacyScheme=*/false);
+    SetTxPayload(tx, proTx);
+    SignTransaction(tx, spent, setup.coinbaseKey);
+    return tx;
+}
+
+// Mainnet requires a BasicBLS EvoNode's Platform HTTPS port to be 443. Moving such a node to
+// ExtAddr, whether by a registrar update or by a BasicBLS service update once it is already
+// ExtAddr, turns that port into an IP:443 PLATFORM_HTTPS entry, which must be accepted.
+void FuncEvoNodeMigratesPlatformHTTPS443(TestChainV24SignalBeforeV19Setup& setup)
+{
+    auto& chainman = setup.chainman;
+    auto& dmnman = setup.dmnman;
+
+    setup.MineToV19();
+    CKey owner_key;
+    owner_key.MakeNewKey(true);
+    CBLSSecretKey operator_key;
+    operator_key.MakeNewKey();
+    const auto proTxHash = RegisterBasicEvoNode(setup, "1.1.1.4", 443, owner_key, operator_key);
+    setup.MineToV24();
+
+    auto check_https_entry = [&](const std::string& what) {
+        const auto dmn = dmnman.GetListAtChainTip().GetMN(proTxHash);
+        BOOST_REQUIRE(dmn);
+        BOOST_CHECK_EQUAL(dmn->pdmnState->nVersion, ProTxVersion::ExtAddr);
+        const auto entries = dmn->pdmnState->netInfo->GetEntries(NetInfoPurpose::PLATFORM_HTTPS);
+        BOOST_REQUIRE_EQUAL(entries.size(), 1U);
+        BOOST_CHECK(entries[0].GetAddrPort() == LookupNumeric("1.1.1.4", 443));
+        CheckListRoundTrips(dmnman, what);
+    };
+
+    {
+        const auto tx = CreateExtAddrProUpRegTx(setup, proTxHash, owner_key, operator_key);
+        TxValidationState val_state;
+        {
+            LOCK(cs_main);
+            BOOST_REQUIRE_MESSAGE(CheckProUpRegTx(CTransaction(tx), chainman.ActiveChain().Tip(), dmnman,
+                                                  chainman.ActiveChainstate().CoinsTip(), chainman.GetConsensus(),
+                                                  IsV24Active(chainman), val_state, /*check_sigs=*/true),
+                                  "ExtAddr ProUpRegTx rejected: " << val_state.GetRejectReason());
+        }
+        setup.ProcessBlock({tx});
+        check_https_entry("after ExtAddr ProUpRegTx");
+    }
+
+    {
+        const auto tx = CreateBasicEvoProUpServTx(setup, proTxHash, "1.1.1.4", 443, operator_key);
+        TxValidationState val_state;
+        {
+            LOCK(cs_main);
+            BOOST_REQUIRE_MESSAGE(CheckProUpServTx(CTransaction(tx), chainman.ActiveChain().Tip(), dmnman,
+                                                   chainman.GetConsensus(), IsV24Active(chainman), val_state,
+                                                   /*check_sigs=*/true),
+                                  "BasicBLS ProUpServTx rejected: " << val_state.GetRejectReason());
+        }
+        setup.ProcessBlock({tx});
+        check_https_entry("after BasicBLS ProUpServTx");
+    }
+
+    // Other privileged ports still cannot be carried into ExtAddr
+    {
+        const auto tx = CreateBasicEvoProUpServTx(setup, proTxHash, "1.1.1.4", 80, operator_key);
+        TxValidationState val_state;
+        LOCK(cs_main);
+        BOOST_CHECK(!CheckProUpServTx(CTransaction(tx), chainman.ActiveChain().Tip(), dmnman, chainman.GetConsensus(),
+                                      IsV24Active(chainman), val_state, /*check_sigs=*/true));
+        BOOST_CHECK_EQUAL(val_state.GetRejectReason(), "bad-protx-netinfo-version");
+    }
+}
+
+BOOST_AUTO_TEST_CASE(evonode_migrates_platform_https_443)
+{
+    TestChainV24SignalBeforeV19Setup setup;
+    FuncEvoNodeMigratesPlatformHTTPS443(setup);
+}
+
+// Off mainnet a BasicBLS EvoNode may hold a Platform HTTPS port that ExtNetInfo rejects. A registrar
+// update migrating it to ExtAddr must be refused up front: once in the mempool it would otherwise be
+// selected into every block template and make block assembly fail.
+void FuncEvoNodeMigrationRejectsBadPlatformPort(TestChainV24SignalBeforeV19Setup& setup)
+{
+    auto& chainman = setup.chainman;
+    auto& dmnman = setup.dmnman;
+
+    setup.MineToV19();
+    CKey owner_key;
+    owner_key.MakeNewKey(true);
+    CBLSSecretKey operator_key;
+    operator_key.MakeNewKey();
+    const auto proTxHash = RegisterBasicEvoNode(setup, "1.1.1.5", 6667, owner_key, operator_key);
+    setup.MineToV24();
+
+    const auto tx = CreateExtAddrProUpRegTx(setup, proTxHash, owner_key, operator_key);
+    {
+        TxValidationState val_state;
+        LOCK(cs_main);
+        BOOST_CHECK(!CheckProUpRegTx(CTransaction(tx), chainman.ActiveChain().Tip(), dmnman,
+                                     chainman.ActiveChainstate().CoinsTip(), chainman.GetConsensus(),
+                                     IsV24Active(chainman), val_state, /*check_sigs=*/true));
+        BOOST_CHECK_EQUAL(val_state.GetRejectReason(), "bad-protx-netinfo-version");
+    }
+
+    auto& mempool = *Assert(setup.m_node.mempool.get());
+    TestMemPoolEntryHelper entry;
+    {
+        LOCK2(cs_main, mempool.cs);
+        mempool.addUnchecked(entry.Fee(50000).Time(Now<NodeSeconds>()).FromTx(tx));
+        BOOST_REQUIRE(mempool.exists(tx.GetHash()));
+    }
+    const auto block_template = node::BlockAssembler{chainman.ActiveChainstate(), setup.m_node, &mempool}.CreateNewBlock(
+        setup.coinbase_pk);
+    BOOST_REQUIRE(block_template != nullptr);
+    for (const auto& block_tx : block_template->block.vtx) {
+        BOOST_CHECK(block_tx->GetHash() != tx.GetHash());
+    }
+    BOOST_CHECK_EQUAL(dmnman.GetListAtChainTip().GetMN(proTxHash)->pdmnState->nVersion, ProTxVersion::BasicBLS);
+}
+
+BOOST_AUTO_TEST_CASE(evonode_migration_rejects_bad_platform_port)
+{
+    TestChainV24SignalBeforeV19Setup setup;
+    FuncEvoNodeMigrationRejectsBadPlatformPort(setup);
 }
 
 // The SAME masternode, two registrar updates in one block, version-crossing. tx1 rotates a

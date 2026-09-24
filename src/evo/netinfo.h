@@ -393,7 +393,7 @@ private:
     NetInfoStatus ProcessCandidate(const NetInfoPurpose purpose, const NetInfoEntry& candidate);
 
     /** Validate CService candidate address against ruleset */
-    static NetInfoStatus ValidateService(const CService& service);
+    static NetInfoStatus ValidateService(const NetInfoPurpose purpose, const CService& service);
     static NetInfoStatus ValidateDomainPort(const DomainPort& domain);
 
 private:

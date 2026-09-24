@@ -119,6 +119,37 @@ static bool SetStateVersion(CDeterministicMNState& state_mn, uint16_t nVersion, 
     return true;
 }
 
+// Shared by BuildNewListFromBlock and CheckProUpServTx so that a service update whose state-version
+// migration fails is rejected on entry to the mempool rather than aborting block assembly.
+static bool ApplyProUpServTx(CDeterministicMNState& state_mn, const CProUpServTx& proTx, bool is_v24_active,
+                             BlockValidationState& state)
+{
+    const uint16_t current_version{static_cast<uint16_t>(state_mn.nVersion)};
+    const uint16_t target_version{is_v24_active ? std::max<uint16_t>(current_version, proTx.nVersion) : current_version};
+    if (is_v24_active) {
+        // Extended addresses support in v24 means that the version can be updated
+        state_mn.nVersion = proTx.nVersion;
+    }
+    state_mn.netInfo = proTx.netInfo;
+    state_mn.scriptOperatorPayout = proTx.scriptOperatorPayout;
+    if (proTx.nType == MnType::Evo) {
+        state_mn.platformNodeID = proTx.platformNodeID;
+        if (proTx.nVersion < ProTxVersion::ExtAddr) {
+            state_mn.platformP2PPort = proTx.platformP2PPort;
+            state_mn.platformHTTPPort = proTx.platformHTTPPort;
+        } else {
+            // From ExtAddr onwards the Platform ports are stored in netInfo. Clear the
+            // legacy scalar fields (which a legacy registration may have left set) so the
+            // in-memory state matches its serialized form, which omits them for ExtAddr
+            // (see CDeterministicMNState serialization). Otherwise a stale value would
+            // survive in diff-reconstructed lists but vanish through a snapshot round-trip.
+            state_mn.platformP2PPort = 0;
+            state_mn.platformHTTPPort = 0;
+        }
+    }
+    return !is_v24_active || SetStateVersion(state_mn, target_version, proTx.nType, state);
+}
+
 bool CheckCbTxBestChainlock(const CCbTx& cbTx, const CBlockIndex* pindex, const Consensus::Params& consensus_params,
                             const CChain& chain, const llmq::CQuorumManager& qman,
                             const chainlock::Chainlocks& chainlocks, BlockValidationState& state)
@@ -472,28 +503,7 @@ bool CSpecialTxProcessor::RebuildListFromBlock(const CBlock& block, gsl::not_nul
             const uint16_t current_version{static_cast<uint16_t>(newState->nVersion)};
             const uint16_t target_version{is_v24_active ? std::max<uint16_t>(current_version, opt_proTx->nVersion)
                                                         : current_version};
-            if (is_v24_active) {
-                // Extended addresses support in v24 means that the version can be updated
-                newState->nVersion = opt_proTx->nVersion;
-            }
-            newState->netInfo = opt_proTx->netInfo;
-            newState->scriptOperatorPayout = opt_proTx->scriptOperatorPayout;
-            if (opt_proTx->nType == MnType::Evo) {
-                newState->platformNodeID = opt_proTx->platformNodeID;
-                if (opt_proTx->nVersion < ProTxVersion::ExtAddr) {
-                    newState->platformP2PPort = opt_proTx->platformP2PPort;
-                    newState->platformHTTPPort = opt_proTx->platformHTTPPort;
-                } else {
-                    // From ExtAddr onwards the Platform ports are stored in netInfo. Clear the
-                    // legacy scalar fields (which a legacy registration may have left set) so the
-                    // in-memory state matches its serialized form, which omits them for ExtAddr
-                    // (see CDeterministicMNState serialization). Otherwise a stale value would
-                    // survive in diff-reconstructed lists but vanish through a snapshot round-trip.
-                    newState->platformP2PPort = 0;
-                    newState->platformHTTPPort = 0;
-                }
-            }
-            if (is_v24_active && !SetStateVersion(*newState, target_version, dmn->nType, state)) {
+            if (!ApplyProUpServTx(*newState, *opt_proTx, is_v24_active, state)) {
                 return false;
             }
             if (newState->IsBanned()) {
@@ -1351,6 +1361,14 @@ bool CheckProUpServTx(const CTransaction& tx, gsl::not_null<const CBlockIndex*> 
         return false;
     }
 
+    if (is_v24_active) {
+        CDeterministicMNState new_state{*dmn->pdmnState};
+        BlockValidationState migration_state;
+        if (!ApplyProUpServTx(new_state, *opt_ptx, is_v24_active, migration_state)) {
+            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, migration_state.GetRejectReason());
+        }
+    }
+
     // A service update carries no operator key, but raising a legacy masternode to the basic scheme
     // re-encodes its stored key, moving it to the basic-scheme unique-property slot. If another
     // masternode already holds that key under either encoding, the re-key in UpdateMN() would throw
@@ -1446,6 +1464,18 @@ bool CheckProUpRegTx(const CTransaction& tx, gsl::not_null<const CBlockIndex*> p
         if ((key_changed || migrating) &&
             mnList.HasOperatorKeyUnderAnyScheme(opt_ptx->pubKeyOperator.Get(), /*self=*/opt_ptx->proTxHash)) {
             return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-dup-key");
+        }
+
+        // A key change clears the stored addresses, leaving nothing to migrate. Otherwise the
+        // existing addresses are carried into the target version's format, which must succeed or
+        // BuildNewListFromBlock would reject the block this transaction is placed in.
+        if (!key_changed) {
+            CDeterministicMNState new_state{*dmn->pdmnState};
+            BlockValidationState migration_state;
+            if (!SetStateVersion(new_state, std::max<uint16_t>(dmn->pdmnState->nVersion, opt_ptx->nVersion), dmn->nType,
+                                 migration_state)) {
+                return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, migration_state.GetRejectReason());
+            }
         }
     }
 
