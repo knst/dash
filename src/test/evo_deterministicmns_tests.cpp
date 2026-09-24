@@ -2222,20 +2222,26 @@ static CMutableTransaction CreateExtAddrProUpRegTx(TestChainV24SignalBeforeV19Se
     return tx;
 }
 
-static CMutableTransaction CreateBasicEvoProUpServTx(TestChainV24SignalBeforeV19Setup& setup, const uint256& proTxHash,
-                                                     const std::string& addr, uint16_t platform_http_port,
-                                                     const CBLSSecretKey& operator_key)
+static CMutableTransaction CreateEvoProUpServTx(TestChainV24SignalBeforeV19Setup& setup, const uint256& proTxHash,
+                                                uint16_t version, const std::string& addr, const CBLSSecretKey& operator_key)
 {
     CProUpServTx proTx;
-    proTx.nVersion = ProTxVersion::BasicBLS;
+    proTx.nVersion = version;
     proTx.nType = MnType::Evo;
     proTx.netInfo = NetInfoInterface::MakeNetInfo(proTx.nVersion);
     proTx.proTxHash = proTxHash;
     BOOST_REQUIRE_EQUAL(proTx.netInfo->AddEntry(NetInfoPurpose::CORE_P2P, strprintf("%s:20300", addr)),
                         NetInfoStatus::Success);
     proTx.platformNodeID.SetHex("8899aabbccddeeff00112233445566778899aabb");
-    proTx.platformP2PPort = 20301;
-    proTx.platformHTTPPort = platform_http_port;
+    if (version >= ProTxVersion::ExtAddr) {
+        BOOST_REQUIRE_EQUAL(proTx.netInfo->AddEntry(NetInfoPurpose::PLATFORM_P2P, strprintf("%s:20301", addr)),
+                            NetInfoStatus::Success);
+        BOOST_REQUIRE_EQUAL(proTx.netInfo->AddEntry(NetInfoPurpose::PLATFORM_HTTPS, strprintf("%s:443", addr)),
+                            NetInfoStatus::Success);
+    } else {
+        proTx.platformP2PPort = 20301;
+        proTx.platformHTTPPort = 443;
+    }
     CMutableTransaction tx;
     tx.nVersion = 3;
     tx.nType = TRANSACTION_PROVIDER_UPDATE_SERVICE;
@@ -2248,10 +2254,11 @@ static CMutableTransaction CreateBasicEvoProUpServTx(TestChainV24SignalBeforeV19
     return tx;
 }
 
-// Mainnet requires a BasicBLS EvoNode's Platform HTTPS port to be 443. Moving such a node to
-// ExtAddr, whether by a registrar update or by a BasicBLS service update once it is already
-// ExtAddr, turns that port into an IP:443 PLATFORM_HTTPS entry, which must be accepted.
-void FuncEvoNodeMigratesPlatformHTTPS443(TestChainV24SignalBeforeV19Setup& setup)
+// From ExtAddr on an EvoNode's Platform ports live in netInfo and are not derived from a BasicBLS
+// state's scalar ports: the derived IP:port entries could be held by another masternode, and the
+// re-key in UpdateMN() would then throw out of block assembly. Only a service update that spells out
+// the Platform entries raises a BasicBLS EvoNode to ExtAddr.
+void FuncEvoNodeRaisedToExtAddrByServiceUpdateOnly(TestChainV24SignalBeforeV19Setup& setup)
 {
     auto& chainman = setup.chainman;
     auto& dmnman = setup.dmnman;
@@ -2264,65 +2271,64 @@ void FuncEvoNodeMigratesPlatformHTTPS443(TestChainV24SignalBeforeV19Setup& setup
     const auto proTxHash = RegisterBasicEvoNode(setup, "1.1.1.4", 443, owner_key, operator_key);
     setup.MineToV24();
 
-    auto check_https_entry = [&](const std::string& what) {
+    auto check_proupreg = [&](const CMutableTransaction& tx) {
+        TxValidationState val_state;
+        LOCK(cs_main);
+        CheckProUpRegTx(CTransaction(tx), chainman.ActiveChain().Tip(), dmnman, chainman.ActiveChainstate().CoinsTip(),
+                        chainman.GetConsensus(), IsV24Active(chainman), val_state, /*check_sigs=*/true);
+        return val_state.GetRejectReason();
+    };
+    auto check_proupserv = [&](const CMutableTransaction& tx) {
+        TxValidationState val_state;
+        LOCK(cs_main);
+        CheckProUpServTx(CTransaction(tx), chainman.ActiveChain().Tip(), dmnman, chainman.GetConsensus(),
+                         IsV24Active(chainman), val_state, /*check_sigs=*/true);
+        return val_state.GetRejectReason();
+    };
+    auto check_state = [&](uint16_t version, const std::string& what) {
         const auto dmn = dmnman.GetListAtChainTip().GetMN(proTxHash);
         BOOST_REQUIRE(dmn);
-        BOOST_CHECK_EQUAL(dmn->pdmnState->nVersion, ProTxVersion::ExtAddr);
-        const auto entries = dmn->pdmnState->netInfo->GetEntries(NetInfoPurpose::PLATFORM_HTTPS);
-        BOOST_REQUIRE_EQUAL(entries.size(), 1U);
-        BOOST_CHECK(entries[0].GetAddrPort() == LookupNumeric("1.1.1.4", 443));
+        BOOST_CHECK_EQUAL(dmn->pdmnState->nVersion, version);
+        if (version >= ProTxVersion::ExtAddr) {
+            const auto entries = dmn->pdmnState->netInfo->GetEntries(NetInfoPurpose::PLATFORM_HTTPS);
+            BOOST_REQUIRE_EQUAL(entries.size(), 1U);
+            BOOST_CHECK(entries[0].GetAddrPort() == LookupNumeric("1.1.1.4", 443));
+            BOOST_CHECK_EQUAL(dmn->pdmnState->platformHTTPPort, 0);
+        }
         CheckListRoundTrips(dmnman, what);
     };
 
+    BOOST_CHECK_EQUAL(check_proupreg(CreateExtAddrProUpRegTx(setup, proTxHash, owner_key, operator_key)),
+                      "bad-protx-netinfo-version");
+    BOOST_CHECK_EQUAL(check_proupserv(CreateEvoProUpServTx(setup, proTxHash, ProTxVersion::BasicBLS, "1.1.1.4", operator_key)),
+                      "bad-protx-version-disallowed");
+    check_state(ProTxVersion::BasicBLS, "after rejected raises");
+
+    {
+        const auto tx = CreateEvoProUpServTx(setup, proTxHash, ProTxVersion::ExtAddr, "1.1.1.4", operator_key);
+        BOOST_CHECK_EQUAL(check_proupserv(tx), "");
+        setup.ProcessBlock({tx});
+        check_state(ProTxVersion::ExtAddr, "after ExtAddr ProUpServTx");
+    }
     {
         const auto tx = CreateExtAddrProUpRegTx(setup, proTxHash, owner_key, operator_key);
-        TxValidationState val_state;
-        {
-            LOCK(cs_main);
-            BOOST_REQUIRE_MESSAGE(CheckProUpRegTx(CTransaction(tx), chainman.ActiveChain().Tip(), dmnman,
-                                                  chainman.ActiveChainstate().CoinsTip(), chainman.GetConsensus(),
-                                                  IsV24Active(chainman), val_state, /*check_sigs=*/true),
-                                  "ExtAddr ProUpRegTx rejected: " << val_state.GetRejectReason());
-        }
+        BOOST_CHECK_EQUAL(check_proupreg(tx), "");
         setup.ProcessBlock({tx});
-        check_https_entry("after ExtAddr ProUpRegTx");
+        check_state(ProTxVersion::ExtAddr, "after ExtAddr ProUpRegTx");
     }
-
-    {
-        const auto tx = CreateBasicEvoProUpServTx(setup, proTxHash, "1.1.1.4", 443, operator_key);
-        TxValidationState val_state;
-        {
-            LOCK(cs_main);
-            BOOST_REQUIRE_MESSAGE(CheckProUpServTx(CTransaction(tx), chainman.ActiveChain().Tip(), dmnman,
-                                                   chainman.GetConsensus(), IsV24Active(chainman), val_state,
-                                                   /*check_sigs=*/true),
-                                  "BasicBLS ProUpServTx rejected: " << val_state.GetRejectReason());
-        }
-        setup.ProcessBlock({tx});
-        check_https_entry("after BasicBLS ProUpServTx");
-    }
-
-    // Other privileged ports still cannot be carried into ExtAddr
-    {
-        const auto tx = CreateBasicEvoProUpServTx(setup, proTxHash, "1.1.1.4", 80, operator_key);
-        TxValidationState val_state;
-        LOCK(cs_main);
-        BOOST_CHECK(!CheckProUpServTx(CTransaction(tx), chainman.ActiveChain().Tip(), dmnman, chainman.GetConsensus(),
-                                      IsV24Active(chainman), val_state, /*check_sigs=*/true));
-        BOOST_CHECK_EQUAL(val_state.GetRejectReason(), "bad-protx-netinfo-version");
-    }
+    BOOST_CHECK_EQUAL(check_proupserv(CreateEvoProUpServTx(setup, proTxHash, ProTxVersion::BasicBLS, "1.1.1.4", operator_key)),
+                      "bad-protx-version-disallowed");
 }
 
-BOOST_AUTO_TEST_CASE(evonode_migrates_platform_https_443)
+BOOST_AUTO_TEST_CASE(evonode_raised_to_extaddr_by_service_update_only)
 {
     TestChainV24SignalBeforeV19Setup setup;
-    FuncEvoNodeMigratesPlatformHTTPS443(setup);
+    FuncEvoNodeRaisedToExtAddrByServiceUpdateOnly(setup);
 }
 
-// Off mainnet a BasicBLS EvoNode may hold a Platform HTTPS port that ExtNetInfo rejects. A registrar
-// update migrating it to ExtAddr must be refused up front: once in the mempool it would otherwise be
-// selected into every block template and make block assembly fail.
-void FuncEvoNodeMigrationRejectsBadPlatformPort(TestChainV24SignalBeforeV19Setup& setup)
+// A registrar update that would raise a BasicBLS EvoNode to ExtAddr is refused up front: once in the
+// mempool it would otherwise be selected into every block template and make block assembly fail.
+void FuncEvoNodeRegistrarRaiseNotMined(TestChainV24SignalBeforeV19Setup& setup)
 {
     auto& chainman = setup.chainman;
     auto& dmnman = setup.dmnman;
@@ -2332,7 +2338,7 @@ void FuncEvoNodeMigrationRejectsBadPlatformPort(TestChainV24SignalBeforeV19Setup
     owner_key.MakeNewKey(true);
     CBLSSecretKey operator_key;
     operator_key.MakeNewKey();
-    const auto proTxHash = RegisterBasicEvoNode(setup, "1.1.1.5", 6667, owner_key, operator_key);
+    const auto proTxHash = RegisterBasicEvoNode(setup, "1.1.1.5", 443, owner_key, operator_key);
     setup.MineToV24();
 
     const auto tx = CreateExtAddrProUpRegTx(setup, proTxHash, owner_key, operator_key);
@@ -2361,10 +2367,10 @@ void FuncEvoNodeMigrationRejectsBadPlatformPort(TestChainV24SignalBeforeV19Setup
     BOOST_CHECK_EQUAL(dmnman.GetListAtChainTip().GetMN(proTxHash)->pdmnState->nVersion, ProTxVersion::BasicBLS);
 }
 
-BOOST_AUTO_TEST_CASE(evonode_migration_rejects_bad_platform_port)
+BOOST_AUTO_TEST_CASE(evonode_registrar_raise_not_mined)
 {
     TestChainV24SignalBeforeV19Setup setup;
-    FuncEvoNodeMigrationRejectsBadPlatformPort(setup);
+    FuncEvoNodeRegistrarRaiseNotMined(setup);
 }
 
 // The SAME masternode, two registrar updates in one block, version-crossing. tx1 rotates a
