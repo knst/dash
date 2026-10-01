@@ -59,12 +59,6 @@ enum class MnRewardEra {
     EvoReward,  // MN_RR: platform share is reallocated from the masternode reward
 };
 
-enum class SuperBlockCheckType {
-    NoCheck, // for chainlocked blocks or during sync
-    AllowDuplicates,
-    DisallowDuplicates,
-};
-
 CAmount GetMasternodePayment(int nHeight, CAmount blockValue, const Consensus::Params& consensus_params, MnRewardEra era);
 
 /**

@@ -2497,7 +2497,7 @@ bool Chainstate::IsSuperblockValidationRequired(const CBlockIndex* const pindex)
 }
 
 bool Chainstate::IsTransactionValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy,
-                                                            const CAmount feeReward, MnRewardEra era, bool strict_multiplicity)
+                                                            const CAmount feeReward, MnRewardEra era, bool strict_multiplicity) const
 {
     const Consensus::Params& consensus_params{m_chainman.GetConsensus()};
     const int nBlockHeight = pindexPrev  == nullptr ? 0 : pindexPrev->nHeight + 1;
@@ -2532,7 +2532,7 @@ bool Chainstate::IsTransactionValid(const CTransaction& txNew, const CBlockIndex
     return true;
 }
 
-[[nodiscard]] static bool IsOldBudgetBlockValueValid(const CBlock& block, const int nBlockHeight, const CAmount blockReward, std::string& strErrorRet, SuperBlockCheckType check_superblock,
+[[nodiscard]] static bool IsOldBudgetBlockValueValid(const CBlock& block, const int nBlockHeight, const CAmount blockReward, std::string& strErrorRet, const bool enforce,
                                                      const Consensus::Params& consensus_params)
 {
     bool isBlockRewardValueMet = (block.vtx[0]->GetValueOut() <= blockReward);
@@ -2553,7 +2553,7 @@ bool Chainstate::IsTransactionValid(const CTransaction& txNew, const CBlockIndex
     int nOffset = nBlockHeight % consensus_params.nBudgetPaymentsCycleBlocks;
     if (nOffset < consensus_params.nBudgetPaymentsWindowBlocks) {
         // NOTE: old budget system is disabled since 12.1
-        if (check_superblock == SuperBlockCheckType::NoCheck) {
+        if (!enforce) {
             // historical mainnet blocks in this window do pay old budgets and we have no
             // data to validate them with, so rely on online nodes (all networks)
             LogPrint(BCLog::GOBJECT, "CMNPaymentsProcessor::%s -- WARNING! Skipping old budget block value checks, accepting block\n", __func__);
@@ -2584,10 +2584,10 @@ bool Chainstate::IsTransactionValid(const CTransaction& txNew, const CBlockIndex
 *   - Other blocks are 10% lower in outgoing value, so in total, no extra coins are created
 *   - When non-superblocks are detected, the normal schedule should be maintained
 */
-bool Chainstate::IsBlockValueValid(const CBlock& block, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockReward, std::string& strErrorRet, SuperBlockCheckType check_superblock)
+bool Chainstate::IsBlockValueValid(const CBlock& block, const CBlockIndex* pindex, const CDeterministicMNList& mn_list, const CAmount blockReward, std::string& strErrorRet) const
 {
     const Consensus::Params& consensus_params{m_chainman.GetConsensus()};
-    const int nBlockHeight = pindexPrev == nullptr ? 0 : pindexPrev->nHeight + 1;
+    const int nBlockHeight{pindex->nHeight};
     bool isBlockRewardValueMet = (block.vtx[0]->GetValueOut() <= blockReward);
 
     strErrorRet = "";
@@ -2601,7 +2601,7 @@ bool Chainstate::IsBlockValueValid(const CBlock& block, const CBlockIndex* pinde
         return isBlockRewardValueMet;
     } else if (nBlockHeight < consensus_params.nSuperblockStartBlock) {
         // superblocks are not enabled yet, check if we can pass old budget rules
-        return IsOldBudgetBlockValueValid(block, nBlockHeight, blockReward, strErrorRet, check_superblock, consensus_params);
+        return IsOldBudgetBlockValueValid(block, nBlockHeight, blockReward, strErrorRet, IsSuperblockValidationRequired(pindex), consensus_params);
     }
 
     LogPrint(BCLog::MNPAYMENTS, "block.vtx[0]->GetValueOut() %lld <= blockReward %lld\n", block.vtx[0]->GetValueOut(), blockReward);
@@ -2627,7 +2627,7 @@ bool Chainstate::IsBlockValueValid(const CBlock& block, const CBlockIndex* pinde
         return false;
     }
 
-    if (check_superblock == SuperBlockCheckType::NoCheck) return true;
+    if (!IsSuperblockValidationRequired(pindex)) return true;
 
     SuperblockStatus superblock;
     if (m_chainman.m_options.superblock_status) {
@@ -2660,7 +2660,7 @@ bool Chainstate::IsBlockValueValid(const CBlock& block, const CBlockIndex* pinde
     }
 
     // this actually also checks for correct payees and not only amount
-    const bool is_v24{check_superblock == SuperBlockCheckType::DisallowDuplicates};
+    const bool is_v24{DeploymentActiveAfter(pindex->pprev, m_chainman, Consensus::DEPLOYMENT_V24)};
     if (!isSuperblockValueMet || !IsSuperblockValid(superblock, *block.vtx[0], nBlockHeight, is_v24, GetSuperblockPaymentsLimit(nBlockHeight, consensus_params))) {
         // triggered but invalid? that's weird
         LogPrintf("CMNPaymentsProcessor::%s -- ERROR! Invalid superblock detected at height %d: %s", __func__, nBlockHeight, block.vtx[0]->ToString()); /* Continued */
@@ -2673,12 +2673,15 @@ bool Chainstate::IsBlockValueValid(const CBlock& block, const CBlockIndex* pinde
     return true;
 }
 
-bool Chainstate::IsBlockPayeeValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy, const CAmount feeReward, MnRewardEra era, bool strict_multiplicity)
+bool Chainstate::IsBlockPayeeValid(const CBlock& block, const CBlockIndex* pindex, const CDeterministicMNList& mn_list, const CAmount blockSubsidy, const CAmount feeReward) const
 {
-    const int nBlockHeight = pindexPrev  == nullptr ? 0 : pindexPrev->nHeight + 1;
+    const CTransaction& txNew{*block.vtx[0]};
+    const int nBlockHeight{pindex->nHeight};
+    const MnRewardEra era{GetMnRewardEraAfter(pindex->pprev, m_chainman)};
+    const bool strict_multiplicity{DeploymentActiveAfter(pindex->pprev, m_chainman, Consensus::DEPLOYMENT_V24)};
 
     // Check for correct masternode payment
-    if (IsTransactionValid(txNew, pindexPrev, mn_list, blockSubsidy, feeReward, era, strict_multiplicity)) {
+    if (IsTransactionValid(txNew, pindex->pprev, mn_list, blockSubsidy, feeReward, era, strict_multiplicity)) {
         LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- Valid masternode payment at height %d: %s", __func__, nBlockHeight, txNew.ToString()); /* Continued */
     } else {
         LogPrintf("CMNPaymentsProcessor::%s -- ERROR! Invalid masternode payment detected at height %d: %s", __func__, nBlockHeight, txNew.ToString()); /* Continued */
@@ -3063,12 +3066,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
              Ticks<SecondsDouble>(time_subsidy),
              Ticks<MillisecondsDouble>(time_subsidy) / num_blocks_total);
 
-    const SuperBlockCheckType check_superblock = !IsSuperblockValidationRequired(pindex)
-        ? SuperBlockCheckType::NoCheck
-        : special_tx_rules.v24 ? SuperBlockCheckType::DisallowDuplicates : SuperBlockCheckType::AllowDuplicates;
-
-
-    if (!IsBlockValueValid(block, pindex->pprev, mnlist_updates.old_list, blockSubsidy + feeReward, strError, check_superblock)) {
+    if (!IsBlockValueValid(block, pindex, mnlist_updates.old_list, blockSubsidy + feeReward, strError)) {
         // NOTE: Do not punish, the node might be missing governance data
         LogPrintf("ERROR: ConnectBlock(DASH): %s\n", strError);
         return state.Invalid(BlockValidationResult::BLOCK_RESULT_UNSET, "bad-cb-amount");
@@ -3081,9 +3079,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
              Ticks<SecondsDouble>(time_value_valid),
              Ticks<MillisecondsDouble>(time_value_valid) / num_blocks_total);
 
-    const MnRewardEra mn_reward_era{GetMnRewardEraAfter(pindex->pprev, m_chainman)};
-    if (!IsBlockPayeeValid(*block.vtx[0], pindex->pprev, mnlist_updates.old_list, blockSubsidy, feeReward,
-                                                        mn_reward_era, special_tx_rules.v24)) {
+    if (!IsBlockPayeeValid(block, pindex, mnlist_updates.old_list, blockSubsidy, feeReward)) {
         // NOTE: Do not punish, the node might be missing governance data
         LogPrintf("ERROR: ConnectBlock(DASH): couldn't find masternode or superblock payments\n");
         return state.Invalid(BlockValidationResult::BLOCK_RESULT_UNSET, "bad-cb-payee");

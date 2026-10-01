@@ -546,7 +546,7 @@ void SuperblockManager::ExecuteBestSuperblock(const CDeterministicMNList& tip_mn
     LOCK(cs_sb);
     CSuperblock_sptr pSuperblock;
     if (GetBestSuperblockInternal(tip_mn_list, pSuperblock, nBlockHeight)) {
-        // All checks are done in CSuperblock::IsValid via IsBlockValueValid and IsBlockPayeeValid,
+        // All checks are done in Chainstate::IsBlockValueValid,
         // tip wouldn't be updated if anything was wrong. Mark this trigger as executed.
         pSuperblock->SetExecuted();
     }
