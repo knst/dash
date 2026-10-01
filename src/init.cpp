@@ -1990,6 +1990,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     bool fReindexChainState = args.GetBoolArg("-reindex-chainstate", false);
     ChainstateManager::Options chainman_opts{
         .chainparams = chainparams,
+        .superblock_status = [&sbman = *node.sbman](const CDeterministicMNList& mn_list, int height) { return sbman.GetStatus(mn_list, height); },
     };
     Assert(!ApplyArgsManOptions(args, chainman_opts)); // no error can happen, already checked in AppInitParameterInteraction
 
@@ -2105,7 +2106,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                 node.chain_helper = std::make_unique<CChainstateHelper>(*node.evodb, *node.dmnman, *node.mn_sync, *node.isman,
                                                                         *node.llmq_ctx->quorum_block_processor, *node.llmq_ctx->qsnapman,
                                                                         chainman, chainman.m_blockman, chainman.GetConsensus(),
-                                                                        *node.chainlocks, *node.llmq_ctx->qman, *node.sbman);
+                                                                        *node.chainlocks, *node.llmq_ctx->qman, chainman.m_options.superblock_status);
                 return LoadChainstate(chainman, cache_sizes, options, *node.evodb, *node.dmnman, node.chain_helper);
             });
         }

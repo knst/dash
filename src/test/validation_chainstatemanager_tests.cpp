@@ -6,6 +6,7 @@
 #include <consensus/validation.h>
 #include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
+#include <governance/superblock.h>
 #include <kernel/disconnected_transactions.h>
 #include <node/chainstate.h>
 #include <node/utxo_snapshot.h>
@@ -440,6 +441,7 @@ struct SnapshotTestSetup : TestChain100Setup {
             BOOST_CHECK_EQUAL(chainman.GetAll().size(), 0);
             const ChainstateManager::Options chainman_opts{
                 .chainparams = ::Params(),
+                .superblock_status = [&sbman = *m_node.sbman](const CDeterministicMNList& mn_list, int height) { return sbman.GetStatus(mn_list, height); },
             };
             // For robustness, ensure the old manager is destroyed before creating a
             // new one.

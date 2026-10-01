@@ -6,13 +6,16 @@
 #define BITCOIN_KERNEL_CHAINSTATEMANAGER_OPTS_H
 
 #include <arith_uint256.h>
+#include <masternode/payments.h>
 #include <uint256.h>
 #include <util/time.h>
 
 #include <cstdint>
+#include <functional>
 #include <optional>
 
 class CChainParams;
+class CDeterministicMNList;
 
 static constexpr bool DEFAULT_CHECKPOINTS_ENABLED{true};
 static constexpr auto DEFAULT_MAX_TIP_AGE{6h}; // ~144 blocks behind -> 2 x fork detection time, was 24h in bitcoin
@@ -34,6 +37,9 @@ struct ChainstateManagerOpts {
     std::optional<uint256> assumed_valid_block{};
     //! If the tip is older than this, the node is considered to be in initial block download.
     std::chrono::seconds max_tip_age{DEFAULT_MAX_TIP_AGE};
+    //! Dash: governance's superblock status for a block height, consulted by
+    //! block validation and the miner. Unset means superblock validation is disabled.
+    std::function<SuperblockStatus(const CDeterministicMNList& mn_list, int nBlockHeight)> superblock_status{};
 };
 
 } // namespace kernel

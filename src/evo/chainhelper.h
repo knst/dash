@@ -7,6 +7,9 @@
 
 #include <cstdint>
 #include <map>
+#include <masternode/payments.h>
+
+#include <functional>
 #include <memory>
 #include <optional>
 
@@ -25,9 +28,6 @@ struct CCreditPool;
 namespace chainlock {
 class Chainlocks;
 } // namespace chainlock
-namespace governance {
-class SuperblockManager;
-} // namespace governance
 namespace Consensus {
 struct Params;
 } // namespace Consensus
@@ -63,7 +63,7 @@ public:
                                llmq::CQuorumSnapshotManager& qsnapman, const ChainstateManager& chainman,
                                const node::BlockManager& blockman, const Consensus::Params& consensus_params,
                                const chainlock::Chainlocks& chainlocks, const llmq::CQuorumManager& qman,
-                               governance::SuperblockManager& sbman);
+                               const std::function<SuperblockStatus(const CDeterministicMNList& mn_list, int nBlockHeight)>& superblock_status);
     ~CChainstateHelper();
 
     bool IsSuperblockValidationRequired(const CBlockIndex* const pindex);

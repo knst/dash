@@ -8,6 +8,7 @@
 #include <consensus/amount.h>
 #include <primitives/transaction.h>
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -36,9 +37,6 @@ int FindUnmatchedMasternodePayment(const std::vector<CTxOut>& expected,
 
 struct CMutableTransaction;
 
-namespace governance {
-class SuperblockManager;
-}
 namespace Consensus { struct Params; }
 
 /**
@@ -108,7 +106,7 @@ bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& t
 class CMNPaymentsProcessor
 {
 private:
-    governance::SuperblockManager& m_superblocks;
+    const std::function<SuperblockStatus(const CDeterministicMNList& mn_list, int nBlockHeight)>& m_superblock_status;
     const Consensus::Params& m_consensus_params;
 
 private:
@@ -119,8 +117,9 @@ private:
     [[nodiscard]] bool IsOldBudgetBlockValueValid(const CBlock& block, const int nBlockHeight, const CAmount blockReward, std::string& strErrorRet, SuperBlockCheckType check_superblock);
 
 public:
-    explicit CMNPaymentsProcessor(governance::SuperblockManager& superblocks, const Consensus::Params& consensus_params) :
-        m_superblocks{superblocks},
+    explicit CMNPaymentsProcessor(const std::function<SuperblockStatus(const CDeterministicMNList& mn_list, int nBlockHeight)>& superblock_status,
+                                  const Consensus::Params& consensus_params) :
+        m_superblock_status{superblock_status},
         m_consensus_params{consensus_params}
     {
     }

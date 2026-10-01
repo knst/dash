@@ -438,7 +438,10 @@ bool CMNPaymentsProcessor::IsBlockValueValid(const CBlock& block, const CBlockIn
 
     if (check_superblock == SuperBlockCheckType::NoCheck) return true;
 
-    const SuperblockStatus superblock{m_superblocks.GetStatus(mn_list, nBlockHeight)};
+    SuperblockStatus superblock;
+    if (m_superblock_status) {
+        superblock = m_superblock_status(mn_list, nBlockHeight);
+    }
     if (superblock.state == SuperblockStatus::State::ValidationDisabled) {
         LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- WARNING! Not enough data, checked superblock max bounds only\n", __func__);
         // not enough data for full checks but at least we know that the superblock limits were honored.
@@ -500,9 +503,12 @@ void CMNPaymentsProcessor::FillBlockPayments(CMutableTransaction& txNew, const C
     int nBlockHeight = pindexPrev == nullptr ? 0 : pindexPrev->nHeight + 1;
 
     // Only create superblocks when one is actually triggered.
-    if (SuperblockStatus superblock{m_superblocks.GetStatus(mn_list, nBlockHeight)}; superblock.state == SuperblockStatus::State::Triggered) {
-        LogPrint(BCLog::GOBJECT, "CMNPaymentsProcessor::%s -- Triggered superblock creation at height %d\n", __func__, nBlockHeight);
-        voutSuperblockPaymentsRet = std::move(superblock.payments);
+    if (m_superblock_status) {
+        SuperblockStatus superblock{m_superblock_status(mn_list, nBlockHeight)};
+        if (superblock.state == SuperblockStatus::State::Triggered) {
+            LogPrint(BCLog::GOBJECT, "CMNPaymentsProcessor::%s -- Triggered superblock creation at height %d\n", __func__, nBlockHeight);
+            voutSuperblockPaymentsRet = std::move(superblock.payments);
+        }
     }
 
     if (!GetMasternodeTxOuts(pindexPrev, mn_list, blockSubsidy, feeReward, era, voutMasternodePaymentsRet)) {

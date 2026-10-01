@@ -270,6 +270,7 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
     const ChainstateManager::Options chainman_opts{
         .chainparams = chainparams,
         .check_block_index = true,
+        .superblock_status = [&sbman = *m_node.sbman](const CDeterministicMNList& mn_list, int height) { return sbman.GetStatus(mn_list, height); },
     };
     m_node.chainman = std::make_unique<ChainstateManager>(chainman_opts);
     m_node.chainman->m_blockman.m_block_tree_db = std::make_unique<CBlockTreeDB>(m_cache_sizes.block_tree_db, true);
@@ -328,7 +329,7 @@ void ChainTestingSetup::MakeDashChainContexts(const bool llmq_dbs_wipe)
     m_node.chain_helper = std::make_unique<CChainstateHelper>(*m_node.evodb, *m_node.dmnman, *Assert(m_node.mn_sync), *Assert(m_node.isman),
                                                               *m_node.llmq_ctx->quorum_block_processor, *m_node.llmq_ctx->qsnapman,
                                                               chainman, chainman.m_blockman, chainman.GetConsensus(),
-                                                              *Assert(m_node.chainlocks), *m_node.llmq_ctx->qman, *Assert(m_node.sbman));
+                                                              *Assert(m_node.chainlocks), *m_node.llmq_ctx->qman, chainman.m_options.superblock_status);
 }
 
 void ChainTestingSetup::LoadVerifyActivateChainstate()

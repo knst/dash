@@ -10,7 +10,6 @@
 #include <evo/deterministicmns.h>
 #include <evo/mnhftx.h>
 #include <evo/specialtxman.h>
-#include <governance/superblock.h>
 #include <hash.h>
 #include <instantsend/instantsend.h>
 #include <instantsend/lock.h>
@@ -24,14 +23,14 @@ CChainstateHelper::CChainstateHelper(CEvoDB& evodb, CDeterministicMNManager& dmn
                                      llmq::CQuorumSnapshotManager& qsnapman, const ChainstateManager& chainman,
                                      const node::BlockManager& blockman, const Consensus::Params& consensus_params,
                                      const chainlock::Chainlocks& chainlocks, const llmq::CQuorumManager& qman,
-                                     governance::SuperblockManager& sbman) :
+                                     const std::function<SuperblockStatus(const CDeterministicMNList& mn_list, int nBlockHeight)>& superblock_status) :
     isman{isman},
     mn_sync{mn_sync},
     m_dmnman{dmnman},
     credit_pool_manager{std::make_unique<CCreditPoolManager>(evodb, chainman)},
     m_chainlocks{chainlocks},
     ehf_manager{std::make_unique<CMNHFManager>(evodb, consensus_params)},
-    mn_payments{std::make_unique<CMNPaymentsProcessor>(sbman, consensus_params)},
+    mn_payments{std::make_unique<CMNPaymentsProcessor>(superblock_status, consensus_params)},
     special_tx{std::make_unique<CSpecialTxProcessor>(*credit_pool_manager, dmnman, *ehf_manager, qblockman, qsnapman,
                                                      chainman, blockman, consensus_params, chainlocks, qman)}
 {}

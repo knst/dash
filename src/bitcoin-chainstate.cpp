@@ -22,7 +22,6 @@
 #include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
-#include <governance/superblock.h>
 #include <init/common.h>
 #include <instantsend/instantsend.h>
 #include <llmq/context.h>
@@ -103,7 +102,6 @@ int main(int argc, char* argv[])
     CMasternodeSync mn_sync{std::make_unique<NullNodeSyncNotifier>()};
     CSporkManager sporkman;
     chainlock::Chainlocks chainlocks(sporkman);
-    governance::SuperblockManager sbman;
     // TODO: remove isman from bitcoin-chainstate and make it nullable for node::ChainstateLoadOptions same as mempool
     llmq::CInstantSendManager isman{sporkman, util::DbWrapperParams{.path = gArgs.GetDataDirNet(), .memory = false, .wipe = false}};
 
@@ -113,7 +111,7 @@ int main(int argc, char* argv[])
     auto chain_helper = std::make_unique<CChainstateHelper>(evodb, dmnman, mn_sync, isman,
                                                             *llmq_ctx->quorum_block_processor, *llmq_ctx->qsnapman,
                                                             chainman, chainman.m_blockman, chainman.GetConsensus(),
-                                                            chainlocks, *llmq_ctx->qman, sbman);
+                                                            chainlocks, *llmq_ctx->qman, chainman.m_options.superblock_status);
 
     node::CacheSizes cache_sizes;
     cache_sizes.block_tree_db = 2 << 20;
