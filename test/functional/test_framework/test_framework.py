@@ -2136,8 +2136,18 @@ class DashTestFramework(BitcoinTestFramework):
         self.wait_until(check_probes, timeout=timeout, sleep=1)
 
     def wait_for_quorum_phase(self, quorum_hash, phase, expected_member_count, check_received_messages, check_received_messages_count, mninfos, llmq_type_name="llmq_test", timeout=30, sleep=0.5):
+        # A member reports a phase only once its own messages of that phase are sent, so with
+        # check_received_messages_count=None the members' sent* flags give the exact number of
+        # messages every member has to receive before the DKG may move on
+        sent_flags = {
+            "receivedContributions": "sentContributions",
+            "receivedComplaints": "sentComplaint",
+            "receivedJustifications": "sentJustification",
+            "receivedPrematureCommitments": "sentPrematureCommitment",
+        }
+
         def check_dkg_session():
-            member_count = 0
+            statuses = []
             for mn in mninfos:
                 s = mn.get_node(self).quorum("dkgstatus")["session"]
                 for qs in s:
@@ -2148,12 +2158,16 @@ class DashTestFramework(BitcoinTestFramework):
                         continue
                     if qstatus["phase"] != phase:
                         return False
-                    if check_received_messages is not None:
-                        if qstatus[check_received_messages] < check_received_messages_count:
-                            return False
-                    member_count += 1
-                    break
-            return member_count >= expected_member_count
+                    statuses.append(qstatus)
+            if len(statuses) < expected_member_count:
+                return False
+            if check_received_messages is not None:
+                expected = check_received_messages_count
+                if expected is None:
+                    expected = sum(qstatus[sent_flags[check_received_messages]] for qstatus in statuses)
+                if any(qstatus[check_received_messages] < expected for qstatus in statuses):
+                    return False
+            return True
 
         self.wait_until(check_dkg_session, timeout=timeout, sleep=sleep)
 
