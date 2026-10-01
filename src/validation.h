@@ -55,6 +55,7 @@ class CTxMemPool;
 class TxValidationState;
 class CChainstateHelper;
 class CDeterministicMNList;
+enum class SuperBlockCheckType;
 class ChainstateManager;
 enum class EvoDbIdentity;
 struct PrecomputedTransactionData;
@@ -708,6 +709,12 @@ public:
     DisconnectResult DisconnectBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
     bool ConnectBlock(const CBlock& block, BlockValidationState& state, CBlockIndex* pindex, CCoinsViewCache& view, bool fJustCheck = false) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
+    /** Dash: the coinbase may pay out at most the block reward plus, on a
+     *  triggered superblock, the payments governance expects at that height. */
+    bool IsBlockValueValid(const CBlock& block, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, CAmount blockReward, std::string& strErrorRet, SuperBlockCheckType check_superblock);
+    /** Dash: the coinbase must carry every payment owed to the masternode list at the previous block. */
+    bool IsBlockPayeeValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, CAmount blockSubsidy, CAmount feeReward, MnRewardEra era, bool strict_multiplicity);
+
     // Apply the effects of a block disconnection on the UTXO set.
     bool DisconnectTip(BlockValidationState& state, DisconnectedBlockTransactions* disconnectpool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);
 
@@ -774,6 +781,9 @@ public:
         return m_mempool ? &m_mempool->cs : nullptr;
     }
 private:
+    bool IsTransactionValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, CAmount blockSubsidy,
+                            CAmount feeReward, MnRewardEra era, bool strict_multiplicity);
+
     bool ActivateBestChainStep(BlockValidationState& state, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock>& pblock, bool& fInvalidFound, ConnectTrace& connectTrace) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);
     bool ConnectTip(BlockValidationState& state, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock>& pblock, ConnectTrace& connectTrace, DisconnectedBlockTransactions& disconnectpool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);
 

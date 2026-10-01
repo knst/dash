@@ -112,9 +112,6 @@ private:
 private:
     [[nodiscard]] bool GetMasternodeTxOuts(const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy, const CAmount feeReward,
                                       MnRewardEra era, std::vector<CTxOut>& voutMasternodePaymentsRet);
-    [[nodiscard]] bool IsTransactionValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy,
-                                          const CAmount feeReward, MnRewardEra era, bool strict_multiplicity);
-    [[nodiscard]] bool IsOldBudgetBlockValueValid(const CBlock& block, const int nBlockHeight, const CAmount blockReward, std::string& strErrorRet, SuperBlockCheckType check_superblock);
 
 public:
     explicit CMNPaymentsProcessor(const std::function<SuperblockStatus(const CDeterministicMNList& mn_list, int nBlockHeight)>& superblock_status,
@@ -124,8 +121,6 @@ public:
     {
     }
 
-    bool IsBlockValueValid(const CBlock& block, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockReward, std::string& strErrorRet, SuperBlockCheckType check_superblock);
-    bool IsBlockPayeeValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy, const CAmount feeReward, MnRewardEra era, bool strict_multiplicity);
     void FillBlockPayments(CMutableTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy, const CAmount feeReward,
                            MnRewardEra era, std::vector<CTxOut>& voutMasternodePaymentsRet, std::vector<CTxOut>& voutSuperblockPaymentsRet);
 };

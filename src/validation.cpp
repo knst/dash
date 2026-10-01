@@ -70,6 +70,7 @@
 #include <evo/specialtx.h>
 #include <evo/specialtxman.h>
 #include <instantsend/lock.h>
+#include <key_io.h>
 #include <masternode/payments.h>
 #include <stats/client.h>
 #include <util/std23.h>
@@ -2481,6 +2482,198 @@ static SteadyClock::duration time_index{};
 static SteadyClock::duration time_total{};
 static int64_t num_blocks_total = 0;
 
+bool Chainstate::IsTransactionValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy,
+                                                            const CAmount feeReward, MnRewardEra era, bool strict_multiplicity)
+{
+    const Consensus::Params& consensus_params{m_chainman.GetConsensus()};
+    const int nBlockHeight = pindexPrev  == nullptr ? 0 : pindexPrev->nHeight + 1;
+    if (!DeploymentDIP0003Enforced(nBlockHeight, consensus_params)) {
+        // can't verify historical blocks here
+        return true;
+    }
+
+    std::vector<CTxOut> voutMasternodePayments;
+    if (!GetMasternodePayments(mn_list, pindexPrev, blockSubsidy, feeReward, era, consensus_params, voutMasternodePayments)) {
+        LogPrintf("CMNPaymentsProcessor::%s -- ERROR! Failed to get payees for block at height %s\n", __func__, nBlockHeight);
+        return true;
+    }
+
+    // With strict multiplicity (v24 active, computed by the caller) each expected payment must be
+    // matched by a distinct coinbase output: duplicate expected outputs require duplicate coinbase
+    // outputs. Pre-v24 retains the legacy existence-only check to avoid tightening historical
+    // validation.
+    const int unmatched_idx = FindUnmatchedMasternodePayment(voutMasternodePayments, txNew.vout, strict_multiplicity);
+    if (unmatched_idx >= 0) {
+        const auto& txout = voutMasternodePayments[unmatched_idx];
+        std::string str_payout;
+        if (CTxDestination dest; ExtractDestination(txout.scriptPubKey, dest)) {
+            str_payout = "address=" + EncodeDestination(dest);
+        } else {
+            str_payout = "scriptPubKey=" + HexStr(txout.scriptPubKey);
+        }
+        LogPrintf("CMNPaymentsProcessor::%s -- ERROR! Failed to find expected payee %s amount=%lld height=%d\n",
+                  __func__, str_payout, txout.nValue, nBlockHeight);
+        return false;
+    }
+    return true;
+}
+
+[[nodiscard]] static bool IsOldBudgetBlockValueValid(const CBlock& block, const int nBlockHeight, const CAmount blockReward, std::string& strErrorRet, SuperBlockCheckType check_superblock,
+                                                     const Consensus::Params& consensus_params)
+{
+    bool isBlockRewardValueMet = (block.vtx[0]->GetValueOut() <= blockReward);
+
+    if (nBlockHeight < consensus_params.nBudgetPaymentsStartBlock) {
+        strErrorRet = strprintf("Incorrect block %d, old budgets are not activated yet", nBlockHeight);
+        return false;
+    }
+
+    if (nBlockHeight >= consensus_params.nSuperblockStartBlock) {
+        strErrorRet = strprintf("Incorrect block %d, old budgets are no longer active", nBlockHeight);
+        return false;
+    }
+
+    // we are still using budgets, but we have no data about them anymore,
+    // all we know is predefined budget cycle and window
+
+    int nOffset = nBlockHeight % consensus_params.nBudgetPaymentsCycleBlocks;
+    if (nOffset < consensus_params.nBudgetPaymentsWindowBlocks) {
+        // NOTE: old budget system is disabled since 12.1
+        if (check_superblock == SuperBlockCheckType::NoCheck) {
+            // historical mainnet blocks in this window do pay old budgets and we have no
+            // data to validate them with, so rely on online nodes (all networks)
+            LogPrint(BCLog::GOBJECT, "CMNPaymentsProcessor::%s -- WARNING! Skipping old budget block value checks, accepting block\n", __func__);
+            return true;
+        }
+        // no old budget blocks should be accepted here on mainnet,
+        // testnet/devnet/regtest should produce regular blocks only
+        if(!isBlockRewardValueMet) {
+            strErrorRet = strprintf("coinbase pays too much at height %d (actual=%d vs limit=%d), exceeded block reward, old budgets are disabled",
+                                    nBlockHeight, block.vtx[0]->GetValueOut(), blockReward);
+        }
+        return isBlockRewardValueMet;
+    }
+    if(!isBlockRewardValueMet) {
+        strErrorRet = strprintf("coinbase pays too much at height %d (actual=%d vs limit=%d), exceeded block reward, block is not in old budget cycle window",
+                                nBlockHeight, block.vtx[0]->GetValueOut(), blockReward);
+    }
+    return isBlockRewardValueMet;
+}
+
+/**
+* IsBlockValueValid
+*
+*   Determine if coinbase outgoing created money is the correct value
+*
+*   Why is this needed?
+*   - In Dash some blocks are superblocks, which output much higher amounts of coins
+*   - Other blocks are 10% lower in outgoing value, so in total, no extra coins are created
+*   - When non-superblocks are detected, the normal schedule should be maintained
+*/
+bool Chainstate::IsBlockValueValid(const CBlock& block, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockReward, std::string& strErrorRet, SuperBlockCheckType check_superblock)
+{
+    const Consensus::Params& consensus_params{m_chainman.GetConsensus()};
+    const int nBlockHeight = pindexPrev == nullptr ? 0 : pindexPrev->nHeight + 1;
+    bool isBlockRewardValueMet = (block.vtx[0]->GetValueOut() <= blockReward);
+
+    strErrorRet = "";
+
+    if (nBlockHeight < consensus_params.nBudgetPaymentsStartBlock) {
+        // old budget system is not activated yet, just make sure we do not exceed the regular block reward
+        if(!isBlockRewardValueMet) {
+            strErrorRet = strprintf("coinbase pays too much at height %d (actual=%d vs limit=%d), exceeded block reward, old budgets are not activated yet",
+                                    nBlockHeight, block.vtx[0]->GetValueOut(), blockReward);
+        }
+        return isBlockRewardValueMet;
+    } else if (nBlockHeight < consensus_params.nSuperblockStartBlock) {
+        // superblocks are not enabled yet, check if we can pass old budget rules
+        return IsOldBudgetBlockValueValid(block, nBlockHeight, blockReward, strErrorRet, check_superblock, consensus_params);
+    }
+
+    LogPrint(BCLog::MNPAYMENTS, "block.vtx[0]->GetValueOut() %lld <= blockReward %lld\n", block.vtx[0]->GetValueOut(), blockReward);
+
+    CAmount nSuperblockMaxValue =  blockReward + GetSuperblockPaymentsLimit(nBlockHeight, consensus_params);
+    bool isSuperblockMaxValueMet = (block.vtx[0]->GetValueOut() <= nSuperblockMaxValue);
+
+    LogPrint(BCLog::GOBJECT, "block.vtx[0]->GetValueOut() %lld <= nSuperblockMaxValue %lld\n", block.vtx[0]->GetValueOut(), nSuperblockMaxValue);
+
+    if (!IsSuperblockHeight(nBlockHeight, consensus_params)) {
+        // can't possibly be a superblock, so lets just check for block reward limits
+        if (!isBlockRewardValueMet) {
+            strErrorRet = strprintf("coinbase pays too much at height %d (actual=%d vs limit=%d), exceeded block reward, only regular blocks are allowed at this height",
+                                    nBlockHeight, block.vtx[0]->GetValueOut(), blockReward);
+        }
+        return isBlockRewardValueMet;
+    }
+
+    // bail out in case superblock limits were exceeded
+    if (!isSuperblockMaxValueMet) {
+        strErrorRet = strprintf("coinbase pays too much at height %d (actual=%d vs limit=%d), exceeded superblock max value",
+                                nBlockHeight, block.vtx[0]->GetValueOut(), nSuperblockMaxValue);
+        return false;
+    }
+
+    if (check_superblock == SuperBlockCheckType::NoCheck) return true;
+
+    SuperblockStatus superblock;
+    if (m_chainman.m_options.superblock_status) {
+        superblock = m_chainman.m_options.superblock_status(mn_list, nBlockHeight);
+    }
+    if (superblock.state == SuperblockStatus::State::ValidationDisabled) {
+        LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- WARNING! Not enough data, checked superblock max bounds only\n", __func__);
+        // not enough data for full checks but at least we know that the superblock limits were honored.
+        // We rely on the network to have followed the correct chain in this case
+        return true;
+    }
+
+    // we are synced and possibly on a superblock now
+
+    if (superblock.state == SuperblockStatus::State::NotTriggered) {
+        // we are on a valid superblock height but a superblock was not triggered
+        // revert to block reward limits in this case
+        if(!isBlockRewardValueMet) {
+            strErrorRet = strprintf("coinbase pays too much at height %d (actual=%d vs limit=%d), exceeded block reward, no triggered superblock detected",
+                                    nBlockHeight, block.vtx[0]->GetValueOut(), blockReward);
+        }
+        return isBlockRewardValueMet;
+    }
+
+    // miner and masternodes should not get more than they would usually get
+    const CAmount nPaymentsTotalAmount = std23::ranges::fold_left(superblock.payments, CAmount{0}, [](CAmount s, const auto& p) { return s + p.nValue; });
+    const bool isSuperblockValueMet = (block.vtx[0]->GetValueOut() <= blockReward + nPaymentsTotalAmount);
+    if (!isSuperblockValueMet) {
+        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, block value limit exceeded: block %lld, limit %lld\n", block.vtx[0]->GetValueOut(), blockReward + nPaymentsTotalAmount);
+    }
+
+    // this actually also checks for correct payees and not only amount
+    const bool is_v24{check_superblock == SuperBlockCheckType::DisallowDuplicates};
+    if (!isSuperblockValueMet || !IsSuperblockValid(superblock, *block.vtx[0], nBlockHeight, is_v24, GetSuperblockPaymentsLimit(nBlockHeight, consensus_params))) {
+        // triggered but invalid? that's weird
+        LogPrintf("CMNPaymentsProcessor::%s -- ERROR! Invalid superblock detected at height %d: %s", __func__, nBlockHeight, block.vtx[0]->ToString()); /* Continued */
+        // should NOT allow invalid superblocks, when superblocks are enabled
+        strErrorRet = strprintf("invalid superblock detected at height %d", nBlockHeight);
+        return false;
+    }
+
+    // we got a valid superblock
+    return true;
+}
+
+bool Chainstate::IsBlockPayeeValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy, const CAmount feeReward, MnRewardEra era, bool strict_multiplicity)
+{
+    const int nBlockHeight = pindexPrev  == nullptr ? 0 : pindexPrev->nHeight + 1;
+
+    // Check for correct masternode payment
+    if (IsTransactionValid(txNew, pindexPrev, mn_list, blockSubsidy, feeReward, era, strict_multiplicity)) {
+        LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- Valid masternode payment at height %d: %s", __func__, nBlockHeight, txNew.ToString()); /* Continued */
+    } else {
+        LogPrintf("CMNPaymentsProcessor::%s -- ERROR! Invalid masternode payment detected at height %d: %s", __func__, nBlockHeight, txNew.ToString()); /* Continued */
+        return false;
+    }
+
+    return true;
+}
+
 /** Apply the effects of this block (with given index) on the UTXO set represented by coins.
  *  Validity checks that depend on the UTXO set are also done; ConnectBlock()
  *  can fail if those validity checks fail (among other reasons). */
@@ -2861,7 +3054,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
         : special_tx_rules.v24 ? SuperBlockCheckType::DisallowDuplicates : SuperBlockCheckType::AllowDuplicates;
 
 
-    if (!m_chain_helper->mn_payments->IsBlockValueValid(block, pindex->pprev, mnlist_updates.old_list, blockSubsidy + feeReward, strError, check_superblock)) {
+    if (!IsBlockValueValid(block, pindex->pprev, mnlist_updates.old_list, blockSubsidy + feeReward, strError, check_superblock)) {
         // NOTE: Do not punish, the node might be missing governance data
         LogPrintf("ERROR: ConnectBlock(DASH): %s\n", strError);
         return state.Invalid(BlockValidationResult::BLOCK_RESULT_UNSET, "bad-cb-amount");
@@ -2875,7 +3068,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
              Ticks<MillisecondsDouble>(time_value_valid) / num_blocks_total);
 
     const MnRewardEra mn_reward_era{GetMnRewardEraAfter(pindex->pprev, m_chainman)};
-    if (!m_chain_helper->mn_payments->IsBlockPayeeValid(*block.vtx[0], pindex->pprev, mnlist_updates.old_list, blockSubsidy, feeReward,
+    if (!IsBlockPayeeValid(*block.vtx[0], pindex->pprev, mnlist_updates.old_list, blockSubsidy, feeReward,
                                                         mn_reward_era, special_tx_rules.v24)) {
         // NOTE: Do not punish, the node might be missing governance data
         LogPrintf("ERROR: ConnectBlock(DASH): couldn't find masternode or superblock payments\n");
