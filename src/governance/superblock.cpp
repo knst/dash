@@ -11,6 +11,7 @@
 #include <governance/vote.h>
 #include <key_io.h>
 #include <logging.h>
+#include <masternode/payments.h>
 #include <primitives/transaction.h>
 #include <util/std23.h>
 #include <util/strencodings.h>
@@ -118,9 +119,7 @@ CSuperblock::CSuperblock(int nBlockHeight, std::vector<CGovernancePayment> vecPa
 
 bool CSuperblock::IsValidBlockHeight(int nBlockHeight)
 {
-    // SUPERBLOCKS CAN HAPPEN ONLY after hardfork and only ONCE PER CYCLE
-    return nBlockHeight >= Params().GetConsensus().nSuperblockStartBlock &&
-           ((nBlockHeight % Params().GetConsensus().nSuperblockCycle) == 0);
+    return IsSuperblockHeight(nBlockHeight, Params().GetConsensus());
 }
 
 void CSuperblock::GetNearestSuperblocksHeights(int nBlockHeight, int& nLastSuperblockRet, int& nNextSuperblockRet)
@@ -144,22 +143,7 @@ void CSuperblock::GetNearestSuperblocksHeights(int nBlockHeight, int& nLastSuper
 
 CAmount CSuperblock::GetPaymentsLimit(int nBlockHeight)
 {
-    const Consensus::Params& consensusParams = Params().GetConsensus();
-
-    if (!IsValidBlockHeight(nBlockHeight)) {
-        return 0;
-    }
-
-    const bool fV20Active{nBlockHeight >= consensusParams.V20Height};
-
-    // min subsidy for high diff networks and vice versa
-    int nBits = consensusParams.fPowAllowMinDifficultyBlocks ? UintToArith256(consensusParams.powLimit).GetCompact() : 1;
-    // some part of all blocks issued during the cycle goes to superblock, see GetBlockSubsidy
-    CAmount nSuperblockPartOfSubsidy = GetSuperblockSubsidyInner(nBits, nBlockHeight - 1, consensusParams, fV20Active);
-    CAmount nPaymentsLimit = nSuperblockPartOfSubsidy * consensusParams.nSuperblockCycle;
-    LogPrint(BCLog::GOBJECT, "CSuperblock::GetPaymentsLimit -- Valid superblock height %d, payments max %lld\n", nBlockHeight, nPaymentsLimit);
-
-    return nPaymentsLimit;
+    return GetSuperblockPaymentsLimit(nBlockHeight, Params().GetConsensus());
 }
 
 void CSuperblock::ParsePaymentSchedule(const std::string& strPaymentAddresses, const std::string& strPaymentAmounts, const std::string& strProposalHashes)

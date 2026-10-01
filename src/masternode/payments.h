@@ -70,6 +70,9 @@ enum class SuperBlockCheckType {
 
 CAmount GetMasternodePayment(int nHeight, CAmount blockValue, const Consensus::Params& consensus_params, MnRewardEra era);
 
+/** Superblocks happen once per cycle after the superblock hardfork. */
+bool IsSuperblockHeight(int nBlockHeight, const Consensus::Params& consensus_params);
+
 class CMNPaymentsProcessor
 {
 private:

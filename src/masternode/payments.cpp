@@ -128,6 +128,13 @@ CAmount GetMasternodePayment(int nHeight, CAmount blockValue, const Consensus::P
     return static_cast<CAmount>(blockValue * vecPeriods[nCurrentPeriod] / 1000);
 }
 
+bool IsSuperblockHeight(const int nBlockHeight, const Consensus::Params& consensus_params)
+{
+    // SUPERBLOCKS CAN HAPPEN ONLY after hardfork and only ONCE PER CYCLE
+    return nBlockHeight >= consensus_params.nSuperblockStartBlock &&
+           ((nBlockHeight % consensus_params.nSuperblockCycle) == 0);
+}
+
 [[nodiscard]] bool CMNPaymentsProcessor::GetBlockTxOuts(const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward,
                                                         MnRewardEra era, std::vector<CTxOut>& voutMasternodePaymentsRet)
 {
