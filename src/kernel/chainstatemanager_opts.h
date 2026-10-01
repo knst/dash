@@ -16,6 +16,7 @@
 
 class CChainParams;
 class CDeterministicMNList;
+class CMasternodeSync;
 
 static constexpr bool DEFAULT_CHECKPOINTS_ENABLED{true};
 static constexpr auto DEFAULT_MAX_TIP_AGE{6h}; // ~144 blocks behind -> 2 x fork detection time, was 24h in bitcoin
@@ -40,6 +41,9 @@ struct ChainstateManagerOpts {
     //! Dash: governance's superblock status for a block height, consulted by
     //! block validation and the miner. Unset means superblock validation is disabled.
     std::function<SuperblockStatus(const CDeterministicMNList& mn_list, int nBlockHeight)> superblock_status{};
+    //! Dash: sync state gating superblock enforcement; must outlive the
+    //! ChainstateManager and be set by any manager that connects blocks.
+    const CMasternodeSync* mn_sync{nullptr};
 };
 
 } // namespace kernel

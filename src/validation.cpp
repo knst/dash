@@ -72,6 +72,7 @@
 #include <instantsend/lock.h>
 #include <key_io.h>
 #include <masternode/payments.h>
+#include <masternode/sync.h>
 #include <stats/client.h>
 #include <util/std23.h>
 
@@ -2482,6 +2483,19 @@ static SteadyClock::duration time_index{};
 static SteadyClock::duration time_total{};
 static int64_t num_blocks_total = 0;
 
+bool Chainstate::IsSuperblockValidationRequired(const CBlockIndex* const pindex) const
+{
+    if (m_chain_helper->GetBestChainLockHeight() >= pindex->nHeight) {
+        LogPrint(BCLog::MNPAYMENTS, "%s -- validation of chainlocked block=%s is skipped\n", __func__, pindex->GetBlockHash().ToString());
+        return false;
+    }
+    if (!Assert(m_chainman.m_options.mn_sync)->IsSynced()) {
+        LogPrint(BCLog::MNPAYMENTS, "%s -- WARNING! Node is not fully synced, checked superblock for block=%s max bounds only\n", __func__, pindex->GetBlockHash().ToString());
+        return false;
+    }
+    return true;
+}
+
 bool Chainstate::IsTransactionValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy,
                                                             const CAmount feeReward, MnRewardEra era, bool strict_multiplicity)
 {
@@ -3049,7 +3063,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
              Ticks<SecondsDouble>(time_subsidy),
              Ticks<MillisecondsDouble>(time_subsidy) / num_blocks_total);
 
-    const SuperBlockCheckType check_superblock = !m_chain_helper->IsSuperblockValidationRequired(pindex)
+    const SuperBlockCheckType check_superblock = !IsSuperblockValidationRequired(pindex)
         ? SuperBlockCheckType::NoCheck
         : special_tx_rules.v24 ? SuperBlockCheckType::DisallowDuplicates : SuperBlockCheckType::AllowDuplicates;
 

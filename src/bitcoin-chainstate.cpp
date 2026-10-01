@@ -91,15 +91,16 @@ int main(int argc, char* argv[])
 
 
     // SETUP: Chainstate
+    CMasternodeSync mn_sync{std::make_unique<NullNodeSyncNotifier>()};
     const ChainstateManager::Options chainman_opts{
         .chainparams = chainparams,
+        .mn_sync = &mn_sync,
     };
     ChainstateManager chainman{chainman_opts};
 
     CMasternodeMetaMan metaman;
     CEvoDB evodb{util::DbWrapperParams{.path = gArgs.GetDataDirNet(), .memory = false, .wipe = false}};
     CDeterministicMNManager dmnman{evodb, metaman};
-    CMasternodeSync mn_sync{std::make_unique<NullNodeSyncNotifier>()};
     CSporkManager sporkman;
     chainlock::Chainlocks chainlocks(sporkman);
     // TODO: remove isman from bitcoin-chainstate and make it nullable for node::ChainstateLoadOptions same as mempool
@@ -108,7 +109,7 @@ int main(int argc, char* argv[])
     auto llmq_ctx = WITH_LOCK(::cs_main, return std::make_unique<LLMQContext>(dmnman, evodb, chainman,
                                                                               util::DbWrapperParams{.path = gArgs.GetDataDirNet(), .memory = false, .wipe = false},
                                                                               llmq::DEFAULT_BLSCHECK_THREADS, llmq::DEFAULT_WORKER_COUNT, llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE));
-    auto chain_helper = std::make_unique<CChainstateHelper>(evodb, dmnman, mn_sync, isman,
+    auto chain_helper = std::make_unique<CChainstateHelper>(evodb, dmnman, isman,
                                                             *llmq_ctx->quorum_block_processor, *llmq_ctx->qsnapman,
                                                             chainman, chainman.m_blockman, chainman.GetConsensus(),
                                                             chainlocks, *llmq_ctx->qman, chainman.m_options.superblock_status);

@@ -271,6 +271,7 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
         .chainparams = chainparams,
         .check_block_index = true,
         .superblock_status = [&sbman = *m_node.sbman](const CDeterministicMNList& mn_list, int height) { return sbman.GetStatus(mn_list, height); },
+        .mn_sync = m_node.mn_sync.get(),
     };
     m_node.chainman = std::make_unique<ChainstateManager>(chainman_opts);
     m_node.chainman->m_blockman.m_block_tree_db = std::make_unique<CBlockTreeDB>(m_cache_sizes.block_tree_db, true);
@@ -326,7 +327,7 @@ void ChainTestingSetup::MakeDashChainContexts(const bool llmq_dbs_wipe)
     m_node.llmq_ctx = std::make_unique<LLMQContext>(*m_node.dmnman, *m_node.evodb, chainman,
                                                     util::DbWrapperParams{.path = m_node.args->GetDataDirNet(), .memory = m_dash_dbs_in_memory, .wipe = llmq_dbs_wipe},
                                                     llmq::DEFAULT_BLSCHECK_THREADS, llmq::DEFAULT_WORKER_COUNT, llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE);
-    m_node.chain_helper = std::make_unique<CChainstateHelper>(*m_node.evodb, *m_node.dmnman, *Assert(m_node.mn_sync), *Assert(m_node.isman),
+    m_node.chain_helper = std::make_unique<CChainstateHelper>(*m_node.evodb, *m_node.dmnman, *Assert(m_node.isman),
                                                               *m_node.llmq_ctx->quorum_block_processor, *m_node.llmq_ctx->qsnapman,
                                                               chainman, chainman.m_blockman, chainman.GetConsensus(),
                                                               *Assert(m_node.chainlocks), *m_node.llmq_ctx->qman, chainman.m_options.superblock_status);

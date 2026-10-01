@@ -18,7 +18,6 @@ class CCreditPoolManager;
 class CDeterministicMNManager;
 class CEvoDB;
 class ChainstateManager;
-class CMasternodeSync;
 class CMNHFManager;
 class CMNPaymentsProcessor;
 class CSpecialTxProcessor;
@@ -44,7 +43,6 @@ class CChainstateHelper
 {
 private:
     llmq::CInstantSendManager& isman;
-    const CMasternodeSync& mn_sync;
     CDeterministicMNManager& m_dmnman;
 
 public:
@@ -58,15 +56,13 @@ public:
     CChainstateHelper() = delete;
     CChainstateHelper(const CChainstateHelper&) = delete;
     CChainstateHelper& operator=(const CChainstateHelper&) = delete;
-    explicit CChainstateHelper(CEvoDB& evodb, CDeterministicMNManager& dmnman, const CMasternodeSync& mn_sync,
+    explicit CChainstateHelper(CEvoDB& evodb, CDeterministicMNManager& dmnman,
                                llmq::CInstantSendManager& isman, llmq::CQuorumBlockProcessor& qblockman,
                                llmq::CQuorumSnapshotManager& qsnapman, const ChainstateManager& chainman,
                                const node::BlockManager& blockman, const Consensus::Params& consensus_params,
                                const chainlock::Chainlocks& chainlocks, const llmq::CQuorumManager& qman,
                                const std::function<SuperblockStatus(const CDeterministicMNList& mn_list, int nBlockHeight)>& superblock_status);
     ~CChainstateHelper();
-
-    bool IsSuperblockValidationRequired(const CBlockIndex* const pindex);
 
     /** Passthrough functions to chainlock::Chainlocks */
     bool HasConflictingChainLock(int nHeight, const uint256& blockHash) const;

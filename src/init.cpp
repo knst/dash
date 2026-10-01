@@ -1991,6 +1991,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     ChainstateManager::Options chainman_opts{
         .chainparams = chainparams,
         .superblock_status = [&sbman = *node.sbman](const CDeterministicMNList& mn_list, int height) { return sbman.GetStatus(mn_list, height); },
+        .mn_sync = node.mn_sync.get(),
     };
     Assert(!ApplyArgsManOptions(args, chainman_opts)); // no error can happen, already checked in AppInitParameterInteraction
 
@@ -2103,7 +2104,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                 WITH_LOCK(::cs_main, node.llmq_ctx = std::make_unique<LLMQContext>(*node.dmnman, *node.evodb, chainman,
                                                                                    util::DbWrapperParams{.path = args.GetDataDirNet(), .memory = false, .wipe = node::fReindex || fReindexChainState},
                                                                                    bls_threads, llmq::DEFAULT_WORKER_COUNT, max_recsigs_age));
-                node.chain_helper = std::make_unique<CChainstateHelper>(*node.evodb, *node.dmnman, *node.mn_sync, *node.isman,
+                node.chain_helper = std::make_unique<CChainstateHelper>(*node.evodb, *node.dmnman, *node.isman,
                                                                         *node.llmq_ctx->quorum_block_processor, *node.llmq_ctx->qsnapman,
                                                                         chainman, chainman.m_blockman, chainman.GetConsensus(),
                                                                         *node.chainlocks, *node.llmq_ctx->qman, chainman.m_options.superblock_status);

@@ -781,6 +781,10 @@ public:
         return m_mempool ? &m_mempool->cs : nullptr;
     }
 private:
+    //! Dash: superblock payments are only enforced by a synced node and for
+    //! blocks that are not chainlocked yet
+    bool IsSuperblockValidationRequired(const CBlockIndex* const pindex) const;
+
     bool IsTransactionValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, CAmount blockSubsidy,
                             CAmount feeReward, MnRewardEra era, bool strict_multiplicity);
 

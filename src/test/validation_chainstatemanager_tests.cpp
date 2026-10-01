@@ -442,6 +442,7 @@ struct SnapshotTestSetup : TestChain100Setup {
             const ChainstateManager::Options chainman_opts{
                 .chainparams = ::Params(),
                 .superblock_status = [&sbman = *m_node.sbman](const CDeterministicMNList& mn_list, int height) { return sbman.GetStatus(mn_list, height); },
+                .mn_sync = m_node.mn_sync.get(),
             };
             // For robustness, ensure the old manager is destroyed before creating a
             // new one.

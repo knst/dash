@@ -15,17 +15,15 @@
 #include <instantsend/lock.h>
 #include <logging.h>
 #include <masternode/payments.h>
-#include <masternode/sync.h>
 #include <util/check.h>
 
-CChainstateHelper::CChainstateHelper(CEvoDB& evodb, CDeterministicMNManager& dmnman, const CMasternodeSync& mn_sync,
+CChainstateHelper::CChainstateHelper(CEvoDB& evodb, CDeterministicMNManager& dmnman,
                                      llmq::CInstantSendManager& isman, llmq::CQuorumBlockProcessor& qblockman,
                                      llmq::CQuorumSnapshotManager& qsnapman, const ChainstateManager& chainman,
                                      const node::BlockManager& blockman, const Consensus::Params& consensus_params,
                                      const chainlock::Chainlocks& chainlocks, const llmq::CQuorumManager& qman,
                                      const std::function<SuperblockStatus(const CDeterministicMNList& mn_list, int nBlockHeight)>& superblock_status) :
     isman{isman},
-    mn_sync{mn_sync},
     m_dmnman{dmnman},
     credit_pool_manager{std::make_unique<CCreditPoolManager>(evodb, chainman)},
     m_chainlocks{chainlocks},
@@ -36,19 +34,6 @@ CChainstateHelper::CChainstateHelper(CEvoDB& evodb, CDeterministicMNManager& dmn
 {}
 
 CChainstateHelper::~CChainstateHelper() = default;
-
-bool CChainstateHelper::IsSuperblockValidationRequired(const CBlockIndex* const pindex)
-{
-    if (m_chainlocks.GetBestChainLockHeight() >= pindex->nHeight) {
-        LogPrint(BCLog::MNPAYMENTS, "%s -- validation of chainlocked block=%s is skipped\n", __func__, pindex->GetBlockHash().ToString());
-        return false;
-    }
-    if (!mn_sync.IsSynced()) {
-        LogPrint(BCLog::MNPAYMENTS, "%s -- WARNING! Node is not fully synced, checked superblock for block=%s max bounds only\n", __func__, pindex->GetBlockHash().ToString());
-        return false;
-    }
-    return true;
-}
 
 /** Passthrough functions to chainlock::Chainlocks */
 bool CChainstateHelper::HasConflictingChainLock(int nHeight, const uint256& blockHash) const
