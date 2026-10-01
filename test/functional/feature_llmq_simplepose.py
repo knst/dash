@@ -241,9 +241,10 @@ class LLMQSimplePoSeTest(DashTestFramework):
             self.log.info(f"Testing no PoSe banning in normal conditions {i + 1}/{iters}")
             self.mine_quorum(expected_connections=expected_connections)
 
-    def mine_quorum_less_checks(self, expected_good_nodes, mninfos_online):
-        # Unlike in mine_quorum we skip most of the checks and only care about
-        # nodes moving forward from phase to phase correctly and the fact that the quorum is actually mined.
+    def mine_quorum_less_checks(self, expected_members, mninfos_online):
+        # Unlike in mine_quorum we don't know how many complaints and justifications to expect:
+        # the deaf masternode is a regular DKG participant until enough probes to it have failed,
+        # so each phase waits for exactly the messages the members report having sent instead.
         self.log.info("Mining a quorum with less checks")
         nodes = [self.nodes[0]] + [mn.get_node(self) for mn in mninfos_online]
 
@@ -256,30 +257,36 @@ class LLMQSimplePoSeTest(DashTestFramework):
         q = self.nodes[0].getbestblockhash()
         self.log.info("Expected quorum_hash: "+str(q))
         self.log.info("Waiting for phase 1 (init)")
-        self.wait_for_quorum_phase(q, 1, expected_good_nodes, None, 0, mninfos_online)
+        self.wait_for_quorum_phase(q, 1, expected_members, None, 0, mninfos_online)
+        self.wait_for_quorum_connections(q, expected_members - 1, mninfos_online, wait_proc=lambda: self.bump_mocktime(1))
+        self.log.info("Waiting for this round's probes of the deaf masternodes to be attempted")
+        self.wait_for_deaf_masternode_probes(mninfos_online)
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 2 (contribute)")
-        self.wait_for_quorum_phase(q, 2, expected_good_nodes, "receivedContributions", expected_good_nodes, mninfos_online)
+        self.wait_for_quorum_phase(q, 2, expected_members, "receivedContributions", expected_members, mninfos_online)
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 3 (complain)")
-        self.wait_for_quorum_phase(q, 3, expected_good_nodes, None, 0, mninfos_online)
+        self.wait_for_quorum_phase(q, 3, expected_members, "receivedComplaints", None, mninfos_online)
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 4 (justify)")
-        self.wait_for_quorum_phase(q, 4, expected_good_nodes, None, 0, mninfos_online)
+        self.wait_for_quorum_phase(q, 4, expected_members, "receivedJustifications", None, mninfos_online)
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 5 (commit)")
-        self.wait_for_quorum_phase(q, 5, expected_good_nodes, "receivedPrematureCommitments", expected_good_nodes, mninfos_online)
+        self.wait_for_quorum_phase(q, 5, expected_members, "receivedPrematureCommitments", expected_members, mninfos_online)
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 6 (mining)")
-        self.wait_for_quorum_phase(q, 6, expected_good_nodes, None, 0, mninfos_online)
+        self.wait_for_quorum_phase(q, 6, expected_members, None, 0, mninfos_online)
 
         self.log.info("Waiting final commitment")
         self.wait_for_quorum_commitment(q, mninfos_online)
+
+        self.log.info("Waiting final commitments on mining node")
+        self.wait_for_quorum_commitments_on_miner(q, mninfos_online)
 
         self.log.info("Mining final commitment")
         self.bump_mocktime(1, nodes=nodes)
@@ -299,6 +306,25 @@ class LLMQSimplePoSeTest(DashTestFramework):
         self.log.info("New quorum: height=%d, quorumHash=%s, quorumIndex=%d, minedBlock=%s" % (quorum_info["height"], new_quorum, quorum_info["quorumIndex"], quorum_info["minedBlock"]))
 
         return new_quorum
+
+    def wait_for_deaf_masternode_probes(self, mninfos_online):
+        # A member marks a deaf masternode bad only once enough probes of it have failed, and a
+        # probe attempt is counted when the connection is opened, not when the DKG round starts.
+        # reset_probe_timeouts() moved mocktime 10 minutes ahead of any previous attempt, so a
+        # younger attempt is this round's one. Already banned deaf masternodes are no members
+        # and are not probed anymore.
+        probed_mns = [mn for mn in self.deaf_mns if not check_banned(self.nodes[0], mn)]
+
+        def probes_attempted():
+            for mn in mninfos_online:
+                if mn in self.deaf_mns:
+                    continue
+                for probed_mn in probed_mns:
+                    if mn.get_node(self).protx('info', probed_mn.proTxHash)['metaInfo']['lastOutboundAttemptElapsed'] > 10 * 60:
+                        return False
+            return True
+
+        self.wait_until(probes_attempted)
 
     def test_banning(self, invalidate_proc, expected_connections=None):
         mninfos_online = self.mninfo.copy()
@@ -331,13 +357,14 @@ class LLMQSimplePoSeTest(DashTestFramework):
                     self.reset_probe_timeouts()
                     self.mine_quorum(expected_connections=expected_connections, expected_members=expected_contributors, expected_contributions=expected_contributors, expected_complaints=expected_complaints, expected_commitments=expected_contributors, mninfos_online=mninfos_online, mninfos_valid=mninfos_valid)
             else:
-                # It's ok to miss probes/quorum connections up to 5 times.
-                # 6th time is when it should be banned for sure.
+                # A member is marked bad once more than MASTERNODE_MAX_FAILED_OUTBOUND_ATTEMPTS (5)
+                # probes of it failed, i.e. from the 6th DKG round on with one probe per round, and
+                # each exclusion costs 66% of the ban threshold, so the 7th round bans it for sure.
                 assert expected_connections is None
-                for j in range(6):
-                    self.log.info(f"Accumulating PoSe penalty {j + 1}/6")
+                for j in range(7):
+                    self.log.info(f"Accumulating PoSe penalty {j + 1}/7")
                     self.reset_probe_timeouts()
-                    self.mine_quorum_less_checks(expected_contributors - 1, mninfos_online)
+                    self.mine_quorum_less_checks(expected_contributors, mninfos_online)
                     if check_banned(self.nodes[0], mn):
                         break
 
