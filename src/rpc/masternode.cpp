@@ -447,7 +447,7 @@ static RPCHelpMan masternode_payments()
         CMutableTransaction dummyTx;
         CAmount blockSubsidy = GetBlockSubsidy(pindex, Params().GetConsensus());
         const MnRewardEra mn_reward_era{GetMnRewardEraAfter(pindex->pprev, chainman)};
-        node.chain_helper->mn_payments->FillBlockPayments(dummyTx, pindex->pprev, blockSubsidy, nBlockFees, mn_reward_era, voutMasternodePayments, voutDummy);
+        node.chain_helper->mn_payments->FillBlockPayments(dummyTx, pindex->pprev, node.dmnman->GetListForBlock(pindex->pprev), blockSubsidy, nBlockFees, mn_reward_era, voutMasternodePayments, voutDummy);
 
         UniValue blockObj(UniValue::VOBJ);
         CAmount payedPerBlock{0};

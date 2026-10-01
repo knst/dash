@@ -72,6 +72,7 @@ BlockAssembler::BlockAssembler(Chainstate& chainstate, const NodeContext& node, 
       m_chain_helper(chainstate.ChainHelper()),
       m_chainstate{chainstate},
       m_evoDb(*Assert(node.evodb)),
+      m_dmnman(*Assert(node.dmnman)),
       m_chainlocks(*Assert(node.chainlocks)),
       m_clhandler(*Assert(node.clhandler)),
       chainparams(chainstate.m_chainman.GetParams()),
@@ -322,7 +323,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     // Update coinbase transaction with additional info about masternode and governance payments,
     // get some info back to pass to getblocktemplate
     const MnRewardEra mn_reward_era{GetMnRewardEraAfter(pindexPrev, m_chainstate.m_chainman)};
-    m_chain_helper.mn_payments->FillBlockPayments(coinbaseTx, pindexPrev, blockSubsidy, nFees, mn_reward_era, pblocktemplate->voutMasternodePayments, pblocktemplate->voutSuperblockPayments);
+    m_chain_helper.mn_payments->FillBlockPayments(coinbaseTx, pindexPrev, m_dmnman.GetListForBlock(pindexPrev), blockSubsidy, nFees, mn_reward_era, pblocktemplate->voutMasternodePayments, pblocktemplate->voutSuperblockPayments);
 
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
     pblocktemplate->vTxFees[0] = -nFees;

@@ -904,6 +904,9 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(Chainstate& chainstate, const
 
         CDeterministicMNList mn_list;
         if (DeploymentActiveAt(*pindex, m_consensus_params, Consensus::DEPLOYMENT_DIP0003)) {
+            // ConnectBlock validates masternode payments against the list at the
+            // previous block, also under fJustCheck where ProcessBlock is skipped.
+            updatesRet.old_list = m_dmnman.GetListForBlock(pindex->pprev);
             if (!BuildNewListFromBlock(block, pindex->pprev, rules.v24, view, true, state, mn_list)) {
                 // pass the state returned by the function above
                 return false;

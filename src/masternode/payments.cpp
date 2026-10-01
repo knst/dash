@@ -211,33 +211,34 @@ bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& t
     return true;
 }
 
-[[nodiscard]] bool CMNPaymentsProcessor::GetBlockTxOuts(const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward,
-                                                        MnRewardEra era, std::vector<CTxOut>& voutMasternodePaymentsRet)
+bool GetMasternodePayments(const CDeterministicMNList& mn_list, const CBlockIndex* pindexPrev,
+                           const CAmount blockSubsidy, const CAmount feeReward, MnRewardEra era,
+                           const Consensus::Params& consensus_params,
+                           std::vector<CTxOut>& voutMasternodePaymentsRet)
 {
     voutMasternodePaymentsRet.clear();
 
     const int nBlockHeight = pindexPrev  == nullptr ? 0 : pindexPrev->nHeight + 1;
 
-    CAmount masternodeReward = GetMasternodePayment(nBlockHeight, blockSubsidy + feeReward, m_consensus_params, era);
+    CAmount masternodeReward = GetMasternodePayment(nBlockHeight, blockSubsidy + feeReward, consensus_params, era);
 
     // Credit Pool doesn't exist before V20. If any part of reward will re-allocated to credit pool before v20
     // activation these fund will be just permanently lost. Applicable for devnets, regtest, testnet
     if (era == MnRewardEra::EvoReward) {
-        CAmount masternodeSubsidyReward = GetMasternodePayment(nBlockHeight, blockSubsidy, m_consensus_params, era);
+        CAmount masternodeSubsidyReward = GetMasternodePayment(nBlockHeight, blockSubsidy, consensus_params, era);
         const CAmount platformReward = PlatformShare(masternodeSubsidyReward);
         masternodeReward -= platformReward;
 
         assert(MoneyRange(masternodeReward));
 
-        LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- MN reward %lld reallocated to credit pool\n", __func__, platformReward);
+        LogPrint(BCLog::MNPAYMENTS, "%s -- MN reward %lld reallocated to credit pool\n", __func__, platformReward);
         voutMasternodePaymentsRet.emplace_back(platformReward, CScript() << OP_RETURN);
     }
-    const auto mnList = m_dmnman.GetListForBlock(pindexPrev);
-    if (mnList.GetCounts().total() == 0) {
-        LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- no masternode registered to receive a payment\n", __func__);
+    if (mn_list.GetCounts().total() == 0) {
+        LogPrint(BCLog::MNPAYMENTS, "%s -- no masternode registered to receive a payment\n", __func__);
         return true;
     }
-    const auto dmnPayee = mnList.GetMNPayee(pindexPrev);
+    const auto dmnPayee = mn_list.GetMNPayee(pindexPrev);
     if (!dmnPayee) {
         return false;
     }
@@ -286,13 +287,13 @@ bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& t
 *
 *   Get masternode payment tx outputs
 */
-[[nodiscard]] bool CMNPaymentsProcessor::GetMasternodeTxOuts(const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward,
+[[nodiscard]] bool CMNPaymentsProcessor::GetMasternodeTxOuts(const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy, const CAmount feeReward,
                                                              MnRewardEra era, std::vector<CTxOut>& voutMasternodePaymentsRet)
 {
     // make sure it's not filled yet
     voutMasternodePaymentsRet.clear();
 
-    if(!GetBlockTxOuts(pindexPrev, blockSubsidy, feeReward, era, voutMasternodePaymentsRet)) {
+    if(!GetMasternodePayments(mn_list, pindexPrev, blockSubsidy, feeReward, era, m_consensus_params, voutMasternodePaymentsRet)) {
         LogPrintf("CMNPaymentsProcessor::%s -- ERROR Failed to get payee\n", __func__);
         return false;
     }
@@ -307,7 +308,7 @@ bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& t
     return true;
 }
 
-[[nodiscard]] bool CMNPaymentsProcessor::IsTransactionValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CAmount blockSubsidy,
+[[nodiscard]] bool CMNPaymentsProcessor::IsTransactionValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy,
                                                             const CAmount feeReward, MnRewardEra era, bool strict_multiplicity)
 {
     const int nBlockHeight = pindexPrev  == nullptr ? 0 : pindexPrev->nHeight + 1;
@@ -317,7 +318,7 @@ bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& t
     }
 
     std::vector<CTxOut> voutMasternodePayments;
-    if (!GetBlockTxOuts(pindexPrev, blockSubsidy, feeReward, era, voutMasternodePayments)) {
+    if (!GetMasternodePayments(mn_list, pindexPrev, blockSubsidy, feeReward, era, m_consensus_params, voutMasternodePayments)) {
         LogPrintf("CMNPaymentsProcessor::%s -- ERROR! Failed to get payees for block at height %s\n", __func__, nBlockHeight);
         return true;
     }
@@ -393,7 +394,7 @@ bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& t
 *   - Other blocks are 10% lower in outgoing value, so in total, no extra coins are created
 *   - When non-superblocks are detected, the normal schedule should be maintained
 */
-bool CMNPaymentsProcessor::IsBlockValueValid(const CBlock& block, const CBlockIndex* pindexPrev, const CAmount blockReward, std::string& strErrorRet, SuperBlockCheckType check_superblock)
+bool CMNPaymentsProcessor::IsBlockValueValid(const CBlock& block, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockReward, std::string& strErrorRet, SuperBlockCheckType check_superblock)
 {
     const int nBlockHeight = pindexPrev == nullptr ? 0 : pindexPrev->nHeight + 1;
     bool isBlockRewardValueMet = (block.vtx[0]->GetValueOut() <= blockReward);
@@ -437,8 +438,7 @@ bool CMNPaymentsProcessor::IsBlockValueValid(const CBlock& block, const CBlockIn
 
     if (check_superblock == SuperBlockCheckType::NoCheck) return true;
 
-    const auto tip_mn_list = m_dmnman.GetListAtChainTip();
-    const SuperblockStatus superblock{m_superblocks.GetStatus(tip_mn_list, nBlockHeight)};
+    const SuperblockStatus superblock{m_superblocks.GetStatus(mn_list, nBlockHeight)};
     if (superblock.state == SuperblockStatus::State::ValidationDisabled) {
         LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- WARNING! Not enough data, checked superblock max bounds only\n", __func__);
         // not enough data for full checks but at least we know that the superblock limits were honored.
@@ -479,12 +479,12 @@ bool CMNPaymentsProcessor::IsBlockValueValid(const CBlock& block, const CBlockIn
     return true;
 }
 
-bool CMNPaymentsProcessor::IsBlockPayeeValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward, MnRewardEra era, bool strict_multiplicity)
+bool CMNPaymentsProcessor::IsBlockPayeeValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy, const CAmount feeReward, MnRewardEra era, bool strict_multiplicity)
 {
     const int nBlockHeight = pindexPrev  == nullptr ? 0 : pindexPrev->nHeight + 1;
 
     // Check for correct masternode payment
-    if (IsTransactionValid(txNew, pindexPrev, blockSubsidy, feeReward, era, strict_multiplicity)) {
+    if (IsTransactionValid(txNew, pindexPrev, mn_list, blockSubsidy, feeReward, era, strict_multiplicity)) {
         LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- Valid masternode payment at height %d: %s", __func__, nBlockHeight, txNew.ToString()); /* Continued */
     } else {
         LogPrintf("CMNPaymentsProcessor::%s -- ERROR! Invalid masternode payment detected at height %d: %s", __func__, nBlockHeight, txNew.ToString()); /* Continued */
@@ -494,19 +494,18 @@ bool CMNPaymentsProcessor::IsBlockPayeeValid(const CTransaction& txNew, const CB
     return true;
 }
 
-void CMNPaymentsProcessor::FillBlockPayments(CMutableTransaction& txNew, const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward,
+void CMNPaymentsProcessor::FillBlockPayments(CMutableTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy, const CAmount feeReward,
                                              MnRewardEra era, std::vector<CTxOut>& voutMasternodePaymentsRet, std::vector<CTxOut>& voutSuperblockPaymentsRet)
 {
     int nBlockHeight = pindexPrev == nullptr ? 0 : pindexPrev->nHeight + 1;
 
     // Only create superblocks when one is actually triggered.
-    const auto tip_mn_list = m_dmnman.GetListAtChainTip();
-    if (SuperblockStatus superblock{m_superblocks.GetStatus(tip_mn_list, nBlockHeight)}; superblock.state == SuperblockStatus::State::Triggered) {
+    if (SuperblockStatus superblock{m_superblocks.GetStatus(mn_list, nBlockHeight)}; superblock.state == SuperblockStatus::State::Triggered) {
         LogPrint(BCLog::GOBJECT, "CMNPaymentsProcessor::%s -- Triggered superblock creation at height %d\n", __func__, nBlockHeight);
         voutSuperblockPaymentsRet = std::move(superblock.payments);
     }
 
-    if (!GetMasternodeTxOuts(pindexPrev, blockSubsidy, feeReward, era, voutMasternodePaymentsRet)) {
+    if (!GetMasternodeTxOuts(pindexPrev, mn_list, blockSubsidy, feeReward, era, voutMasternodePaymentsRet)) {
         LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- No masternode to pay (MN list probably empty)\n", __func__);
     }
 

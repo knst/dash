@@ -25,6 +25,7 @@ class CBlockIndex;
 class CChainParams;
 class CChainstateHelper;
 class CConnman;
+class CDeterministicMNManager;
 class CEvoDB;
 class CScript;
 struct LLMQContext;
@@ -165,6 +166,7 @@ private:
     CChainstateHelper& m_chain_helper;
     Chainstate& m_chainstate;
     CEvoDB& m_evoDb;
+    CDeterministicMNManager& m_dmnman;
     const chainlock::Chainlocks& m_chainlocks;
     chainlock::ChainlockHandler& m_clhandler;
     const CChainParams& chainparams;
