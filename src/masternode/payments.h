@@ -73,6 +73,13 @@ CAmount GetMasternodePayment(int nHeight, CAmount blockValue, const Consensus::P
 /** Superblocks happen once per cycle after the superblock hardfork. */
 bool IsSuperblockHeight(int nBlockHeight, const Consensus::Params& consensus_params);
 
+/**
+ * Whether the coinbase carries every expected superblock payment, in order,
+ * within the superblock payments limit, and without paying the miner and
+ * masternodes more than the block reward.
+ */
+bool IsSuperblockValid(const std::vector<CTxOut>& payments, const CTransaction& txNew, int block_height, CAmount blockReward, bool is_v24, CAmount nPaymentsLimit);
+
 class CMNPaymentsProcessor
 {
 private:

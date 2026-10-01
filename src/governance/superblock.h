@@ -104,13 +104,6 @@ public:
 
     int CountPayments() const { return static_cast<int>(vecPayments.size()); }
     bool GetPayment(int nPaymentIndex, CGovernancePayment& paymentRet);
-
-    /**
-     * Whether the coinbase carries every expected superblock payment, in order,
-     * within the superblock payments limit, and without paying the miner and
-     * masternodes more than the block reward.
-     */
-    static bool IsValid(const std::vector<CTxOut>& payments, const CTransaction& txNew, int block_height, CAmount blockReward, bool is_v24, CAmount nPaymentsLimit);
     bool IsExpired(int heightToTest) const;
 
     std::vector<uint256> GetProposalHashes() const;

@@ -9,6 +9,7 @@
 #include <masternode/sync.h>
 
 #include <chain.h>
+#include <chainparams.h>
 #include <consensus/amount.h>
 #include <deploymentstatus.h>
 #include <key_io.h>
@@ -16,7 +17,9 @@
 #include <primitives/block.h>
 #include <script/standard.h>
 #include <tinyformat.h>
+#include <util/std23.h>
 
+#include <algorithm>
 #include <cassert>
 #include <ranges>
 #include <string>
@@ -133,6 +136,84 @@ bool IsSuperblockHeight(const int nBlockHeight, const Consensus::Params& consens
     // SUPERBLOCKS CAN HAPPEN ONLY after hardfork and only ONCE PER CYCLE
     return nBlockHeight >= consensus_params.nSuperblockStartBlock &&
            ((nBlockHeight % consensus_params.nSuperblockCycle) == 0);
+}
+
+bool IsSuperblockValid(const std::vector<CTxOut>& payments, const CTransaction& txNew, int block_height, CAmount blockReward, bool is_v24, CAmount nPaymentsLimit)
+{
+    if (!IsSuperblockHeight(block_height, Params().GetConsensus())) {
+        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, incorrect block height\n");
+        return false;
+    }
+
+    // CONFIGURE SUPERBLOCK OUTPUTS
+
+    int nOutputs = txNew.vout.size();
+    int nPayments = payments.size();
+    int nMinerAndMasternodePayments = nOutputs - nPayments;
+
+    LogPrint(BCLog::GOBJECT, "CSuperblock::IsValid -- nOutputs = %d, nPayments = %d\n", nOutputs, nPayments);
+
+    // We require an exact match (including order) between the expected
+    // superblock payments and the payments actually in the block.
+
+    if (nMinerAndMasternodePayments < 0) {
+        // This means the block cannot have all the superblock payments
+        // so it is not valid.
+        // TODO: could that be that we just hit coinbase size limit?
+        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, too few superblock payments\n");
+        return false;
+    }
+
+    // payments should not exceed limit
+    CAmount nPaymentsTotalAmount = std23::ranges::fold_left(payments, CAmount{0}, [](CAmount s, const auto& p) { return s + p.nValue; });
+    if (nPaymentsTotalAmount > nPaymentsLimit) {
+        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, payments limit exceeded: payments %lld, limit %lld\n", nPaymentsTotalAmount, nPaymentsLimit);
+        return false;
+    }
+
+    // miner and masternodes should not get more than they would usually get
+    CAmount nBlockValue = txNew.GetValueOut();
+    if (nBlockValue > blockReward + nPaymentsTotalAmount) {
+        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, block value limit exceeded: block %lld, limit %lld\n", nBlockValue, blockReward + nPaymentsTotalAmount);
+        return false;
+    }
+
+    int nVoutIndex = -1;
+    for (int i = 0; i < nPayments; i++) {
+        const CTxOut& payment = payments[i];
+        bool fPaymentMatch = false;
+
+        // From V24 on, start past the previously matched output so each expected
+        // payment consumes a distinct vout (two adjacent payments with the same
+        // script and amount must match two separate outputs, not the same one
+        // twice). Before V24 the scan restarted at the previously matched index
+        // (inclusive), which is kept for backwards compatibility.
+        // TODO: After V24 is hardened/finalized so historical duplicate-output
+        // blocks cannot be encountered, simplify this path to the V24 scan only.
+        const int nVoutStart = is_v24 ? nVoutIndex + 1 : std::max(nVoutIndex, 0);
+        for (int j = nVoutStart; j < nOutputs; j++) {
+            // Find superblock payment
+            fPaymentMatch = ((payment.scriptPubKey == txNew.vout[j].scriptPubKey) &&
+                             (payment.nValue == txNew.vout[j].nValue));
+
+            if (fPaymentMatch) {
+                nVoutIndex = j;
+                break;
+            }
+        }
+
+        if (!fPaymentMatch) {
+            // Superblock payment not found!
+
+            CTxDestination dest;
+            ExtractDestination(payment.scriptPubKey, dest);
+            LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid: %d payment %d to %s not found\n", i, payment.nValue, EncodeDestination(dest));
+
+            return false;
+        }
+    }
+
+    return true;
 }
 
 [[nodiscard]] bool CMNPaymentsProcessor::GetBlockTxOuts(const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward,
