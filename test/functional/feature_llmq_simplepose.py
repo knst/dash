@@ -400,6 +400,8 @@ class LLMQSimplePoSeTest(DashTestFramework):
             assert not check_banned(self.nodes[0], mn)
             mn.get_node(self).setnetworkactive(False)
             self.wait_until(lambda: mn.get_node(self).getconnectioncount() == 0)
+            # node0 has to notice the drop as well, or it rejects the fresh MNAUTH as a duplicate of the stale peer
+            self.wait_until(lambda: all(p.get("verified_proregtx_hash") != mn.proTxHash for p in self.nodes[0].getpeerinfo()))
             mn.get_node(self).setnetworkactive(True)
             force_finish_mnsync(mn.get_node(self))
             self.connect_nodes(mn.nodeIdx, 0)
