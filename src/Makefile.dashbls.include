@@ -11,8 +11,10 @@ noinst_LTLIBRARIES += $(LIBMIMALLOC_INT)
 # What consumers link, dependents first: dashbls -> mimalloc -> blst (from depends)
 LIBDASHBLS = $(LIBDASHBLS_INT) $(LIBMIMALLOC_INT) $(BLST_LIBS)
 
-# Flags for consumers of the library
+# Flags for consumers of the library. mimalloc's header is exposed for
+# BLSInit(), which wraps the library's default allocator in the internal builds.
 DASHBLS_CPPFLAGS = -isystem$(srcdir)/dashbls/include
+DASHBLS_CPPFLAGS += -isystem$(srcdir)/dashbls/depends/mimalloc/include
 
 # Flags used only when building the library itself. Its headers are treated
 # as system headers, as they are for consumers, so that Dash's warning set

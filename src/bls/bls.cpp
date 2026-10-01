@@ -5,10 +5,12 @@
 #include <bls/bls.h>
 
 #include <random.h>
+#include <support/cleanse.h>
 
 #ifndef BUILD_BITCOIN_INTERNAL
 #include <support/allocators/mt_pooled_secure.h>
-#include <support/cleanse.h>
+#else
+#include <mimalloc.h>
 #endif
 
 #include <cassert>
@@ -428,12 +430,29 @@ static void secure_free(void* p)
     size_t n = *reinterpret_cast<size_t*>(ptr);
     return get_secure_allocator().deallocate(ptr, n);
 }
+#else
+
+// libdashkernel and libdashconsensus do not have the locked pool above and
+// stay on the BLS library's default mimalloc backend. mimalloc does not erase
+// a block when it is freed, so cleanse it here: once BLSInit() has run, memory
+// released through bls::Util::SecFree is wiped in these builds as well.
+static void cleansing_free(void* p)
+{
+    if (p == nullptr) {
+        return;
+    }
+
+    memory_cleanse(p, mi_usable_size(p));
+    mi_free(p);
+}
 #endif
 
 bool BLSInit()
 {
 #ifndef BUILD_BITCOIN_INTERNAL
     bls::BLS::SetSecureAllocator(secure_allocate, secure_free);
+#else
+    bls::BLS::SetSecureAllocator(mi_malloc, cleansing_free);
 #endif
     return true;
 }
