@@ -309,7 +309,7 @@ class DashGovernanceTest (DashTestFramework):
         # voted NO vote for the trigger non-isolated node created.
         # So everyone should be on the same page now with 25 votes total.
         for node in self.nodes:
-            assert_equal(node.gobject("count")["votes"], 25)
+            self.wait_until(lambda: node.gobject("count")["votes"] == 25, timeout=5)
 
         self.log.info("Remember vote count")
         before = self.nodes[1].gobject("count")["votes"]
