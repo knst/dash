@@ -2496,42 +2496,6 @@ bool Chainstate::IsSuperblockValidationRequired(const CBlockIndex* const pindex)
     return true;
 }
 
-bool Chainstate::IsTransactionValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy,
-                                                            const CAmount feeReward, MnRewardEra era, bool strict_multiplicity) const
-{
-    const Consensus::Params& consensus_params{m_chainman.GetConsensus()};
-    const int nBlockHeight = pindexPrev  == nullptr ? 0 : pindexPrev->nHeight + 1;
-    if (!DeploymentDIP0003Enforced(nBlockHeight, consensus_params)) {
-        // can't verify historical blocks here
-        return true;
-    }
-
-    std::vector<CTxOut> voutMasternodePayments;
-    if (!GetMasternodePayments(mn_list, pindexPrev, blockSubsidy, feeReward, era, consensus_params, voutMasternodePayments)) {
-        LogPrintf("CMNPaymentsProcessor::%s -- ERROR! Failed to get payees for block at height %s\n", __func__, nBlockHeight);
-        return true;
-    }
-
-    // With strict multiplicity (v24 active, computed by the caller) each expected payment must be
-    // matched by a distinct coinbase output: duplicate expected outputs require duplicate coinbase
-    // outputs. Pre-v24 retains the legacy existence-only check to avoid tightening historical
-    // validation.
-    const int unmatched_idx = FindUnmatchedMasternodePayment(voutMasternodePayments, txNew.vout, strict_multiplicity);
-    if (unmatched_idx >= 0) {
-        const auto& txout = voutMasternodePayments[unmatched_idx];
-        std::string str_payout;
-        if (CTxDestination dest; ExtractDestination(txout.scriptPubKey, dest)) {
-            str_payout = "address=" + EncodeDestination(dest);
-        } else {
-            str_payout = "scriptPubKey=" + HexStr(txout.scriptPubKey);
-        }
-        LogPrintf("CMNPaymentsProcessor::%s -- ERROR! Failed to find expected payee %s amount=%lld height=%d\n",
-                  __func__, str_payout, txout.nValue, nBlockHeight);
-        return false;
-    }
-    return true;
-}
-
 [[nodiscard]] static bool IsOldBudgetBlockValueValid(const CBlock& block, const int nBlockHeight, const CAmount blockReward, std::string& strErrorRet, const bool enforce,
                                                      const Consensus::Params& consensus_params)
 {
@@ -2556,7 +2520,7 @@ bool Chainstate::IsTransactionValid(const CTransaction& txNew, const CBlockIndex
         if (!enforce) {
             // historical mainnet blocks in this window do pay old budgets and we have no
             // data to validate them with, so rely on online nodes (all networks)
-            LogPrint(BCLog::GOBJECT, "CMNPaymentsProcessor::%s -- WARNING! Skipping old budget block value checks, accepting block\n", __func__);
+            LogPrint(BCLog::GOBJECT, "%s -- WARNING! Skipping old budget block value checks, accepting block\n", __func__);
             return true;
         }
         // no old budget blocks should be accepted here on mainnet,
@@ -2634,7 +2598,7 @@ bool Chainstate::IsBlockValueValid(const CBlock& block, const CBlockIndex* pinde
         superblock = m_chainman.m_options.superblock_status(mn_list, nBlockHeight);
     }
     if (superblock.state == SuperblockStatus::State::ValidationDisabled) {
-        LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- WARNING! Not enough data, checked superblock max bounds only\n", __func__);
+        LogPrint(BCLog::MNPAYMENTS, "%s -- WARNING! Not enough data, checked superblock max bounds only\n", __func__);
         // not enough data for full checks but at least we know that the superblock limits were honored.
         // We rely on the network to have followed the correct chain in this case
         return true;
@@ -2663,7 +2627,7 @@ bool Chainstate::IsBlockValueValid(const CBlock& block, const CBlockIndex* pinde
     const bool is_v24{DeploymentActiveAfter(pindex->pprev, m_chainman, Consensus::DEPLOYMENT_V24)};
     if (!isSuperblockValueMet || !IsSuperblockValid(superblock, *block.vtx[0], nBlockHeight, is_v24, GetSuperblockPaymentsLimit(nBlockHeight, consensus_params))) {
         // triggered but invalid? that's weird
-        LogPrintf("CMNPaymentsProcessor::%s -- ERROR! Invalid superblock detected at height %d: %s", __func__, nBlockHeight, block.vtx[0]->ToString()); /* Continued */
+        LogPrintf("%s -- ERROR! Invalid superblock detected at height %d: %s", __func__, nBlockHeight, block.vtx[0]->ToString()); /* Continued */
         // should NOT allow invalid superblocks, when superblocks are enabled
         strErrorRet = strprintf("invalid superblock detected at height %d", nBlockHeight);
         return false;
@@ -2675,19 +2639,41 @@ bool Chainstate::IsBlockValueValid(const CBlock& block, const CBlockIndex* pinde
 
 bool Chainstate::IsBlockPayeeValid(const CBlock& block, const CBlockIndex* pindex, const CDeterministicMNList& mn_list, const CAmount blockSubsidy, const CAmount feeReward) const
 {
+    const Consensus::Params& consensus_params{m_chainman.GetConsensus()};
     const CTransaction& txNew{*block.vtx[0]};
     const int nBlockHeight{pindex->nHeight};
-    const MnRewardEra era{GetMnRewardEraAfter(pindex->pprev, m_chainman)};
-    const bool strict_multiplicity{DeploymentActiveAfter(pindex->pprev, m_chainman, Consensus::DEPLOYMENT_V24)};
-
-    // Check for correct masternode payment
-    if (IsTransactionValid(txNew, pindex->pprev, mn_list, blockSubsidy, feeReward, era, strict_multiplicity)) {
-        LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- Valid masternode payment at height %d: %s", __func__, nBlockHeight, txNew.ToString()); /* Continued */
-    } else {
-        LogPrintf("CMNPaymentsProcessor::%s -- ERROR! Invalid masternode payment detected at height %d: %s", __func__, nBlockHeight, txNew.ToString()); /* Continued */
-        return false;
+    if (!DeploymentDIP0003Enforced(nBlockHeight, consensus_params)) {
+        // can't verify historical blocks here
+        return true;
     }
 
+    std::vector<CTxOut> voutMasternodePayments;
+    const MnRewardEra era{GetMnRewardEraAfter(pindex->pprev, m_chainman)};
+    if (!GetMasternodePayments(mn_list, pindex->pprev, blockSubsidy, feeReward, era, consensus_params, voutMasternodePayments)) {
+        LogPrintf("%s -- ERROR! Failed to get payees for block at height %s\n", __func__, nBlockHeight);
+        return true;
+    }
+
+    // With strict multiplicity (v24 active) each expected payment must be matched by a
+    // distinct coinbase output: duplicate expected outputs require duplicate coinbase
+    // outputs. Pre-v24 retains the legacy existence-only check to avoid tightening
+    // historical validation.
+    const bool strict_multiplicity{DeploymentActiveAfter(pindex->pprev, m_chainman, Consensus::DEPLOYMENT_V24)};
+    const int unmatched_idx = FindUnmatchedMasternodePayment(voutMasternodePayments, txNew.vout, strict_multiplicity);
+    if (unmatched_idx >= 0) {
+        const auto& txout = voutMasternodePayments[unmatched_idx];
+        std::string str_payout;
+        if (CTxDestination dest; ExtractDestination(txout.scriptPubKey, dest)) {
+            str_payout = "address=" + EncodeDestination(dest);
+        } else {
+            str_payout = "scriptPubKey=" + HexStr(txout.scriptPubKey);
+        }
+        LogPrintf("%s -- ERROR! Failed to find expected payee %s amount=%lld height=%d\n",
+                  __func__, str_payout, txout.nValue, nBlockHeight);
+        LogPrintf("%s -- ERROR! Invalid masternode payment detected at height %d: %s", __func__, nBlockHeight, txNew.ToString()); /* Continued */
+        return false;
+    }
+    LogPrint(BCLog::MNPAYMENTS, "%s -- Valid masternode payment at height %d: %s", __func__, nBlockHeight, txNew.ToString()); /* Continued */
     return true;
 }
 

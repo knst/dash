@@ -784,9 +784,6 @@ private:
     //! blocks that are not chainlocked yet
     bool IsSuperblockValidationRequired(const CBlockIndex* const pindex) const;
 
-    bool IsTransactionValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, CAmount blockSubsidy,
-                            CAmount feeReward, MnRewardEra era, bool strict_multiplicity) const;
-
     bool ActivateBestChainStep(BlockValidationState& state, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock>& pblock, bool& fInvalidFound, ConnectTrace& connectTrace) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);
     bool ConnectTip(BlockValidationState& state, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock>& pblock, ConnectTrace& connectTrace, DisconnectedBlockTransactions& disconnectpool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);
 
