@@ -2058,24 +2058,29 @@ class DashTestFramework(BitcoinTestFramework):
         self.bump_mocktime(6, update_schedulers=False)
         self.wait_until(check_sporks_same, timeout=timeout)
 
-    def wait_for_quorum_connections(self, quorum_hash, expected_connections, mninfos, llmq_type_name="llmq_test", timeout = 60, wait_proc=None):
+    def wait_for_quorum_connections(self, quorum_hash, expected_connections, mninfos, llmq_type_name="llmq_test", timeout = 60, wait_proc=None, all_types=False):
         def check_quorum_connections():
             def ret():
                 if wait_proc is not None:
                     wait_proc()
                 return False
 
+            # With all_types every type running its DKG at this base block has to have its connections
+            # up as well, or its contributions are lost and wait_for_quorum_phase never sees them;
+            # expected_connections only applies to the requested type
+            found = False
+            online = {mn.proTxHash for mn in mninfos}
             for mn in mninfos:
                 s = mn.get_node(self).quorum("dkgstatus")
                 for qs in s["session"]:
-                    if qs["llmqType"] != llmq_type_name:
+                    if not all_types and qs["llmqType"] != llmq_type_name:
                         continue
                     if qs["status"]["quorumHash"] != quorum_hash:
                         continue
                     for qc in s["quorumConnections"]:
                         if "quorumConnections" not in qc:
                             continue
-                        if qc["llmqType"] != llmq_type_name:
+                        if qc["llmqType"] != qs["llmqType"]:
                             continue
                         if qc["quorumHash"] != quorum_hash:
                             continue
@@ -2085,15 +2090,24 @@ class DashTestFramework(BitcoinTestFramework):
                         for c in qc["quorumConnections"]:
                             if c["connected"]:
                                 cnt += 1
-                        if cnt < expected_connections:
-                            return ret()
-                        return True
-                    # a session with no matching connections - not ok
-                    return ret()
+                            elif c["outbound"] and c["proTxHash"] in online:
+                                # DKG messages are only relayed over the outbound connections, and only to the
+                                # peers connected at the time, so a member must have all of them before it
+                                # sends anything
+                                return ret()
+                        if qs["llmqType"] == llmq_type_name:
+                            if cnt < expected_connections:
+                                return ret()
+                            found = True
+                        break
+                    else:
+                        # a session with no matching connections - not ok
+                        return ret()
                 # a node with no sessions - ok
-                pass
-            # no sessions at all - not ok
-            return ret()
+            if not found:
+                # no sessions at all - not ok
+                return ret()
+            return True
 
         self.wait_until(check_quorum_connections, timeout=timeout, sleep=1)
 
@@ -2315,7 +2329,7 @@ class DashTestFramework(BitcoinTestFramework):
         self.log.info("Expected quorum_hash:"+str(q))
         self.log.info("Waiting for phase 1 (init)")
         self.wait_for_quorum_phase(q, 1, expected_members, None, 0, mninfos_online, llmq_type_name=llmq_type_name, all_types=all_types)
-        self.wait_for_quorum_connections(q, expected_connections, mninfos_online, wait_proc=lambda: self.bump_mocktime(1), llmq_type_name=llmq_type_name)
+        self.wait_for_quorum_connections(q, expected_connections, mninfos_online, wait_proc=lambda: self.bump_mocktime(1), llmq_type_name=llmq_type_name, all_types=all_types)
         if spork23_active:
             self.wait_for_masternode_probes(q, mninfos_online, wait_proc=lambda: self.bump_mocktime(1))
 
@@ -2478,7 +2492,7 @@ class DashTestFramework(BitcoinTestFramework):
         self.log.info("quorumIndex 0: Waiting for phase 1 (init)")
         self.wait_for_quorum_phase(q_0, 1, expected_members, None, 0, mninfos_online, llmq_type_name, all_types=True)
         self.log.info("quorumIndex 0: Waiting for quorum connections (init)")
-        self.wait_for_quorum_connections(q_0, expected_connections, mninfos_online, llmq_type_name, wait_proc=lambda: self.bump_mocktime(1))
+        self.wait_for_quorum_connections(q_0, expected_connections, mninfos_online, llmq_type_name, wait_proc=lambda: self.bump_mocktime(1), all_types=True)
         if spork23_active:
             self.wait_for_masternode_probes(q_0, mninfos_online, wait_proc=lambda: self.bump_mocktime(1), llmq_type_name=llmq_type_name)
 
@@ -2493,7 +2507,7 @@ class DashTestFramework(BitcoinTestFramework):
         self.log.info("quorumIndex 1: Waiting for phase 1 (init)")
         self.wait_for_quorum_phase(q_1, 1, expected_members, None, 0, mninfos_online, llmq_type_name, all_types=True)
         self.log.info("quorumIndex 1: Waiting for quorum connections (init)")
-        self.wait_for_quorum_connections(q_1, expected_connections, mninfos_online, llmq_type_name, wait_proc=lambda: self.bump_mocktime(1))
+        self.wait_for_quorum_connections(q_1, expected_connections, mninfos_online, llmq_type_name, wait_proc=lambda: self.bump_mocktime(1), all_types=True)
         if spork23_active:
             self.wait_for_masternode_probes(q_1, mninfos_online, wait_proc=lambda: self.bump_mocktime(1), llmq_type_name=llmq_type_name)
 
