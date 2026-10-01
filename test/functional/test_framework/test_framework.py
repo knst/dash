@@ -2170,7 +2170,7 @@ class DashTestFramework(BitcoinTestFramework):
 
         self.wait_until(check_probes, timeout=timeout)
 
-    def wait_for_quorum_phase(self, quorum_hash, phase, expected_member_count, check_received_messages, check_received_messages_count, mninfos, llmq_type_name="llmq_test", timeout=30, sleep=0.5, all_types=False):
+    def wait_for_quorum_phase(self, quorum_hash, phase, expected_member_count, check_received_messages, check_received_messages_count, mninfos, llmq_type_name="llmq_test", timeout=30, all_types=False):
         # A member reports a phase only once its own messages of that phase are sent, so with
         # check_received_messages_count=None the members' sent* flags give the exact number of
         # messages every member has to receive before the DKG may move on
@@ -2238,7 +2238,7 @@ class DashTestFramework(BitcoinTestFramework):
                         return False
             return True
 
-        self.wait_until(check_dkg_session, timeout=timeout, sleep=sleep)
+        self.wait_until(check_dkg_session, timeout=timeout)
 
     def node_quorum_commitment_types(self, node, quorum_hash):
         s = node.quorum("dkgstatus")
@@ -2624,13 +2624,15 @@ class DashTestFramework(BitcoinTestFramework):
         return (quorum_info_0, quorum_info_1)
 
     def wait_for_recovered_sig(self, rec_sig_id, rec_sig_msg_hash, llmq_type=100, timeout=10):
+        bump_mocktime = throttled(lambda: self.bump_mocktime(1))
+
         def check_recovered_sig():
-            self.bump_mocktime(1)
+            bump_mocktime()
             for mn in self.mninfo: # type: MasternodeInfo
                 if not mn.get_node(self).quorum("hasrecsig", llmq_type, rec_sig_id, rec_sig_msg_hash):
                     return False
             return True
-        self.wait_until(check_recovered_sig, timeout=timeout, sleep=1)
+        self.wait_until(check_recovered_sig, timeout=timeout)
 
     def get_recovered_sig(self, rec_sig_id, rec_sig_msg_hash, llmq_type=100, use_platformsign=False):
         # Note: recsigs aren't relayed to regular nodes by default,
@@ -2676,14 +2678,20 @@ class DashTestFramework(BitcoinTestFramework):
 
     def wait_for_quorum_data(self, mns, quorum_type_in, quorum_hash_in, test_secret=True, expect_secret=True,
                              recover=False, timeout=60):
+        def expire_request():
+            if self.mocktime % 2:
+                self.bump_mocktime(self.quorum_data_request_expiration_timeout + 1)
+                self.generate(self.nodes[0], 1, sync_fun=lambda: self.sync_blocks())
+            else:
+                self.bump_mocktime(self.quorum_data_thread_request_timeout_seconds + 1)
+        # the recovery thread retries once per real second, so give it the time to answer a request
+        # before the next one is expired
+        expire_request = throttled(expire_request, 0.5)
+
         def test_mns():
             valid = 0
             if recover:
-                if self.mocktime % 2:
-                    self.bump_mocktime(self.quorum_data_request_expiration_timeout + 1)
-                    self.generate(self.nodes[0], 1, sync_fun=lambda: self.sync_blocks())
-                else:
-                    self.bump_mocktime(self.quorum_data_thread_request_timeout_seconds + 1)
+                expire_request()
 
             for test_mn in mns:
                 valid += self.test_mn_quorum_data(test_mn, quorum_type_in, quorum_hash_in, test_secret, expect_secret)
@@ -2691,7 +2699,7 @@ class DashTestFramework(BitcoinTestFramework):
                            (valid, len(mns), quorum_type_in, quorum_hash_in))
             return valid == len(mns)
 
-        self.wait_until(test_mns, timeout=timeout, sleep=0.5)
+        self.wait_until(test_mns, timeout=timeout)
 
     def wait_for_mnauth(self, node, count, timeout=10):
         def test():
