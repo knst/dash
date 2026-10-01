@@ -2135,7 +2135,7 @@ class DashTestFramework(BitcoinTestFramework):
 
         self.wait_until(check_probes, timeout=timeout, sleep=1)
 
-    def wait_for_quorum_phase(self, quorum_hash, phase, expected_member_count, check_received_messages, check_received_messages_count, mninfos, llmq_type_name="llmq_test", timeout=30, sleep=0.5):
+    def wait_for_quorum_phase(self, quorum_hash, phase, expected_member_count, check_received_messages, check_received_messages_count, mninfos, llmq_type_name="llmq_test", timeout=30, sleep=0.5, all_types=False):
         # A member reports a phase only once its own messages of that phase are sent, so with
         # check_received_messages_count=None the members' sent* flags give the exact number of
         # messages every member has to receive before the DKG may move on
@@ -2146,27 +2146,61 @@ class DashTestFramework(BitcoinTestFramework):
             "receivedPrematureCommitments": "sentPrematureCommitment",
         }
 
+        # A masternode PoSe-banned after its selection into a quarter of a rotating quorum stays in
+        # that quorum's composition while the quarter is reused, but a banned masternode joins no DKG
+        online = {mn.proTxHash for mn in mninfos if not check_banned(self.nodes[0], mn)}
+
+        def dkg_members(dkgstatus):
+            # The quorum connections of every type whose DKG runs at this base block come from the
+            # member selection itself, so unlike a session they are listed before a member's handler
+            # thread has noticed the block. Each masternode lists the members it has to be connected
+            # to, which together name every member of the type.
+            members = {}
+            for qc in dkgstatus["quorumConnections"]:
+                if qc.get("quorumHash") != quorum_hash:
+                    continue
+                members.setdefault(qc["llmqType"], set()).update(c["proTxHash"] for c in qc["quorumConnections"])
+            return members
+
         def check_dkg_session():
-            statuses = []
+            # Every llmq type runs its DKG at this base block at once, and the commitments of the
+            # others apply PoSe penalties just the same, so with all_types all of them have to get
+            # their messages through before the next phase is mined; only the requested type has
+            # known counts. Offline members break the relay graph of the other types, so their
+            # messages can't be expected to arrive then.
+            statuses = {}
+            members = {}
             for mn in mninfos:
-                s = mn.get_node(self).quorum("dkgstatus")["session"]
-                for qs in s:
-                    if qs["llmqType"] != llmq_type_name:
+                dkgstatus = mn.get_node(self).quorum("dkgstatus")
+                if all_types:
+                    for llmq_type, type_members in dkg_members(dkgstatus).items():
+                        members.setdefault(llmq_type, set()).update(type_members)
+                for qs in dkgstatus["session"]:
+                    if not all_types and qs["llmqType"] != llmq_type_name:
                         continue
                     qstatus = qs["status"]
                     if qstatus["quorumHash"] != quorum_hash:
                         continue
                     if qstatus["phase"] != phase:
                         return False
-                    statuses.append(qstatus)
-            if len(statuses) < expected_member_count:
+                    statuses.setdefault(qs["llmqType"], []).append(qstatus)
+            if len(statuses.get(llmq_type_name, [])) < expected_member_count:
                 return False
-            if check_received_messages is not None:
-                expected = check_received_messages_count
-                if expected is None:
-                    expected = sum(qstatus[sent_flags[check_received_messages]] for qstatus in statuses)
-                if any(qstatus[check_received_messages] < expected for qstatus in statuses):
+            for llmq_type, type_members in members.items():
+                # A member reports the phase only once its handler thread has entered the round, and
+                # one that enters late has missed the messages sent so far, so every member has to be
+                # in before the DKG moves on. A DKG with fewer members than the type's minimum size
+                # never starts.
+                min_size = {"llmq_test_dip0024": self.llmq_size_dip0024, "llmq_test_v17": 2}.get(llmq_type, self.llmq_threshold)
+                if len(type_members) >= min_size and len(statuses.get(llmq_type, [])) < len(type_members & online):
                     return False
+            if check_received_messages is not None:
+                for llmq_type, type_statuses in statuses.items():
+                    expected = check_received_messages_count if llmq_type == llmq_type_name else None
+                    if expected is None:
+                        expected = sum(qstatus[sent_flags[check_received_messages]] for qstatus in type_statuses)
+                    if any(qstatus[check_received_messages] < expected for qstatus in type_statuses):
+                        return False
             return True
 
         self.wait_until(check_dkg_session, timeout=timeout, sleep=sleep)
@@ -2261,6 +2295,7 @@ class DashTestFramework(BitcoinTestFramework):
                                                    expected_justifications, expected_commitments))
 
         nodes = [self.nodes[0]] + [mn.get_node(self) for mn in mninfos_online]
+        all_types = len(mninfos_online) == len(self.mninfo)
 
         # move forward to next DKG
         llmq_cycle_len = 24
@@ -2279,7 +2314,7 @@ class DashTestFramework(BitcoinTestFramework):
         q = self.nodes[0].getbestblockhash()
         self.log.info("Expected quorum_hash:"+str(q))
         self.log.info("Waiting for phase 1 (init)")
-        self.wait_for_quorum_phase(q, 1, expected_members, None, 0, mninfos_online, llmq_type_name=llmq_type_name)
+        self.wait_for_quorum_phase(q, 1, expected_members, None, 0, mninfos_online, llmq_type_name=llmq_type_name, all_types=all_types)
         self.wait_for_quorum_connections(q, expected_connections, mninfos_online, wait_proc=lambda: self.bump_mocktime(1), llmq_type_name=llmq_type_name)
         if spork23_active:
             self.wait_for_masternode_probes(q, mninfos_online, wait_proc=lambda: self.bump_mocktime(1))
@@ -2287,27 +2322,27 @@ class DashTestFramework(BitcoinTestFramework):
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 2 (contribute)")
-        self.wait_for_quorum_phase(q, 2, expected_members, "receivedContributions", expected_contributions, mninfos_online, llmq_type_name=llmq_type_name)
+        self.wait_for_quorum_phase(q, 2, expected_members, "receivedContributions", expected_contributions, mninfos_online, llmq_type_name=llmq_type_name, all_types=all_types)
 
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 3 (complain)")
-        self.wait_for_quorum_phase(q, 3, expected_members, "receivedComplaints", expected_complaints, mninfos_online, llmq_type_name=llmq_type_name)
+        self.wait_for_quorum_phase(q, 3, expected_members, "receivedComplaints", expected_complaints, mninfos_online, llmq_type_name=llmq_type_name, all_types=all_types)
 
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 4 (justify)")
-        self.wait_for_quorum_phase(q, 4, expected_members, "receivedJustifications", expected_justifications, mninfos_online, llmq_type_name=llmq_type_name)
+        self.wait_for_quorum_phase(q, 4, expected_members, "receivedJustifications", expected_justifications, mninfos_online, llmq_type_name=llmq_type_name, all_types=all_types)
 
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 5 (commit)")
-        self.wait_for_quorum_phase(q, 5, expected_members, "receivedPrematureCommitments", expected_commitments, mninfos_online, llmq_type_name=llmq_type_name)
+        self.wait_for_quorum_phase(q, 5, expected_members, "receivedPrematureCommitments", expected_commitments, mninfos_online, llmq_type_name=llmq_type_name, all_types=all_types)
 
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 6 (mining)")
-        self.wait_for_quorum_phase(q, 6, expected_members, None, 0, mninfos_online, llmq_type_name=llmq_type_name)
+        self.wait_for_quorum_phase(q, 6, expected_members, None, 0, mninfos_online, llmq_type_name=llmq_type_name, all_types=all_types)
 
         self.log.info("Waiting final commitment")
         self.wait_for_quorum_commitment(q, mninfos_online, llmq_type=llmq_type)
@@ -2441,7 +2476,7 @@ class DashTestFramework(BitcoinTestFramework):
         self.log.info("Expected quorum_0 at:" + str(self.nodes[0].getblockcount()))
         self.log.info("Expected quorum_0 hash:" + str(q_0))
         self.log.info("quorumIndex 0: Waiting for phase 1 (init)")
-        self.wait_for_quorum_phase(q_0, 1, expected_members, None, 0, mninfos_online, llmq_type_name)
+        self.wait_for_quorum_phase(q_0, 1, expected_members, None, 0, mninfos_online, llmq_type_name, all_types=True)
         self.log.info("quorumIndex 0: Waiting for quorum connections (init)")
         self.wait_for_quorum_connections(q_0, expected_connections, mninfos_online, llmq_type_name, wait_proc=lambda: self.bump_mocktime(1))
         if spork23_active:
@@ -2456,7 +2491,7 @@ class DashTestFramework(BitcoinTestFramework):
         self.log.info("Expected quorum_1 at:" + str(self.nodes[0].getblockcount()))
         self.log.info("Expected quorum_1 hash:" + str(q_1))
         self.log.info("quorumIndex 1: Waiting for phase 1 (init)")
-        self.wait_for_quorum_phase(q_1, 1, expected_members, None, 0, mninfos_online, llmq_type_name)
+        self.wait_for_quorum_phase(q_1, 1, expected_members, None, 0, mninfos_online, llmq_type_name, all_types=True)
         self.log.info("quorumIndex 1: Waiting for quorum connections (init)")
         self.wait_for_quorum_connections(q_1, expected_connections, mninfos_online, llmq_type_name, wait_proc=lambda: self.bump_mocktime(1))
         if spork23_active:
@@ -2465,52 +2500,52 @@ class DashTestFramework(BitcoinTestFramework):
         self.move_blocks(nodes, 1)
 
         self.log.info("quorumIndex 0: Waiting for phase 2 (contribute)")
-        self.wait_for_quorum_phase(q_0, 2, expected_members, "receivedContributions", expected_contributions, mninfos_online, llmq_type_name)
+        self.wait_for_quorum_phase(q_0, 2, expected_members, "receivedContributions", expected_contributions, mninfos_online, llmq_type_name, all_types=True)
 
         self.move_blocks(nodes, 1)
 
         self.log.info("quorumIndex 1: Waiting for phase 2 (contribute)")
-        self.wait_for_quorum_phase(q_1, 2, expected_members, "receivedContributions", expected_contributions, mninfos_online, llmq_type_name)
+        self.wait_for_quorum_phase(q_1, 2, expected_members, "receivedContributions", expected_contributions, mninfos_online, llmq_type_name, all_types=True)
 
         self.move_blocks(nodes, 1)
 
         self.log.info("quorumIndex 0: Waiting for phase 3 (complain)")
-        self.wait_for_quorum_phase(q_0, 3, expected_members, "receivedComplaints", expected_complaints, mninfos_online, llmq_type_name)
+        self.wait_for_quorum_phase(q_0, 3, expected_members, "receivedComplaints", expected_complaints, mninfos_online, llmq_type_name, all_types=True)
 
         self.move_blocks(nodes, 1)
 
         self.log.info("quorumIndex 1: Waiting for phase 3 (complain)")
-        self.wait_for_quorum_phase(q_1, 3, expected_members, "receivedComplaints", expected_complaints, mninfos_online, llmq_type_name)
+        self.wait_for_quorum_phase(q_1, 3, expected_members, "receivedComplaints", expected_complaints, mninfos_online, llmq_type_name, all_types=True)
 
         self.move_blocks(nodes, 1)
 
         self.log.info("quorumIndex 0: Waiting for phase 4 (justify)")
-        self.wait_for_quorum_phase(q_0, 4, expected_members, "receivedJustifications", expected_justifications, mninfos_online, llmq_type_name)
+        self.wait_for_quorum_phase(q_0, 4, expected_members, "receivedJustifications", expected_justifications, mninfos_online, llmq_type_name, all_types=True)
 
         self.move_blocks(nodes, 1)
 
         self.log.info("quorumIndex 1: Waiting for phase 4 (justify)")
-        self.wait_for_quorum_phase(q_1, 4, expected_members, "receivedJustifications", expected_justifications, mninfos_online, llmq_type_name)
+        self.wait_for_quorum_phase(q_1, 4, expected_members, "receivedJustifications", expected_justifications, mninfos_online, llmq_type_name, all_types=True)
 
         self.move_blocks(nodes, 1)
 
         self.log.info("quorumIndex 0: Waiting for phase 5 (commit)")
-        self.wait_for_quorum_phase(q_0, 5, expected_members, "receivedPrematureCommitments", expected_commitments, mninfos_online, llmq_type_name)
+        self.wait_for_quorum_phase(q_0, 5, expected_members, "receivedPrematureCommitments", expected_commitments, mninfos_online, llmq_type_name, all_types=True)
 
         self.move_blocks(nodes, 1)
 
         self.log.info("quorumIndex 1: Waiting for phase 5 (commit)")
-        self.wait_for_quorum_phase(q_1, 5, expected_members, "receivedPrematureCommitments", expected_commitments, mninfos_online, llmq_type_name)
+        self.wait_for_quorum_phase(q_1, 5, expected_members, "receivedPrematureCommitments", expected_commitments, mninfos_online, llmq_type_name, all_types=True)
 
         self.move_blocks(nodes, 1)
 
         self.log.info("quorumIndex 0: Waiting for phase 6 (finalization)")
-        self.wait_for_quorum_phase(q_0, 6, expected_members, None, 0, mninfos_online, llmq_type_name)
+        self.wait_for_quorum_phase(q_0, 6, expected_members, None, 0, mninfos_online, llmq_type_name, all_types=True)
 
         self.move_blocks(nodes, 1)
 
         self.log.info("quorumIndex 1: Waiting for phase 6 (finalization)")
-        self.wait_for_quorum_phase(q_1, 6, expected_members, None, 0, mninfos_online, llmq_type_name)
+        self.wait_for_quorum_phase(q_1, 6, expected_members, None, 0, mninfos_online, llmq_type_name, all_types=True)
         self.log.info("Mining final commitments")
         self.bump_mocktime(1)
         self.nodes[0].getblocktemplate() # this calls CreateNewBlock
