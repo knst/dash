@@ -218,24 +218,8 @@ bool CSuperblock::GetPayment(int nPaymentIndex, CGovernancePayment& paymentRet)
     return true;
 }
 
-CAmount CSuperblock::GetPaymentsTotalAmount()
+bool CSuperblock::IsValid(const std::vector<CTxOut>& payments, const CTransaction& txNew, int block_height, CAmount blockReward, bool is_v24, CAmount nPaymentsLimit)
 {
-    return std23::ranges::fold_left(vecPayments, CAmount{0}, [](CAmount s, const auto& p) { return s + p.nAmount; });
-}
-
-/**
-*   Is Transaction Valid
-*
-*   - Does this transaction match the superblock?
-*/
-
-bool CSuperblock::IsValid(const CTransaction& txNew, int block_height, CAmount blockReward, bool is_v24)
-{
-    // TODO : LOCK(cs);
-    // No reason for a lock here now since this method only accesses data
-    // internal to *this and since CSuperblock's are accessed only through
-    // shared pointers there's no way our object can get deleted while this
-    // code is running.
     if (!IsValidBlockHeight(block_height)) {
         LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, incorrect block height\n");
         return false;
@@ -244,11 +228,10 @@ bool CSuperblock::IsValid(const CTransaction& txNew, int block_height, CAmount b
     // CONFIGURE SUPERBLOCK OUTPUTS
 
     int nOutputs = txNew.vout.size();
-    int nPayments = CountPayments();
+    int nPayments = payments.size();
     int nMinerAndMasternodePayments = nOutputs - nPayments;
 
-    LogPrint(BCLog::GOBJECT, "CSuperblock::IsValid -- nOutputs = %d, nPayments = %d, hash = %s\n", nOutputs, nPayments,
-             nGovObjHash.ToString());
+    LogPrint(BCLog::GOBJECT, "CSuperblock::IsValid -- nOutputs = %d, nPayments = %d\n", nOutputs, nPayments);
 
     // We require an exact match (including order) between the expected
     // superblock payments and the payments actually in the block.
@@ -262,8 +245,7 @@ bool CSuperblock::IsValid(const CTransaction& txNew, int block_height, CAmount b
     }
 
     // payments should not exceed limit
-    CAmount nPaymentsTotalAmount = GetPaymentsTotalAmount();
-    CAmount nPaymentsLimit = GetPaymentsLimit(block_height);
+    CAmount nPaymentsTotalAmount = std23::ranges::fold_left(payments, CAmount{0}, [](CAmount s, const auto& p) { return s + p.nValue; });
     if (nPaymentsTotalAmount > nPaymentsLimit) {
         LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, payments limit exceeded: payments %lld, limit %lld\n", nPaymentsTotalAmount, nPaymentsLimit);
         return false;
@@ -278,13 +260,7 @@ bool CSuperblock::IsValid(const CTransaction& txNew, int block_height, CAmount b
 
     int nVoutIndex = -1;
     for (int i = 0; i < nPayments; i++) {
-        CGovernancePayment payment;
-        if (!GetPayment(i, payment)) {
-            // This shouldn't happen so log a warning
-            LogPrintf("CSuperblock::IsValid -- WARNING: Failed to find payment: %d of %d total payments\n", i, nPayments);
-            continue;
-        }
-
+        const CTxOut& payment = payments[i];
         bool fPaymentMatch = false;
 
         // From V24 on, start past the previously matched output so each expected
@@ -297,8 +273,8 @@ bool CSuperblock::IsValid(const CTransaction& txNew, int block_height, CAmount b
         const int nVoutStart = is_v24 ? nVoutIndex + 1 : std::max(nVoutIndex, 0);
         for (int j = nVoutStart; j < nOutputs; j++) {
             // Find superblock payment
-            fPaymentMatch = ((payment.script == txNew.vout[j].scriptPubKey) &&
-                             (payment.nAmount == txNew.vout[j].nValue));
+            fPaymentMatch = ((payment.scriptPubKey == txNew.vout[j].scriptPubKey) &&
+                             (payment.nValue == txNew.vout[j].nValue));
 
             if (fPaymentMatch) {
                 nVoutIndex = j;
@@ -310,8 +286,8 @@ bool CSuperblock::IsValid(const CTransaction& txNew, int block_height, CAmount b
             // Superblock payment not found!
 
             CTxDestination dest;
-            ExtractDestination(payment.script, dest);
-            LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid: %d payment %d to %s not found\n", i, payment.nAmount, EncodeDestination(dest));
+            ExtractDestination(payment.scriptPubKey, dest);
+            LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid: %d payment %d to %s not found\n", i, payment.nValue, EncodeDestination(dest));
 
             return false;
         }
@@ -609,7 +585,14 @@ bool SuperblockManager::IsValidSuperblock(const CDeterministicMNList& tip_mn_lis
     LOCK(cs_sb);
     CSuperblock_sptr pSuperblock;
     if (GetBestSuperblockInternal(tip_mn_list, pSuperblock, nBlockHeight)) {
-        return pSuperblock->IsValid(txNew, nBlockHeight, blockReward, is_v24);
+        std::vector<CTxOut> payments;
+        for (int i = 0; i < pSuperblock->CountPayments(); i++) {
+            CGovernancePayment payment;
+            if (pSuperblock->GetPayment(i, payment)) {
+                payments.emplace_back(payment.nAmount, payment.script);
+            }
+        }
+        return CSuperblock::IsValid(payments, txNew, nBlockHeight, blockReward, is_v24, CSuperblock::GetPaymentsLimit(nBlockHeight));
     }
     return false;
 }
