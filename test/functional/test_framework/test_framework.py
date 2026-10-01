@@ -1492,6 +1492,19 @@ class MasternodeInfo:
 
         return ret
 
+def throttled(proc, interval=1):
+    # proc has side effects like bumping mocktime, so run it at most once per interval of real time
+    # no matter how fast the caller polls
+    last = 0
+
+    def run():
+        nonlocal last
+        if time.time() - last >= interval:
+            proc()
+            last = time.time()
+    return run
+
+
 class DashTestFramework(BitcoinTestFramework):
     def set_test_params(self):
         """Tests must this method to change default values for number of nodes, topology, etc"""
@@ -2059,6 +2072,10 @@ class DashTestFramework(BitcoinTestFramework):
         self.wait_until(check_sporks_same, timeout=timeout)
 
     def wait_for_quorum_connections(self, quorum_hash, expected_connections, mninfos, llmq_type_name="llmq_test", timeout = 60, wait_proc=None, all_types=False):
+        if wait_proc is not None:
+            # wait_proc bumps mocktime by a second, keep it from outrunning the wall clock
+            wait_proc = throttled(wait_proc)
+
         def check_quorum_connections():
             def ret():
                 if wait_proc is not None:
@@ -2109,9 +2126,13 @@ class DashTestFramework(BitcoinTestFramework):
                 return ret()
             return True
 
-        self.wait_until(check_quorum_connections, timeout=timeout, sleep=1)
+        self.wait_until(check_quorum_connections, timeout=timeout)
 
     def wait_for_masternode_probes(self, quorum_hash, mninfos, timeout = 30, wait_proc=None, llmq_type_name="llmq_test"):
+        if wait_proc is not None:
+            # wait_proc bumps mocktime by a second, keep it from outrunning the wall clock
+            wait_proc = throttled(wait_proc)
+
         def check_probes():
             def ret():
                 if wait_proc is not None:
@@ -2147,7 +2168,7 @@ class DashTestFramework(BitcoinTestFramework):
                                         return ret()
             return True
 
-        self.wait_until(check_probes, timeout=timeout, sleep=1)
+        self.wait_until(check_probes, timeout=timeout)
 
     def wait_for_quorum_phase(self, quorum_hash, phase, expected_member_count, check_received_messages, check_received_messages_count, mninfos, llmq_type_name="llmq_test", timeout=30, sleep=0.5, all_types=False):
         # A member reports a phase only once its own messages of that phase are sent, so with
