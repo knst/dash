@@ -479,7 +479,7 @@ bool CMNPaymentsProcessor::IsBlockValueValid(const CBlock& block, const CBlockIn
     return true;
 }
 
-bool CMNPaymentsProcessor::IsBlockPayeeValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward, MnRewardEra era, bool strict_multiplicity, SuperBlockCheckType check_superblock)
+bool CMNPaymentsProcessor::IsBlockPayeeValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward, MnRewardEra era, bool strict_multiplicity)
 {
     const int nBlockHeight = pindexPrev  == nullptr ? 0 : pindexPrev->nHeight + 1;
 
@@ -489,44 +489,6 @@ bool CMNPaymentsProcessor::IsBlockPayeeValid(const CTransaction& txNew, const CB
     } else {
         LogPrintf("CMNPaymentsProcessor::%s -- ERROR! Invalid masternode payment detected at height %d: %s", __func__, nBlockHeight, txNew.ToString()); /* Continued */
         return false;
-    }
-
-    if (!m_superblocks.IsValid()) {
-        // governance data is either incomplete or non-existent
-        LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- WARNING! Not enough data, skipping superblock payee checks\n", __func__);
-        return true;  // not an error
-    }
-
-    if (nBlockHeight < m_consensus_params.nSuperblockStartBlock) {
-        // We are still using budgets, but we have no data about them anymore,
-        // we can only check masternode payments.
-        // NOTE: old budget system is disabled since 12.1 and we should never enter this branch
-        // anymore when sync is finished (on mainnet). We have no old budget data but these blocks
-        // have tons of confirmations and can be safely accepted without payee verification
-        LogPrint(BCLog::GOBJECT, "CMNPaymentsProcessor::%s -- WARNING! Client synced but old budget system is disabled, accepting any payee\n", __func__);
-        return true; // not an error
-    }
-
-    // superblocks started
-    if (check_superblock == SuperBlockCheckType::NoCheck) return true;
-
-    const auto tip_mn_list = m_dmnman.GetListAtChainTip();
-    const SuperblockStatus superblock{m_superblocks.GetStatus(tip_mn_list, nBlockHeight)};
-    const bool is_v24{check_superblock == SuperBlockCheckType::DisallowDuplicates};
-    if (superblock.state == SuperblockStatus::State::Triggered) {
-        if (IsSuperblockValid(superblock, txNew, nBlockHeight, is_v24,
-                              CSuperblock::GetPaymentsLimit(nBlockHeight))) {
-            LogPrint(BCLog::GOBJECT, "CMNPaymentsProcessor::%s -- Valid superblock at height %d: %s", /* Continued */
-                     __func__, nBlockHeight, txNew.ToString());
-            // continue validation, should also pay MN
-        } else {
-            LogPrintf("CMNPaymentsProcessor::%s -- ERROR! Invalid superblock detected at height %d: %s", /* Continued */
-                      __func__, nBlockHeight, txNew.ToString());
-            return false;
-        }
-    } else {
-        LogPrint(BCLog::GOBJECT, "CMNPaymentsProcessor::%s -- No triggered superblock detected at height %d\n",
-                 __func__, nBlockHeight);
     }
 
     return true;
