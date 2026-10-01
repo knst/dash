@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_CASE(isvalid_duplicate_payments_require_distinct_outputs)
     const CAmount nPayAmount = 1 * COIN;
 
     // Two identical expected payments (same script, same amount).
-    const std::vector<CTxOut> payments{{nPayAmount, scriptPayee}, {nPayAmount, scriptPayee}};
+    const SuperblockStatus superblock{.state = SuperblockStatus::State::Triggered, .payments = {{nPayAmount, scriptPayee}, {nPayAmount, scriptPayee}}};
     const CAmount nPaymentsLimit = CSuperblock::GetPaymentsLimit(nBlockHeight);
 
     const CScript scriptMinerOrMN = CScript() << OP_RETURN;
@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(isvalid_duplicate_payments_require_distinct_outputs)
         CMutableTransaction txNew;
         txNew.vout.emplace_back(blockReward - nPayAmount, scriptMinerOrMN);
         txNew.vout.emplace_back(nPayAmount, scriptPayee); // single matching output
-        BOOST_CHECK(!IsSuperblockValid(payments, CTransaction(txNew), nBlockHeight, blockReward, /*is_v24=*/true, nPaymentsLimit));
+        BOOST_CHECK(!IsSuperblockValid(superblock, CTransaction(txNew), nBlockHeight, /*is_v24=*/true, nPaymentsLimit));
     }
 
     // Case 2 (V24): coinbase carries TWO outputs matching the duplicate expected
@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(isvalid_duplicate_payments_require_distinct_outputs)
         txNew.vout.emplace_back(blockReward - 2 * nPayAmount, scriptMinerOrMN);
         txNew.vout.emplace_back(nPayAmount, scriptPayee);
         txNew.vout.emplace_back(nPayAmount, scriptPayee);
-        BOOST_CHECK(IsSuperblockValid(payments, CTransaction(txNew), nBlockHeight, blockReward, /*is_v24=*/true, nPaymentsLimit));
+        BOOST_CHECK(IsSuperblockValid(superblock, CTransaction(txNew), nBlockHeight, /*is_v24=*/true, nPaymentsLimit));
     }
 
     // Case 3 (pre-V24): the stricter distinct-output rule is gated behind V24.
@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE(isvalid_duplicate_payments_require_distinct_outputs)
         CMutableTransaction txNew;
         txNew.vout.emplace_back(blockReward - nPayAmount, scriptMinerOrMN);
         txNew.vout.emplace_back(nPayAmount, scriptPayee); // single matching output
-        BOOST_CHECK(IsSuperblockValid(payments, CTransaction(txNew), nBlockHeight, blockReward, /*is_v24=*/false, nPaymentsLimit));
+        BOOST_CHECK(IsSuperblockValid(superblock, CTransaction(txNew), nBlockHeight, /*is_v24=*/false, nPaymentsLimit));
     }
 }
 

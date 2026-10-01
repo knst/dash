@@ -7,6 +7,7 @@
 
 #include <consensus/amount.h>
 #include <governance/object.h>
+#include <masternode/payments.h>
 #include <script/script.h>
 #include <script/standard.h>
 #include <sync.h>
@@ -151,13 +152,11 @@ public:
     bool GetBestSuperblock(const CDeterministicMNList& tip_mn_list, CSuperblock_sptr& sbRet, int nBlockHeight) const
         EXCLUSIVE_LOCKS_REQUIRED(!cs_sb);
 
-    bool IsSuperblockTriggered(const CDeterministicMNList& tip_mn_list, int nBlockHeight) EXCLUSIVE_LOCKS_REQUIRED(!cs_sb);
-
-    bool IsValidSuperblock(const CDeterministicMNList& tip_mn_list, const CTransaction& txNew, int nBlockHeight,
-                           CAmount blockReward, bool is_v24) const EXCLUSIVE_LOCKS_REQUIRED(!cs_sb);
-
-    bool GetSuperblockPayments(const CDeterministicMNList& tip_mn_list, int nBlockHeight,
-                               std::vector<CTxOut>& voutSuperblockRet) const EXCLUSIVE_LOCKS_REQUIRED(!cs_sb);
+    /** Governance's status for the superblock at a height: validation is
+     *  disabled until governance data is loaded; otherwise whether a funded
+     *  trigger exists and, if so, the winning trigger's payment outputs. */
+    SuperblockStatus GetStatus(const CDeterministicMNList& tip_mn_list, int nBlockHeight)
+        EXCLUSIVE_LOCKS_REQUIRED(!cs_sb);
 
     void ExecuteBestSuperblock(const CDeterministicMNList& tip_mn_list, int nBlockHeight) EXCLUSIVE_LOCKS_REQUIRED(!cs_sb);
 
@@ -169,6 +168,8 @@ private:
 
     bool GetBestSuperblockInternal(const CDeterministicMNList& tip_mn_list, CSuperblock_sptr& sbRet,
                                    int nBlockHeight) const EXCLUSIVE_LOCKS_REQUIRED(cs_sb);
+    bool IsSuperblockTriggeredInternal(const CDeterministicMNList& tip_mn_list, int nBlockHeight)
+        EXCLUSIVE_LOCKS_REQUIRED(cs_sb);
 
     mutable Mutex cs_sb;
     std::atomic<bool> m_loaded{false};

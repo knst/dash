@@ -249,13 +249,9 @@ static std::string GetRequiredPaymentsString(governance::SuperblockManager& supe
             strPayments += ", " + EncodeDestination(dest);
         }
     }
-    if (superblocks.IsSuperblockTriggered(tip_mn_list, nBlockHeight)) {
-        std::vector<CTxOut> voutSuperblock;
-        if (!superblocks.GetSuperblockPayments(tip_mn_list, nBlockHeight, voutSuperblock)) {
-            return strPayments + ", error";
-        }
+    if (const SuperblockStatus superblock{superblocks.GetStatus(tip_mn_list, nBlockHeight)}; superblock.state == SuperblockStatus::State::Triggered) {
         std::string strSBPayees = "Unknown";
-        for (const auto& txout : voutSuperblock) {
+        for (const auto& txout : superblock.payments) {
             CTxDestination dest;
             ExtractDestination(txout.scriptPubKey, dest);
             if (strSBPayees != "Unknown") {

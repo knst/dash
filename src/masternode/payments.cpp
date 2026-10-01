@@ -138,8 +138,10 @@ bool IsSuperblockHeight(const int nBlockHeight, const Consensus::Params& consens
            ((nBlockHeight % consensus_params.nSuperblockCycle) == 0);
 }
 
-bool IsSuperblockValid(const std::vector<CTxOut>& payments, const CTransaction& txNew, int block_height, CAmount blockReward, bool is_v24, CAmount nPaymentsLimit)
+bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& txNew, int block_height, bool is_v24, CAmount nPaymentsLimit)
 {
+    const std::vector<CTxOut>& payments{superblock.payments};
+
     if (!IsSuperblockHeight(block_height, Params().GetConsensus())) {
         LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, incorrect block height\n");
         return false;
@@ -168,13 +170,6 @@ bool IsSuperblockValid(const std::vector<CTxOut>& payments, const CTransaction& 
     CAmount nPaymentsTotalAmount = std23::ranges::fold_left(payments, CAmount{0}, [](CAmount s, const auto& p) { return s + p.nValue; });
     if (nPaymentsTotalAmount > nPaymentsLimit) {
         LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, payments limit exceeded: payments %lld, limit %lld\n", nPaymentsTotalAmount, nPaymentsLimit);
-        return false;
-    }
-
-    // miner and masternodes should not get more than they would usually get
-    CAmount nBlockValue = txNew.GetValueOut();
-    if (nBlockValue > blockReward + nPaymentsTotalAmount) {
-        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, block value limit exceeded: block %lld, limit %lld\n", nBlockValue, blockReward + nPaymentsTotalAmount);
         return false;
     }
 
@@ -440,20 +435,20 @@ bool CMNPaymentsProcessor::IsBlockValueValid(const CBlock& block, const CBlockIn
         return false;
     }
 
-    if (!m_superblocks.IsValid()) {
+    if (check_superblock == SuperBlockCheckType::NoCheck) return true;
+
+    const auto tip_mn_list = m_dmnman.GetListAtChainTip();
+    const SuperblockStatus superblock{m_superblocks.GetStatus(tip_mn_list, nBlockHeight)};
+    if (superblock.state == SuperblockStatus::State::ValidationDisabled) {
         LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- WARNING! Not enough data, checked superblock max bounds only\n", __func__);
         // not enough data for full checks but at least we know that the superblock limits were honored.
         // We rely on the network to have followed the correct chain in this case
         return true;
     }
 
-    if (check_superblock == SuperBlockCheckType::NoCheck) return true;
-
     // we are synced and possibly on a superblock now
 
-    const auto tip_mn_list = m_dmnman.GetListAtChainTip();
-
-    if (!m_superblocks.IsSuperblockTriggered(tip_mn_list, nBlockHeight)) {
+    if (superblock.state == SuperblockStatus::State::NotTriggered) {
         // we are on a valid superblock height but a superblock was not triggered
         // revert to block reward limits in this case
         if(!isBlockRewardValueMet) {
@@ -463,9 +458,16 @@ bool CMNPaymentsProcessor::IsBlockValueValid(const CBlock& block, const CBlockIn
         return isBlockRewardValueMet;
     }
 
+    // miner and masternodes should not get more than they would usually get
+    const CAmount nPaymentsTotalAmount = std23::ranges::fold_left(superblock.payments, CAmount{0}, [](CAmount s, const auto& p) { return s + p.nValue; });
+    const bool isSuperblockValueMet = (block.vtx[0]->GetValueOut() <= blockReward + nPaymentsTotalAmount);
+    if (!isSuperblockValueMet) {
+        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, block value limit exceeded: block %lld, limit %lld\n", block.vtx[0]->GetValueOut(), blockReward + nPaymentsTotalAmount);
+    }
+
     // this actually also checks for correct payees and not only amount
     const bool is_v24{check_superblock == SuperBlockCheckType::DisallowDuplicates};
-    if (!m_superblocks.IsValidSuperblock(tip_mn_list, *block.vtx[0], nBlockHeight, blockReward, is_v24)) {
+    if (!isSuperblockValueMet || !IsSuperblockValid(superblock, *block.vtx[0], nBlockHeight, is_v24, CSuperblock::GetPaymentsLimit(nBlockHeight))) {
         // triggered but invalid? that's weird
         LogPrintf("CMNPaymentsProcessor::%s -- ERROR! Invalid superblock detected at height %d: %s", __func__, nBlockHeight, block.vtx[0]->ToString()); /* Continued */
         // should NOT allow invalid superblocks, when superblocks are enabled
@@ -509,10 +511,11 @@ bool CMNPaymentsProcessor::IsBlockPayeeValid(const CTransaction& txNew, const CB
     if (check_superblock == SuperBlockCheckType::NoCheck) return true;
 
     const auto tip_mn_list = m_dmnman.GetListAtChainTip();
+    const SuperblockStatus superblock{m_superblocks.GetStatus(tip_mn_list, nBlockHeight)};
     const bool is_v24{check_superblock == SuperBlockCheckType::DisallowDuplicates};
-    if (m_superblocks.IsSuperblockTriggered(tip_mn_list, nBlockHeight)) {
-        if (m_superblocks.IsValidSuperblock(tip_mn_list, txNew, nBlockHeight,
-                                            blockSubsidy + feeReward, is_v24)) {
+    if (superblock.state == SuperblockStatus::State::Triggered) {
+        if (IsSuperblockValid(superblock, txNew, nBlockHeight, is_v24,
+                              CSuperblock::GetPaymentsLimit(nBlockHeight))) {
             LogPrint(BCLog::GOBJECT, "CMNPaymentsProcessor::%s -- Valid superblock at height %d: %s", /* Continued */
                      __func__, nBlockHeight, txNew.ToString());
             // continue validation, should also pay MN
@@ -536,9 +539,9 @@ void CMNPaymentsProcessor::FillBlockPayments(CMutableTransaction& txNew, const C
 
     // Only create superblocks when one is actually triggered.
     const auto tip_mn_list = m_dmnman.GetListAtChainTip();
-    if (m_superblocks.IsSuperblockTriggered(tip_mn_list, nBlockHeight)) {
+    if (SuperblockStatus superblock{m_superblocks.GetStatus(tip_mn_list, nBlockHeight)}; superblock.state == SuperblockStatus::State::Triggered) {
         LogPrint(BCLog::GOBJECT, "CMNPaymentsProcessor::%s -- Triggered superblock creation at height %d\n", __func__, nBlockHeight);
-        m_superblocks.GetSuperblockPayments(tip_mn_list, nBlockHeight, voutSuperblockPaymentsRet);
+        voutSuperblockPaymentsRet = std::move(superblock.payments);
     }
 
     if (!GetMasternodeTxOuts(pindexPrev, blockSubsidy, feeReward, era, voutMasternodePaymentsRet)) {

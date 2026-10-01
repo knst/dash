@@ -6,6 +6,7 @@
 #define BITCOIN_MASTERNODE_PAYMENTS_H
 
 #include <consensus/amount.h>
+#include <primitives/transaction.h>
 
 #include <string>
 #include <vector>
@@ -13,8 +14,6 @@
 class CBlock;
 class CBlockIndex;
 class CDeterministicMNManager;
-class CTransaction;
-class CTxOut;
 
 /**
  * Match the list of expected masternode payment outputs against the coinbase
@@ -73,12 +72,25 @@ CAmount GetMasternodePayment(int nHeight, CAmount blockValue, const Consensus::P
 /** Superblocks happen once per cycle after the superblock hardfork. */
 bool IsSuperblockHeight(int nBlockHeight, const Consensus::Params& consensus_params);
 
+/** What governance says about the superblock at a block height. */
+struct SuperblockStatus {
+    enum class State {
+        //! governance data is not loaded, so only the superblock value bounds can be checked
+        ValidationDisabled,
+        //! no funded superblock trigger exists for the height
+        NotTriggered,
+        //! a funded trigger exists; payments holds the winning trigger's outputs, in order
+        Triggered,
+    };
+    State state{State::ValidationDisabled};
+    std::vector<CTxOut> payments;
+};
+
 /**
- * Whether the coinbase carries every expected superblock payment, in order,
- * within the superblock payments limit, and without paying the miner and
- * masternodes more than the block reward.
+ * Whether the coinbase @p txNew carries every payment of the triggered
+ * @p superblock, in order, within the superblock payments limit.
  */
-bool IsSuperblockValid(const std::vector<CTxOut>& payments, const CTransaction& txNew, int block_height, CAmount blockReward, bool is_v24, CAmount nPaymentsLimit);
+bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& txNew, int block_height, bool is_v24, CAmount nPaymentsLimit);
 
 class CMNPaymentsProcessor
 {

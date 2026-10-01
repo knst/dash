@@ -457,14 +457,13 @@ bool SuperblockManager::GetBestSuperblockInternal(const CDeterministicMNList& ti
     return nYesCount > 0;
 }
 
-bool SuperblockManager::IsSuperblockTriggered(const CDeterministicMNList& tip_mn_list, int nBlockHeight)
+bool SuperblockManager::IsSuperblockTriggeredInternal(const CDeterministicMNList& tip_mn_list, int nBlockHeight)
 {
+    AssertLockHeld(cs_sb);
     LogPrint(BCLog::GOBJECT, "IsSuperblockTriggered -- Start nBlockHeight = %d\n", nBlockHeight);
     if (!CSuperblock::IsValidBlockHeight(nBlockHeight)) {
         return false;
     }
-
-    LOCK(cs_sb);
 
     LogPrint(BCLog::GOBJECT, "IsSuperblockTriggered -- m_triggers.size() = %d\n", m_triggers.size());
 
@@ -501,36 +500,24 @@ bool SuperblockManager::IsSuperblockTriggered(const CDeterministicMNList& tip_mn
     return false;
 }
 
-bool SuperblockManager::IsValidSuperblock(const CDeterministicMNList& tip_mn_list, const CTransaction& txNew,
-                                          int nBlockHeight, CAmount blockReward, bool is_v24) const
+SuperblockStatus SuperblockManager::GetStatus(const CDeterministicMNList& tip_mn_list, int nBlockHeight)
 {
-    LOCK(cs_sb);
-    CSuperblock_sptr pSuperblock;
-    if (GetBestSuperblockInternal(tip_mn_list, pSuperblock, nBlockHeight)) {
-        std::vector<CTxOut> payments;
-        for (int i = 0; i < pSuperblock->CountPayments(); i++) {
-            CGovernancePayment payment;
-            if (pSuperblock->GetPayment(i, payment)) {
-                payments.emplace_back(payment.nAmount, payment.script);
-            }
-        }
-        return IsSuperblockValid(payments, txNew, nBlockHeight, blockReward, is_v24, CSuperblock::GetPaymentsLimit(nBlockHeight));
+    SuperblockStatus ret;
+    if (!IsValid()) {
+        return ret;
     }
-    return false;
-}
+    ret.state = SuperblockStatus::State::NotTriggered;
 
-bool SuperblockManager::GetSuperblockPayments(const CDeterministicMNList& tip_mn_list, int nBlockHeight,
-                                              std::vector<CTxOut>& voutSuperblockRet) const
-{
     LOCK(cs_sb);
-
+    if (!IsSuperblockTriggeredInternal(tip_mn_list, nBlockHeight)) {
+        return ret;
+    }
     CSuperblock_sptr pSuperblock;
     if (!GetBestSuperblockInternal(tip_mn_list, pSuperblock, nBlockHeight)) {
-        LogPrint(BCLog::GOBJECT, "GetSuperblockPayments -- Can't find superblock for height %d\n", nBlockHeight);
-        return false;
+        LogPrint(BCLog::GOBJECT, "%s -- Can't find superblock for height %d\n", __func__, nBlockHeight);
+        return ret;
     }
-
-    voutSuperblockRet.clear();
+    ret.state = SuperblockStatus::State::Triggered;
 
     // TODO: How many payments can we add before things blow up?
     //       Consider at least following limits:
@@ -539,7 +526,7 @@ bool SuperblockManager::GetSuperblockPayments(const CDeterministicMNList& tip_mn
     for (int i = 0; i < pSuperblock->CountPayments(); i++) {
         CGovernancePayment payment;
         if (pSuperblock->GetPayment(i, payment)) {
-            voutSuperblockRet.emplace_back(payment.nAmount, payment.script);
+            ret.payments.emplace_back(payment.nAmount, payment.script);
 
             CTxDestination dest;
             ExtractDestination(payment.script, dest);
@@ -551,7 +538,7 @@ bool SuperblockManager::GetSuperblockPayments(const CDeterministicMNList& tip_mn
         }
     }
 
-    return true;
+    return ret;
 }
 
 void SuperblockManager::ExecuteBestSuperblock(const CDeterministicMNList& tip_mn_list, int nBlockHeight)
