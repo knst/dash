@@ -8,11 +8,8 @@
 #include <consensus/amount.h>
 #include <primitives/transaction.h>
 
-#include <functional>
-#include <string>
 #include <vector>
 
-class CBlock;
 class CBlockIndex;
 class CDeterministicMNList;
 
@@ -34,8 +31,6 @@ class CDeterministicMNList;
 int FindUnmatchedMasternodePayment(const std::vector<CTxOut>& expected,
                                    const std::vector<CTxOut>& actual,
                                    bool strict_multiplicity);
-
-struct CMutableTransaction;
 
 namespace Consensus { struct Params; }
 
@@ -96,27 +91,5 @@ struct SuperblockStatus {
  * @p superblock, in order, within the superblock payments limit.
  */
 bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& txNew, int block_height, bool is_v24, CAmount nPaymentsLimit);
-
-class CMNPaymentsProcessor
-{
-private:
-    const std::function<SuperblockStatus(const CDeterministicMNList& mn_list, int nBlockHeight)>& m_superblock_status;
-    const Consensus::Params& m_consensus_params;
-
-private:
-    [[nodiscard]] bool GetMasternodeTxOuts(const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy, const CAmount feeReward,
-                                      MnRewardEra era, std::vector<CTxOut>& voutMasternodePaymentsRet);
-
-public:
-    explicit CMNPaymentsProcessor(const std::function<SuperblockStatus(const CDeterministicMNList& mn_list, int nBlockHeight)>& superblock_status,
-                                  const Consensus::Params& consensus_params) :
-        m_superblock_status{superblock_status},
-        m_consensus_params{consensus_params}
-    {
-    }
-
-    void FillBlockPayments(CMutableTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy, const CAmount feeReward,
-                           MnRewardEra era, std::vector<CTxOut>& voutMasternodePaymentsRet, std::vector<CTxOut>& voutSuperblockPaymentsRet);
-};
 
 #endif // BITCOIN_MASTERNODE_PAYMENTS_H

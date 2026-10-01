@@ -48,7 +48,6 @@ EXPECTED_DASH_CIRCULAR_DEPENDENCIES = (
     "evo/deterministicmns -> node/blockstorage -> validation -> txmempool -> evo/deterministicmns",
     "evo/smldiff -> llmq/blockprocessor -> llmq/utils -> llmq/snapshot -> evo/smldiff",
     "evo/specialtxman -> llmq/blockprocessor -> validation -> evo/specialtxman",
-    "governance/superblock -> validation -> masternode/payments -> governance/superblock",
     "instantsend/instantsend -> node/blockstorage -> validation -> txmempool -> instantsend/instantsend",
     "llmq/blockprocessor -> llmq/utils -> llmq/snapshot -> llmq/blockprocessor",
     "llmq/commitment -> llmq/utils -> llmq/snapshot -> llmq/commitment",

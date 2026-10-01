@@ -7,9 +7,6 @@
 
 #include <cstdint>
 #include <map>
-#include <masternode/payments.h>
-
-#include <functional>
 #include <memory>
 #include <optional>
 
@@ -19,7 +16,6 @@ class CDeterministicMNManager;
 class CEvoDB;
 class ChainstateManager;
 class CMNHFManager;
-class CMNPaymentsProcessor;
 class CSpecialTxProcessor;
 class CTransaction;
 class uint256;
@@ -49,7 +45,6 @@ public:
     const std::unique_ptr<CCreditPoolManager> credit_pool_manager;
     const chainlock::Chainlocks& m_chainlocks;
     const std::unique_ptr<CMNHFManager> ehf_manager;
-    const std::unique_ptr<CMNPaymentsProcessor> mn_payments;
     const std::unique_ptr<CSpecialTxProcessor> special_tx;
 
 public:
@@ -60,8 +55,7 @@ public:
                                llmq::CInstantSendManager& isman, llmq::CQuorumBlockProcessor& qblockman,
                                llmq::CQuorumSnapshotManager& qsnapman, const ChainstateManager& chainman,
                                const node::BlockManager& blockman, const Consensus::Params& consensus_params,
-                               const chainlock::Chainlocks& chainlocks, const llmq::CQuorumManager& qman,
-                               const std::function<SuperblockStatus(const CDeterministicMNList& mn_list, int nBlockHeight)>& superblock_status);
+                               const chainlock::Chainlocks& chainlocks, const llmq::CQuorumManager& qman);
     ~CChainstateHelper();
 
     /** Passthrough functions to chainlock::Chainlocks */

@@ -5,7 +5,6 @@
 #include <active/context.h>
 #include <active/masternode.h>
 #include <evo/assetlocktx.h>
-#include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
 #include <governance/superblock.h>
 #include <masternode/payments.h>
@@ -411,7 +410,6 @@ static RPCHelpMan masternode_payments()
     // A temporary vector which is used to sort results properly (there is no "reverse" in/for UniValue)
     std::vector<UniValue> vecPayments;
 
-    CHECK_NONFATAL(node.chain_helper);
     CHECK_NONFATAL(node.dmnman);
     while (vecPayments.size() < uint64_t(std::abs(nCount)) && pindex != nullptr) {
         CBlock block;
@@ -443,11 +441,11 @@ static RPCHelpMan masternode_payments()
             nBlockFees += nValueIn - tx->GetValueOut();
         }
 
-        std::vector<CTxOut> voutMasternodePayments, voutDummy;
-        CMutableTransaction dummyTx;
+        std::vector<CTxOut> voutMasternodePayments;
         CAmount blockSubsidy = GetBlockSubsidy(pindex, Params().GetConsensus());
         const MnRewardEra mn_reward_era{GetMnRewardEraAfter(pindex->pprev, chainman)};
-        node.chain_helper->mn_payments->FillBlockPayments(dummyTx, pindex->pprev, node.dmnman->GetListForBlock(pindex->pprev), blockSubsidy, nBlockFees, mn_reward_era, voutMasternodePayments, voutDummy);
+        GetMasternodePayments(node.dmnman->GetListForBlock(pindex->pprev), pindex->pprev, blockSubsidy, nBlockFees,
+                              mn_reward_era, Params().GetConsensus(), voutMasternodePayments);
 
         UniValue blockObj(UniValue::VOBJ);
         CAmount payedPerBlock{0};

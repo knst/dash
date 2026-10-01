@@ -330,7 +330,7 @@ void ChainTestingSetup::MakeDashChainContexts(const bool llmq_dbs_wipe)
     m_node.chain_helper = std::make_unique<CChainstateHelper>(*m_node.evodb, *m_node.dmnman, *Assert(m_node.isman),
                                                               *m_node.llmq_ctx->quorum_block_processor, *m_node.llmq_ctx->qsnapman,
                                                               chainman, chainman.m_blockman, chainman.GetConsensus(),
-                                                              *Assert(m_node.chainlocks), *m_node.llmq_ctx->qman, chainman.m_options.superblock_status);
+                                                              *Assert(m_node.chainlocks), *m_node.llmq_ctx->qman);
 }
 
 void ChainTestingSetup::LoadVerifyActivateChainstate()

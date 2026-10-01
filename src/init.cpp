@@ -2107,7 +2107,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                 node.chain_helper = std::make_unique<CChainstateHelper>(*node.evodb, *node.dmnman, *node.isman,
                                                                         *node.llmq_ctx->quorum_block_processor, *node.llmq_ctx->qsnapman,
                                                                         chainman, chainman.m_blockman, chainman.GetConsensus(),
-                                                                        *node.chainlocks, *node.llmq_ctx->qman, chainman.m_options.superblock_status);
+                                                                        *node.chainlocks, *node.llmq_ctx->qman);
                 return LoadChainstate(chainman, cache_sizes, options, *node.evodb, *node.dmnman, node.chain_helper);
             });
         }

@@ -14,21 +14,18 @@
 #include <instantsend/instantsend.h>
 #include <instantsend/lock.h>
 #include <logging.h>
-#include <masternode/payments.h>
 #include <util/check.h>
 
 CChainstateHelper::CChainstateHelper(CEvoDB& evodb, CDeterministicMNManager& dmnman,
                                      llmq::CInstantSendManager& isman, llmq::CQuorumBlockProcessor& qblockman,
                                      llmq::CQuorumSnapshotManager& qsnapman, const ChainstateManager& chainman,
                                      const node::BlockManager& blockman, const Consensus::Params& consensus_params,
-                                     const chainlock::Chainlocks& chainlocks, const llmq::CQuorumManager& qman,
-                                     const std::function<SuperblockStatus(const CDeterministicMNList& mn_list, int nBlockHeight)>& superblock_status) :
+                                     const chainlock::Chainlocks& chainlocks, const llmq::CQuorumManager& qman) :
     isman{isman},
     m_dmnman{dmnman},
     credit_pool_manager{std::make_unique<CCreditPoolManager>(evodb, chainman)},
     m_chainlocks{chainlocks},
     ehf_manager{std::make_unique<CMNHFManager>(evodb, consensus_params)},
-    mn_payments{std::make_unique<CMNPaymentsProcessor>(superblock_status, consensus_params)},
     special_tx{std::make_unique<CSpecialTxProcessor>(*credit_pool_manager, dmnman, *ehf_manager, qblockman, qsnapman,
                                                      chainman, blockman, consensus_params, chainlocks, qman)}
 {}

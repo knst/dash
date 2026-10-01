@@ -5,8 +5,6 @@
 #include <masternode/payments.h>
 
 #include <evo/deterministicmns.h>
-#include <governance/superblock.h>
-#include <masternode/sync.h>
 
 #include <chain.h>
 #include <chainparams.h>
@@ -19,7 +17,6 @@
 #include <algorithm>
 #include <cassert>
 #include <ranges>
-#include <string>
 
 int FindUnmatchedMasternodePayment(const std::vector<CTxOut>& expected,
                                    const std::vector<CTxOut>& actual,
@@ -277,64 +274,4 @@ bool GetMasternodePayments(const CDeterministicMNList& mn_list, const CBlockInde
     }
 
     return true;
-}
-
-/**
-*   GetMasternodeTxOuts
-*
-*   Get masternode payment tx outputs
-*/
-[[nodiscard]] bool CMNPaymentsProcessor::GetMasternodeTxOuts(const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy, const CAmount feeReward,
-                                                             MnRewardEra era, std::vector<CTxOut>& voutMasternodePaymentsRet)
-{
-    // make sure it's not filled yet
-    voutMasternodePaymentsRet.clear();
-
-    if(!GetMasternodePayments(mn_list, pindexPrev, blockSubsidy, feeReward, era, m_consensus_params, voutMasternodePaymentsRet)) {
-        LogPrintf("CMNPaymentsProcessor::%s -- ERROR Failed to get payee\n", __func__);
-        return false;
-    }
-
-    for (const auto& txout : voutMasternodePaymentsRet) {
-        CTxDestination dest;
-        ExtractDestination(txout.scriptPubKey, dest);
-
-        LogPrintf("CMNPaymentsProcessor::%s -- Masternode payment %lld to %s\n", __func__, txout.nValue, EncodeDestination(dest));
-    }
-
-    return true;
-}
-
-void CMNPaymentsProcessor::FillBlockPayments(CMutableTransaction& txNew, const CBlockIndex* pindexPrev, const CDeterministicMNList& mn_list, const CAmount blockSubsidy, const CAmount feeReward,
-                                             MnRewardEra era, std::vector<CTxOut>& voutMasternodePaymentsRet, std::vector<CTxOut>& voutSuperblockPaymentsRet)
-{
-    int nBlockHeight = pindexPrev == nullptr ? 0 : pindexPrev->nHeight + 1;
-
-    // Only create superblocks when one is actually triggered.
-    if (m_superblock_status) {
-        SuperblockStatus superblock{m_superblock_status(mn_list, nBlockHeight)};
-        if (superblock.state == SuperblockStatus::State::Triggered) {
-            LogPrint(BCLog::GOBJECT, "CMNPaymentsProcessor::%s -- Triggered superblock creation at height %d\n", __func__, nBlockHeight);
-            voutSuperblockPaymentsRet = std::move(superblock.payments);
-        }
-    }
-
-    if (!GetMasternodeTxOuts(pindexPrev, mn_list, blockSubsidy, feeReward, era, voutMasternodePaymentsRet)) {
-        LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- No masternode to pay (MN list probably empty)\n", __func__);
-    }
-
-    txNew.vout.insert(txNew.vout.end(), voutMasternodePaymentsRet.begin(), voutMasternodePaymentsRet.end());
-    txNew.vout.insert(txNew.vout.end(), voutSuperblockPaymentsRet.begin(), voutSuperblockPaymentsRet.end());
-
-    std::string voutMasternodeStr;
-    for (const auto& txout : voutMasternodePaymentsRet) {
-        // subtract MN payment from miner reward
-        txNew.vout[0].nValue -= txout.nValue;
-        if (!voutMasternodeStr.empty())
-            voutMasternodeStr += ",";
-        voutMasternodeStr += txout.ToString();
-    }
-
-    LogPrint(BCLog::MNPAYMENTS, "CMNPaymentsProcessor::%s -- nBlockHeight %d blockReward %lld voutMasternodePaymentsRet \"%s\" txNew %s", __func__, /* Continued */
-                            nBlockHeight, blockSubsidy + feeReward, voutMasternodeStr, txNew.ToString());
 }

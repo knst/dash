@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
     auto chain_helper = std::make_unique<CChainstateHelper>(evodb, dmnman, isman,
                                                             *llmq_ctx->quorum_block_processor, *llmq_ctx->qsnapman,
                                                             chainman, chainman.m_blockman, chainman.GetConsensus(),
-                                                            chainlocks, *llmq_ctx->qman, chainman.m_options.superblock_status);
+                                                            chainlocks, *llmq_ctx->qman);
 
     node::CacheSizes cache_sizes;
     cache_sizes.block_tree_db = 2 << 20;

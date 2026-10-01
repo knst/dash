@@ -200,6 +200,10 @@ private:
     void resetBlock();
     /** Add a tx to the block */
     void AddToBlock(CTxMemPool::txiter iter);
+    /** Append the masternode payments and, when a superblock is triggered,
+     *  the superblock payments to the coinbase. */
+    void FillBlockPayments(CMutableTransaction& txNew, const CBlockIndex* pindexPrev, CAmount blockSubsidy,
+                           CAmount feeReward) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     // Methods for how to add transactions to a block.
     /** Add transactions based on feerate including unconfirmed ancestors

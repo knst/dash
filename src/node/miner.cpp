@@ -34,7 +34,6 @@
 #include <evo/deterministicmns.h>
 #include <evo/simplifiedmns.h>
 #include <evo/specialtxman.h>
-#include <governance/governance.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/context.h>
 #include <llmq/options.h>
@@ -172,6 +171,51 @@ static bool CalcCbTxBestChainlock(const chainlock::Chainlocks& chainlocks, const
     }
 }
 
+
+void BlockAssembler::FillBlockPayments(CMutableTransaction& txNew, const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward)
+{
+    int nBlockHeight = pindexPrev == nullptr ? 0 : pindexPrev->nHeight + 1;
+    const auto mn_list{m_dmnman.GetListForBlock(pindexPrev)};
+    std::vector<CTxOut>& voutMasternodePaymentsRet{pblocktemplate->voutMasternodePayments};
+    std::vector<CTxOut>& voutSuperblockPaymentsRet{pblocktemplate->voutSuperblockPayments};
+
+    // Only create superblocks when one is actually triggered.
+    if (const auto& superblock_status{m_chainstate.m_chainman.m_options.superblock_status}) {
+        SuperblockStatus superblock{superblock_status(mn_list, nBlockHeight)};
+        if (superblock.state == SuperblockStatus::State::Triggered) {
+            LogPrint(BCLog::GOBJECT, "%s -- Triggered superblock creation at height %d\n", __func__, nBlockHeight);
+            voutSuperblockPaymentsRet = std::move(superblock.payments);
+        }
+    }
+
+    const MnRewardEra era{GetMnRewardEraAfter(pindexPrev, m_chainstate.m_chainman)};
+    if (!GetMasternodePayments(mn_list, pindexPrev, blockSubsidy, feeReward, era, chainparams.GetConsensus(), voutMasternodePaymentsRet)) {
+        LogPrintf("%s -- ERROR Failed to get payee\n", __func__);
+        LogPrint(BCLog::MNPAYMENTS, "%s -- No masternode to pay (MN list probably empty)\n", __func__);
+    } else {
+        for (const auto& txout : voutMasternodePaymentsRet) {
+            CTxDestination dest;
+            ExtractDestination(txout.scriptPubKey, dest);
+
+            LogPrintf("%s -- Masternode payment %lld to %s\n", __func__, txout.nValue, EncodeDestination(dest));
+        }
+    }
+
+    txNew.vout.insert(txNew.vout.end(), voutMasternodePaymentsRet.begin(), voutMasternodePaymentsRet.end());
+    txNew.vout.insert(txNew.vout.end(), voutSuperblockPaymentsRet.begin(), voutSuperblockPaymentsRet.end());
+
+    std::string voutMasternodeStr;
+    for (const auto& txout : voutMasternodePaymentsRet) {
+        // subtract MN payment from miner reward
+        txNew.vout[0].nValue -= txout.nValue;
+        if (!voutMasternodeStr.empty())
+            voutMasternodeStr += ",";
+        voutMasternodeStr += txout.ToString();
+    }
+
+    LogPrint(BCLog::MNPAYMENTS, "%s -- nBlockHeight %d blockReward %lld voutMasternodePaymentsRet \"%s\" txNew %s", __func__, /* Continued */
+                            nBlockHeight, blockSubsidy + feeReward, voutMasternodeStr, txNew.ToString());
+}
 
 std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn)
 {
@@ -322,8 +366,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     // Update coinbase transaction with additional info about masternode and governance payments,
     // get some info back to pass to getblocktemplate
-    const MnRewardEra mn_reward_era{GetMnRewardEraAfter(pindexPrev, m_chainstate.m_chainman)};
-    m_chain_helper.mn_payments->FillBlockPayments(coinbaseTx, pindexPrev, m_dmnman.GetListForBlock(pindexPrev), blockSubsidy, nFees, mn_reward_era, pblocktemplate->voutMasternodePayments, pblocktemplate->voutSuperblockPayments);
+    FillBlockPayments(coinbaseTx, pindexPrev, blockSubsidy, nFees);
 
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
     pblocktemplate->vTxFees[0] = -nFees;
