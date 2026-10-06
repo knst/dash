@@ -444,8 +444,10 @@ static RPCHelpMan masternode_payments()
         std::vector<CTxOut> voutMasternodePayments;
         CAmount blockSubsidy = GetBlockSubsidy(pindex, Params().GetConsensus());
         const MnRewardEra mn_reward_era{GetMnRewardEraAfter(pindex->pprev, chainman)};
-        GetMasternodePayments(node.dmnman->GetListForBlock(pindex->pprev), pindex->pprev, blockSubsidy, nBlockFees,
-                              mn_reward_era, Params().GetConsensus(), voutMasternodePayments);
+        if (!GetMasternodePayments(node.dmnman->GetListForBlock(pindex->pprev), pindex->pprev, blockSubsidy, nBlockFees,
+                                   mn_reward_era, Params().GetConsensus(), voutMasternodePayments)) {
+            LogPrint(BCLog::MNPAYMENTS, "%s -- No masternode to pay (MN list probably empty)\n", __func__);
+        }
 
         UniValue blockObj(UniValue::VOBJ);
         CAmount payedPerBlock{0};
