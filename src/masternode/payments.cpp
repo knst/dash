@@ -137,7 +137,7 @@ bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& t
     const std::vector<CTxOut>& payments{superblock.payments};
 
     if (!IsSuperblockHeight(block_height, Params().GetConsensus())) {
-        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, incorrect block height\n");
+        LogPrintf("%s -- ERROR: Block invalid, incorrect block height\n", __func__);
         return false;
     }
 
@@ -147,7 +147,7 @@ bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& t
     int nPayments = payments.size();
     int nMinerAndMasternodePayments = nOutputs - nPayments;
 
-    LogPrint(BCLog::GOBJECT, "CSuperblock::IsValid -- nOutputs = %d, nPayments = %d\n", nOutputs, nPayments);
+    LogPrint(BCLog::GOBJECT, "%s -- nOutputs = %d, nPayments = %d\n", __func__, nOutputs, nPayments);
 
     // We require an exact match (including order) between the expected
     // superblock payments and the payments actually in the block.
@@ -156,14 +156,14 @@ bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& t
         // This means the block cannot have all the superblock payments
         // so it is not valid.
         // TODO: could that be that we just hit coinbase size limit?
-        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, too few superblock payments\n");
+        LogPrintf("%s -- ERROR: Block invalid, too few superblock payments\n", __func__);
         return false;
     }
 
     // payments should not exceed limit
     CAmount nPaymentsTotalAmount = std23::ranges::fold_left(payments, CAmount{0}, [](CAmount s, const auto& p) { return s + p.nValue; });
     if (nPaymentsTotalAmount > nPaymentsLimit) {
-        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, payments limit exceeded: payments %lld, limit %lld\n", nPaymentsTotalAmount, nPaymentsLimit);
+        LogPrintf("%s -- ERROR: Block invalid, payments limit exceeded: payments %lld, limit %lld\n", __func__, nPaymentsTotalAmount, nPaymentsLimit);
         return false;
     }
 
@@ -196,7 +196,7 @@ bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& t
 
             CTxDestination dest;
             ExtractDestination(payment.scriptPubKey, dest);
-            LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid: %d payment %d to %s not found\n", i, payment.nValue, EncodeDestination(dest));
+            LogPrintf("%s -- ERROR: Block invalid: %d payment %d to %s not found\n", __func__, i, payment.nValue, EncodeDestination(dest));
 
             return false;
         }

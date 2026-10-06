@@ -531,10 +531,10 @@ SuperblockStatus SuperblockManager::GetStatus(const CDeterministicMNList& tip_mn
             CTxDestination dest;
             ExtractDestination(payment.script, dest);
 
-            LogPrint(BCLog::GOBJECT, "GetSuperblockPayments -- NEW Superblock: output %d (addr %s, amount %d.%08d)\n",
+            LogPrint(BCLog::GOBJECT, "%s -- NEW Superblock: output %d (addr %s, amount %d.%08d)\n", __func__,
                      i, EncodeDestination(dest), payment.nAmount / COIN, payment.nAmount % COIN);
         } else {
-            LogPrint(BCLog::GOBJECT, "GetSuperblockPayments -- Payment not found\n");
+            LogPrint(BCLog::GOBJECT, "%s -- Payment not found\n", __func__);
         }
     }
 

@@ -2624,7 +2624,7 @@ bool Chainstate::IsBlockValueValid(const CBlock& block, const CBlockIndex* pinde
     const CAmount nPaymentsTotalAmount = std23::ranges::fold_left(superblock.payments, CAmount{0}, [](CAmount s, const auto& p) { return s + p.nValue; });
     const bool isSuperblockValueMet = (block.vtx[0]->GetValueOut() <= blockReward + nPaymentsTotalAmount);
     if (!isSuperblockValueMet) {
-        LogPrintf("CSuperblock::IsValid -- ERROR: Block invalid, block value limit exceeded: block %lld, limit %lld\n", block.vtx[0]->GetValueOut(), blockReward + nPaymentsTotalAmount);
+        LogPrintf("%s -- ERROR: Block invalid, block value limit exceeded: block %lld, limit %lld\n", __func__, block.vtx[0]->GetValueOut(), blockReward + nPaymentsTotalAmount);
     }
 
     // this actually also checks for correct payees and not only amount
