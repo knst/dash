@@ -23,11 +23,9 @@
 class ArgsManager;
 class CBlockIndex;
 class CChainParams;
-class CConnman;
 class CDeterministicMNManager;
 class CEvoDB;
 class CScript;
-struct LLMQContext;
 
 namespace chainlock
 {

@@ -47,10 +47,8 @@
 #include <vector>
 
 class Chainstate;
-class CBlockTreeDB;
 class CChainParams;
 class CEvoDB;
-class CMNHFManager;
 class CTxMemPool;
 class TxValidationState;
 class CSpecialTxProcessor;

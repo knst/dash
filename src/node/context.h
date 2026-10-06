@@ -17,7 +17,6 @@
 class AddressIndex;
 class ArgsManager;
 class BanMan;
-class CActiveMasternodeManager;
 class AddrMan;
 class CBlockPolicyEstimator;
 class CConnman;
