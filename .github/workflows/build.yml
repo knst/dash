@@ -34,6 +34,10 @@ jobs:
       backlog-count: ${{ steps.select-runner.outputs.backlog_count }}
       decision-reason: ${{ steps.select-runner.outputs.decision_reason }}
       base-image-digest: ${{ steps.base-image.outputs.digest }}
+      runner-check-skip: ${{ vars.RUNNER_CHECK_SKIP || 'ubuntu-24.04-arm' }}
+      ci-context-tag: ${{ steps.ci-images.outputs.context_tag }}
+      existing-runner-image: ${{ steps.ci-images.outputs.runner_image }}
+      existing-slim-image: ${{ steps.ci-images.outputs.slim_image }}
     steps:
       - name: Check skip environment variables
         id: skip-check
@@ -88,6 +92,20 @@ jobs:
           fi
           echo "digest=${DIGEST:-unknown}" >> "$GITHUB_OUTPUT"
 
+      - name: Find existing CI containers
+        id: ci-images
+        if: ${{ steps.skip-check.outputs.skip == 'false' }}
+        # Reads the commit under test only through the API, never checks it
+        # out. A failure here only means the containers get built.
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          BASE_IMAGE_DIGEST: ${{ steps.base-image.outputs.digest }}
+          GH_TOKEN: ${{ github.token }}
+          SKIP_CI_IMAGE_REUSE: ${{ vars.SKIP_CI_IMAGE_REUSE }}
+        run: |
+          python3 .github/workflows/resolve_ci_images.py
+
   cache-sources:
     name: Cache depends sources
     needs: [check-skip]
@@ -110,6 +128,9 @@ jobs:
       name: dashcore-ci-runner
       runs-on-amd64: ${{ needs.check-skip.outputs['runner-amd64'] }}
       runs-on-arm64: ${{ needs.check-skip.outputs['runner-arm64'] }}
+      existing-image: ${{ needs.check-skip.outputs['existing-runner-image'] }}
+      runs-on-existing: ${{ needs.check-skip.outputs['runner-check-skip'] }}
+      context-tag: ${{ needs.check-skip.outputs['ci-context-tag'] }}
 
   container-slim:
     permissions:
@@ -125,6 +146,9 @@ jobs:
       name: dashcore-ci-slim
       runs-on-amd64: ${{ needs.check-skip.outputs['runner-amd64'] }}
       runs-on-arm64: ${{ needs.check-skip.outputs['runner-arm64'] }}
+      existing-image: ${{ needs.check-skip.outputs['existing-slim-image'] }}
+      runs-on-existing: ${{ needs.check-skip.outputs['runner-check-skip'] }}
+      context-tag: ${{ needs.check-skip.outputs['ci-context-tag'] }}
 
   depends-aarch64-linux:
     name: aarch64-linux-gnu
