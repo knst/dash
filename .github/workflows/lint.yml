@@ -11,11 +11,17 @@ on:
         description: "Runner label to use"
         required: true
         type: string
+    outputs:
+      freshness:
+        description: "current or superseded relative to develop's tip at the end of lint; empty if unknown"
+        value: ${{ jobs.lint.outputs.freshness }}
 
 jobs:
   lint:
     name: Run linters
     runs-on: ${{ inputs.runs-on }}
+    outputs:
+      freshness: ${{ steps.freshness.outputs.freshness }}
     container:
       image: ${{ inputs.container-path }}
       options: --user root
@@ -82,3 +88,18 @@ jobs:
         with:
           path: /cache/cppcheck
           key: cppcheck-${{ hashFiles('contrib/containers/ci/ci-slim.Dockerfile') }}-${{ github.sha }}
+
+      - name: Check whether develop has moved on
+        id: freshness
+        if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+        run: |
+          # Left unset when the lookup fails: tests still run, but only a
+          # verified-current run may cancel another run's tests.
+          tip="$(git ls-remote origin "refs/heads/${GITHUB_REF_NAME}" | cut -f1)" || true
+          if [[ "${tip}" == "${GITHUB_SHA}" ]]; then
+            echo "freshness=current" >> "${GITHUB_OUTPUT}"
+          elif [[ -n "${tip}" ]]; then
+            echo "freshness=superseded" >> "${GITHUB_OUTPUT}"
+            echo "Superseded by ${tip}: this run's tests will be skipped"
+          fi
+        shell: bash

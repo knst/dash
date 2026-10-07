@@ -9,11 +9,18 @@ permissions:
   contents: read
   packages: read
 
+# Develop pushes get a group of their own, so a newer push neither cancels nor
+# queues behind an older run: every build finishes and saves its caches. Only
+# tests share a cancelling group (test-src.yml), and only when the run's build
+# and lint both verified it was still develop's tip as they finished; a run
+# found superseded skips its tests, and one whose check failed runs them in its
+# own group. Otherwise a delayed older run could cancel the newest run's tests.
 concurrency:
   group: |
     ${{ github.workflow }}-${{
       (vars.ALLOW_CONCURRENCY != '' && github.sha) ||
       (github.event_name == 'pull_request_target' && github.event.pull_request.number) ||
+      (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch && github.run_id) ||
       (github.event_name == 'push' && github.ref)
     }}
   cancel-in-progress: ${{ github.ref_type != 'tag' }}
@@ -398,58 +405,70 @@ jobs:
     name: linux64-test
     uses: ./.github/workflows/test-src.yml
     needs: [check-skip, container-slim, src-linux64, lint]
+    if: needs.src-linux64.outputs.freshness != 'superseded' && needs.lint.outputs.freshness != 'superseded'
     with:
       bundle-key: ${{ needs.src-linux64.outputs.key }}
       build-target: linux64
       container-path: ${{ needs.container-slim.outputs.path }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      cancel-stale: ${{ needs.src-linux64.outputs.freshness == 'current' && needs.lint.outputs.freshness == 'current' }}
 
   test-linux64_asan:
     name: linux64_asan-test
     uses: ./.github/workflows/test-src.yml
     needs: [check-skip, container-slim, src-linux64_asan, lint]
+    if: needs.src-linux64_asan.outputs.freshness != 'superseded' && needs.lint.outputs.freshness != 'superseded'
     with:
       bundle-key: ${{ needs.src-linux64_asan.outputs.key }}
       build-target: linux64_asan
       container-path: ${{ needs.container-slim.outputs.path }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      cancel-stale: ${{ needs.src-linux64_asan.outputs.freshness == 'current' && needs.lint.outputs.freshness == 'current' }}
 
   test-linux64_multiprocess:
     name: linux64_multiprocess-test
     uses: ./.github/workflows/test-src.yml
     needs: [check-skip, container-slim, src-linux64_multiprocess, lint]
+    if: needs.src-linux64_multiprocess.outputs.freshness != 'superseded' && needs.lint.outputs.freshness != 'superseded'
     with:
       bundle-key: ${{ needs.src-linux64_multiprocess.outputs.key }}
       build-target: linux64_multiprocess
       container-path: ${{ needs.container-slim.outputs.path }}
       runs-on: ${{ needs.check-skip.outputs['runner-arm64'] }}
+      cancel-stale: ${{ needs.src-linux64_multiprocess.outputs.freshness == 'current' && needs.lint.outputs.freshness == 'current' }}
 
   test-linux64_nowallet:
     name: linux64_nowallet-test
     uses: ./.github/workflows/test-src.yml
     needs: [check-skip, container-slim, src-linux64_nowallet, lint]
+    if: needs.src-linux64_nowallet.outputs.freshness != 'superseded' && needs.lint.outputs.freshness != 'superseded'
     with:
       bundle-key: ${{ needs.src-linux64_nowallet.outputs.key }}
       build-target: linux64_nowallet
       container-path: ${{ needs.container-slim.outputs.path }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      cancel-stale: ${{ needs.src-linux64_nowallet.outputs.freshness == 'current' && needs.lint.outputs.freshness == 'current' }}
 
   test-linux64_sqlite:
     name: linux64_sqlite-test
     uses: ./.github/workflows/test-src.yml
     needs: [check-skip, container-slim, src-linux64_sqlite, lint]
+    if: needs.src-linux64_sqlite.outputs.freshness != 'superseded' && needs.lint.outputs.freshness != 'superseded'
     with:
       bundle-key: ${{ needs.src-linux64_sqlite.outputs.key }}
       build-target: linux64_sqlite
       container-path: ${{ needs.container-slim.outputs.path }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      cancel-stale: ${{ needs.src-linux64_sqlite.outputs.freshness == 'current' && needs.lint.outputs.freshness == 'current' }}
 
   test-linux64_tsan:
     name: linux64_tsan-test
     uses: ./.github/workflows/test-src.yml
     needs: [check-skip, container-slim, src-linux64_tsan, lint]
+    if: needs.src-linux64_tsan.outputs.freshness != 'superseded' && needs.lint.outputs.freshness != 'superseded'
     with:
       bundle-key: ${{ needs.src-linux64_tsan.outputs.key }}
       build-target: linux64_tsan
       container-path: ${{ needs.container-slim.outputs.path }}
       runs-on: ${{ needs.check-skip.outputs['runner-arm64'] }}
+      cancel-stale: ${{ needs.src-linux64_tsan.outputs.freshness == 'current' && needs.lint.outputs.freshness == 'current' }}

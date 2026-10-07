@@ -19,6 +19,11 @@ on:
         description: "Runner label to use (e.g., ubuntu-24.04 or ubuntu-24.04-arm)"
         required: true
         type: string
+      cancel-stale:
+        description: "Share a develop-wide group so a newer run's tests cancel these; only for runs verified current"
+        required: false
+        type: boolean
+        default: false
 
 env:
   INTEGRATION_TESTS_ARGS: "--extended --exclude feature_pruning,feature_dbcrash"
@@ -28,6 +33,10 @@ jobs:
   test-src:
     name: Test source
     runs-on: ${{ inputs.runs-on }}
+    # A newer develop run's tests cancel these; see the concurrency comment in build.yml.
+    concurrency:
+      group: ${{ github.workflow }}-${{ inputs.cancel-stale && github.ref || github.run_id }}-test-src-${{ inputs.build-target }}
+      cancel-in-progress: true
     container:
       image: ${{ inputs.container-path }}
       # SYS_PTRACE is required by LeakSanitizer's stop-the-world
