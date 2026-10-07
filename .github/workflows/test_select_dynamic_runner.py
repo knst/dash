@@ -36,6 +36,14 @@ def backlog_responses(queued_jobs):
     }
 
 
+def add_queued_jobs(responses, label, count):
+    """Add `count` queued jobs asking for `label` to backlog_responses() output."""
+    jobs_url = next(url for url in responses if "/jobs?" in url)
+    payload, headers = responses[jobs_url]
+    payload["jobs"] = payload["jobs"] + [{"status": "queued", "labels": [label]}] * count
+    return responses
+
+
 def pull_request_event(author, head_owner=None, labels=()):
     """A pull_request_target payload, by default a fork PR owned by `author`."""
     head_owner = author if head_owner is None else head_owner
@@ -85,7 +93,7 @@ class SelectDynamicRunnerTest(unittest.TestCase):
         def fetch_json(url):
             return responses[url]
 
-        self.assertEqual(MODULE.count_queued_jobs(fetch_json, [repo]), 2)
+        self.assertEqual(MODULE.count_queued_jobs(fetch_json, [repo])[0], 2)
 
     def test_count_queued_jobs_excludes_blacksmith_jobs(self):
         repo = "dashpay/dash"
@@ -118,7 +126,7 @@ class SelectDynamicRunnerTest(unittest.TestCase):
         def fetch_json(url):
             return responses[url]
 
-        self.assertEqual(MODULE.count_queued_jobs(fetch_json, [repo]), 1)
+        self.assertEqual(MODULE.count_queued_jobs(fetch_json, [repo])[0], 1)
 
     def test_label_override_selects_blacksmith_even_with_low_backlog(self):
         outputs = MODULE.select_runners(
@@ -254,7 +262,7 @@ class SelectDynamicRunnerTest(unittest.TestCase):
         self.assertEqual(outputs["runner_arm64"], "blacksmith-arm64")
         self.assertIn("amd64-github-fallback", outputs["decision_reason"])
 
-    # --- lint runner selection (self-hosted rung) ---------------------------
+    # --- pre-lint runner selection (self-hosted rung) -----------------------
 
     def _select(self, **overrides):
         kwargs = dict(
@@ -279,10 +287,33 @@ class SelectDynamicRunnerTest(unittest.TestCase):
     def test_lint_uses_selfhosted_when_backlog_and_author_allowed(self):
         outputs = self._select()
 
-        self.assertEqual(outputs["runner_lint"], "ubuntu-core")
-        self.assertEqual(outputs["lint_decision_reason"], "selfhosted:backlog:3>0")
+        self.assertEqual(outputs["runner_prelint"], "ubuntu-core")
+        self.assertEqual(
+            outputs["prelint_decision_reason"], "selfhosted:backlog:3>0;queued:0<=6"
+        )
         # The rest of the ladder is untouched.
         self.assertEqual(outputs["runner_amd64"], MODULE.DEFAULT_RUNNER_AMD64)
+        # No arm64 label configured: arm64 pre-lint jobs stay on runner_arm64.
+        self.assertEqual(outputs["runner_prelint_arm64"], MODULE.DEFAULT_RUNNER_ARM64)
+        self.assertEqual(
+            outputs["prelint_arm64_decision_reason"], "selfhosted-arm64-disabled"
+        )
+
+    def test_prelint_arm64_uses_its_own_label(self):
+        outputs = self._select(runner_selfhosted_arm64_var="ubuntu-core-arm64")
+
+        self.assertEqual(outputs["runner_prelint"], "ubuntu-core")
+        self.assertEqual(outputs["runner_prelint_arm64"], "ubuntu-core-arm64")
+
+    def test_prelint_arm64_follows_the_same_allowlist(self):
+        outputs = self._select(
+            runner_selfhosted_arm64_var="ubuntu-core-arm64",
+            event=pull_request_event("mallory"),
+            actor="mallory",
+        )
+
+        self.assertEqual(outputs["runner_prelint_arm64"], MODULE.DEFAULT_RUNNER_ARM64)
+        self.assertEqual(outputs["prelint_arm64_decision_reason"], "actor-not-allowed")
 
     def test_lint_allowlist_is_case_insensitive(self):
         outputs = self._select(
@@ -291,7 +322,7 @@ class SelectDynamicRunnerTest(unittest.TestCase):
             selfhosted_authors="pastapastapasta, KWVG , udjinm6",
         )
 
-        self.assertEqual(outputs["runner_lint"], "ubuntu-core")
+        self.assertEqual(outputs["runner_prelint"], "ubuntu-core")
 
     def test_lint_falls_back_when_author_not_allowed(self):
         # An allowlisted maintainer may not lend our hardware to a fork PR
@@ -301,8 +332,8 @@ class SelectDynamicRunnerTest(unittest.TestCase):
             actor="PastaPastaPasta",
         )
 
-        self.assertEqual(outputs["runner_lint"], MODULE.DEFAULT_RUNNER_AMD64)
-        self.assertEqual(outputs["lint_decision_reason"], "actor-not-allowed")
+        self.assertEqual(outputs["runner_prelint"], MODULE.DEFAULT_RUNNER_AMD64)
+        self.assertEqual(outputs["prelint_decision_reason"], "actor-not-allowed")
 
     def test_lint_falls_back_when_actor_not_allowed_even_if_author_is(self):
         # A fork branch can be pushed to by someone other than the PR author.
@@ -311,26 +342,26 @@ class SelectDynamicRunnerTest(unittest.TestCase):
             actor="mallory",
         )
 
-        self.assertEqual(outputs["runner_lint"], MODULE.DEFAULT_RUNNER_AMD64)
-        self.assertEqual(outputs["lint_decision_reason"], "actor-not-allowed")
+        self.assertEqual(outputs["runner_prelint"], MODULE.DEFAULT_RUNNER_AMD64)
+        self.assertEqual(outputs["prelint_decision_reason"], "actor-not-allowed")
 
     def test_lint_falls_back_without_backlog(self):
         outputs = self._select(queued_jobs=0)
 
-        self.assertEqual(outputs["runner_lint"], MODULE.DEFAULT_RUNNER_AMD64)
-        self.assertEqual(outputs["lint_decision_reason"], "backlog:0<=0")
+        self.assertEqual(outputs["runner_prelint"], MODULE.DEFAULT_RUNNER_AMD64)
+        self.assertEqual(outputs["prelint_decision_reason"], "backlog:0<=0")
 
     def test_lint_falls_back_when_selfhosted_label_unset(self):
         outputs = self._select(runner_selfhosted_var="")
 
-        self.assertEqual(outputs["runner_lint"], MODULE.DEFAULT_RUNNER_AMD64)
-        self.assertEqual(outputs["lint_decision_reason"], "selfhosted-disabled")
+        self.assertEqual(outputs["runner_prelint"], MODULE.DEFAULT_RUNNER_AMD64)
+        self.assertEqual(outputs["prelint_decision_reason"], "selfhosted-disabled")
 
     def test_lint_falls_back_when_allowlist_empty(self):
         outputs = self._select(selfhosted_authors="")
 
-        self.assertEqual(outputs["runner_lint"], MODULE.DEFAULT_RUNNER_AMD64)
-        self.assertEqual(outputs["lint_decision_reason"], "actor-not-allowed")
+        self.assertEqual(outputs["runner_prelint"], MODULE.DEFAULT_RUNNER_AMD64)
+        self.assertEqual(outputs["prelint_decision_reason"], "actor-not-allowed")
 
     def test_lint_falls_back_on_measurement_error(self):
         def fetch_json(_url):
@@ -338,19 +369,19 @@ class SelectDynamicRunnerTest(unittest.TestCase):
 
         outputs = self._select(fetch_json=fetch_json)
 
-        self.assertEqual(outputs["runner_lint"], MODULE.DEFAULT_RUNNER_AMD64)
-        self.assertEqual(outputs["lint_decision_reason"], "metric-unavailable")
+        self.assertEqual(outputs["runner_prelint"], MODULE.DEFAULT_RUNNER_AMD64)
+        self.assertEqual(outputs["prelint_decision_reason"], "metric-unavailable")
 
     def test_lint_uses_selfhosted_on_push_from_allowed_actor(self):
         outputs = self._select(event_name="push", event={}, actor="knst")
 
-        self.assertEqual(outputs["runner_lint"], "ubuntu-core")
+        self.assertEqual(outputs["runner_prelint"], "ubuntu-core")
 
     def test_lint_ignores_unknown_event_types(self):
         outputs = self._select(event_name="workflow_dispatch", event={})
 
-        self.assertEqual(outputs["runner_lint"], MODULE.DEFAULT_RUNNER_AMD64)
-        self.assertEqual(outputs["lint_decision_reason"], "actor-not-allowed")
+        self.assertEqual(outputs["runner_prelint"], MODULE.DEFAULT_RUNNER_AMD64)
+        self.assertEqual(outputs["prelint_decision_reason"], "actor-not-allowed")
 
     def test_lint_falls_back_for_cross_fork_head(self):
         # A pull request may be opened from any readable fork, so an allowlisted
@@ -359,15 +390,15 @@ class SelectDynamicRunnerTest(unittest.TestCase):
             event=pull_request_event("PastaPastaPasta", head_owner="mallory"),
         )
 
-        self.assertEqual(outputs["runner_lint"], MODULE.DEFAULT_RUNNER_AMD64)
-        self.assertEqual(outputs["lint_decision_reason"], "actor-not-allowed")
+        self.assertEqual(outputs["runner_prelint"], MODULE.DEFAULT_RUNNER_AMD64)
+        self.assertEqual(outputs["prelint_decision_reason"], "actor-not-allowed")
 
     def test_lint_allows_same_repo_head(self):
         outputs = self._select(
             event=pull_request_event("PastaPastaPasta", head_owner="dashpay"),
         )
 
-        self.assertEqual(outputs["runner_lint"], "ubuntu-core")
+        self.assertEqual(outputs["runner_prelint"], "ubuntu-core")
 
     def test_lint_requires_an_exact_login_match(self):
         # "knstfoo" must not be accepted on the strength of "knst" being listed.
@@ -376,8 +407,8 @@ class SelectDynamicRunnerTest(unittest.TestCase):
             actor="knstfoo",
         )
 
-        self.assertEqual(outputs["runner_lint"], MODULE.DEFAULT_RUNNER_AMD64)
-        self.assertEqual(outputs["lint_decision_reason"], "actor-not-allowed")
+        self.assertEqual(outputs["runner_prelint"], MODULE.DEFAULT_RUNNER_AMD64)
+        self.assertEqual(outputs["prelint_decision_reason"], "actor-not-allowed")
 
     def test_each_identity_is_matched_exactly(self):
         # Author, actor and head repository owner are three separate gates;
@@ -417,8 +448,8 @@ class SelectDynamicRunnerTest(unittest.TestCase):
 
         outputs = self._select(event=event)
 
-        self.assertEqual(outputs["runner_lint"], MODULE.DEFAULT_RUNNER_AMD64)
-        self.assertEqual(outputs["lint_decision_reason"], "actor-not-allowed")
+        self.assertEqual(outputs["runner_prelint"], MODULE.DEFAULT_RUNNER_AMD64)
+        self.assertEqual(outputs["prelint_decision_reason"], "actor-not-allowed")
 
     def test_lint_falls_back_when_head_repo_missing(self):
         event = pull_request_event("PastaPastaPasta")
@@ -426,16 +457,16 @@ class SelectDynamicRunnerTest(unittest.TestCase):
 
         outputs = self._select(event=event)
 
-        self.assertEqual(outputs["runner_lint"], MODULE.DEFAULT_RUNNER_AMD64)
-        self.assertEqual(outputs["lint_decision_reason"], "actor-not-allowed")
+        self.assertEqual(outputs["runner_prelint"], MODULE.DEFAULT_RUNNER_AMD64)
+        self.assertEqual(outputs["prelint_decision_reason"], "actor-not-allowed")
 
     def test_lint_yields_to_an_explicit_blacksmith_label(self):
         outputs = self._select(
             event=pull_request_event("PastaPastaPasta", labels=["blacksmith-ci"]),
         )
 
-        self.assertEqual(outputs["runner_lint"], "blacksmith-amd64")
-        self.assertEqual(outputs["lint_decision_reason"], "label:blacksmith-ci")
+        self.assertEqual(outputs["runner_prelint"], "blacksmith-amd64")
+        self.assertEqual(outputs["prelint_decision_reason"], "label:blacksmith-ci")
 
     def test_selfhosted_jobs_do_not_count_as_hosted_backlog(self):
         # Queued lint jobs on our own hardware must not inflate the figure that
@@ -447,14 +478,8 @@ class SelectDynamicRunnerTest(unittest.TestCase):
         self.assertFalse(MODULE.targets_github_hosted_runner(job, ["UBUNTU-CORE"]))
         self.assertTrue(MODULE.targets_github_hosted_runner(job, [""]))
 
-    def test_backlog_excludes_queued_selfhosted_lint_jobs(self):
-        responses = backlog_responses(3)
-        jobs_url = next(url for url in responses if "/jobs?" in url)
-        payload, headers = responses[jobs_url]
-        payload["jobs"] = payload["jobs"] + [
-            {"status": "queued", "labels": ["ubuntu-core"]}
-        ] * 9
-        responses[jobs_url] = (payload, headers)
+    def test_backlog_excludes_queued_selfhosted_jobs(self):
+        responses = add_queued_jobs(backlog_responses(3), "ubuntu-core", 9)
 
         outputs = self._select(fetch_json=lambda url: responses[url])
 
@@ -462,7 +487,29 @@ class SelectDynamicRunnerTest(unittest.TestCase):
         # threshold of 10 is not crossed and Blacksmith is not paid for.
         self.assertEqual(outputs["backlog_count"], "3")
         self.assertEqual(outputs["runner_amd64"], MODULE.DEFAULT_RUNNER_AMD64)
-        self.assertEqual(outputs["runner_lint"], "ubuntu-core")
+        # The 9 waiting for our own runners exceed the cap of 6, so pre-lint
+        # goes back to the hosted ladder rather than queue behind them.
+        self.assertEqual(outputs["runner_prelint"], MODULE.DEFAULT_RUNNER_AMD64)
+        self.assertEqual(
+            outputs["prelint_decision_reason"], "selfhosted-saturated:queued:9>6"
+        )
+
+    def test_saturation_is_counted_per_label(self):
+        responses = add_queued_jobs(backlog_responses(3), "ubuntu-core-arm64", 7)
+        add_queued_jobs(responses, "ubuntu-core", 6)
+
+        outputs = self._select(
+            runner_selfhosted_arm64_var="ubuntu-core-arm64",
+            fetch_json=lambda url: responses[url],
+        )
+
+        self.assertEqual(outputs["backlog_count"], "3")
+        # Exactly at the cap is still allowed.
+        self.assertEqual(outputs["runner_prelint"], "ubuntu-core")
+        self.assertEqual(outputs["runner_prelint_arm64"], MODULE.DEFAULT_RUNNER_ARM64)
+        self.assertEqual(
+            outputs["prelint_arm64_decision_reason"], "selfhosted-saturated:queued:7>6"
+        )
 
     def test_lint_inherits_blacksmith_when_rung_unavailable(self):
         # Declining self-hosted must leave lint on whatever amd64 decided,
@@ -474,7 +521,7 @@ class SelectDynamicRunnerTest(unittest.TestCase):
         )
 
         self.assertEqual(outputs["runner_amd64"], "blacksmith-amd64")
-        self.assertEqual(outputs["runner_lint"], "blacksmith-amd64")
+        self.assertEqual(outputs["runner_prelint"], "blacksmith-amd64")
 
 
 if __name__ == "__main__":

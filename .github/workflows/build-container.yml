@@ -23,6 +23,10 @@ on:
         description: "Runner label to use for arm64 jobs"
         required: true
         type: string
+      runs-on-manifest:
+        description: "Runner label for the job that combines the amd64 and arm64 builds into one multi-arch manifest"
+        required: true
+        type: string
       existing-image:
         description: "Digest reference (ghcr.io/...@sha256:...) of a trusted container already built from this exact context. When set, nothing is built and this container is used."
         required: false
@@ -157,7 +161,7 @@ jobs:
   create-manifest:
     name: Create multi-arch manifest
     if: ${{ inputs.existing-image == '' }}
-    runs-on: ${{ inputs.runs-on-arm64 }}
+    runs-on: ${{ inputs.runs-on-manifest }}
     needs: [build-amd64, build-arm64]
     outputs:
       path: ${{ steps.manifest.outputs.path }}

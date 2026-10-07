@@ -25,8 +25,12 @@ REQUEST_TIMEOUT_SECONDS = 10
 # Prefixes — any label starting with one of these indicates a non-GitHub-hosted runner
 NON_GITHUB_HOSTED_RUNNER_PREFIXES = ("blacksmith-",)
 SELF_HOSTED_LABEL = "self-hosted"
-# Any queued GitHub-hosted job at all is enough to prefer our own hardware for lint.
+# Any queued GitHub-hosted job at all is enough to prefer our own hardware for
+# the pre-lint jobs.
 SELFHOSTED_BACKLOG_THRESHOLD = 0
+# Above this many queued jobs for a self-hosted label, our own runners are the
+# bottleneck and the pre-lint jobs go back to the hosted ladder.
+DEFAULT_SELFHOSTED_MAX_QUEUED = 6
 
 
 def parse_next_link(link_header: str) -> Optional[str]:
@@ -111,8 +115,14 @@ def count_queued_jobs(
     repos: Sequence[str],
     statuses: Sequence[str] = DEFAULT_STATUSES,
     non_hosted_labels: Sequence[str] = (),
-) -> int:
+) -> Tuple[int, Dict[str, int]]:
+    """Count queued jobs in one scan of repos.
+
+    Returns the number of queued GitHub-hosted jobs, and for each label in
+    non_hosted_labels (lowercased) the number of queued jobs asking for it.
+    """
     queued_jobs = 0
+    queued_by_label = {label.lower(): 0 for label in non_hosted_labels if label}
 
     for repo in repos:
         run_ids = set()
@@ -133,12 +143,20 @@ def count_queued_jobs(
             ).format(repo, run_id)
             for payload in iter_pages(fetch_json, jobs_url):
                 for job in payload.get("jobs", []):
-                    if job.get("status") == "queued" and targets_github_hosted_runner(
-                        job, non_hosted_labels
-                    ):
+                    if job.get("status") != "queued":
+                        continue
+                    if targets_github_hosted_runner(job, non_hosted_labels):
                         queued_jobs += 1
+                    labels = {
+                        label.lower()
+                        for label in job.get("labels", [])
+                        if isinstance(label, str)
+                    }
+                    for label in queued_by_label:
+                        if label in labels:
+                            queued_by_label[label] += 1
 
-    return queued_jobs
+    return queued_jobs, queued_by_label
 
 
 def load_event(event_path: str) -> Dict:
@@ -216,7 +234,7 @@ def is_selfhosted_allowed(
     return False
 
 
-def select_lint_runner(
+def select_prelint_runner(
     event_name: str,
     event: Dict,
     actor: str,
@@ -226,16 +244,28 @@ def select_lint_runner(
     allowed_authors: Set[str],
     fallback_runner: str,
     label_override: bool = False,
+    selfhosted_queued: int = 0,
+    selfhosted_max_queued: int = DEFAULT_SELFHOSTED_MAX_QUEUED,
+    disabled_reason: str = "selfhosted-disabled",
 ) -> Tuple[str, str]:
-    """Pick the runner for the lint job, and the reason for the pick.
+    """Pick the runner for the pre-lint jobs of one arch, and the reason.
+
+    The pre-lint jobs are the short ones that gate lint and the long builds:
+    lint itself, cache-sources and the container builds and manifest. They
+    take seconds but can wait most of an hour for a GitHub-hosted runner.
 
     Inserts a self-hosted rung into the hosted -> Blacksmith ladder: once any
-    GitHub-hosted job is queued, lint goes to our own hardware instead of
-    competing for the account-wide concurrency limit. When the rung is not
-    available lint keeps the caller's existing amd64 decision unchanged.
+    GitHub-hosted job is queued, these jobs go to our own hardware instead of
+    competing for the account-wide concurrency limit, unless our own runners
+    already have more than selfhosted_max_queued jobs waiting. When the rung
+    is not available they keep the caller's existing decision for the arch.
+
+    Every job but the manifest runs pull request head code (lint scripts,
+    `make -C depends download`, Dockerfile RUN steps), so all of them go
+    through the same allowlist as lint did on its own.
     """
     if not selfhosted_label:
-        return fallback_runner, "selfhosted-disabled"
+        return fallback_runner, disabled_reason
 
     if label_override:
         # Someone asked for Blacksmith explicitly; do not quietly send them to
@@ -253,8 +283,14 @@ def select_lint_runner(
     if not is_selfhosted_allowed(event_name, event, actor, allowed_authors):
         return fallback_runner, "actor-not-allowed"
 
-    return selfhosted_label, "selfhosted:backlog:{}>{}".format(
-        backlog_count_value, SELFHOSTED_BACKLOG_THRESHOLD
+    if selfhosted_queued > selfhosted_max_queued:
+        return fallback_runner, "selfhosted-saturated:queued:{}>{}".format(
+            selfhosted_queued, selfhosted_max_queued
+        )
+
+    return selfhosted_label, "selfhosted:backlog:{}>{};queued:{}<={}".format(
+        backlog_count_value, SELFHOSTED_BACKLOG_THRESHOLD,
+        selfhosted_queued, selfhosted_max_queued,
     )
 
 
@@ -270,6 +306,8 @@ def select_runners(
     runner_selfhosted_var: str = "",
     selfhosted_authors: str = "",
     actor: str = "",
+    runner_selfhosted_arm64_var: str = "",
+    selfhosted_max_queued: int = DEFAULT_SELFHOSTED_MAX_QUEUED,
 ) -> Dict[str, str]:
     label_names = [
         label.get("name", "")
@@ -281,11 +319,14 @@ def select_runners(
 
     backlog_count = "unknown"
     backlog_count_value = None
+    selfhosted_queued: Dict[str, int] = {}
     measurement_error = None
 
     try:
-        backlog_count_value = count_queued_jobs(
-            fetch_json, repos, non_hosted_labels=(runner_selfhosted_var,)
+        backlog_count_value, selfhosted_queued = count_queued_jobs(
+            fetch_json,
+            repos,
+            non_hosted_labels=(runner_selfhosted_var, runner_selfhosted_arm64_var),
         )
         backlog_count = str(backlog_count_value)
     except Exception as exc:  # noqa: BLE001
@@ -340,23 +381,40 @@ def select_runners(
         decision_parts.append("error:{}".format(measurement_error[:180]))
     decision_parts.extend(fallback_parts)
 
-    runner_lint, lint_decision_reason = select_lint_runner(
-        event_name=event_name,
-        event=event,
-        actor=actor,
-        backlog_count_value=backlog_count_value,
-        measurement_error=measurement_error,
-        selfhosted_label=runner_selfhosted_var,
-        allowed_authors=parse_author_allowlist(selfhosted_authors),
-        fallback_runner=runner_amd64,
-        label_override=label_override,
+    allowed_authors = parse_author_allowlist(selfhosted_authors)
+
+    def prelint(
+        selfhosted_label: str, fallback_runner: str, disabled_reason: str
+    ) -> Tuple[str, str]:
+        return select_prelint_runner(
+            event_name=event_name,
+            event=event,
+            actor=actor,
+            backlog_count_value=backlog_count_value,
+            measurement_error=measurement_error,
+            selfhosted_label=selfhosted_label,
+            allowed_authors=allowed_authors,
+            fallback_runner=fallback_runner,
+            label_override=label_override,
+            selfhosted_queued=selfhosted_queued.get(selfhosted_label.lower(), 0),
+            selfhosted_max_queued=selfhosted_max_queued,
+            disabled_reason=disabled_reason,
+        )
+
+    runner_prelint, prelint_decision_reason = prelint(
+        runner_selfhosted_var, runner_amd64, "selfhosted-disabled"
+    )
+    runner_prelint_arm64, prelint_arm64_decision_reason = prelint(
+        runner_selfhosted_arm64_var, runner_arm64, "selfhosted-arm64-disabled"
     )
 
     return {
         "runner_amd64": runner_amd64,
         "runner_arm64": runner_arm64,
-        "runner_lint": runner_lint,
-        "lint_decision_reason": lint_decision_reason,
+        "runner_prelint": runner_prelint,
+        "prelint_decision_reason": prelint_decision_reason,
+        "runner_prelint_arm64": runner_prelint_arm64,
+        "prelint_arm64_decision_reason": prelint_arm64_decision_reason,
         "use_blacksmith": "true" if use_blacksmith_amd64 or use_blacksmith_arm64 else "false",
         "use_blacksmith_amd64": "true" if use_blacksmith_amd64 else "false",
         "use_blacksmith_arm64": "true" if use_blacksmith_arm64 else "false",
@@ -401,9 +459,12 @@ def write_step_summary(path: Optional[str], outputs: Dict[str, str]) -> None:
         )
         fh.write("- amd64 runner: `{}`\n".format(outputs["runner_amd64"]))
         fh.write("- arm64 runner: `{}`\n".format(outputs["runner_arm64"]))
-        fh.write("- lint runner: `{}`\n".format(outputs["runner_lint"]))
+        fh.write("- pre-lint amd64 runner: `{}`\n".format(outputs["runner_prelint"]))
+        fh.write("- pre-lint arm64 runner: `{}`\n".format(outputs["runner_prelint_arm64"]))
         fh.write("- Decision: `{}`\n".format(outputs["decision_reason"]))
-        fh.write("- Lint decision: `{}`\n".format(outputs["lint_decision_reason"]))
+        fh.write("- Pre-lint amd64 decision: `{}`\n".format(outputs["prelint_decision_reason"]))
+        fh.write("- Pre-lint arm64 decision: `{}`\n".format(
+            outputs["prelint_arm64_decision_reason"]))
 
 
 def env_int(name: str, default: int) -> int:
@@ -451,7 +512,18 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument(
         "--runner-selfhosted-var",
         default=os.environ.get("RUNNER_SELFHOSTED_VAR", ""),
-        help="Self-hosted runner label for the lint job; empty disables the rung",
+        help="Self-hosted amd64 runner label for the pre-lint jobs; empty disables the rung",
+    )
+    parser.add_argument(
+        "--runner-selfhosted-arm64-var",
+        default=os.environ.get("RUNNER_SELFHOSTED_ARM64_VAR", ""),
+        help="Self-hosted arm64 runner label for the pre-lint jobs; empty disables the rung",
+    )
+    parser.add_argument(
+        "--selfhosted-max-queued",
+        type=int,
+        default=env_int("SELFHOSTED_MAX_QUEUED", DEFAULT_SELFHOSTED_MAX_QUEUED),
+        help="Use a self-hosted label only while at most this many jobs are queued for it",
     )
     parser.add_argument(
         "--selfhosted-authors",
@@ -508,6 +580,8 @@ def main(argv: Sequence[str]) -> int:
         runner_selfhosted_var=args.runner_selfhosted_var,
         selfhosted_authors=args.selfhosted_authors,
         actor=args.actor,
+        runner_selfhosted_arm64_var=args.runner_selfhosted_arm64_var,
+        selfhosted_max_queued=args.selfhosted_max_queued,
     )
 
     write_github_output(os.environ.get("GITHUB_OUTPUT"), outputs)
