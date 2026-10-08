@@ -7,8 +7,8 @@
 #include <evo/deterministicmns.h>
 
 #include <chain.h>
-#include <chainparams.h>
 #include <consensus/amount.h>
+#include <consensus/params.h>
 #include <key_io.h>
 #include <logging.h>
 #include <script/standard.h>
@@ -132,14 +132,9 @@ bool IsSuperblockHeight(const int nBlockHeight, const Consensus::Params& consens
            ((nBlockHeight % consensus_params.nSuperblockCycle) == 0);
 }
 
-bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& txNew, int block_height, bool is_v24, CAmount nPaymentsLimit)
+bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& txNew, bool is_v24, CAmount nPaymentsLimit)
 {
     const std::vector<CTxOut>& payments{superblock.payments};
-
-    if (!IsSuperblockHeight(block_height, Params().GetConsensus())) {
-        LogPrintf("%s -- ERROR: Block invalid, incorrect block height\n", __func__);
-        return false;
-    }
 
     // CONFIGURE SUPERBLOCK OUTPUTS
 

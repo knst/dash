@@ -2629,7 +2629,7 @@ bool Chainstate::IsBlockValueValid(const CBlock& block, const CBlockIndex* pinde
 
     // this actually also checks for correct payees and not only amount
     const bool is_v24{DeploymentActiveAfter(pindex->pprev, m_chainman, Consensus::DEPLOYMENT_V24)};
-    if (!isSuperblockValueMet || !IsSuperblockValid(superblock, *block.vtx[0], nBlockHeight, is_v24, GetSuperblockPaymentsLimit(nBlockHeight, consensus_params))) {
+    if (!isSuperblockValueMet || !IsSuperblockValid(superblock, *block.vtx[0], is_v24, GetSuperblockPaymentsLimit(nBlockHeight, consensus_params))) {
         // triggered but invalid? that's weird
         LogPrintf("%s -- ERROR! Invalid superblock detected at height %d: %s", __func__, nBlockHeight, block.vtx[0]->ToString()); /* Continued */
         // should NOT allow invalid superblocks, when superblocks are enabled

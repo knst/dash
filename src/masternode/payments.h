@@ -90,6 +90,6 @@ struct SuperblockStatus {
  * Whether the coinbase @p txNew carries every payment of the triggered
  * @p superblock, in order, within the superblock payments limit.
  */
-bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& txNew, int block_height, bool is_v24, CAmount nPaymentsLimit);
+bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& txNew, bool is_v24, CAmount nPaymentsLimit);
 
 #endif // BITCOIN_MASTERNODE_PAYMENTS_H
