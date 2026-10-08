@@ -23,14 +23,44 @@ on:
         description: "Runner label to use for arm64 jobs"
         required: true
         type: string
+      existing-image:
+        description: "Digest reference (ghcr.io/...@sha256:...) of a trusted container already built from this exact context. When set, nothing is built and this container is used."
+        required: false
+        type: string
+        default: ""
+      runs-on-existing:
+        description: "Runner label for the one-step job that runs instead of the build when existing-image is set"
+        required: true
+        type: string
+      context-tag:
+        description: "Tag naming this build context (ctx-...). Trusted (push) builds add it to the container so later runs can find it as existing-image."
+        required: false
+        type: string
+        default: ""
     outputs:
       path:
-        description: "Digest reference to the container built by this run"
-        value: ${{ jobs.create-manifest.outputs.path }}
+        description: "Digest reference to the container this run uses: existing-image, or the one it just built"
+        value: ${{ inputs.existing-image || jobs.create-manifest.outputs.path }}
 
 jobs:
+  use-existing:
+    # Runs instead of the build jobs. A called workflow must run at least one
+    # job: if all of them are skipped, the caller counts as skipped, and so
+    # does every job that needs it (lint, depends, src, test).
+    name: Use existing container
+    if: ${{ inputs.existing-image != '' }}
+    runs-on: ${{ inputs.runs-on-existing }}
+    steps:
+      - name: Report existing container
+        env:
+          NAME: ${{ inputs.name }}
+          EXISTING_IMAGE: ${{ inputs.existing-image }}
+        run: |
+          echo "::notice title=${NAME}::Using existing container ${EXISTING_IMAGE}, build skipped"
+
   build-amd64:
     name: Build container (amd64)
+    if: ${{ inputs.existing-image == '' }}
     runs-on: ${{ inputs.runs-on-amd64 }}
     outputs:
       tag: ${{ steps.prepare.outputs.tag }}
@@ -79,6 +109,7 @@ jobs:
 
   build-arm64:
     name: Build container (arm64)
+    if: ${{ inputs.existing-image == '' }}
     runs-on: ${{ inputs.runs-on-arm64 }}
     outputs:
       digest: ${{ steps.build.outputs.digest }}
@@ -125,6 +156,7 @@ jobs:
 
   create-manifest:
     name: Create multi-arch manifest
+    if: ${{ inputs.existing-image == '' }}
     runs-on: ${{ inputs.runs-on-arm64 }}
     needs: [build-amd64, build-arm64]
     outputs:
@@ -151,6 +183,7 @@ jobs:
         id: manifest
         env:
           TRUSTED: ${{ github.event_name == 'push' }}
+          CONTEXT_TAG: ${{ inputs.context-tag }}
         run: |
           REPO="ghcr.io/${{ needs.build-amd64.outputs.repo }}/${{ inputs.name }}"
           TAG="${{ needs.build-amd64.outputs.tag }}"
@@ -158,6 +191,10 @@ jobs:
 
           if [[ "$TRUSTED" == "true" ]]; then
             TAGS=(-t "${REPO}:${HASH_TAG}" -t "${REPO}:${TAG}" -t "${REPO}:latest")
+            # Lets later runs with the same context use this container (resolve_ci_images.py)
+            if [[ -n "$CONTEXT_TAG" ]]; then
+              TAGS+=(-t "${REPO}:${CONTEXT_TAG}")
+            fi
           else
             TAGS=(-t "${REPO}:untrusted")
           fi
