@@ -13,7 +13,6 @@
 #include <script/standard.h>
 #include <timedata.h>
 #include <util/helpers.h>
-#include <util/string.h>
 
 #include <string>
 
@@ -282,33 +281,16 @@ bool CSporkMessage::Sign(const CKey& key)
         return false;
     }
 
-    CKeyID pubKeyId = key.GetPubKey().GetID();
+    const uint256 hash = GetSignatureHash();
 
-    // Harden Spork6 so that it is active on testnet and no other networks
-    if (std::string strError; Params().NetworkIDString() == CBaseChainParams::TESTNET) {
-        uint256 hash = GetSignatureHash();
+    if (!CHashSigner::SignHash(hash, key, vchSig)) {
+        LogPrintf("CSporkMessage::Sign -- SignHash() failed\n");
+        return false;
+    }
 
-        if (!CHashSigner::SignHash(hash, key, vchSig)) {
-            LogPrintf("CSporkMessage::Sign -- SignHash() failed\n");
-            return false;
-        }
-
-        if (!CHashSigner::VerifyHash(hash, pubKeyId, vchSig, strError)) {
-            LogPrintf("CSporkMessage::Sign -- VerifyHash() failed, error: %s\n", strError);
-            return false;
-        }
-    } else {
-        std::string strMessage = ToString(nSporkID) + ToString(nValue) + ToString(nTimeSigned);
-
-        if (!CMessageSigner::SignMessage(strMessage, vchSig, key)) {
-            LogPrintf("CSporkMessage::Sign -- SignMessage() failed\n");
-            return false;
-        }
-
-        if (!CMessageSigner::VerifyMessage(pubKeyId, vchSig, strMessage, strError)) {
-            LogPrintf("CSporkMessage::Sign -- VerifyMessage() failed, error: %s\n", strError);
-            return false;
-        }
+    if (std::string strError; !CHashSigner::VerifyHash(hash, key.GetPubKey().GetID(), vchSig, strError)) {
+        LogPrintf("CSporkMessage::Sign -- VerifyHash() failed, error: %s\n", strError);
+        return false;
     }
 
     return true;
@@ -316,21 +298,9 @@ bool CSporkMessage::Sign(const CKey& key)
 
 bool CSporkMessage::CheckSignature(const CKeyID& pubKeyId) const
 {
-    // Harden Spork6 so that it is active on testnet and no other networks
-    if (std::string strError; Params().NetworkIDString() == CBaseChainParams::TESTNET) {
-        uint256 hash = GetSignatureHash();
-
-        if (!CHashSigner::VerifyHash(hash, pubKeyId, vchSig, strError)) {
-            LogPrint(BCLog::SPORK, "CSporkMessage::CheckSignature -- VerifyHash() failed, error: %s\n", strError);
-            return false;
-        }
-    } else {
-        std::string strMessage = ToString(nSporkID) + ToString(nValue) + ToString(nTimeSigned);
-
-        if (!CMessageSigner::VerifyMessage(pubKeyId, vchSig, strMessage, strError)) {
-            LogPrint(BCLog::SPORK, "CSporkMessage::CheckSignature -- VerifyMessage() failed, error: %s\n", strError);
-            return false;
-        }
+    if (std::string strError; !CHashSigner::VerifyHash(GetSignatureHash(), pubKeyId, vchSig, strError)) {
+        LogPrint(BCLog::SPORK, "CSporkMessage::CheckSignature -- VerifyHash() failed, error: %s\n", strError);
+        return false;
     }
 
     return true;
