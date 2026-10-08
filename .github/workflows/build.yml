@@ -122,6 +122,8 @@ jobs:
     with:
       runs-on: ${{ needs.check-skip.outputs['runner-prelint'] }}
 
+  # Pushes build the trusted-* images that later runs reuse, so they stay on
+  # GitHub's runners; only pull request builds use the pre-lint runners.
   container:
     permissions:
       contents: read
@@ -134,9 +136,9 @@ jobs:
       context: ./contrib/containers/ci
       file: ./contrib/containers/ci/ci.Dockerfile
       name: dashcore-ci-runner
-      runs-on-amd64: ${{ needs.check-skip.outputs['runner-prelint'] }}
-      runs-on-arm64: ${{ needs.check-skip.outputs['runner-prelint-arm64'] }}
-      runs-on-manifest: ${{ needs.check-skip.outputs['runner-prelint'] }}
+      runs-on-amd64: ${{ github.event_name == 'push' && needs.check-skip.outputs['runner-amd64'] || needs.check-skip.outputs['runner-prelint'] }}
+      runs-on-arm64: ${{ github.event_name == 'push' && needs.check-skip.outputs['runner-arm64'] || needs.check-skip.outputs['runner-prelint-arm64'] }}
+      runs-on-manifest: ${{ github.event_name == 'push' && needs.check-skip.outputs['runner-arm64'] || needs.check-skip.outputs['runner-prelint'] }}
       existing-image: ${{ needs.check-skip.outputs['existing-runner-image'] }}
       runs-on-existing: ${{ needs.check-skip.outputs['runner-check-skip'] }}
       context-tag: ${{ needs.check-skip.outputs['ci-context-tag'] }}
@@ -153,9 +155,9 @@ jobs:
       context: ./contrib/containers/ci
       file: ./contrib/containers/ci/ci-slim.Dockerfile
       name: dashcore-ci-slim
-      runs-on-amd64: ${{ needs.check-skip.outputs['runner-prelint'] }}
-      runs-on-arm64: ${{ needs.check-skip.outputs['runner-prelint-arm64'] }}
-      runs-on-manifest: ${{ needs.check-skip.outputs['runner-prelint'] }}
+      runs-on-amd64: ${{ github.event_name == 'push' && needs.check-skip.outputs['runner-amd64'] || needs.check-skip.outputs['runner-prelint'] }}
+      runs-on-arm64: ${{ github.event_name == 'push' && needs.check-skip.outputs['runner-arm64'] || needs.check-skip.outputs['runner-prelint-arm64'] }}
+      runs-on-manifest: ${{ github.event_name == 'push' && needs.check-skip.outputs['runner-arm64'] || needs.check-skip.outputs['runner-prelint'] }}
       existing-image: ${{ needs.check-skip.outputs['existing-slim-image'] }}
       runs-on-existing: ${{ needs.check-skip.outputs['runner-check-skip'] }}
       context-tag: ${{ needs.check-skip.outputs['ci-context-tag'] }}
