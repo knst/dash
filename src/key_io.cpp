@@ -70,17 +70,17 @@ CTxDestination DecodeDestination(const std::string& str, const CChainParams& par
                 std::equal(script_prefix.begin(), script_prefix.end(), data.begin())) ||
             (data.size() >= pubkey_prefix.size() &&
                 std::equal(pubkey_prefix.begin(), pubkey_prefix.end(), data.begin()))) {
-            error_str = "Invalid length for Base58 address";
+            error_str = "Invalid length for Base58 address (P2PKH or P2SH)";
         } else {
-            error_str = "Invalid prefix for Base58-encoded address";
+            error_str = "Invalid or unsupported Base58-encoded address.";
         }
         return CNoDestination();
     } else if (!is_bech32) {
         // Try Base58 decoding without the checksum, using a much larger max length
         if (!DecodeBase58(str, data, 100)) {
-            error_str = "Not a valid Bech32m or Base58 encoding";
+            error_str = "Invalid or unsupported Bech32m or Base58 encoding.";
         } else {
-            error_str = "Invalid checksum or length of Base58 address";
+            error_str = "Invalid checksum or length of Base58 address (P2PKH or P2SH)";
         }
         return CNoDestination();
     }
