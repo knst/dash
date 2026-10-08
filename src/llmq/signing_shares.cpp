@@ -255,6 +255,10 @@ bool CSigSharesManager::ProcessMessageSigSesAnn(const CNode& pfrom, const CSigSe
 
     LogPrint(BCLog::LLMQ_SIGS, "CSigSharesManager::%s -- ann={%s}, node=%d\n", __func__, ann.ToString(), pfrom.GetId());
 
+    if (!IsQuorumActive(llmqType, qman, ann.getQuorumHash())) {
+        return true;
+    }
+
     auto quorum = qman.GetQuorum(llmqType, ann.getQuorumHash());
     if (!quorum) {
         // TODO should we ban here?
@@ -434,6 +438,10 @@ bool CSigSharesManager::ProcessMessageBatchedSigShares(const CNode& pfrom, const
 
 bool CSigSharesManager::ProcessMessageSigShare(NodeId fromId, const CSigShare& sigShare)
 {
+    if (!IsQuorumActive(sigShare.getLlmqType(), qman, sigShare.getQuorumHash())) {
+        return true;
+    }
+
     auto quorum = qman.GetQuorum(sigShare.getLlmqType(), sigShare.getQuorumHash());
     if (!quorum) {
         return true;
