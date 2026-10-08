@@ -88,8 +88,9 @@ struct SuperblockStatus {
 
 /**
  * Whether the coinbase @p txNew carries every payment of the triggered
- * @p superblock, in order, within the superblock payments limit.
+ * @p superblock, in order, within the superblock payments limit, and pays
+ * out no more than @p blockReward on top of them.
  */
-bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& txNew, bool is_v24, CAmount nPaymentsLimit);
+bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& txNew, CAmount blockReward, bool is_v24, CAmount nPaymentsLimit);
 
 #endif // BITCOIN_MASTERNODE_PAYMENTS_H

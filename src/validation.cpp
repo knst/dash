@@ -2621,16 +2621,9 @@ bool Chainstate::IsBlockValueValid(const CBlock& block, const CBlockIndex* pinde
         return isBlockRewardValueMet;
     }
 
-    // miner and masternodes should not get more than they would usually get
-    const CAmount nPaymentsTotalAmount = std23::ranges::fold_left(superblock.payments, CAmount{0}, [](CAmount s, const auto& p) { return s + p.nValue; });
-    const bool isSuperblockValueMet = (block.vtx[0]->GetValueOut() <= blockReward + nPaymentsTotalAmount);
-    if (!isSuperblockValueMet) {
-        LogPrintf("%s -- ERROR: Block invalid, block value limit exceeded: block %lld, limit %lld\n", __func__, block.vtx[0]->GetValueOut(), blockReward + nPaymentsTotalAmount);
-    }
-
     // this actually also checks for correct payees and not only amount
     const bool is_v24{DeploymentActiveAfter(pindex->pprev, m_chainman, Consensus::DEPLOYMENT_V24)};
-    if (!isSuperblockValueMet || !IsSuperblockValid(superblock, *block.vtx[0], is_v24, nSuperblockPaymentsLimit)) {
+    if (!IsSuperblockValid(superblock, *block.vtx[0], blockReward, is_v24, nSuperblockPaymentsLimit)) {
         // triggered but invalid? that's weird
         LogPrintf("%s -- ERROR! Invalid superblock detected at height %d: %s", __func__, nBlockHeight, block.vtx[0]->ToString()); /* Continued */
         // should NOT allow invalid superblocks, when superblocks are enabled

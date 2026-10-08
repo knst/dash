@@ -132,7 +132,7 @@ bool IsSuperblockHeight(const int nBlockHeight, const Consensus::Params& consens
            ((nBlockHeight % consensus_params.nSuperblockCycle) == 0);
 }
 
-bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& txNew, bool is_v24, CAmount nPaymentsLimit)
+bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& txNew, CAmount blockReward, bool is_v24, CAmount nPaymentsLimit)
 {
     const std::vector<CTxOut>& payments{superblock.payments};
 
@@ -159,6 +159,13 @@ bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& t
     CAmount nPaymentsTotalAmount = std23::ranges::fold_left(payments, CAmount{0}, [](CAmount s, const auto& p) { return s + p.nValue; });
     if (nPaymentsTotalAmount > nPaymentsLimit) {
         LogPrintf("%s -- ERROR: Block invalid, payments limit exceeded: payments %lld, limit %lld\n", __func__, nPaymentsTotalAmount, nPaymentsLimit);
+        return false;
+    }
+
+    // miner and masternodes should not get more than they would usually get
+    CAmount nBlockValue = txNew.GetValueOut();
+    if (nBlockValue > blockReward + nPaymentsTotalAmount) {
+        LogPrintf("%s -- ERROR: Block invalid, block value limit exceeded: block %lld, limit %lld\n", __func__, nBlockValue, blockReward + nPaymentsTotalAmount);
         return false;
     }
 
