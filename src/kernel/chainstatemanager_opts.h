@@ -6,7 +6,6 @@
 #define BITCOIN_KERNEL_CHAINSTATEMANAGER_OPTS_H
 
 #include <arith_uint256.h>
-#include <masternode/payments.h>
 #include <uint256.h>
 #include <util/time.h>
 
@@ -17,6 +16,7 @@
 class CChainParams;
 class CDeterministicMNList;
 class CMasternodeSync;
+struct SuperblockStatus;
 
 static constexpr bool DEFAULT_CHECKPOINTS_ENABLED{true};
 static constexpr auto DEFAULT_MAX_TIP_AGE{6h}; // ~144 blocks behind -> 2 x fork detection time, was 24h in bitcoin
