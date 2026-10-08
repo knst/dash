@@ -2416,7 +2416,8 @@ bool PeerManagerImpl::AlreadyHave(const CInv& inv)
 
     case MSG_SPORK:
         {
-            return m_sporkman.GetSporkByHash(inv.hash).has_value();
+            // Sporks are not used on mainnet, so never request them there
+            return !m_chainparams.IsTestChain() || m_sporkman.GetSporkByHash(inv.hash).has_value();
         }
 
     case MSG_GOVERNANCE_OBJECT:
@@ -5683,6 +5684,8 @@ void PeerManagerImpl::ProcessMessage(
     }
 
     if (msg_type == NetMsgType::SPORK) {
+        if (!m_chainparams.IsTestChain()) return;
+
         CSporkMessage spork;
         try {
             vRecv >> spork;
@@ -5707,6 +5710,8 @@ void PeerManagerImpl::ProcessMessage(
     }
 
     if (msg_type == NetMsgType::GETSPORKS) {
+        if (!m_chainparams.IsTestChain()) return;
+
         // For 'getsporks', active sporks is sent to the requesting peer.
         auto active_sporks = m_sporkman.ActiveSporks();
         std::vector<uint256> active_spork_hashes;
