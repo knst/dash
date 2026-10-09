@@ -123,8 +123,6 @@ public:
     //! Mark the local session as aborted.
     void MarkAborted(Consensus::LLMQType llmqType, int quorumIndex) EXCLUSIVE_LOCKS_REQUIRED(!cs_lockStatus);
 
-    size_t GetSessionCount() const
-        EXCLUSIVE_LOCKS_REQUIRED(!cs_lockStatus);
     [[nodiscard]] static RPCResult GetJsonHelp(const std::string& key, bool optional, bool inner_optional = false);
     [[nodiscard]] UniValue ToJson(int detailLevel) const
         EXCLUSIVE_LOCKS_REQUIRED(!cs_lockStatus);

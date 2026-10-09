@@ -13,6 +13,7 @@
 #include <llmq/context.h>
 #include <llmq/debug.h>
 #include <llmq/dkgsession.h>
+#include <llmq/dkgsessionhandler.h>
 #include <llmq/observer.h>
 #include <llmq/options.h>
 #include <llmq/quorumproofs.h>
@@ -38,8 +39,10 @@
 #include <rpc/server_util.h>
 #include <rpc/util.h>
 #include <util/check.h>
+#include <util/std23.h>
 #include <validation.h>
 
+#include <algorithm>
 #include <iomanip>
 #include <map>
 #include <optional>
@@ -1011,12 +1014,12 @@ static RPCHelpMan quorum_dkginfo()
         "Return information regarding DKGs.\n",
         {
             {"proTxHash", RPCArg::Type::STR_HEX, RPCArg::DefaultHint{"local active masternode proTxHash, if any"},
-                "The proTxHash of the masternode to report upcoming DKG participation for. Empty string is treated as the default."},
+                "The proTxHash of the masternode to report current and upcoming DKG participation for. Empty string is treated as the default."},
         },
         RPCResult{
             RPCResult::Type::OBJ, "", "",
             {
-                {RPCResult::Type::NUM, "active_dkgs", "Total number of active DKG sessions this node is participating in right now"},
+                {RPCResult::Type::NUM, "active_dkgs", "Number of DKG sessions between their start block and the end of their Commit phase that the masternode is a member of. Sessions whose membership cannot be determined are counted. 0 if there is no proTxHash"},
                 {RPCResult::Type::NUM, "next_dkg", "The number of blocks until the next potential DKG session"},
                 GetRpcResult("proTxHash", /*optional=*/true),
                 {RPCResult::Type::ARR, "upcoming_dkgs", /*optional=*/true, "Upcoming DKG sessions for the given proTxHash whose work block is already mined. For rotated quorums all indices in a cycle share the cycle base work block",
@@ -1043,11 +1046,6 @@ static RPCHelpMan quorum_dkginfo()
     if (!node.active_ctx && !node.observer_ctx) {
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Only available in masternode or watch-only mode.");
     }
-    const auto& dkgdbgman = *(node.active_ctx ? node.active_ctx->dkgdbgman.get() : node.observer_ctx->dkgdbgman.get());
-
-    UniValue ret(UniValue::VOBJ);
-    ret.pushKV("active_dkgs", dkgdbgman.GetSessionCount());
-
     const ChainstateManager& chainman = EnsureChainman(node);
     const auto& consensus = chainman.GetParams().GetConsensus();
     const CBlockIndex* const pindexTip = WITH_LOCK(cs_main, return chainman.ActiveChain().Tip());
@@ -1063,7 +1061,6 @@ static RPCHelpMan quorum_dkginfo()
         }
         return minDkgWindow;
     };
-    ret.pushKV("next_dkg", minNextDKG(consensus, nTipHeight));
 
     const auto quorum_type_known_enabled = [&](Consensus::LLMQType llmq_type, int quorum_base_height) {
         const int quorum_base_predecessor_height{quorum_base_height - 1};
@@ -1089,86 +1086,110 @@ static RPCHelpMan quorum_dkginfo()
         proTxHash = node.active_ctx->nodeman->GetProTxHash();
     }
 
+    struct Participation {
+        const CBlockIndex* work_block;
+        std::optional<bool> is_member;
+        const char* unknown_reason{nullptr};
+    };
+    // Membership of proTxHash in the session starting at quorumHeight, or nullopt if no such
+    // session exists or its work block is not mined yet
+    const auto get_participation = [&](const Consensus::LLMQParams& llmq_params, int quorumIndex,
+                                       int quorumHeight) -> std::optional<Participation> {
+        const int cycleBaseHeight{quorumHeight - quorumIndex};
+        if (!quorum_type_known_enabled(llmq_params.type, cycleBaseHeight)) {
+            return std::nullopt;
+        }
+
+        // IsQuorumRotationEnabled gates on DIP0024 (a buried deployment) at the block
+        // preceding the cycle base, so the cycle's rotation state is a pure height check.
+        // A rotation-capable type without rotation active at its cycle base has no
+        // canonical member selection, so skip it (this can only happen around DIP0024
+        // activation).
+        if (llmq_params.useRotation &&
+            (cycleBaseHeight < 1 || cycleBaseHeight < consensus.DeploymentHeight(Consensus::DEPLOYMENT_DIP0024))) {
+            return std::nullopt;
+        }
+
+        // All indices of a rotated cycle share the work block of their cycle base, so
+        // gate availability on the work block height rather than each index's start
+        // height; for non-rotated types cycleBaseHeight == quorumHeight anyway
+        const int workHeight{cycleBaseHeight - llmq::WORK_DIFF_DEPTH};
+        if (workHeight < 0 || workHeight > nTipHeight) {
+            return std::nullopt;
+        }
+
+        const CBlockIndex* const pWorkBlockIndex = pindexTip->GetAncestor(workHeight);
+        if (!DeploymentActiveAfter(pWorkBlockIndex, consensus, Consensus::DEPLOYMENT_V20)) {
+            return Participation{pWorkBlockIndex, std::nullopt, "pre-v20 quorum selection needs future quorum base block hash"};
+        }
+
+        const LLMQContext& llmq_ctx = EnsureLLMQContext(node);
+        const auto members = llmq::utils::ComputeQuorumMembersFromWorkBlock(
+            llmq_params.type,
+            {*CHECK_NONFATAL(node.dmnman), *CHECK_NONFATAL(llmq_ctx.qsnapman), chainman, pindexTip},
+            pWorkBlockIndex, quorumHeight);
+        if (!members.has_value()) {
+            return Participation{pWorkBlockIndex, std::nullopt, "rotated quorum snapshots are not available yet"};
+        }
+        return Participation{pWorkBlockIndex, std::ranges::any_of(*members, [&](const auto& dmn) {
+                                 return dmn->proTxHash == proTxHash;
+                             })};
+    };
+
+    int active_dkgs{0};
+    UniValue upcoming(UniValue::VARR);
     if (!proTxHash.IsNull()) {
-        ret.pushKV("proTxHash", proTxHash.ToString());
-        UniValue upcoming(UniValue::VARR);
         for (const auto& llmq_params : consensus.llmqs) {
-            // Whether a rotated cycle applies at the *upcoming* cycle base is what matters here,
-            // not whether the tip's own current cycle is rotated. Iterate every possible index
-            // for any llmq type that supports rotation and decide per-entry below.
+            // Evaluate rotation at each session's own cycle base, not the tip's. Iterate every
+            // possible index for any rotation-capable llmq type and decide per entry.
             const int quorums_num = llmq_params.useRotation ? llmq_params.signingActiveQuorumCount : 1;
+            // Members exchange DKG messages from the session's start block through its Commit
+            // phase. Each rotated index ends on its own schedule, not at the shared mining window.
+            const int active_blocks{std23::to_underlying(llmq::QuorumPhase::Commit) * llmq_params.dkgPhaseBlocks};
 
             for (const int quorumIndex : util::irange(quorums_num)) {
                 int quorumHeight = nTipHeight - (nTipHeight % llmq_params.dkgInterval) + quorumIndex;
-                if (quorumHeight <= nTipHeight) {
-                    quorumHeight += llmq_params.dkgInterval;
-                }
-                const int cycleBaseHeight{quorumHeight - quorumIndex};
-                if (!quorum_type_known_enabled(llmq_params.type, cycleBaseHeight)) {
-                    continue;
+                if (quorumHeight > nTipHeight) {
+                    quorumHeight -= llmq_params.dkgInterval;
                 }
 
-                // IsQuorumRotationEnabled gates on DIP0024 (a buried deployment) at the block
-                // preceding the cycle base, so the upcoming cycle's rotation state is a pure
-                // height check. A rotation-capable type without rotation active at its cycle
-                // base has no canonical member selection, so skip it (this can only happen
-                // around DIP0024 activation).
-                if (llmq_params.useRotation &&
-                    (cycleBaseHeight < 1 || cycleBaseHeight < consensus.DeploymentHeight(Consensus::DEPLOYMENT_DIP0024))) {
+                // Derived from membership rather than local DKG state, so a session counts
+                // before the DKG worker initializes it. Unknown membership counts too.
+                if (nTipHeight - quorumHeight < active_blocks) {
+                    if (const auto current = get_participation(llmq_params, quorumIndex, quorumHeight)) {
+                        active_dkgs += current->is_member.value_or(true);
+                    }
+                }
+
+                const int nextQuorumHeight{quorumHeight + llmq_params.dkgInterval};
+                const auto next = get_participation(llmq_params, quorumIndex, nextQuorumHeight);
+                if (!next) {
                     continue;
                 }
 
                 UniValue obj(UniValue::VOBJ);
                 obj.pushKV("llmqType", static_cast<int>(llmq_params.type));
                 obj.pushKV("quorumIndex", quorumIndex);
-                obj.pushKV("quorumHeight", quorumHeight);
-                obj.pushKV("blocksUntilStart", quorumHeight - nTipHeight);
-
-                // All indices of a rotated cycle share the work block of their cycle base, so
-                // gate availability on the work block height rather than each index's start
-                // height; for non-rotated types cycleBaseHeight == quorumHeight anyway
-                // workHeight cannot be negative: the upcoming base is a positive multiple of
-                // dkgInterval, and every dkgInterval exceeds WORK_DIFF_DEPTH
-                const int workHeight{cycleBaseHeight - llmq::WORK_DIFF_DEPTH};
-                if (workHeight > nTipHeight) {
-                    continue;
+                obj.pushKV("quorumHeight", nextQuorumHeight);
+                obj.pushKV("blocksUntilStart", nextQuorumHeight - nTipHeight);
+                obj.pushKV("known", next->is_member.has_value());
+                if (next->is_member.has_value()) {
+                    obj.pushKV("isMember", *next->is_member);
+                    obj.pushKV("workBlockHeight", next->work_block->nHeight);
+                    obj.pushKV("workBlockHash", next->work_block->GetBlockHash().ToString());
+                } else {
+                    obj.pushKV("reason", next->unknown_reason);
                 }
-
-                const CBlockIndex* const pWorkBlockIndex = pindexTip->GetAncestor(workHeight);
-                if (!DeploymentActiveAfter(pWorkBlockIndex, consensus, Consensus::DEPLOYMENT_V20)) {
-                    obj.pushKV("known", false);
-                    obj.pushKV("reason", "pre-v20 quorum selection needs future quorum base block hash");
-                    upcoming.push_back(obj);
-                    continue;
-                }
-
-                const LLMQContext& llmq_ctx = EnsureLLMQContext(node);
-                const auto predicted_members = llmq::utils::ComputeQuorumMembersFromWorkBlock(
-                    llmq_params.type,
-                    {*CHECK_NONFATAL(node.dmnman), *CHECK_NONFATAL(llmq_ctx.qsnapman), chainman, pindexTip},
-                    pWorkBlockIndex, quorumHeight);
-                if (!predicted_members.has_value()) {
-                    obj.pushKV("known", false);
-                    obj.pushKV("reason", "rotated quorum snapshots are not available yet");
-                    upcoming.push_back(obj);
-                    continue;
-                }
-
-                obj.pushKV("known", true);
-
-                bool is_member{false};
-                for (const auto& member : *predicted_members) {
-                    if (member->proTxHash == proTxHash) {
-                        is_member = true;
-                        break;
-                    }
-                }
-                obj.pushKV("isMember", is_member);
-                obj.pushKV("workBlockHeight", pWorkBlockIndex->nHeight);
-                obj.pushKV("workBlockHash", pWorkBlockIndex->GetBlockHash().ToString());
                 upcoming.push_back(obj);
             }
         }
+    }
+
+    UniValue ret(UniValue::VOBJ);
+    ret.pushKV("active_dkgs", active_dkgs);
+    ret.pushKV("next_dkg", minNextDKG(consensus, nTipHeight));
+    if (!proTxHash.IsNull()) {
+        ret.pushKV("proTxHash", proTxHash.ToString());
         ret.pushKV("upcoming_dkgs", upcoming);
     }
 

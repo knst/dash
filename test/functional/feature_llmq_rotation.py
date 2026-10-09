@@ -81,6 +81,7 @@ class LLMQQuorumRotationTest(DashTestFramework):
         llmq_type_name="llmq_test_dip0024"
 
         self.test_node = self.nodes[0].add_p2p_connection(TestP2PConn())
+        self.test_unknown_active_membership()
 
         # Connect all nodes to node1 so that we always have the whole network connected
         # Otherwise only masternode connections will be established between nodes, which won't propagate TXs/blocks
@@ -118,12 +119,13 @@ class LLMQQuorumRotationTest(DashTestFramework):
         tip = self.nodes[0].getblockcount()
         next_dkg = 24 - (tip % 24)
         assert next_dkg < 24
-        nonzero_dkgs = 0
+        stale_sessions = 0
         for mn in self.mninfo:
             dkg_info = mn.get_node(self).quorum("dkginfo")
-            nonzero_dkgs += dkg_info['active_dkgs']
+            assert_equal(dkg_info['active_dkgs'], 0)
+            stale_sessions += len(mn.get_node(self).quorum("dkgstatus")["session"])
             assert_equal(dkg_info['next_dkg'], next_dkg)
-        assert_equal(nonzero_dkgs, 4) # 1 quorums 4 nodes
+        assert stale_sessions > 0  # Expired debug sessions do not contribute to the count.
 
         expectedDeleted = []
         expectedNew = [h_100_0, h_100_1]
@@ -279,6 +281,52 @@ class LLMQQuorumRotationTest(DashTestFramework):
         assert_equal(rpc_qr_info["mnListDiffAtHMinus3C"]["baseBlockHash"], genesis_blockhash)
 
         self.test_getqrinfo_base_block_hashes_limit(int(best_block_hash, 16), int(hmc_base_blockhash, 16))
+        self.test_active_rotated_membership()
+
+    def test_unknown_active_membership(self):
+        self.log.info("Unknown active membership is counted conservatively before v20")
+        self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 4070908800)
+        self.wait_for_sporks_same()
+        tip = self.nodes[0].getblockcount()
+        start_height = tip + 24 - tip % 24
+        assert start_height < self.v20_height
+        self.generate(self.nodes[0], start_height - tip - 1)
+        node = self.mninfo[0].get_node(self)
+        upcoming = node.quorum("dkginfo")["upcoming_dkgs"]
+        assert upcoming
+        assert all(d["reason"] == "pre-v20 quorum selection needs future quorum base block hash" for d in upcoming)
+        self.generate(self.nodes[0], 1)
+        info = node.quorum("dkginfo")
+        assert info["active_dkgs"] > 0
+        assert_equal(info["active_dkgs"], self.expected_active_dkgs(upcoming, start_height))
+        assert_equal(node.quorum("dkgstatus")["session"], [])
+        self.generate(self.nodes[0], 13)
+        assert_equal(node.quorum("dkginfo")["active_dkgs"], 0)
+
+    def test_active_rotated_membership(self):
+        self.log.info("Active rotated membership is counted without DKG initialization")
+        self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 4070908800)
+        self.wait_for_sporks_same()
+        node = self.mninfo[0].get_node(self)
+        tip = self.nodes[0].getblockcount()
+        start_height = tip + 24 - tip % 24
+        self.generate(self.nodes[0], start_height - tip - 1)
+        upcoming = {mn.proTxHash: node.quorum("dkginfo", mn.proTxHash)["upcoming_dkgs"] for mn in self.mninfo}
+
+        # Each index's Commit phase ends after 10 blocks, independently of the
+        # shared mining window starting 12 blocks after the cycle base.
+        for offset in (0, 1, 9, 10, 11, 12, 13):
+            height = start_height + offset
+            self.generate(self.nodes[0], height - self.nodes[0].getblockcount())
+            counts = [node.quorum("dkginfo", mn.proTxHash)["active_dkgs"] for mn in self.mninfo]
+            assert_equal(counts, [self.expected_active_dkgs(upcoming[mn.proTxHash], height) for mn in self.mninfo])
+            # All other enabled regtest types share the cycle base, so only index 1 remains at offset 10.
+            if offset == 10:
+                assert sum(counts) > 0
+            elif offset > 10:
+                assert_equal(sum(counts), 0)
+            sessions = node.quorum("dkgstatus")["session"]
+            assert all(d["status"]["quorumHeight"] < start_height for d in sessions)
 
     def test_duplicate_rotated_commitment(self, quorum_info, llmq_type):
         self.log.info("A block mining one rotated commitment twice instead of its sibling is rejected")
