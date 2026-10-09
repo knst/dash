@@ -201,9 +201,9 @@ void SyncManager::ProcessTick()
                 continue;
             }
 
-            // SPORK : ALWAYS ASK FOR SPORKS AS WE SYNC
+            // SPORK : ASK FOR SPORKS AS WE SYNC, EXCEPT ON MAINNET WHERE THEY ARE NOT USED
 
-            if (!m_netfulfilledman.HasFulfilledRequest(pnode->addr, "spork-sync")) {
+            if (Params().IsTestChain() && !m_netfulfilledman.HasFulfilledRequest(pnode->addr, "spork-sync")) {
                 // always get sporks first, only request once from each peer
                 m_netfulfilledman.AddFulfilledRequest(pnode->addr, "spork-sync");
                 // get current network sporks

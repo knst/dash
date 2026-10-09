@@ -81,4 +81,19 @@ BOOST_AUTO_TEST_CASE(check_and_remove_drops_sporks_not_signed_by_the_spork_key)
     BOOST_CHECK(!sporkman.GetSporkByHash(spork.GetHash()).has_value());
 }
 
+// "10020" + "1" + "1791370200" and "10020" + "11" + "791370200" are the same decimal text
+BOOST_AUTO_TEST_CASE(spork_signature_binds_value_and_time)
+{
+    CKey key;
+    key.MakeNewKey(/*fCompressed=*/true);
+    CSporkMessage spork{SPORK_21_QUORUM_ALL_CONNECTED, 1, NodeClock::time_point{1791370200s}};
+    BOOST_REQUIRE(spork.Sign(key));
+    BOOST_CHECK(spork.CheckSignature(key.GetPubKey().GetID()));
+
+    CSporkMessage reinterpreted{spork};
+    reinterpreted.nValue = 11;
+    reinterpreted.nTimeSigned = 791370200;
+    BOOST_CHECK(!reinterpreted.CheckSignature(key.GetPubKey().GetID()));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

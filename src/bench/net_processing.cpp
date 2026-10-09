@@ -14,7 +14,7 @@ using namespace std::literals;
 
 static void InventoryBatch(benchmark::Bench& bench, uint32_t count)
 {
-    const auto setup = MakeNoLogFileContext<TestingSetup>();
+    const auto setup = MakeNoLogFileContext<TestingSetup>(CBaseChainParams::REGTEST);
     auto& chainstate = *static_cast<TestChainState*>(&setup->m_node.chainman->ActiveChainstate());
     chainstate.JumpOutOfIbd();
     auto& peerman = *setup->m_node.peerman;

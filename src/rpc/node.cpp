@@ -207,7 +207,7 @@ static RPCHelpMan spork()
 static RPCHelpMan sporkupdate()
 {
     return RPCHelpMan{"sporkupdate",
-        "\nUpdate the value of the specific spork. Requires \"-sporkkey\" to be set to sign the message.\n",
+        "\nUpdate the value of the specific spork. Requires \"-sporkkey\" to be set to sign the message. Not available on mainnet.\n",
         {
             {"name", RPCArg::Type::STR, RPCArg::Optional::NO, "The name of the spork to update"},
             {"value", RPCArg::Type::NUM, RPCArg::Optional::NO, "The new desired value of the spork"},
@@ -222,6 +222,9 @@ static RPCHelpMan sporkupdate()
         },
     [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
+    if (!Params().IsTestChain()) {
+        throw JSONRPCError(RPC_MISC_ERROR, "Sporks are not used on mainnet");
+    }
 
     // advanced mode, update spork values
     SporkId nSporkID = CSporkManager::GetSporkIDByName(request.params[0].get_str());

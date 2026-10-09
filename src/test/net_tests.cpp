@@ -8,6 +8,7 @@
 #include <chainparams.h>
 #include <clientversion.h>
 #include <compat/compat.h>
+#include <key.h>
 #include <net.h>
 #include <net_processing.h>
 #include <netaddress.h>
@@ -15,6 +16,7 @@
 #include <netmessagemaker.h>
 #include <serialize.h>
 #include <span.h>
+#include <spork.h>
 #include <streams.h>
 #include <test/util/net.h>
 #include <test/util/random.h>
@@ -133,6 +135,31 @@ BOOST_AUTO_TEST_CASE(inventory_request_accounting)
     peerman.FinalizeNode(*fallback);
     chainstate.ResetIbd();
     SetMockTime(0s);
+}
+
+BOOST_FIXTURE_TEST_CASE(mainnet_ignores_sporks, TestingSetup)
+{
+    auto peer{MakeTestPeer(/*id=*/0)};
+    m_node.peerman->InitializeNode(*peer, NODE_NETWORK);
+    {
+        LOCK(NetEventsInterface::g_msgproc_mutex);
+        ProcessInv(*m_node.peerman, *peer, CInv{MSG_SPORK, uint256S("01")});
+
+        // Older peers still relay sporks that no longer verify; they must not be penalized for it.
+        CKey key;
+        key.MakeNewKey(/*fCompressed=*/true);
+        CSporkMessage spork{SPORK_2_INSTANTSEND_ENABLED, 0, GetAdjustedTime()};
+        BOOST_REQUIRE(spork.Sign(key));
+        CDataStream stream{SER_NETWORK, PROTOCOL_VERSION};
+        stream << spork;
+        std::atomic<bool> interrupt_dummy{false};
+        m_node.peerman->ProcessMessage(*peer, NetMsgType::SPORK, stream, GetTime<std::chrono::microseconds>(), interrupt_dummy);
+    }
+    BOOST_CHECK_EQUAL(m_node.peerman->GetRequestedObjectCount(peer->GetId()), 0U);
+    CNodeStateStats stats;
+    BOOST_REQUIRE(m_node.peerman->GetNodeStateStats(peer->GetId(), stats));
+    BOOST_CHECK_EQUAL(stats.m_misbehavior_score, 0);
+    m_node.peerman->FinalizeNode(*peer);
 }
 
 BOOST_AUTO_TEST_CASE(notfound_does_not_wait_for_chainstate)
