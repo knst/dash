@@ -118,11 +118,6 @@ CDKGDebugManager::CDKGDebugManager(CDeterministicMNManager& dmnman, CQuorumSnaps
 
 CDKGDebugManager::~CDKGDebugManager() = default;
 
-size_t CDKGDebugManager::GetSessionCount() const
-{
-    return WITH_LOCK(cs_lockStatus, return localStatus.sessions.size());
-}
-
 UniValue CDKGDebugManager::ToJson(int detailLevel) const
 {
     LOCK(cs_lockStatus);
