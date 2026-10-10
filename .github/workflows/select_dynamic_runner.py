@@ -234,6 +234,24 @@ def is_selfhosted_allowed(
     return False
 
 
+def allows_cache_write(
+    event_name: str,
+    event: Dict,
+    actor: str,
+    allowed_authors: Set[str],
+) -> bool:
+    """Whether this run may receive the remote ccache write credential.
+
+    The credential is the repository's own secret, so any push may have it:
+    pushing already requires write access to that repository. A pull request
+    executes its head, so it gets the credential only when the people and the
+    repository behind that head are trusted to run on our own hardware too.
+    """
+    return event_name == "push" or is_selfhosted_allowed(
+        event_name, event, actor, allowed_authors
+    )
+
+
 def select_prelint_runner(
     event_name: str,
     event: Dict,
@@ -407,6 +425,7 @@ def select_runners(
     runner_prelint_arm64, prelint_arm64_decision_reason = prelint(
         runner_selfhosted_arm64_var, runner_arm64, "selfhosted-arm64-disabled"
     )
+    cache_write = allows_cache_write(event_name, event, actor, allowed_authors)
 
     return {
         "runner_amd64": runner_amd64,
@@ -419,6 +438,7 @@ def select_runners(
         "use_blacksmith_amd64": "true" if use_blacksmith_amd64 else "false",
         "use_blacksmith_arm64": "true" if use_blacksmith_arm64 else "false",
         "backlog_count": backlog_count,
+        "cache_write": "true" if cache_write else "false",
         "decision_reason": ";".join(decision_parts),
         "label_override": "true" if label_override else "false",
     }
@@ -465,6 +485,11 @@ def write_step_summary(path: Optional[str], outputs: Dict[str, str]) -> None:
         fh.write("- Pre-lint amd64 decision: `{}`\n".format(outputs["prelint_decision_reason"]))
         fh.write("- Pre-lint arm64 decision: `{}`\n".format(
             outputs["prelint_arm64_decision_reason"]))
+        fh.write(
+            "- Remote ccache writes: {}\n".format(
+                "yes" if outputs["cache_write"] == "true" else "no"
+            )
+        )
 
 
 def env_int(name: str, default: int) -> int:

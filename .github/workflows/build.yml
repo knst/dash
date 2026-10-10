@@ -9,11 +9,18 @@ permissions:
   contents: read
   packages: read
 
+# Develop pushes get a group of their own, so a newer push neither cancels nor
+# queues behind an older run: every build finishes and saves its caches. Only
+# tests share a cancelling group (test-src.yml), and only when the run's build
+# and lint both verified it was still develop's tip as they finished; a run
+# found superseded skips its tests, and one whose check failed runs them in its
+# own group. Otherwise a delayed older run could cancel the newest run's tests.
 concurrency:
   group: |
     ${{ github.workflow }}-${{
       (vars.ALLOW_CONCURRENCY != '' && github.sha) ||
       (github.event_name == 'pull_request_target' && github.event.pull_request.number) ||
+      (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch && github.run_id) ||
       (github.event_name == 'push' && github.ref)
     }}
   cancel-in-progress: ${{ github.ref_type != 'tag' }}
@@ -33,6 +40,10 @@ jobs:
       use-blacksmith-amd64: ${{ steps.select-runner.outputs.use_blacksmith_amd64 }}
       use-blacksmith-arm64: ${{ steps.select-runner.outputs.use_blacksmith_arm64 }}
       backlog-count: ${{ steps.select-runner.outputs.backlog_count }}
+      # Gates CCACHE_REMOTE_AUTH for the src-* jobs. Their secrets: mapping is
+      # resolved before a job reaches a runner, so a run that fails this gate
+      # is handed an empty value rather than a credential it could read.
+      cache-write: ${{ steps.select-runner.outputs.cache_write }}
       decision-reason: ${{ steps.select-runner.outputs.decision_reason }}
       base-image-digest: ${{ steps.base-image.outputs.digest }}
       runner-check-skip: ${{ vars.RUNNER_CHECK_SKIP || 'ubuntu-24.04-arm' }}
@@ -254,6 +265,8 @@ jobs:
       depends-dep-opts: ${{ needs.depends-aarch64-linux.outputs.dep-opts }}
       depends-artifact: ${{ needs.depends-aarch64-linux.outputs.built-artifact }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+    secrets: &remote-ccache-auth
+      CCACHE_REMOTE_AUTH: ${{ needs.check-skip.outputs.cache-write == 'true' && secrets.CCACHE_REMOTE_AUTH || '' }}
 
   src-linux64:
     name: linux64-build
@@ -268,6 +281,7 @@ jobs:
       depends-dep-opts: ${{ needs.depends-linux64.outputs.dep-opts }}
       depends-artifact: ${{ needs.depends-linux64.outputs.built-artifact }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+    secrets: *remote-ccache-auth
 
   src-linux64_asan:
     name: linux64_asan-build
@@ -282,6 +296,7 @@ jobs:
       depends-dep-opts: ${{ needs.depends-linux64.outputs.dep-opts }}
       depends-artifact: ${{ needs.depends-linux64.outputs.built-artifact }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+    secrets: *remote-ccache-auth
 
   src-linux64_fuzz:
     name: linux64_fuzz-build
@@ -296,6 +311,7 @@ jobs:
       depends-dep-opts: ${{ needs.depends-linux64.outputs.dep-opts }}
       depends-artifact: ${{ needs.depends-linux64.outputs.built-artifact }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+    secrets: *remote-ccache-auth
 
   src-linux64_multiprocess:
     name: linux64_multiprocess-build
@@ -310,6 +326,7 @@ jobs:
       depends-dep-opts: ${{ needs.depends-linux64_multiprocess.outputs.dep-opts }}
       depends-artifact: ${{ needs.depends-linux64_multiprocess.outputs.built-artifact }}
       runs-on: ${{ needs.check-skip.outputs['runner-arm64'] }}
+    secrets: *remote-ccache-auth
 
   src-linux64_nowallet:
     name: linux64_nowallet-build
@@ -323,6 +340,7 @@ jobs:
       depends-dep-opts: ${{ needs.depends-linux64_nowallet.outputs.dep-opts }}
       depends-artifact: ${{ needs.depends-linux64_nowallet.outputs.built-artifact }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+    secrets: *remote-ccache-auth
 
   src-linux64_sqlite:
     name: linux64_sqlite-build
@@ -337,6 +355,7 @@ jobs:
       depends-dep-opts: ${{ needs.depends-linux64.outputs.dep-opts }}
       depends-artifact: ${{ needs.depends-linux64.outputs.built-artifact }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+    secrets: *remote-ccache-auth
 
   src-linux64_tsan:
     name: linux64_tsan-build
@@ -351,6 +370,7 @@ jobs:
       depends-dep-opts: ${{ needs.depends-linux64_multiprocess.outputs.dep-opts }}
       depends-artifact: ${{ needs.depends-linux64_multiprocess.outputs.built-artifact }}
       runs-on: ${{ needs.check-skip.outputs['runner-arm64'] }}
+    secrets: *remote-ccache-auth
 
   src-mac:
     name: mac-build
@@ -365,6 +385,7 @@ jobs:
       depends-artifact: ${{ needs.depends-mac.outputs.built-artifact }}
       sdk-artifact: ${{ needs.depends-mac.outputs.sdk-artifact }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+    secrets: *remote-ccache-auth
 
   src-win64:
     name: win64-build
@@ -378,63 +399,108 @@ jobs:
       depends-dep-opts: ${{ needs.depends-win64.outputs.dep-opts }}
       depends-artifact: ${{ needs.depends-win64.outputs.built-artifact }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+    secrets: *remote-ccache-auth
 
   test-linux64:
     name: linux64-test
     uses: ./.github/workflows/test-src.yml
     needs: [check-skip, container-slim, src-linux64, lint]
+    if: needs.src-linux64.outputs.freshness != 'superseded' && needs.lint.outputs.freshness != 'superseded'
     with:
       bundle-key: ${{ needs.src-linux64.outputs.key }}
       build-target: linux64
       container-path: ${{ needs.container-slim.outputs.path }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      cancel-stale: ${{ needs.src-linux64.outputs.freshness == 'current' && needs.lint.outputs.freshness == 'current' }}
 
   test-linux64_asan:
     name: linux64_asan-test
     uses: ./.github/workflows/test-src.yml
     needs: [check-skip, container-slim, src-linux64_asan, lint]
+    if: needs.src-linux64_asan.outputs.freshness != 'superseded' && needs.lint.outputs.freshness != 'superseded'
     with:
       bundle-key: ${{ needs.src-linux64_asan.outputs.key }}
       build-target: linux64_asan
       container-path: ${{ needs.container-slim.outputs.path }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      cancel-stale: ${{ needs.src-linux64_asan.outputs.freshness == 'current' && needs.lint.outputs.freshness == 'current' }}
 
   test-linux64_multiprocess:
     name: linux64_multiprocess-test
     uses: ./.github/workflows/test-src.yml
     needs: [check-skip, container-slim, src-linux64_multiprocess, lint]
+    if: needs.src-linux64_multiprocess.outputs.freshness != 'superseded' && needs.lint.outputs.freshness != 'superseded'
     with:
       bundle-key: ${{ needs.src-linux64_multiprocess.outputs.key }}
       build-target: linux64_multiprocess
       container-path: ${{ needs.container-slim.outputs.path }}
       runs-on: ${{ needs.check-skip.outputs['runner-arm64'] }}
+      cancel-stale: ${{ needs.src-linux64_multiprocess.outputs.freshness == 'current' && needs.lint.outputs.freshness == 'current' }}
 
   test-linux64_nowallet:
     name: linux64_nowallet-test
     uses: ./.github/workflows/test-src.yml
     needs: [check-skip, container-slim, src-linux64_nowallet, lint]
+    if: needs.src-linux64_nowallet.outputs.freshness != 'superseded' && needs.lint.outputs.freshness != 'superseded'
     with:
       bundle-key: ${{ needs.src-linux64_nowallet.outputs.key }}
       build-target: linux64_nowallet
       container-path: ${{ needs.container-slim.outputs.path }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      cancel-stale: ${{ needs.src-linux64_nowallet.outputs.freshness == 'current' && needs.lint.outputs.freshness == 'current' }}
 
   test-linux64_sqlite:
     name: linux64_sqlite-test
     uses: ./.github/workflows/test-src.yml
     needs: [check-skip, container-slim, src-linux64_sqlite, lint]
+    if: needs.src-linux64_sqlite.outputs.freshness != 'superseded' && needs.lint.outputs.freshness != 'superseded'
     with:
       bundle-key: ${{ needs.src-linux64_sqlite.outputs.key }}
       build-target: linux64_sqlite
       container-path: ${{ needs.container-slim.outputs.path }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      cancel-stale: ${{ needs.src-linux64_sqlite.outputs.freshness == 'current' && needs.lint.outputs.freshness == 'current' }}
 
   test-linux64_tsan:
     name: linux64_tsan-test
     uses: ./.github/workflows/test-src.yml
     needs: [check-skip, container-slim, src-linux64_tsan, lint]
+    if: needs.src-linux64_tsan.outputs.freshness != 'superseded' && needs.lint.outputs.freshness != 'superseded'
     with:
       bundle-key: ${{ needs.src-linux64_tsan.outputs.key }}
       build-target: linux64_tsan
       container-path: ${{ needs.container-slim.outputs.path }}
       runs-on: ${{ needs.check-skip.outputs['runner-arm64'] }}
+      cancel-stale: ${{ needs.src-linux64_tsan.outputs.freshness == 'current' && needs.lint.outputs.freshness == 'current' }}
+
+  prune-ccache:
+    name: Prune old ccache generations
+    # Each develop push saves a new ccache/ctcache entry per target; keep only
+    # the newest so the 10 GB repository cache stops evicting fresh ones.
+    needs: [src-aarch64-linux, src-linux64, src-linux64_asan, src-linux64_fuzz, src-linux64_multiprocess, src-linux64_nowallet, src-linux64_sqlite, src-linux64_tsan, src-mac, src-win64]
+    if: |
+      !cancelled() &&
+      github.event_name == 'push' &&
+      github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      actions: write
+    steps:
+      - name: Delete all but the newest entry per target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          REF: ${{ github.ref }}
+        run: |
+          for prefix in ccache ctcache; do
+            gh cache list --ref "${REF}" --key "${prefix}-" --sort created_at --order desc \
+              --limit 1000 --json id,key \
+              | jq -r --arg p "${prefix}" '
+                  map(.target = (.key | capture("^" + $p + "-[0-9a-f]{64}-(?<t>.+)-[0-9a-f]{40}$").t))
+                  | group_by(.target)[][1:][] | "\(.id) \(.key)"' \
+              | while read -r id key; do
+                  echo "Deleting ${key}"
+                  # A concurrent prune may have deleted it already.
+                  gh cache delete "${id}" || true
+                done
+          done
