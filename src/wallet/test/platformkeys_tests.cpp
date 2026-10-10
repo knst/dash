@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <chainparams.h>
-#include <interfaces/coinjoin.h>
 #include <interfaces/wallet.h>
 #include <key.h>
 #include <key_io.h>
@@ -221,7 +220,6 @@ struct FriendshipWalletSetup : public TestChain100Setup {
     {
         m_context.args = &m_args;
         m_context.chain = m_node.chain.get();
-        m_context.coinjoin_loader = m_node.coinjoin_loader.get();
         std::tie(m_wallet, m_iface) = MakeSeededWallet(mnemonic);
     }
 
@@ -230,8 +228,7 @@ struct FriendshipWalletSetup : public TestChain100Setup {
     std::pair<std::shared_ptr<CWallet>, std::unique_ptr<interfaces::Wallet>>
     MakeSeededWallet(const SecureString& mnemonic)
     {
-        auto wallet = std::make_shared<CWallet>(m_node.chain.get(), m_node.coinjoin_loader.get(), "", m_args,
-                                                CreateMockWalletDatabase());
+        auto wallet = std::make_shared<CWallet>(m_node.chain.get(), "", CreateMockWalletDatabase());
         wallet->LoadWallet();
         {
             LOCK(wallet->cs_wallet);
@@ -245,8 +242,7 @@ struct FriendshipWalletSetup : public TestChain100Setup {
     std::pair<std::shared_ptr<CWallet>, std::unique_ptr<interfaces::Wallet>>
     MakeXprvWallet(const CExtKey& root)
     {
-        auto wallet = std::make_shared<CWallet>(m_node.chain.get(), m_node.coinjoin_loader.get(), "", m_args,
-                                                CreateMockWalletDatabase());
+        auto wallet = std::make_shared<CWallet>(m_node.chain.get(), "", CreateMockWalletDatabase());
         wallet->LoadWallet();
 
         FlatSigningProvider provider;
@@ -455,8 +451,7 @@ BOOST_FIXTURE_TEST_CASE(invalid_mnemonic_does_not_change_platform_keys, Friendsh
         "birth kingdom trash renew flavor utility donkey gasp regular alert pave kingdom"};
     BOOST_REQUIRE(!CMnemonic::Check(bad_mnemonic));
 
-    auto wallet = std::make_shared<CWallet>(m_node.chain.get(), m_node.coinjoin_loader.get(), "", m_args,
-                                            CreateMockWalletDatabase());
+    auto wallet = std::make_shared<CWallet>(m_node.chain.get(), "", CreateMockWalletDatabase());
     wallet->LoadWallet();
 
     // The master key a corrupt record would pair with: derived from the very
@@ -496,8 +491,7 @@ BOOST_FIXTURE_TEST_CASE(invalid_mnemonic_does_not_change_platform_keys, Friendsh
 //! created that a later wallet migration would orphan.
 BOOST_FIXTURE_TEST_CASE(legacy_wallet_has_no_platform_keys, FriendshipWalletSetup)
 {
-    auto wallet = std::make_shared<CWallet>(m_node.chain.get(), m_node.coinjoin_loader.get(), "", m_args,
-                                            CreateMockWalletDatabase());
+    auto wallet = std::make_shared<CWallet>(m_node.chain.get(), "", CreateMockWalletDatabase());
     wallet->LoadWallet();
     {
         LOCK(wallet->cs_wallet);

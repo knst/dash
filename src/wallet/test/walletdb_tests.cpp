@@ -114,11 +114,10 @@ BOOST_AUTO_TEST_CASE(walletdb_platform_data_records)
 //! `record_key` with a truncated value (claims five bytes, carries none),
 //! next to an intact record, and report the load result and the Platform
 //! data that made it into the wallet.
-static DBErrors LoadWithCorruptPlatformRecord(const node::NodeContext& node, const ArgsManager& args,
-                                              const std::string& record_key,
+static DBErrors LoadWithCorruptPlatformRecord(const node::NodeContext& node, const std::string& record_key,
                                               std::map<std::string, std::vector<unsigned char>>& platform_data_out)
 {
-    CWallet wallet(node.chain.get(), node.coinjoin_loader.get(), "", args, CreateMockWalletDatabase());
+    CWallet wallet(node.chain.get(), "", CreateMockWalletDatabase());
     const std::vector<unsigned char> truncated{0x05};
     const std::vector<unsigned char> intact_value{0x01, 0x02};
     {
@@ -137,13 +136,13 @@ BOOST_AUTO_TEST_CASE(walletdb_platform_data_corruption_policy)
     // wallet still loads, and intact records survive. There is no reserved
     // Platform seed-selection record.
     std::map<std::string, std::vector<unsigned char>> platform_data;
-    BOOST_CHECK(LoadWithCorruptPlatformRecord(m_node, m_args, "platform/metadata", platform_data) ==
+    BOOST_CHECK(LoadWithCorruptPlatformRecord(m_node, "platform/metadata", platform_data) ==
                 DBErrors::NONCRITICAL_ERROR);
     BOOST_CHECK_EQUAL(platform_data.count("platform/metadata"), 0U);
     BOOST_CHECK(platform_data.at("platform/intact") == std::vector<unsigned char>({0x01, 0x02}));
 
     platform_data.clear();
-    BOOST_CHECK(LoadWithCorruptPlatformRecord(m_node, m_args, "platform/identity/0", platform_data) ==
+    BOOST_CHECK(LoadWithCorruptPlatformRecord(m_node, "platform/identity/0", platform_data) ==
                 DBErrors::NONCRITICAL_ERROR);
     BOOST_CHECK_EQUAL(platform_data.count("platform/identity/0"), 0U);
     BOOST_CHECK(platform_data.at("platform/intact") == std::vector<unsigned char>({0x01, 0x02}));

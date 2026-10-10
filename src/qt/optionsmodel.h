@@ -149,6 +149,9 @@ public:
     const QString& getOverriddenByCommandLine() { return strOverriddenByCommandLine; }
     bool isOptionOverridden(const QString& option) const { return strOverriddenByCommandLine.contains(option); }
 
+    /** Whether -signer was set or not */
+    bool hasSigner();
+
     /* Explicit setters */
     void SetPruneTargetGB(int prune_target_gb);
 

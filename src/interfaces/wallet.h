@@ -64,9 +64,6 @@ struct WalletTx;
 struct WalletTxOut;
 struct WalletTxStatus;
 struct WalletMigrationResult;
-namespace CoinJoin {
-class Loader;
-}
 
 using WalletOrderForm = std::vector<std::pair<std::string, std::string>>;
 using WalletValueMap = std::map<std::string, std::string>;
@@ -589,8 +586,7 @@ std::unique_ptr<Wallet> MakeWallet(wallet::WalletContext& context, const std::sh
 
 //! Return implementation of ChainClient interface for a wallet loader. This
 //! function will be undefined in builds where ENABLE_WALLET is false.
-std::unique_ptr<WalletLoader> MakeWalletLoader(Chain& chain, ArgsManager& args, node::NodeContext& node_context,
-                                               CoinJoin::Loader& coinjoin_loader);
+std::unique_ptr<WalletLoader> MakeWalletLoader(Chain& chain, ArgsManager& args, node::NodeContext& node_context);
 
 } // namespace interfaces
 

@@ -9,6 +9,7 @@
 #include <coinjoin/options.h>
 #include <net.h>
 #include <interfaces/chain.h>
+#include <interfaces/coinjoin.h>
 #include <scheduler.h>
 #include <util/check.h>
 #include <util/fs.h>
@@ -134,8 +135,8 @@ bool LoadWallets(WalletContext& context)
                 return false;
             }
 
-            NotifyWalletLoaded(context, pwallet);
             AddWallet(context, pwallet);
+            NotifyWalletLoaded(context, pwallet);
         }
         return true;
     } catch (const std::runtime_error& e) {
@@ -161,9 +162,8 @@ void FlushWallets(WalletContext& context)
 {
     for (const std::shared_ptr<CWallet>& pwallet : GetWallets(context)) {
         if (CCoinJoinClientOptions::IsEnabled()) {
-            assert(pwallet->coinjoin_available());
             // Stop CoinJoin, release keys
-            pwallet->coinjoin_loader().FlushWallet(pwallet->GetName());
+            Assert(pwallet->chain().coinJoinLoader())->FlushWallet(pwallet->GetName());
         }
         pwallet->Flush();
     }

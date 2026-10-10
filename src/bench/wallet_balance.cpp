@@ -31,7 +31,7 @@ static void WalletBalance(benchmark::Bench& bench, const bool set_dirty, const b
     // Set clock to genesis block, so the descriptors/keys creation time don't interfere with the blocks scanning process.
     // The reason is 'generatetoaddress', which creates a chain with deterministic timestamps in the past.
     SetMockTime(test_setup->m_node.chainman->GetParams().GenesisBlock().nTime);
-    CWallet wallet{test_setup->m_node.chain.get(), test_setup->m_node.coinjoin_loader.get(), "", gArgs, CreateMockWalletDatabase()};
+    CWallet wallet{test_setup->m_node.chain.get(), "", CreateMockWalletDatabase()};
     {
         LOCK(wallet.cs_wallet);
         wallet.SetWalletFlag(WALLET_FLAG_DESCRIPTORS);

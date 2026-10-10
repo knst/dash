@@ -14,6 +14,7 @@
 #include <crypto/common.h>
 #include <external_signer.h>
 #include <interfaces/chain.h>
+#include <interfaces/coinjoin.h>
 #include <interfaces/wallet.h>
 #include <key.h>
 #include <key_io.h>
@@ -34,8 +35,9 @@
 #include <util/fs.h>
 #include <util/fs_helpers.h>
 #include <util/moneystr.h>
-#include <util/string.h>
 #include <util/strencodings.h>
+#include <util/string.h>
+#include <util/system.h>
 #include <util/time.h>
 #include <util/translation.h>
 #ifdef USE_BDB
@@ -130,11 +132,11 @@ bool AddWallet(WalletContext& context, const std::shared_ptr<CWallet>& wallet)
         if (i != context.wallets.end()) return false;
         context.wallets.push_back(wallet);
     }
+    if (auto* coinjoin_loader = wallet->chain().coinJoinLoader()) {
+        coinjoin_loader->AddWallet(wallet);
+    }
     wallet->ConnectScriptPubKeyManNotifiers();
     wallet->AutoLockMasternodeCollaterals();
-    if (wallet->coinjoin_available()) {
-        wallet->coinjoin_loader().AddWallet(wallet);
-    }
     wallet->NotifyCanGetAddressesChanged();
     return true;
 }
@@ -155,8 +157,8 @@ bool RemoveWallet(WalletContext& context, const std::shared_ptr<CWallet>& wallet
         context.wallets.erase(i);
     }
 
-    if (wallet->coinjoin_available()) {
-        wallet->coinjoin_loader().RemoveWallet(name);
+    if (auto* coinjoin_loader = chain.coinJoinLoader()) {
+        coinjoin_loader->RemoveWallet(name);
     }
 
     // Write the wallet setting
@@ -289,8 +291,8 @@ std::shared_ptr<CWallet> LoadWalletInternal(WalletContext& context, const std::s
             return nullptr;
         }
 
-        NotifyWalletLoaded(context, wallet);
         AddWallet(context, wallet);
+        NotifyWalletLoaded(context, wallet);
         wallet->postInitProcess();
 
         // Write the wallet setting
@@ -483,8 +485,8 @@ std::shared_ptr<CWallet> CreateWallet(WalletContext& context, const std::string&
         }
     }
 
-    NotifyWalletLoaded(context, wallet);
     AddWallet(context, wallet);
+    NotifyWalletLoaded(context, wallet);
     wallet->postInitProcess();
 
     // Write the wallet settings
@@ -1136,7 +1138,7 @@ CWalletTx* CWallet::AddToWallet(CTransactionRef tx, const TxState& state, const 
 
 #if HAVE_SYSTEM
     // notify an external script when a wallet transaction comes in or is updated
-    std::string strCmd = m_args.GetArg("-walletnotify", "");
+    std::string strCmd = m_notify_tx_changed_script;
 
     if (!strCmd.empty())
     {
@@ -3208,14 +3210,17 @@ std::unique_ptr<WalletDatabase> MakeWalletDatabase(const std::string& name, cons
 std::shared_ptr<CWallet> CWallet::Create(WalletContext& context, const std::string& name, std::unique_ptr<WalletDatabase> database, uint64_t wallet_creation_flags, bilingual_str& error, std::vector<bilingual_str>& warnings)
 {
     interfaces::Chain* chain = context.chain;
-    interfaces::CoinJoin::Loader* coinjoin_loader = context.coinjoin_loader;
     ArgsManager& args = *Assert(context.args);
     const std::string& walletFile = database->Filename();
 
     const auto start{SteadyClock::now()};
     // TODO: Can't use std::make_shared because we need a custom deleter but
     // should be possible to use std::allocate_shared.
-    std::shared_ptr<CWallet> walletInstance(new CWallet(chain, coinjoin_loader, name, args, std::move(database)), ReleaseWallet);
+    std::shared_ptr<CWallet> walletInstance(new CWallet(chain, name, std::move(database)), ReleaseWallet);
+    walletInstance->m_keypool_size = std::max(args.GetIntArg("-keypool", DEFAULT_KEYPOOL_SIZE), int64_t{1});
+    walletInstance->m_mnemonic_bits = args.GetIntArg("-mnemonicbits", CHDChain::DEFAULT_MNEMONIC_BITS);
+    walletInstance->m_notify_tx_changed_script = args.GetArg("-walletnotify", "");
+    walletInstance->m_notify_tx_locked_script = args.GetArg("-instantsendnotify", "");
     // TODO: refactor this condition: validation of error looks like workaround
     if (!walletInstance->AutoBackupWallet(fs::PathFromString(walletFile), error, warnings) && !error.original.empty()) {
         return nullptr;
@@ -3525,10 +3530,6 @@ std::shared_ptr<CWallet> CWallet::Create(WalletContext& context, const std::stri
     if (chain && !AttachChain(walletInstance, *chain, rescan_required, error, warnings)) {
         walletInstance->m_chain_notifications_handler.reset(); // Reset this pointer so that the wallet will actually be unloaded
         return nullptr;
-    }
-
-    if (coinjoin_loader) {
-        coinjoin_loader->AddWallet(walletInstance);
     }
 
     {
@@ -3888,7 +3889,7 @@ void CWallet::notifyTransactionLock(const CTransactionRef &tx, const std::shared
         NotifyISLockReceived();
 #if HAVE_SYSTEM
         // notify an external script
-        std::string strCmd = m_args.GetArg("-instantsendnotify", "");
+        std::string strCmd = m_notify_tx_locked_script;
         if (!strCmd.empty()) {
             ReplaceAll(strCmd, "%s", txHash.GetHex());
 #ifndef WIN32
@@ -4230,7 +4231,7 @@ bool CWallet::Unlock(const SecureString& strWalletPassphrase, bool fForMixingOnl
                 if(nWalletBackups == -2) {
                     TopUpKeyPool();
                     WalletLogPrintf("Keypool replenished, re-initializing automatic backups.\n");
-                    nWalletBackups = m_args.GetIntArg("-createwalletbackups", 10);
+                    nWalletBackups = gArgs.GetIntArg("-createwalletbackups", 10);
                 }
                 return true;
             }
@@ -4364,7 +4365,7 @@ void CWallet::SetupLegacyScriptPubKeyMan()
         return;
     }
 
-    auto spk_manager = std::make_unique<LegacyScriptPubKeyMan>(*this);
+    auto spk_manager = std::make_unique<LegacyScriptPubKeyMan>(*this, m_keypool_size);
     m_internal_spk_managers = spk_manager.get();
     m_external_spk_managers = spk_manager.get();
     uint256 id = spk_manager->GetID();
@@ -4399,10 +4400,10 @@ void CWallet::UpdateProgress(const std::string& title, int nProgress)
 void CWallet::LoadDescriptorScriptPubKeyMan(uint256 id, WalletDescriptor& desc)
 {
     if (IsWalletFlagSet(WALLET_FLAG_EXTERNAL_SIGNER)) {
-        auto spk_manager = std::unique_ptr<ScriptPubKeyMan>(new ExternalSignerScriptPubKeyMan(*this, desc));
+        auto spk_manager = std::unique_ptr<ScriptPubKeyMan>(new ExternalSignerScriptPubKeyMan(*this, desc, m_keypool_size));
         AddScriptPubKeyMan(id, std::move(spk_manager));
     } else {
-        auto spk_manager = std::unique_ptr<ScriptPubKeyMan>(new DescriptorScriptPubKeyMan(*this, desc));
+        auto spk_manager = std::unique_ptr<ScriptPubKeyMan>(new DescriptorScriptPubKeyMan(*this, desc, m_keypool_size));
         AddScriptPubKeyMan(id, std::move(spk_manager));
     }
 }
@@ -4413,7 +4414,7 @@ void CWallet::SetupDescriptorScriptPubKeyMans(const CExtKey& master_key, const S
 
     for (auto type : {PathDerivationType::BIP44_External, PathDerivationType::BIP44_Internal, PathDerivationType::DIP0009_CoinJoin}) {
         { // OUTPUT_TYPE is only one: LEGACY
-            auto spk_manager = std::unique_ptr<DescriptorScriptPubKeyMan>(new DescriptorScriptPubKeyMan(*this));
+            auto spk_manager = std::unique_ptr<DescriptorScriptPubKeyMan>(new DescriptorScriptPubKeyMan(*this, m_keypool_size));
             if (IsCrypted()) {
                 if (IsLocked()) {
                     throw std::runtime_error(std::string(__func__) + ": Wallet is locked, cannot setup new descriptors");
@@ -4439,7 +4440,7 @@ void CWallet::SetupDescriptorScriptPubKeyMans(const SecureString& mnemonic_arg, 
     if (!IsWalletFlagSet(WALLET_FLAG_EXTERNAL_SIGNER)) {
     // Make a seed
     // TODO: remove duplicated code with CHDChain::SetMnemonic
-    const SecureString mnemonic = mnemonic_arg.empty() ? CMnemonic::Generate(m_args.GetIntArg("-mnemonicbits", CHDChain::DEFAULT_MNEMONIC_BITS)) : mnemonic_arg;
+    const SecureString mnemonic = mnemonic_arg.empty() ? CMnemonic::Generate(m_mnemonic_bits) : mnemonic_arg;
     if (!CMnemonic::Check(mnemonic)) {
         throw std::runtime_error(std::string(__func__) + ": invalid mnemonic");
     }
@@ -4473,7 +4474,7 @@ void CWallet::SetupDescriptorScriptPubKeyMans(const SecureString& mnemonic_arg, 
                 if (!desc->GetOutputType()) {
                     continue;
                 }
-                auto spk_manager = std::unique_ptr<ExternalSignerScriptPubKeyMan>(new ExternalSignerScriptPubKeyMan(*this));
+                auto spk_manager = std::unique_ptr<ExternalSignerScriptPubKeyMan>(new ExternalSignerScriptPubKeyMan(*this, m_keypool_size));
                 spk_manager->SetupDescriptor(std::move(desc));
                 uint256 id = spk_manager->GetID();
                 AddScriptPubKeyMan(id, std::move(spk_manager));
@@ -4594,7 +4595,7 @@ ScriptPubKeyMan* CWallet::AddWalletDescriptor(WalletDescriptor& desc, const Flat
         WalletLogPrintf("Update existing descriptor: %s\n", desc.descriptor->ToString());
         spk_man->UpdateWalletDescriptor(desc);
     } else {
-        auto new_spk_man = std::unique_ptr<DescriptorScriptPubKeyMan>(new DescriptorScriptPubKeyMan(*this, desc));
+        auto new_spk_man = std::unique_ptr<DescriptorScriptPubKeyMan>(new DescriptorScriptPubKeyMan(*this, desc, m_keypool_size));
         spk_man = new_spk_man.get();
 
         // Save the descriptor to memory
