@@ -121,6 +121,9 @@ private:
     mutable unordered_lru_cache<std::pair<Consensus::LLMQType, uint256>, bool, StaticSaltedHasher, 30000> hasSigForIdCache GUARDED_BY(cs_cache);
     mutable Uint256LruHashMap<bool, 30000> hasSigForSessionCache GUARDED_BY(cs_cache);
     mutable Uint256LruHashMap<bool, 30000> hasSigForHashCache GUARDED_BY(cs_cache);
+    // Legacy marker values only appear after a downgrade, which needs a restart, so one bounded scan per
+    // process adopts them all. A prefix is dropped once scanned through.
+    std::unordered_map<std::string, uint256> m_legacy_scan_resume GUARDED_BY(cs_cache){{"rs_h", {}}, {"rs_s", {}}};
 
 public:
     explicit CRecoveredSigsDb(const util::DbWrapperParams& db_params);

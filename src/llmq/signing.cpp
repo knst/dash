@@ -269,26 +269,16 @@ std::optional<RecoveredSigMarker> ReadRecoveredSigMarker(const CDBWrapper& db, c
 void CRecoveredSigsDb::MigrateLegacyMarkers(const std::string& prefix)
 {
     AssertLockHeld(cs_cache);
-    const auto cursor_key = std::make_pair(std::string("rs_c"), prefix);
-    uint256 last;
-    const bool have_cursor = db->Read(cursor_key, last);
+    const auto resume = m_legacy_scan_resume.find(prefix);
+    if (resume == m_legacy_scan_resume.end()) return;
     std::unique_ptr<CDBIterator> cursor{db->NewIterator()};
-    auto start = std::make_pair(prefix, last);
+    auto start = std::make_pair(prefix, resume->second);
     cursor->Seek(start);
-    if (have_cursor && cursor->Valid()) {
-        decltype(start) key;
-        if (cursor->GetKey(key) && key == start) cursor->Next();
-    }
     CDBBatch batch(*db);
-    bool finished{false};
     const uint32_t now = GetTime<std::chrono::seconds>().count();
     for (size_t examined{0}; examined < MAX_CLEANUP_ENTRIES && cursor->Valid(); ++examined, cursor->Next()) {
         decltype(start) key;
-        if (!cursor->GetKey(key) || key.first != prefix) {
-            finished = true;
-            break;
-        }
-        last = key.second;
+        if (!cursor->GetKey(key) || key.first != prefix) break;
         const auto marker = ReadRecoveredSigMarker(*db, prefix, key.second);
         if (!marker || marker->time) continue;
         // Uncorrelated legacy session markers have no recoverable age; retain one grace interval.
@@ -299,10 +289,11 @@ void CRecoveredSigsDb::MigrateLegacyMarkers(const std::string& prefix)
         }
         batch.Write(std::make_tuple(std::string("rs_e"), htobe32_internal(now), prefix, key.second), uint8_t{1});
     }
-    if (finished || !cursor->Valid()) {
-        batch.Erase(cursor_key);
+    decltype(start) next;
+    if (cursor->Valid() && cursor->GetKey(next) && next.first == prefix) {
+        resume->second = next.second;
     } else {
-        batch.Write(cursor_key, last);
+        m_legacy_scan_resume.erase(resume);
     }
     db->WriteBatch(batch);
 }
@@ -338,7 +329,6 @@ void CRecoveredSigsDb::CleanupOldMarkers(int64_t maxAge)
 void CRecoveredSigsDb::CleanupOldRecoveredSigs(int64_t maxAge)
 {
     LOCK(cs_cache);
-    // Cycle the bounded scans so downgrade-written legacy values are adopted on re-upgrade too.
     MigrateLegacyMarkers("rs_h");
     MigrateLegacyMarkers("rs_s");
     CleanupOldMarkers(maxAge);
