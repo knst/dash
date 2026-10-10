@@ -71,7 +71,6 @@
 #include <coinjoin/coinjoin.h>
 #include <coinjoin/walletman.h>
 #include <evo/cbtx.h>
-#include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
 #include <evo/simplifiedmns.h>
@@ -79,8 +78,10 @@
 #include <evo/specialtxman.h>
 #include <flat-database.h>
 #include <governance/governance.h>
+#include <governance/superblock.h>
 #include <instantsend/instantsend.h>
 #include <llmq/context.h>
+#include <llmq/options.h>
 #include <llmq/signing.h>
 #include <masternode/meta.h>
 #include <masternode/sync.h>
@@ -212,6 +213,8 @@ BasicTestingSetup::BasicTestingSetup(const std::string& chainName, const std::ve
     m_node.netfulfilledman = std::make_unique<CNetFulfilledRequestManager>();
     m_node.sporkman = std::make_unique<CSporkManager>();
     m_node.chainlocks = std::make_unique<chainlock::Chainlocks>(*m_node.sporkman);
+    m_node.sbman = std::make_unique<governance::SuperblockManager>();
+    m_node.mn_sync = std::make_unique<CMasternodeSync>(std::make_unique<NodeSyncNotifierImpl>(*m_node.connman, *m_node.netfulfilledman));
     m_node.evodb = std::make_unique<CEvoDB>(util::DbWrapperParams{.path = m_node.args->GetDataDirNet(), .memory = m_dash_dbs_in_memory, .wipe = true});
     m_node.dmnman = std::make_unique<CDeterministicMNManager>(*m_node.evodb, *m_node.mn_metaman);
     m_node.isman = std::make_unique<llmq::CInstantSendManager>(*m_node.sporkman, util::DbWrapperParams{.path = m_node.args->GetDataDirNet(), .memory = m_dash_dbs_in_memory, .wipe = true});
@@ -266,11 +269,11 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
     const ChainstateManager::Options chainman_opts{
         .chainparams = chainparams,
         .check_block_index = true,
+        .superblock_status = [&sbman = *m_node.sbman](const CDeterministicMNList& mn_list, int height) { return sbman.GetStatus(mn_list, height); },
+        .mn_sync = m_node.mn_sync.get(),
     };
     m_node.chainman = std::make_unique<ChainstateManager>(chainman_opts);
     m_node.chainman->m_blockman.m_block_tree_db = std::make_unique<CBlockTreeDB>(m_cache_sizes.block_tree_db, true);
-
-    m_node.mn_sync = std::make_unique<CMasternodeSync>(std::make_unique<NodeSyncNotifierImpl>(*m_node.connman, *m_node.netfulfilledman));
 
     m_node.clhandler = std::make_unique<chainlock::ChainlockHandler>(*m_node.chainlocks, *m_node.chainman, *m_node.mempool, *m_node.mn_sync);
 
@@ -298,7 +301,6 @@ node::ChainstateLoadOptions ChainTestingSetup::ChainstateLoadOptionsForTest()
     options.mempool = Assert(m_node.mempool.get());
     options.isman = Assert(m_node.isman.get());
     options.chainlocks = Assert(m_node.chainlocks.get());
-    options.mn_sync = Assert(m_node.mn_sync.get());
     options.data_dir = Assert(m_node.args)->GetDataDirNet();
     options.block_tree_db_in_memory = m_block_tree_db_in_memory;
     options.coins_db_in_memory = m_coins_db_in_memory;
@@ -312,6 +314,22 @@ node::ChainstateLoadOptions ChainTestingSetup::ChainstateLoadOptionsForTest()
     options.check_interrupt = [] { return false; };
     options.coins_error_cb = [] {};
     return options;
+}
+
+void ChainTestingSetup::MakeDashChainContexts(const bool llmq_dbs_wipe)
+{
+    auto& chainman{*Assert(m_node.chainman)};
+
+    LOCK(::cs_main);
+    m_node.special_tx.reset();
+    m_node.llmq_ctx.reset();
+    m_node.llmq_ctx = std::make_unique<LLMQContext>(*m_node.dmnman, *m_node.evodb, chainman,
+                                                    util::DbWrapperParams{.path = m_node.args->GetDataDirNet(), .memory = m_dash_dbs_in_memory, .wipe = llmq_dbs_wipe},
+                                                    llmq::DEFAULT_BLSCHECK_THREADS, llmq::DEFAULT_WORKER_COUNT, llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE);
+    m_node.special_tx = std::make_unique<CSpecialTxProcessor>(*m_node.evodb, *m_node.dmnman,
+                                                              *m_node.llmq_ctx->quorum_block_processor, *m_node.llmq_ctx->qsnapman,
+                                                              chainman, chainman.m_blockman, chainman.GetConsensus(),
+                                                              *Assert(m_node.chainlocks), *m_node.llmq_ctx->qman);
 }
 
 void ChainTestingSetup::LoadVerifyActivateChainstate()
@@ -342,6 +360,8 @@ void ChainTestingSetup::LoadVerifyActivateChainstate()
         // here, including the chainlock handler that references the mempool.
         m_node.clhandler.reset();
         m_node.mempool.reset();
+        m_node.special_tx.reset();
+        m_node.llmq_ctx.reset();
         m_node.isman.reset();
         m_node.dmnman.reset();
         m_node.evodb.reset();
@@ -350,11 +370,14 @@ void ChainTestingSetup::LoadVerifyActivateChainstate()
         m_node.isman = std::make_unique<llmq::CInstantSendManager>(*m_node.sporkman, util::DbWrapperParams{.path = m_node.args->GetDataDirNet(), .memory = m_dash_dbs_in_memory, .wipe = true});
         m_node.mempool = std::make_unique<CTxMemPool>(MemPoolOptionsForTest(m_node));
         m_node.clhandler = std::make_unique<chainlock::ChainlockHandler>(*m_node.chainlocks, chainman, *m_node.mempool, *m_node.mn_sync);
+        MakeDashChainContexts(/*llmq_dbs_wipe=*/true);
         options = ChainstateLoadOptionsForTest();
+    } else {
+        MakeDashChainContexts(/*llmq_dbs_wipe=*/false);
     }
 
-    auto [status, error] = LoadChainstate(chainman, m_cache_sizes, options, *m_node.evodb, *m_node.dmnman, m_node.llmq_ctx,
-                                          m_node.chain_helper);
+    auto [status, error] = LoadChainstate(chainman, m_cache_sizes, options, *m_node.evodb, *m_node.dmnman,
+                                          *m_node.special_tx);
     assert(status == node::ChainstateLoadStatus::SUCCESS);
 
     std::tie(status, error) = VerifyLoadedChainstate(chainman, options, *Assert(m_node.evodb), [](bool bls_state) {
@@ -434,12 +457,12 @@ TestingSetup::~TestingSetup()
         m_node.connman->Stop();
     }
 
-    // govman holds a reference to chain_helper->superblocks, so it must be
-    // reset before chain_helper is destroyed (matches PrepareShutdown ordering
-    // in init.cpp). Keep this defensive for fixtures that construct govman.
+    // govman holds a reference to node.sbman, which NodeContext destroys
+    // last, but reset it here anyway to match PrepareShutdown ordering in
+    // init.cpp for fixtures that construct govman.
     m_node.govman.reset();
 
-    m_node.chain_helper.reset();
+    m_node.special_tx.reset();
     m_node.llmq_ctx.reset();
 }
 
@@ -593,7 +616,7 @@ CBlock TestChainSetup::CreateBlock(
         CDeterministicMNList mn_list;
         const CBlockIndex* pindexPrev{chainstate.m_chain.Tip()};
         const bool is_v24_active{DeploymentActiveAfter(pindexPrev, chainstate.m_chainman, Consensus::DEPLOYMENT_V24)};
-        if (!chainstate.ChainHelper().special_tx->BuildNewListFromBlock(block, pindexPrev, is_v24_active,
+        if (!chainstate.m_special_tx.BuildNewListFromBlock(block, pindexPrev, is_v24_active,
                                                                         chainstate.CoinsTip(), true, state, mn_list)) {
             Assert(false);
         }

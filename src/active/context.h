@@ -59,7 +59,7 @@ public:
     ActiveContext(const ActiveContext&) = delete;
     ActiveContext& operator=(const ActiveContext&) = delete;
     explicit ActiveContext(CBLSWorker& bls_worker, ChainstateManager& chainman, CConnman& connman,
-                           CDeterministicMNManager& dmnman, CGovernanceManager& govman,
+                           CDeterministicMNManager& dmnman, CGovernanceManager& govman, CMNHFManager& mnhfman,
                            governance::SuperblockManager& superblocks, CSporkManager& sporkman,
                            const chainlock::Chainlocks& chainlocks, CTxMemPool& mempool,
                            chainlock::ChainlockHandler& clhandler, llmq::CInstantSendManager& isman,

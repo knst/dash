@@ -6,16 +6,12 @@
 #define BITCOIN_MASTERNODE_PAYMENTS_H
 
 #include <consensus/amount.h>
+#include <primitives/transaction.h>
 
-#include <string>
 #include <vector>
 
-class CBlock;
 class CBlockIndex;
-class CChain;
-class CDeterministicMNManager;
-class CTransaction;
-class CTxOut;
+class CDeterministicMNList;
 
 /**
  * Match the list of expected masternode payment outputs against the coinbase
@@ -36,11 +32,6 @@ int FindUnmatchedMasternodePayment(const std::vector<CTxOut>& expected,
                                    const std::vector<CTxOut>& actual,
                                    bool strict_multiplicity);
 
-struct CMutableTransaction;
-
-namespace governance {
-class SuperblockManager;
-}
 namespace Consensus { struct Params; }
 
 /**
@@ -63,43 +54,43 @@ enum class MnRewardEra {
     EvoReward,  // MN_RR: platform share is reallocated from the masternode reward
 };
 
-enum class SuperBlockCheckType {
-    NoCheck, // for chainlocked blocks or during sync
-    AllowDuplicates,
-    DisallowDuplicates,
-};
-
 CAmount GetMasternodePayment(int nHeight, CAmount blockValue, const Consensus::Params& consensus_params, MnRewardEra era);
 
-class CMNPaymentsProcessor
-{
-private:
-    CDeterministicMNManager& m_dmnman;
-    governance::SuperblockManager& m_superblocks;
-    const Consensus::Params& m_consensus_params;
+/**
+ * Expected masternode payment outputs for the block after @p pindexPrev,
+ * derived from the deterministic masternode list at @p pindexPrev.
+ *
+ * Returns false when the list has entries but no payee could be determined;
+ * @p voutMasternodePaymentsRet may already carry the platform reallocation
+ * output in that case.
+ */
+bool GetMasternodePayments(const CDeterministicMNList& mn_list, const CBlockIndex* pindexPrev,
+                           CAmount blockSubsidy, CAmount feeReward, MnRewardEra era,
+                           const Consensus::Params& consensus_params,
+                           std::vector<CTxOut>& voutMasternodePaymentsRet);
 
-private:
-    [[nodiscard]] bool GetBlockTxOuts(const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward,
-                                      MnRewardEra era, std::vector<CTxOut>& voutMasternodePaymentsRet);
-    [[nodiscard]] bool GetMasternodeTxOuts(const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward,
-                                      MnRewardEra era, std::vector<CTxOut>& voutMasternodePaymentsRet);
-    [[nodiscard]] bool IsTransactionValid(const CTransaction& txNew, const CBlockIndex* pindexPrev, const CAmount blockSubsidy,
-                                          const CAmount feeReward, MnRewardEra era, bool strict_multiplicity);
-    [[nodiscard]] bool IsOldBudgetBlockValueValid(const CBlock& block, const int nBlockHeight, const CAmount blockReward, std::string& strErrorRet, SuperBlockCheckType check_superblock);
+/** Superblocks happen once per cycle after the superblock hardfork. */
+bool IsSuperblockHeight(int nBlockHeight, const Consensus::Params& consensus_params);
 
-public:
-    explicit CMNPaymentsProcessor(CDeterministicMNManager& dmnman, governance::SuperblockManager& superblocks,
-                                  const Consensus::Params& consensus_params) :
-        m_dmnman{dmnman},
-        m_superblocks{superblocks},
-        m_consensus_params{consensus_params}
-    {
-    }
-
-    bool IsBlockValueValid(const CChain& active_chain, const CBlock& block, const CBlockIndex* pindexPrev, const CAmount blockReward, std::string& strErrorRet, SuperBlockCheckType check_superblock);
-    bool IsBlockPayeeValid(const CChain& active_chain, const CTransaction& txNew, const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward, MnRewardEra era, bool strict_multiplicity, SuperBlockCheckType check_superblock);
-    void FillBlockPayments(CMutableTransaction& txNew, const CBlockIndex* pindexPrev, const CAmount blockSubsidy, const CAmount feeReward,
-                           MnRewardEra era, std::vector<CTxOut>& voutMasternodePaymentsRet, std::vector<CTxOut>& voutSuperblockPaymentsRet);
+/** What governance says about the superblock at a block height. */
+struct SuperblockStatus {
+    enum class State {
+        //! governance data is not loaded, so only the superblock value bounds can be checked
+        ValidationDisabled,
+        //! no funded superblock trigger exists for the height
+        NotTriggered,
+        //! a funded trigger exists; payments holds the winning trigger's outputs, in order
+        Triggered,
+    };
+    State state{State::ValidationDisabled};
+    std::vector<CTxOut> payments;
 };
+
+/**
+ * Whether the coinbase @p txNew carries every payment of the triggered
+ * @p superblock, in order, within the superblock payments limit, and pays
+ * out no more than @p blockReward on top of them.
+ */
+bool IsSuperblockValid(const SuperblockStatus& superblock, const CTransaction& txNew, CAmount blockReward, bool is_v24, CAmount nPaymentsLimit);
 
 #endif // BITCOIN_MASTERNODE_PAYMENTS_H

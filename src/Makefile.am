@@ -222,7 +222,6 @@ BITCOIN_CORE_H = \
   dsnotificationinterface.h \
   evo/assetlocktx.h \
   evo/cbtx.h \
-  evo/chainhelper.h \
   evo/creditpool.h \
   evo/deterministicmns.h \
   evo/dmn_types.h \
@@ -548,7 +547,6 @@ libbitcoin_node_a_SOURCES = \
   dsnotificationinterface.cpp \
   evo/assetlocktx.cpp \
   evo/cbtx.cpp \
-  evo/chainhelper.cpp \
   evo/creditpool.cpp \
   evo/deterministicmns.cpp \
   evo/dmnstate.cpp \
@@ -1274,7 +1272,6 @@ libdashkernel_la_SOURCES = \
   deploymentstatus.cpp \
   evo/assetlocktx.cpp \
   evo/cbtx.cpp \
-  evo/chainhelper.cpp \
   evo/creditpool.cpp \
   evo/deterministicmns.cpp \
   evo/dmnstate.cpp \
@@ -1289,19 +1286,10 @@ libdashkernel_la_SOURCES = \
   evo/specialtx_filter.cpp \
   evo/specialtxman.cpp \
   flatfile.cpp \
-  governance/common.cpp \
-  governance/object.cpp \
-  governance/superblock.cpp \
-  governance/vote.cpp \
-  governance/votedb.cpp \
   gsl/assert.cpp \
   hash.cpp \
-  index/addressindex.cpp \
   index/addressindex_util.cpp \
   index/base.cpp \
-  index/blockfilterindex.cpp \
-  index/coinstatsindex.cpp \
-  index/spentindex.cpp \
   index/txindex.cpp \
   init/common.cpp \
   instantsend/db.cpp \
@@ -1318,9 +1306,6 @@ libdashkernel_la_SOURCES = \
   llmq/blockprocessor.cpp \
   llmq/commitment.cpp \
   llmq/context.cpp \
-  llmq/debug.cpp \
-  llmq/dkgsession.cpp \
-  llmq/dkgsessionhandler.cpp \
   llmq/dkgsessionmgr.cpp \
   llmq/options.cpp \
   llmq/quorums.cpp \
@@ -1332,7 +1317,6 @@ libdashkernel_la_SOURCES = \
   logging.cpp \
   masternode/meta.cpp \
   masternode/payments.cpp \
-  masternode/sync.cpp \
   merkleblock.cpp \
   messagesigner.cpp \
   netaddress.cpp \

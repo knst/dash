@@ -102,12 +102,12 @@
 #include <coinjoin/server.h>
 #include <coinjoin/walletman.h>
 #include <dsnotificationinterface.h>
-#include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
 #include <evo/specialtxman.h>
 #include <flat-database.h>
 #include <governance/governance.h>
+#include <governance/superblock.h>
 #include <governance/net_governance.h>
 #include <instantsend/instantsend.h>
 #include <instantsend/net_instantsend.h>
@@ -457,7 +457,7 @@ void PrepareShutdown(NodeContext& node)
         // The mempool holds raw pointers to dmnman and isman, so it must be
         // destroyed before either manager.
         node.mempool.reset();
-        node.chain_helper.reset();
+        node.special_tx.reset();
         node.llmq_ctx.reset();
         node.isman.reset();
         node.dmnman.reset();
@@ -1742,6 +1742,18 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     assert(!node.sporkman);
     node.sporkman = std::make_unique<CSporkManager>();
     node.chainlocks = std::make_unique<chainlock::Chainlocks>(*node.sporkman);
+    node.sbman = std::make_unique<governance::SuperblockManager>();
+
+    /**
+     * The manager needs to be constructed regardless of whether governance
+     * validation is needed or not.
+     *
+     * Instead, we decide whether to initialize its database based on whether we
+     * need it or not further down and then query if the database is initialized
+     * to check if validation is enabled.
+     */
+    assert(!node.mn_sync);
+    node.mn_sync = std::make_unique<CMasternodeSync>(std::make_unique<NodeSyncNotifierImpl>(*node.connman, *node.netfulfilledman));
 
     const std::string spork_address{args.GetArg("-sporkaddr", chainparams.SporkAddress())};
     if (args.GetArgs("-sporkaddr").size() > 1) {
@@ -1977,6 +1989,8 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     bool fReindexChainState = args.GetBoolArg("-reindex-chainstate", false);
     ChainstateManager::Options chainman_opts{
         .chainparams = chainparams,
+        .superblock_status = [&sbman = *node.sbman](const CDeterministicMNList& mn_list, int height) { return sbman.GetStatus(mn_list, height); },
+        .mn_sync = node.mn_sync.get(),
     };
     Assert(!ApplyArgsManOptions(args, chainman_opts)); // no error can happen, already checked in AppInitParameterInteraction
 
@@ -2005,7 +2019,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
 
     assert(!node.mempool);
     assert(!node.chainman);
-    assert(!node.mn_sync);
 
     CTxMemPool::Options mempool_opts{
         .estimator = node.fee_estimator.get(),
@@ -2026,6 +2039,8 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         // On a retry iteration the previous instances still hold the on-disk
         // database locks, so release them before opening the databases again.
         node.mempool.reset();
+        node.special_tx.reset();
+        node.llmq_ctx.reset();
         node.isman.reset();
         node.dmnman.reset();
         node.evodb.reset();
@@ -2051,24 +2066,13 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         node.chainman = std::make_unique<ChainstateManager>(chainman_opts);
         ChainstateManager& chainman = *node.chainman;
 
-        /**
-         * The manager needs to be constructed regardless of whether governance
-         * validation is needed or not.
-         *
-         * Instead, we decide whether to initialize its database based on whether we
-         * need it or not further down and then query if the database is initialized
-         * to check if validation is enabled.
-         */
-        node.mn_sync = std::make_unique<CMasternodeSync>(std::make_unique<NodeSyncNotifierImpl>(*node.connman, *node.netfulfilledman));
-
         node::ChainstateLoadOptions options;
         options.chainlocks = Assert(node.chainlocks.get());
-        options.mn_sync = Assert(node.mn_sync.get());
         options.data_dir = args.GetDataDirNet();
         options.reindex = node::fReindex;
         options.reindex_chainstate = fReindexChainState;
         options.prune = chainman.m_blockman.IsPruneMode();
-        options.bls_threads = [&args]() -> int8_t {
+        const int8_t bls_threads = [&args]() -> int8_t {
             int64_t threads = args.GetIntArg("-parbls", llmq::DEFAULT_BLSCHECK_THREADS);
             if (threads <= 0) {
                 // -parbls=0 means autodetect (number of cores - 1 validator threads)
@@ -2079,7 +2083,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
             const int64_t adjusted_threads = std::clamp<int64_t>(threads, 1, int64_t{llmq::MAX_BLSCHECK_THREADS} + 1) - 1;
             return static_cast<int8_t>(adjusted_threads);
         }();
-        options.max_recsigs_age = args.GetIntArg("-maxrecsigsage", llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE);
+        const int64_t max_recsigs_age = args.GetIntArg("-maxrecsigsage", llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE);
         options.check_blocks = args.GetIntArg("-checkblocks", DEFAULT_CHECKBLOCKS);
         options.check_level = args.GetIntArg("-checklevel", DEFAULT_CHECKLEVEL);
         options.require_full_verification = args.IsArgSet("-checkblocks") || args.IsArgSet("-checklevel");
@@ -2095,7 +2099,16 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         if (status == node::ChainstateLoadStatus::SUCCESS) {
             options.mempool = Assert(node.mempool.get());
             options.isman = Assert(node.isman.get());
-            std::tie(status, error) = catch_exceptions([&]{ return LoadChainstate(chainman, cache_sizes, options, *node.evodb, *node.dmnman, node.llmq_ctx, node.chain_helper); });
+            std::tie(status, error) = catch_exceptions([&]() -> node::ChainstateLoadResult {
+                WITH_LOCK(::cs_main, node.llmq_ctx = std::make_unique<LLMQContext>(*node.dmnman, *node.evodb, chainman,
+                                                                                   util::DbWrapperParams{.path = args.GetDataDirNet(), .memory = false, .wipe = node::fReindex || fReindexChainState},
+                                                                                   bls_threads, llmq::DEFAULT_WORKER_COUNT, max_recsigs_age));
+                node.special_tx = std::make_unique<CSpecialTxProcessor>(*node.evodb, *node.dmnman,
+                                                                        *node.llmq_ctx->quorum_block_processor, *node.llmq_ctx->qsnapman,
+                                                                        chainman, chainman.m_blockman, chainman.GetConsensus(),
+                                                                        *node.chainlocks, *node.llmq_ctx->qman);
+                return LoadChainstate(chainman, cache_sizes, options, *node.evodb, *node.dmnman, *node.special_tx);
+            });
         }
         if (status == node::ChainstateLoadStatus::SUCCESS) {
             uiInterface.InitMessage(_("Verifying blocks…").translated);
@@ -2153,7 +2166,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     RegisterValidationInterface(node.clhandler.get());
 
     assert(!node.govman);
-    node.govman = std::make_unique<CGovernanceManager>(*node.mn_metaman, *node.chainman, *node.chain_helper->superblocks, *node.dmnman, *node.mn_sync);
+    node.govman = std::make_unique<CGovernanceManager>(*node.mn_metaman, *node.chainman, *node.sbman, *node.dmnman, *node.mn_sync);
 
     // ********************************************************* Step 7c: Setup masternode mode or watch-only mode
     assert(!node.active_ctx);
@@ -2170,7 +2183,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         }
         // Will init later in ThreadImport
         node.active_ctx = std::make_unique<ActiveContext>(*node.llmq_ctx->bls_worker, chainman, *node.connman, *node.dmnman,
-                                                          *node.govman, *node.chain_helper->superblocks,
+                                                          *node.govman, *node.special_tx->m_mnhfman, *node.sbman,
                                                           *node.sporkman, *node.chainlocks, *node.mempool, *node.clhandler, *node.isman,
                                                           *node.llmq_ctx->qman, *node.llmq_ctx->qsnapman, *node.llmq_ctx->sigman,
                                                           *node.mn_sync, operator_sk, dash_db_params, quorums_watch);
@@ -2517,7 +2530,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                                        const CDeterministicMNList& prevList, const CCoinsViewCache& view, bool debugLogs,
                                        BlockValidationState& state, CDeterministicMNList& mnListRet) -> bool {
                     const bool is_v24_active{DeploymentActiveAfter(pindexPrev, chainman, Consensus::DEPLOYMENT_V24)};
-                    return node.chain_helper->special_tx->RebuildListFromBlock(block, pindexPrev, is_v24_active, prevList,
+                    return node.special_tx->RebuildListFromBlock(block, pindexPrev, is_v24_active, prevList,
                                                                                view, debugLogs, state, mnListRet);
                 };
                 auto result = node.dmnman->RecalculateAndRepairDiffs(start_index, stop_index, build_list_func, true);

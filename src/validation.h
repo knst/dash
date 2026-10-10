@@ -47,13 +47,11 @@
 #include <vector>
 
 class Chainstate;
-class CBlockTreeDB;
 class CChainParams;
 class CEvoDB;
-class CMNHFManager;
 class CTxMemPool;
 class TxValidationState;
-class CChainstateHelper;
+class CSpecialTxProcessor;
 class CDeterministicMNList;
 class ChainstateManager;
 enum class EvoDbIdentity;
@@ -66,6 +64,9 @@ struct AssumeutxoData;
 namespace Consensus {
 struct Params;
 } // namespace Consensus
+namespace llmq {
+class CInstantSendManager;
+} // namespace llmq
 namespace node {
 class SnapshotMetadata;
 } // namespace node
@@ -130,6 +131,9 @@ double ConvertBitsToDouble(unsigned int nBits);
 CAmount GetBlockSubsidyInner(int nPrevBits, int nPrevHeight, const Consensus::Params& consensusParams, bool fV20Active);
 CAmount GetSuperblockSubsidyInner(int nPrevBits, int nPrevHeight, const Consensus::Params& consensusParams, bool fV20Active);
 CAmount GetBlockSubsidy(const CBlockIndex* const pindex, const Consensus::Params& consensusParams);
+
+/** The superblock share of all subsidies issued during the cycle ending at a superblock height. */
+CAmount GetSuperblockPaymentsLimit(int nBlockHeight, const Consensus::Params& consensusParams);
 
 bool AbortNode(BlockValidationState& state, const std::string& strMessage, const bilingual_str& userMessage = bilingual_str{});
 
@@ -501,8 +505,6 @@ protected:
     //! Manages the UTXO set, which is a reflection of the contents of `m_chain`.
     std::unique_ptr<CoinsViews> m_coins_views;
 
-    //! Dash
-    const std::unique_ptr<CChainstateHelper>& m_chain_helper;
     CEvoDB& m_evoDb;
 
     //! This toggle exists for use when doing background validation for UTXO
@@ -535,7 +537,9 @@ public:
                          node::BlockManager& blockman,
                          ChainstateManager& chainman,
                          CEvoDB& evoDb,
-                         const std::unique_ptr<CChainstateHelper>& chain_helper,
+                         CSpecialTxProcessor& special_tx,
+                         const chainlock::Chainlocks& chainlocks,
+                         llmq::CInstantSendManager* isman,
                          std::optional<uint256> from_snapshot_blockhash = std::nullopt);
 
     //! Return the stable EvoDB identity corresponding to this chainstate's coins DB.
@@ -593,11 +597,11 @@ public:
      */
     std::set<CBlockIndex*, node::CBlockIndexWorkComparator> setBlockIndexCandidates;
 
-    CChainstateHelper& ChainHelper()
-    {
-        assert(m_chain_helper);
-        return *m_chain_helper;
-    }
+    //! Dash: chainman-bound processors and managers used by block validation
+    CSpecialTxProcessor& m_special_tx;
+    const chainlock::Chainlocks& m_chainlocks;
+    //! Null when running without InstantSend (bitcoin-chainstate)
+    llmq::CInstantSendManager* const m_isman;
 
     //! @returns A reference to the in-memory cache of the UTXO set.
     CCoinsViewCache& CoinsTip() EXCLUSIVE_LOCKS_REQUIRED(::cs_main)
@@ -705,6 +709,12 @@ public:
     DisconnectResult DisconnectBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
     bool ConnectBlock(const CBlock& block, BlockValidationState& state, CBlockIndex* pindex, CCoinsViewCache& view, bool fJustCheck = false) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
+    /** Dash: the coinbase may pay out at most the block reward plus, on a
+     *  triggered superblock, the payments governance expects at that height. */
+    bool IsBlockValueValid(const CBlock& block, const CBlockIndex* pindex, const CDeterministicMNList& mn_list, CAmount blockReward, std::string& strErrorRet) const;
+    /** Dash: the coinbase must carry every payment owed to the masternode list at the previous block. */
+    bool IsBlockPayeeValid(const CBlock& block, const CBlockIndex* pindex, const CDeterministicMNList& mn_list, CAmount blockSubsidy, CAmount feeReward) const;
+
     // Apply the effects of a block disconnection on the UTXO set.
     bool DisconnectTip(BlockValidationState& state, DisconnectedBlockTransactions* disconnectpool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);
 
@@ -771,6 +781,10 @@ public:
         return m_mempool ? &m_mempool->cs : nullptr;
     }
 private:
+    //! Dash: superblock payments are only enforced by a synced node and for
+    //! blocks that are not chainlocked yet
+    bool IsSuperblockValidationRequired(const CBlockIndex* const pindex) const;
+
     bool ActivateBestChainStep(BlockValidationState& state, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock>& pblock, bool& fInvalidFound, ConnectTrace& connectTrace) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);
     bool ConnectTip(BlockValidationState& state, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock>& pblock, ConnectTrace& connectTrace, DisconnectedBlockTransactions& disconnectpool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);
 
@@ -1047,7 +1061,9 @@ public:
     //                                  constructor
     Chainstate& InitializeChainstate(CTxMemPool* mempool,
                                       CEvoDB& evoDb,
-                                      const std::unique_ptr<CChainstateHelper>& chain_helper)
+                                      CSpecialTxProcessor& special_tx,
+                                      const chainlock::Chainlocks& chainlocks,
+                                      llmq::CInstantSendManager* isman)
         LIFETIMEBOUND EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     //! Get all chainstates currently being used.

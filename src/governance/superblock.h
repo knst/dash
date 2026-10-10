@@ -7,6 +7,7 @@
 
 #include <consensus/amount.h>
 #include <governance/object.h>
+#include <masternode/payments.h>
 #include <script/script.h>
 #include <script/standard.h>
 #include <sync.h>
@@ -18,7 +19,6 @@
 #include <string>
 #include <vector>
 
-class CChain;
 class CDeterministicMNList;
 class CTransaction;
 class CTxOut;
@@ -86,7 +86,7 @@ public:
 
     static bool IsValidBlockHeight(int nBlockHeight);
     static void GetNearestSuperblocksHeights(int nBlockHeight, int& nLastSuperblockRet, int& nNextSuperblockRet);
-    static CAmount GetPaymentsLimit(const CChain& active_chain, int nBlockHeight);
+    static CAmount GetPaymentsLimit(int nBlockHeight);
 
     SeenObjectStatus GetStatus() const { return nStatus; }
     void SetStatus(SeenObjectStatus nStatusIn) { nStatus = nStatusIn; }
@@ -105,9 +105,6 @@ public:
 
     int CountPayments() const { return static_cast<int>(vecPayments.size()); }
     bool GetPayment(int nPaymentIndex, CGovernancePayment& paymentRet);
-    CAmount GetPaymentsTotalAmount();
-
-    bool IsValid(const CChain& active_chain, const CTransaction& txNew, int block_height, CAmount blockReward, bool is_v24);
     bool IsExpired(int heightToTest) const;
 
     std::vector<uint256> GetProposalHashes() const;
@@ -124,7 +121,7 @@ namespace governance {
  * underlying object from its store. Each entry holds a strong reference
  * to the underlying CGovernanceObject so we never look it up by hash.
  *
- * Lifetime: typically owned by CChainstateHelper, which outlives the
+ * Lifetime: owned by NodeContext, which outlives the
  * paired CGovernanceManager. The govman drives m_loaded via SetLoaded()
  * from LoadCache() and Clear()s us in its destructor, so IsValid() and
  * the trigger map track the live govman's state.
@@ -155,13 +152,11 @@ public:
     bool GetBestSuperblock(const CDeterministicMNList& tip_mn_list, CSuperblock_sptr& sbRet, int nBlockHeight) const
         EXCLUSIVE_LOCKS_REQUIRED(!cs_sb);
 
-    bool IsSuperblockTriggered(const CDeterministicMNList& tip_mn_list, int nBlockHeight) EXCLUSIVE_LOCKS_REQUIRED(!cs_sb);
-
-    bool IsValidSuperblock(const CChain& active_chain, const CDeterministicMNList& tip_mn_list, const CTransaction& txNew,
-                           int nBlockHeight, CAmount blockReward, bool is_v24) const EXCLUSIVE_LOCKS_REQUIRED(!cs_sb);
-
-    bool GetSuperblockPayments(const CDeterministicMNList& tip_mn_list, int nBlockHeight,
-                               std::vector<CTxOut>& voutSuperblockRet) const EXCLUSIVE_LOCKS_REQUIRED(!cs_sb);
+    /** Governance's status for the superblock at a height: validation is
+     *  disabled until governance data is loaded; otherwise whether a funded
+     *  trigger exists and, if so, the winning trigger's payment outputs. */
+    SuperblockStatus GetStatus(const CDeterministicMNList& tip_mn_list, int nBlockHeight)
+        EXCLUSIVE_LOCKS_REQUIRED(!cs_sb);
 
     void ExecuteBestSuperblock(const CDeterministicMNList& tip_mn_list, int nBlockHeight) EXCLUSIVE_LOCKS_REQUIRED(!cs_sb);
 
@@ -173,6 +168,8 @@ private:
 
     bool GetBestSuperblockInternal(const CDeterministicMNList& tip_mn_list, CSuperblock_sptr& sbRet,
                                    int nBlockHeight) const EXCLUSIVE_LOCKS_REQUIRED(cs_sb);
+    bool IsSuperblockTriggeredInternal(const CDeterministicMNList& tip_mn_list, int nBlockHeight)
+        EXCLUSIVE_LOCKS_REQUIRED(cs_sb);
 
     mutable Mutex cs_sb;
     std::atomic<bool> m_loaded{false};

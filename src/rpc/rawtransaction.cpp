@@ -50,9 +50,9 @@
 #include <chainlock/chainlock.h>
 #include <evo/assetlocktx.h>
 #include <evo/cbtx.h>
-#include <evo/chainhelper.h>
 #include <evo/creditpool.h>
 #include <evo/mnhftx.h>
+#include <evo/specialtxman.h>
 #include <evo/providertx.h>
 #include <evo/specialtx.h>
 #include <instantsend/instantsend.h>
@@ -813,7 +813,7 @@ static RPCHelpMan getassetunlockstatuses()
     CHECK_NONFATAL(node.chainlocks);
     const ChainstateManager& chainman = EnsureChainman(node);
     const llmq::CInstantSendManager& isman = EnsureInstantSendManager(node);
-    auto& chain_helper = chainman.ActiveChainstate().ChainHelper();
+    CCreditPoolManager& cpoolman = *CHECK_NONFATAL(node.special_tx)->m_cpoolman;
     UniValue result_arr(UniValue::VARR);
     const UniValue str_indexes = request.params[0].get_array();
     if (str_indexes.size() > 100) {
@@ -845,7 +845,7 @@ static RPCHelpMan getassetunlockstatuses()
             pBlockIndex = chainman.ActiveChain()[nSpecificCoreHeight.value()];
         }
         CHECK_NONFATAL(pBlockIndex);
-        poolCL = std::make_optional(chain_helper.GetCreditPool(pBlockIndex));
+        poolCL = std::make_optional(cpoolman.GetCreditPool(pBlockIndex));
     }
     else {
         const auto pBlockIndexBestCL = [&]() -> const CBlockIndex* {
@@ -864,12 +864,12 @@ static RPCHelpMan getassetunlockstatuses()
         // We need in 2 credit pools: at tip of chain and on best CL to know if tx is mined or chainlocked
         // Sometimes that's two different blocks, sometimes not and we need to initialize 2nd creditPoolManager
         poolCL = pBlockIndexBestCL ?
-                 std::make_optional(chain_helper.GetCreditPool(pBlockIndexBestCL)) :
+                 std::make_optional(cpoolman.GetCreditPool(pBlockIndexBestCL)) :
                  std::nullopt;
 
         poolOnTip = [&]() -> std::optional<CCreditPool> {
             if (pTipBlockIndex != pBlockIndexBestCL) {
-                return std::make_optional(chain_helper.GetCreditPool(pTipBlockIndex));
+                return std::make_optional(cpoolman.GetCreditPool(pTipBlockIndex));
             }
             return std::nullopt;
         }();

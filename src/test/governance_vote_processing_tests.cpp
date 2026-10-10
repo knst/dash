@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <consensus/amount.h>
-#include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
 #include <governance/governance.h>
 #include <governance/object.h>
@@ -118,7 +117,7 @@ struct GovernanceVoteSetup : public TestChainSetup {
         BOOST_REQUIRE(m_node.mn_sync->IsSynced());
 
         m_node.govman = std::make_unique<CGovernanceManager>(*m_node.mn_metaman, *m_node.chainman,
-                                                             *m_node.chain_helper->superblocks, *m_node.dmnman,
+                                                             *m_node.sbman, *m_node.dmnman,
                                                              *m_node.mn_sync);
         BOOST_REQUIRE(m_node.govman->LoadCache(/*load_cache=*/false));
 
@@ -130,7 +129,7 @@ struct GovernanceVoteSetup : public TestChainSetup {
 
     void TearDown()
     {
-        // govman holds a reference into chain_helper, so it must go first (matches PrepareShutdown
+        // govman holds a reference to node.sbman, so it must go first (matches PrepareShutdown
         // ordering in init.cpp).
         m_node.govman.reset();
         if (g_txindex) {

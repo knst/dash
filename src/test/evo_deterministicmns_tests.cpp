@@ -10,7 +10,6 @@
 #include <consensus/merkle.h>
 #include <consensus/validation.h>
 #include <deploymentstatus.h>
-#include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
 #include <evo/providertx.h>
@@ -1243,7 +1242,7 @@ void FuncProUpServInvalidNType(TestChainSetup& setup)
         BlockValidationState state;
         CDeterministicMNList mn_list;
         LOCK(cs_main);
-        BOOST_CHECK(!chainman.ActiveChainstate().ChainHelper().special_tx->BuildNewListFromBlock(
+        BOOST_CHECK(!chainman.ActiveChainstate().m_special_tx.BuildNewListFromBlock(
             block, tip_index(), IsV24Active(chainman), chainman.ActiveChainstate().CoinsTip(), /*debugLogs=*/false,
             state, mn_list));
         BOOST_CHECK_EQUAL(state.GetRejectReason(), expected_reason);
@@ -1513,7 +1512,7 @@ void FuncTestMempoolProRegReplacementUpdateConflict(TestChainSetup& setup)
 
         BlockValidationState state;
         CDeterministicMNList mn_list;
-        BOOST_CHECK(!chainman.ActiveChainstate().ChainHelper().special_tx->BuildNewListFromBlock(
+        BOOST_CHECK(!chainman.ActiveChainstate().m_special_tx.BuildNewListFromBlock(
             hazard_block, tip_index(), IsV24Active(chainman), chainman.ActiveChainstate().CoinsTip(),
             /*debugLogs=*/false, state, mn_list));
         BOOST_CHECK_EQUAL(state.GetRejectReason(), "bad-protx-hash");
@@ -2616,9 +2615,9 @@ void FuncSameMnSameBlockVersionCrossingKeyRotation(TestChainV24SignalBeforeV19Se
     std::string thrown;
     {
         LOCK(cs_main);
-        auto& chain_helper = *Assert(setup.m_node.chain_helper.get());
+        auto& special_tx = *Assert(setup.m_node.special_tx.get());
         try {
-            rebuilt = chain_helper.special_tx->RebuildListFromBlock(
+            rebuilt = special_tx.RebuildListFromBlock(
                 block, chainman.ActiveChain().Tip(), IsV24Active(chainman), dmnman.GetListAtChainTip(),
                 chainman.ActiveChainstate().CoinsTip(), /*debugLogs=*/false, block_state, mn_list_ret);
         } catch (const std::exception& e) {
@@ -2725,9 +2724,9 @@ void FuncSameMnSameBlockMigrationConsistent(TestChainV24SignalBeforeV19Setup& se
     bool rebuilt{false};
     {
         LOCK(cs_main);
-        auto& chain_helper = *Assert(setup.m_node.chain_helper.get());
+        auto& special_tx = *Assert(setup.m_node.special_tx.get());
         BOOST_CHECK_NO_THROW(
-            rebuilt = chain_helper.special_tx->RebuildListFromBlock(
+            rebuilt = special_tx.RebuildListFromBlock(
                 block, chainman.ActiveChain().Tip(), IsV24Active(chainman), dmnman.GetListAtChainTip(),
                 chainman.ActiveChainstate().CoinsTip(), /*debugLogs=*/false, block_state, mn_list_ret));
     }
@@ -2932,9 +2931,9 @@ void FuncSameBlockCrossSchemeKeyPairRejected(TestChainV24SignalBeforeV19Setup& s
     bool rebuilt{true};
     {
         LOCK(cs_main);
-        auto& chain_helper = *Assert(setup.m_node.chain_helper.get());
+        auto& special_tx = *Assert(setup.m_node.special_tx.get());
         BOOST_CHECK_NO_THROW(
-            rebuilt = chain_helper.special_tx->RebuildListFromBlock(
+            rebuilt = special_tx.RebuildListFromBlock(
                 block, chainman.ActiveChain().Tip(), IsV24Active(chainman), dmnman.GetListAtChainTip(),
                 chainman.ActiveChainstate().CoinsTip(), /*debugLogs=*/false, block_state, mn_list_ret));
     }

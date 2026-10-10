@@ -17,14 +17,12 @@
 class AddressIndex;
 class ArgsManager;
 class BanMan;
-class CActiveMasternodeManager;
 class AddrMan;
 class CBlockPolicyEstimator;
 class CConnman;
 class CDeterministicMNManager;
 class CDSNotificationInterface;
 class CDSTXManager;
-class CChainstateHelper;
 class ChainstateManager;
 class CEvoDB;
 class CGovernanceManager;
@@ -33,6 +31,7 @@ class CMasternodeMetaMan;
 class CMasternodeSync;
 class CNetFulfilledRequestManager;
 class CScheduler;
+class CSpecialTxProcessor;
 class CSporkManager;
 class CTxMemPool;
 class NetGroupManager;
@@ -46,6 +45,10 @@ namespace chainlock {
 class Chainlocks;
 class ChainlockHandler;
 } // namespace chainlock
+
+namespace governance {
+class SuperblockManager;
+} // namespace governance
 
 namespace interfaces {
 class Chain;
@@ -101,13 +104,14 @@ struct NodeContext {
     std::unique_ptr<CJWalletManager> cj_walletman;
     std::unique_ptr<CDSTXManager> dstxman;
     std::unique_ptr<CEvoDB> evodb;
-    std::unique_ptr<CChainstateHelper> chain_helper;
+    std::unique_ptr<CSpecialTxProcessor> special_tx;
     std::unique_ptr<CDeterministicMNManager> dmnman;
     std::unique_ptr<llmq::CInstantSendManager> isman;
     std::unique_ptr<CGovernanceManager> govman;
     std::unique_ptr<CMasternodeMetaMan> mn_metaman;
     std::unique_ptr<CMasternodeSync> mn_sync;
     std::unique_ptr<CNetFulfilledRequestManager> netfulfilledman;
+    std::unique_ptr<governance::SuperblockManager> sbman;
     std::unique_ptr<CSporkManager> sporkman;
     std::unique_ptr<chainlock::Chainlocks> chainlocks;
     std::unique_ptr<chainlock::ChainlockHandler> clhandler;

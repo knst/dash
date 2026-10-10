@@ -2,16 +2,15 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <chain.h>
 #include <chainparams.h>
 #include <consensus/amount.h>
 #include <governance/superblock.h>
+#include <masternode/payments.h>
 #include <key.h>
 #include <primitives/transaction.h>
 #include <pubkey.h>
 #include <script/script.h>
 #include <script/standard.h>
-#include <uint256.h>
 
 #include <test/util/setup_common.h>
 
@@ -43,18 +42,11 @@ BOOST_AUTO_TEST_CASE(isvalid_duplicate_payments_require_distinct_outputs)
     const CAmount nPayAmount = 1 * COIN;
 
     // Two identical expected payments (same script, same amount).
-    std::vector<CGovernancePayment> payments;
-    payments.emplace_back(dest, nPayAmount, /*proposalHash=*/uint256());
-    payments.emplace_back(dest, nPayAmount, /*proposalHash=*/uint256::ONE);
-    BOOST_REQUIRE(payments[0].IsValid());
-    BOOST_REQUIRE(payments[1].IsValid());
-
-    CSuperblock sb(nBlockHeight, payments);
-    BOOST_REQUIRE_EQUAL(sb.CountPayments(), 2);
+    const SuperblockStatus superblock{.state = SuperblockStatus::State::Triggered, .payments = {{nPayAmount, scriptPayee}, {nPayAmount, scriptPayee}}};
+    const CAmount nPaymentsLimit = CSuperblock::GetPaymentsLimit(nBlockHeight);
 
     const CScript scriptMinerOrMN = CScript() << OP_RETURN;
     const CAmount blockReward = 500 * COIN;
-    CChain dummy_chain;
 
     // Case 1 (regression, V24): coinbase carries only ONE output matching the
     // duplicate expected payment. With the buggy forward scan that restarted
@@ -66,7 +58,7 @@ BOOST_AUTO_TEST_CASE(isvalid_duplicate_payments_require_distinct_outputs)
         CMutableTransaction txNew;
         txNew.vout.emplace_back(blockReward - nPayAmount, scriptMinerOrMN);
         txNew.vout.emplace_back(nPayAmount, scriptPayee); // single matching output
-        BOOST_CHECK(!sb.IsValid(dummy_chain, CTransaction(txNew), nBlockHeight, blockReward, /*is_v24=*/true));
+        BOOST_CHECK(!IsSuperblockValid(superblock, CTransaction(txNew), blockReward, /*is_v24=*/true, nPaymentsLimit));
     }
 
     // Case 2 (V24): coinbase carries TWO outputs matching the duplicate expected
@@ -76,7 +68,7 @@ BOOST_AUTO_TEST_CASE(isvalid_duplicate_payments_require_distinct_outputs)
         txNew.vout.emplace_back(blockReward - 2 * nPayAmount, scriptMinerOrMN);
         txNew.vout.emplace_back(nPayAmount, scriptPayee);
         txNew.vout.emplace_back(nPayAmount, scriptPayee);
-        BOOST_CHECK(sb.IsValid(dummy_chain, CTransaction(txNew), nBlockHeight, blockReward, /*is_v24=*/true));
+        BOOST_CHECK(IsSuperblockValid(superblock, CTransaction(txNew), blockReward, /*is_v24=*/true, nPaymentsLimit));
     }
 
     // Case 3 (pre-V24): the stricter distinct-output rule is gated behind V24.
@@ -87,7 +79,7 @@ BOOST_AUTO_TEST_CASE(isvalid_duplicate_payments_require_distinct_outputs)
         CMutableTransaction txNew;
         txNew.vout.emplace_back(blockReward - nPayAmount, scriptMinerOrMN);
         txNew.vout.emplace_back(nPayAmount, scriptPayee); // single matching output
-        BOOST_CHECK(sb.IsValid(dummy_chain, CTransaction(txNew), nBlockHeight, blockReward, /*is_v24=*/false));
+        BOOST_CHECK(IsSuperblockValid(superblock, CTransaction(txNew), blockReward, /*is_v24=*/false, nPaymentsLimit));
     }
 }
 

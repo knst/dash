@@ -19,14 +19,13 @@
 #include <chainparams.h>
 #include <consensus/validation.h>
 #include <core_io.h>
-#include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
+#include <evo/specialtxman.h>
 #include <init/common.h>
-#include <instantsend/instantsend.h>
 #include <llmq/context.h>
+#include <llmq/options.h>
 #include <masternode/meta.h>
-#include <masternode/sync.h>
 #include <node/blockstorage.h>
 #include <node/caches.h>
 #include <node/chainstate.h>
@@ -98,27 +97,27 @@ int main(int argc, char* argv[])
     CMasternodeMetaMan metaman;
     CEvoDB evodb{util::DbWrapperParams{.path = gArgs.GetDataDirNet(), .memory = false, .wipe = false}};
     CDeterministicMNManager dmnman{evodb, metaman};
-    CMasternodeSync mn_sync{std::make_unique<NullNodeSyncNotifier>()};
     CSporkManager sporkman;
     chainlock::Chainlocks chainlocks(sporkman);
-    // TODO: remove isman from bitcoin-chainstate and make it nullable for node::ChainstateLoadOptions same as mempool
-    llmq::CInstantSendManager isman{sporkman, util::DbWrapperParams{.path = gArgs.GetDataDirNet(), .memory = false, .wipe = false}};
 
-    std::unique_ptr<LLMQContext> llmq_ctx;
-    std::unique_ptr<CChainstateHelper> chain_helper;
+    auto llmq_ctx = WITH_LOCK(::cs_main, return std::make_unique<LLMQContext>(dmnman, evodb, chainman,
+                                                                              util::DbWrapperParams{.path = gArgs.GetDataDirNet(), .memory = false, .wipe = false},
+                                                                              llmq::DEFAULT_BLSCHECK_THREADS, llmq::DEFAULT_WORKER_COUNT, llmq::DEFAULT_MAX_RECOVERED_SIGS_AGE));
+    auto special_tx = std::make_unique<CSpecialTxProcessor>(evodb, dmnman,
+                                                            *llmq_ctx->quorum_block_processor, *llmq_ctx->qsnapman,
+                                                            chainman, chainman.m_blockman, chainman.GetConsensus(),
+                                                            chainlocks, *llmq_ctx->qman);
 
     node::CacheSizes cache_sizes;
     cache_sizes.block_tree_db = 2 << 20;
     cache_sizes.coins_db = 2 << 22;
     cache_sizes.coins = (450 << 20) - (2 << 20) - (2 << 22);
     node::ChainstateLoadOptions options;
-    options.isman = &isman;
     options.chainlocks = &chainlocks;
-    options.mn_sync = &mn_sync;
     options.data_dir = gArgs.GetDataDirNet();
     options.check_interrupt = [] { return false; };
     options.coins_error_cb = [] {};
-    auto [status, error] = node::LoadChainstate(chainman, cache_sizes, options, evodb, dmnman, llmq_ctx, chain_helper);
+    auto [status, error] = node::LoadChainstate(chainman, cache_sizes, options, evodb, dmnman, *special_tx);
     if (status != node::ChainstateLoadStatus::SUCCESS) {
         std::cerr << "Failed to load Chain state from your datadir." << std::endl;
         goto epilogue;
@@ -280,6 +279,6 @@ epilogue:
     }
     GetMainSignals().UnregisterBackgroundSignalScheduler();
     // Tear down Dash kernel objects before kernel::~Context().
-    chain_helper.reset();
+    special_tx.reset();
     llmq_ctx.reset();
 }

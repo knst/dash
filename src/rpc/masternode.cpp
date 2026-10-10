@@ -5,7 +5,6 @@
 #include <active/context.h>
 #include <active/masternode.h>
 #include <evo/assetlocktx.h>
-#include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
 #include <governance/superblock.h>
 #include <masternode/payments.h>
@@ -249,13 +248,9 @@ static std::string GetRequiredPaymentsString(governance::SuperblockManager& supe
             strPayments += ", " + EncodeDestination(dest);
         }
     }
-    if (superblocks.IsSuperblockTriggered(tip_mn_list, nBlockHeight)) {
-        std::vector<CTxOut> voutSuperblock;
-        if (!superblocks.GetSuperblockPayments(tip_mn_list, nBlockHeight, voutSuperblock)) {
-            return strPayments + ", error";
-        }
+    if (const SuperblockStatus superblock{superblocks.GetStatus(tip_mn_list, nBlockHeight)}; superblock.state == SuperblockStatus::State::Triggered) {
         std::string strSBPayees = "Unknown";
-        for (const auto& txout : voutSuperblock) {
+        for (const auto& txout : superblock.payments) {
             CTxDestination dest;
             ExtractDestination(txout.scriptPubKey, dest);
             if (strSBPayees != "Unknown") {
@@ -330,7 +325,7 @@ static RPCHelpMan masternode_winners()
         const CBlockIndex* pIndex = pindexTip->GetAncestor(h - 1);
         auto payee = node.dmnman->GetListForBlock(pIndex).GetMNPayee(pIndex);
         if (payee) {
-            std::string strPayments = GetRequiredPaymentsString(*CHECK_NONFATAL(node.chain_helper)->superblocks,
+            std::string strPayments = GetRequiredPaymentsString(*CHECK_NONFATAL(node.sbman),
                                                                 tip_mn_list, h, payee);
             if (!strFilter.empty() && strPayments.find(strFilter) == std::string::npos) continue;
             obj.pushKV(strprintf("%d", h), strPayments);
@@ -340,7 +335,7 @@ static RPCHelpMan masternode_winners()
     auto projection = node.dmnman->GetListForBlock(pindexTip).GetProjectedMNPayees(pindexTip, /*nCount=*/20);
     for (size_t i = 0; i < projection.size(); i++) {
         int h = nChainTipHeight + 1 + i;
-        std::string strPayments = GetRequiredPaymentsString(*node.chain_helper->superblocks, tip_mn_list, h, projection[i]);
+        std::string strPayments = GetRequiredPaymentsString(*node.sbman, tip_mn_list, h, projection[i]);
         if (!strFilter.empty() && strPayments.find(strFilter) == std::string::npos) continue;
         obj.pushKV(strprintf("%d", h), strPayments);
     }
@@ -415,7 +410,6 @@ static RPCHelpMan masternode_payments()
     // A temporary vector which is used to sort results properly (there is no "reverse" in/for UniValue)
     std::vector<UniValue> vecPayments;
 
-    CHECK_NONFATAL(node.chain_helper);
     CHECK_NONFATAL(node.dmnman);
     while (vecPayments.size() < uint64_t(std::abs(nCount)) && pindex != nullptr) {
         CBlock block;
@@ -454,11 +448,13 @@ static RPCHelpMan masternode_payments()
             nBlockFees += nValueIn - tx->GetValueOut();
         }
 
-        std::vector<CTxOut> voutMasternodePayments, voutDummy;
-        CMutableTransaction dummyTx;
+        std::vector<CTxOut> voutMasternodePayments;
         CAmount blockSubsidy = GetBlockSubsidy(pindex, Params().GetConsensus());
         const MnRewardEra mn_reward_era{GetMnRewardEraAfter(pindex->pprev, chainman)};
-        node.chain_helper->mn_payments->FillBlockPayments(dummyTx, pindex->pprev, blockSubsidy, nBlockFees, mn_reward_era, voutMasternodePayments, voutDummy);
+        if (!GetMasternodePayments(node.dmnman->GetListForBlock(pindex->pprev), pindex->pprev, blockSubsidy, nBlockFees,
+                                   mn_reward_era, Params().GetConsensus(), voutMasternodePayments)) {
+            LogPrint(BCLog::MNPAYMENTS, "%s -- No masternode to pay (MN list probably empty)\n", __func__);
+        }
 
         UniValue blockObj(UniValue::VOBJ);
         CAmount payedPerBlock{0};

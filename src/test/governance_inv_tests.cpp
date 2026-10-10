@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <common/bloom.h>
-#include <evo/chainhelper.h>
 #include <governance/governance.h>
 #include <governance/net_governance.h>
 #include <governance/object.h>
@@ -47,7 +46,7 @@ struct GovernanceInvSetup : public TestingSetup {
         // Note: mn_metaman is left unloaded. Reaching CGovernanceObject::ProcessVote asserts
         // metaman.IsValid(), so a test that delivers a vote whose parent object exists must
         // load it first (see invalid_vote_is_scored_alike_with_and_without_a_parent_object).
-        m_node.govman = std::make_unique<CGovernanceManager>(*m_node.mn_metaman, *m_node.chainman, *m_node.chain_helper->superblocks, *m_node.dmnman, *m_node.mn_sync);
+        m_node.govman = std::make_unique<CGovernanceManager>(*m_node.mn_metaman, *m_node.chainman, *m_node.sbman, *m_node.dmnman, *m_node.mn_sync);
         // Match runtime preconditions: NetGovernance::AlreadyHave claims we
         // already have the inv when governance isn't loaded (e.g.
         // -disablegovernance), so ConfirmInventoryRequest would never run.
@@ -76,8 +75,6 @@ struct GovernanceInvSetup : public TestingSetup {
         SetMockTime(1'700'000'000s);
     }
     ~GovernanceInvSetup() {
-        // govman holds a reference to chain_helper->superblocks, so it must be reset before chain_helper (matches PrepareShutdown
-        // ordering in init.cpp).
         m_node.peerman->RemoveHandlers();
         m_node.govman.reset();
     }

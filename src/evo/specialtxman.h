@@ -11,6 +11,7 @@
 #include <sync.h>
 #include <threadsafety.h>
 
+#include <memory>
 #include <optional>
 
 class BlockValidationState;
@@ -22,6 +23,7 @@ class CCoinsViewCache;
 class CCreditPoolManager;
 class CDeterministicMNList;
 class CDeterministicMNManager;
+class CEvoDB;
 class CProDisTx;
 class CRangesSet;
 class CTransaction;
@@ -29,6 +31,7 @@ class ChainstateManager;
 class Chainstate;
 class CMNHFManager;
 class TxValidationState;
+class uint256;
 struct MNListUpdates;
 
 namespace chainlock {
@@ -54,10 +57,14 @@ struct SpecialTxRules {
 
 class CSpecialTxProcessor
 {
+public:
+    //! Credit-pool and EHF-signal state is carried by special transactions,
+    //! so the processor owns their managers; other consumers reach them here.
+    const std::unique_ptr<CCreditPoolManager> m_cpoolman;
+    const std::unique_ptr<CMNHFManager> m_mnhfman;
+
 private:
-    CCreditPoolManager& m_cpoolman;
     CDeterministicMNManager& m_dmnman;
-    CMNHFManager& m_mnhfman;
     llmq::CQuorumBlockProcessor& m_qblockman;
     llmq::CQuorumSnapshotManager& m_qsnapman;
     const ChainstateManager& m_chainman;
@@ -67,23 +74,12 @@ private:
     const llmq::CQuorumManager& m_qman;
 
 public:
-    explicit CSpecialTxProcessor(CCreditPoolManager& cpoolman, CDeterministicMNManager& dmnman, CMNHFManager& mnhfman,
+    explicit CSpecialTxProcessor(CEvoDB& evodb, CDeterministicMNManager& dmnman,
                                  llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumSnapshotManager& qsnapman,
                                  const ChainstateManager& chainman, const node::BlockManager& blockman,
                                  const Consensus::Params& consensus_params, const chainlock::Chainlocks& chainlocks,
-                                 const llmq::CQuorumManager& qman) :
-        m_cpoolman(cpoolman),
-        m_dmnman{dmnman},
-        m_mnhfman{mnhfman},
-        m_qblockman{qblockman},
-        m_qsnapman{qsnapman},
-        m_chainman(chainman),
-        m_blockman{blockman},
-        m_consensus_params{consensus_params},
-        m_chainlocks{chainlocks},
-        m_qman{qman}
-    {
-    }
+                                 const llmq::CQuorumManager& qman);
+    ~CSpecialTxProcessor();
 
     bool CheckSpecialTx(const CTransaction& tx, const CBlockIndex* pindexPrev, SpecialTxRules rules,
                         const CCoinsViewCache& view, bool check_sigs, TxValidationState& state)
@@ -107,6 +103,9 @@ public:
     bool RebuildListFromBlock(const CBlock& block, gsl::not_null<const CBlockIndex*> pindexPrev, bool is_v24_active,
                               const CDeterministicMNList& prevList, const CCoinsViewCache& view, bool debugLogs,
                               BlockValidationState& state, CDeterministicMNList& mnListRet);
+
+    /** Return a canonical hash of the deterministic MN list derived at a block. */
+    uint256 GetDeterministicMNListHash(gsl::not_null<const CBlockIndex*> pindex) const;
 
 private:
     bool CheckSpecialTxInner(const CChain* chain, const CTransaction& tx, const CBlockIndex* pindexPrev,

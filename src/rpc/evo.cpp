@@ -7,7 +7,6 @@
 #include <consensus/validation.h>
 #include <core_io.h>
 #include <deploymentstatus.h>
-#include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
 #include <evo/dmn_types.h>
 #include <evo/providertx.h>
@@ -1986,7 +1985,7 @@ static UniValue evodb_verify_or_repair_impl(const JSONRPCRequest& request, bool 
     const NodeContext& node = EnsureAnyNodeContext(request.context);
     ChainstateManager& chainman = EnsureChainman(node);
     CDeterministicMNManager& dmnman = *CHECK_NONFATAL(node.dmnman);
-    CChainstateHelper& chain_helper = *CHECK_NONFATAL(node.chain_helper);
+    CSpecialTxProcessor& special_tx = *CHECK_NONFATAL(node.special_tx);
 
     const CBlockIndex* start_index;
     const CBlockIndex* stop_index;
@@ -2032,12 +2031,12 @@ static UniValue evodb_verify_or_repair_impl(const JSONRPCRequest& request, bool 
     }
 
     // Create a callback that wraps CSpecialTxProcessor::RebuildListFromBlock
-    auto build_list_func = [&chain_helper, &chainman](const CBlock& block, const CBlockIndex* const pindexPrev,
+    auto build_list_func = [&special_tx, &chainman](const CBlock& block, const CBlockIndex* const pindexPrev,
                                                       const CDeterministicMNList& prevList, const CCoinsViewCache& view,
                                                       bool debugLogs, BlockValidationState& state,
                                                       CDeterministicMNList& mnListRet) -> bool {
         const bool is_v24_active{DeploymentActiveAfter(pindexPrev, chainman, Consensus::DEPLOYMENT_V24)};
-        return chain_helper.special_tx->RebuildListFromBlock(block, pindexPrev, is_v24_active, prevList, view,
+        return special_tx.RebuildListFromBlock(block, pindexPrev, is_v24_active, prevList, view,
                                                              debugLogs, state, mnListRet);
     };
 

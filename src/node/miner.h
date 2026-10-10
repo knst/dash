@@ -23,11 +23,9 @@
 class ArgsManager;
 class CBlockIndex;
 class CChainParams;
-class CChainstateHelper;
-class CConnman;
+class CDeterministicMNManager;
 class CEvoDB;
 class CScript;
-struct LLMQContext;
 
 namespace chainlock
 {
@@ -162,9 +160,9 @@ private:
     int nHeight;
     int64_t m_lock_time_cutoff;
 
-    CChainstateHelper& m_chain_helper;
     Chainstate& m_chainstate;
     CEvoDB& m_evoDb;
+    CDeterministicMNManager& m_dmnman;
     const chainlock::Chainlocks& m_chainlocks;
     chainlock::ChainlockHandler& m_clhandler;
     const CChainParams& chainparams;
@@ -198,6 +196,10 @@ private:
     void resetBlock();
     /** Add a tx to the block */
     void AddToBlock(CTxMemPool::txiter iter);
+    /** Append the masternode payments and, when a superblock is triggered,
+     *  the superblock payments to the coinbase. */
+    void FillBlockPayments(CMutableTransaction& txNew, const CBlockIndex* pindexPrev, CAmount blockSubsidy,
+                           CAmount feeReward) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     // Methods for how to add transactions to a block.
     /** Add transactions based on feerate including unconfirmed ancestors
