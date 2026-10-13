@@ -18,6 +18,7 @@ import random
 import shutil
 import re
 import sys
+import threading
 import time
 import urllib.parse
 
@@ -281,6 +282,11 @@ def wait_until_helper(predicate, *, attempts=float('inf'), timeout=float('inf'),
                 with lock:
                     if predicate():
                         return True
+                    if isinstance(lock, threading.Condition):
+                        # Wake up early when the lock owner signals a state change
+                        lock.wait(sleep)
+                        attempt += 1
+                        continue
             else:
                 if predicate():
                     return True
