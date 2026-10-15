@@ -254,6 +254,10 @@ protected:
     CMessageHeader::MessageStartChars pchMessageStart;
     uint16_t nDefaultPort;
     uint64_t nPruneAfterHeight;
+    /// Four days of blocks (2304) on every network but regtest. Validation reads older blocks from disk:
+    /// a credit pool is rebuilt from its newest daily snapshot, reading the block one withdrawal window
+    /// before each block since it, and rotated LLMQ modifiers read the work block of earlier cycles.
+    /// Regtest keeps Bitcoin Core's 288 for the upstream pruning tests.
     int m_min_blocks_to_keep{288};
     uint64_t m_assumed_blockchain_size;
     uint64_t m_assumed_chain_state_size;
