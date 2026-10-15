@@ -155,9 +155,9 @@ class LLMQSimplePoSeTest(DashTestFramework):
             assert not check_punished(self.nodes[0], mn)
 
     def mine_quorum_no_service(self, mn, others, relay, services, expected_complaints):
-        # Like mine_quorum, except that mn goes offline once every member holds its contribution and a peer stands
-        # in for it on each other member with a masternode connection that lacks the service, so that the complain
-        # phase judges mn by that connection alone.
+        # Like mine_quorum, except that mn goes offline once every member of every type holds its contribution and
+        # a peer stands in for it on each other member with a masternode connection that lacks the service, so that
+        # the complain phase judges mn by that connection alone.
         self.log.info(f"Mining quorum with a stand-in for {mn.proTxHash}: expected_complaints={expected_complaints}")
         nodes = [self.nodes[0]] + [m.get_node(self) for m in others]
         spork23_active = self.nodes[0].spork('show')['SPORK_23_QUORUM_POSE'] <= 1
@@ -170,15 +170,15 @@ class LLMQSimplePoSeTest(DashTestFramework):
         q = self.nodes[0].getbestblockhash()
         self.log.info("Expected quorum_hash:"+str(q))
         self.log.info("Waiting for phase 1 (init)")
-        self.wait_for_quorum_phase(q, 1, len(others), None, 0, others)
-        self.wait_for_quorum_connections(q, self.llmq_size - 1, others, wait_proc=lambda: self.bump_mocktime(1))
+        self.wait_for_quorum_phase(q, 1, len(self.mninfo), None, 0, self.mninfo, all_types=True)
+        self.wait_for_quorum_connections(q, self.llmq_size - 1, self.mninfo, wait_proc=lambda: self.bump_mocktime(1), all_types=True)
         if spork23_active:
             self.wait_for_masternode_probes(q, others, wait_proc=lambda: self.bump_mocktime(1))
 
         self.move_blocks(self.nodes, 2)
 
         self.log.info("Waiting for phase 2 (contribute)")
-        self.wait_for_quorum_phase(q, 2, len(others), "receivedContributions", self.llmq_size, others)
+        self.wait_for_quorum_phase(q, 2, len(self.mninfo), "receivedContributions", self.llmq_size, self.mninfo, all_types=True)
 
         self.log.info("Replacing the connections to the masternode with stand-ins")
         mn.get_node(self).setnetworkactive(False)
@@ -255,30 +255,30 @@ class LLMQSimplePoSeTest(DashTestFramework):
         q = self.nodes[0].getbestblockhash()
         self.log.info("Expected quorum_hash: "+str(q))
         self.log.info("Waiting for phase 1 (init)")
-        self.wait_for_quorum_phase(q, 1, expected_members, None, 0, mninfos_online)
-        self.wait_for_quorum_connections(q, expected_members - 1, mninfos_online, wait_proc=lambda: self.bump_mocktime(1))
+        self.wait_for_quorum_phase(q, 1, expected_members, None, 0, mninfos_online, all_types=True)
+        self.wait_for_quorum_connections(q, expected_members - 1, mninfos_online, wait_proc=lambda: self.bump_mocktime(1), all_types=True)
         self.log.info("Waiting for this round's probes of the deaf masternodes to be attempted")
         self.wait_for_deaf_masternode_probes(mninfos_online)
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 2 (contribute)")
-        self.wait_for_quorum_phase(q, 2, expected_members, "receivedContributions", expected_members, mninfos_online)
+        self.wait_for_quorum_phase(q, 2, expected_members, "receivedContributions", expected_members, mninfos_online, all_types=True)
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 3 (complain)")
-        self.wait_for_quorum_phase(q, 3, expected_members, "receivedComplaints", None, mninfos_online)
+        self.wait_for_quorum_phase(q, 3, expected_members, "receivedComplaints", None, mninfos_online, all_types=True)
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 4 (justify)")
-        self.wait_for_quorum_phase(q, 4, expected_members, "receivedJustifications", None, mninfos_online)
+        self.wait_for_quorum_phase(q, 4, expected_members, "receivedJustifications", None, mninfos_online, all_types=True)
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 5 (commit)")
-        self.wait_for_quorum_phase(q, 5, expected_members, "receivedPrematureCommitments", expected_members, mninfos_online)
+        self.wait_for_quorum_phase(q, 5, expected_members, "receivedPrematureCommitments", expected_members, mninfos_online, all_types=True)
         self.move_blocks(nodes, 2)
 
         self.log.info("Waiting for phase 6 (mining)")
-        self.wait_for_quorum_phase(q, 6, expected_members, None, 0, mninfos_online)
+        self.wait_for_quorum_phase(q, 6, expected_members, None, 0, mninfos_online, all_types=True)
 
         self.log.info("Waiting final commitment")
         self.wait_for_quorum_commitment(q, mninfos_online)
