@@ -118,6 +118,8 @@ public:
     /** If this chain is exclusively used for testing */
     bool IsTestChain() const { return m_is_test_chain; }
     uint64_t PruneAfterHeight() const { return nPruneAfterHeight; }
+    /** Block files containing a block-height within MinBlocksToKeep() of ActiveChain().Tip() will not be pruned. */
+    int MinBlocksToKeep() const { return m_min_blocks_to_keep; }
     /** Minimum free space (in GB) needed for data directory */
     uint64_t AssumedBlockchainSize() const { return m_assumed_blockchain_size; }
     /** Minimum free space (in GB) needed for data directory when pruned; Does not include prune target*/
@@ -252,6 +254,7 @@ protected:
     CMessageHeader::MessageStartChars pchMessageStart;
     uint16_t nDefaultPort;
     uint64_t nPruneAfterHeight;
+    int m_min_blocks_to_keep{288};
     uint64_t m_assumed_blockchain_size;
     uint64_t m_assumed_chain_state_size;
     std::vector<std::string> vSeeds;
