@@ -826,7 +826,7 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
         sync_fun() if sync_fun else self.sync_all()
         return blocks
 
-    def sync_blocks(self, nodes=None, wait=1, timeout=60):
+    def sync_blocks(self, nodes=None, *, wait=0.05, timeout=60):
         """
         Wait until everybody has the same tip.
         sync_blocks needs to be called with an rpc_connections set that has least
@@ -848,7 +848,7 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
             "".join("\n  {!r}".format(b) for b in best_hash),
         ))
 
-    def sync_mempools(self, nodes=None, wait=1, timeout=60, flush_scheduler=True, wait_func=None):
+    def sync_mempools(self, nodes=None, *, wait=0.05, timeout=60, flush_scheduler=True, wait_func=None):
         """
         Wait until everybody has the same transactions in their memory
         pools
@@ -857,7 +857,8 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
         timeout = int(timeout * self.options.timeout_factor)
         stop_time = time.time() + timeout
         if self.mocktime != 0 and wait_func is None:
-            wait_func = lambda: self.bump_mocktime(3, nodes=nodes)
+            # Polling is much faster than the mocktime bump was designed for; keep the bump at its original cadence
+            wait_func = throttled(lambda: self.bump_mocktime(3, nodes=nodes))
         while time.time() <= stop_time:
             pool = [set(r.getrawmempool()) for r in rpc_connections]
             if pool.count(pool[0]) == len(rpc_connections):
