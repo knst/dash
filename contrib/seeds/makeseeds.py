@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2013-2020 The Bitcoin Core developers
+# Copyright (c) 2013-2022 The Bitcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #
@@ -8,10 +8,10 @@
 #
 
 import argparse
+import collections
 import ipaddress
 import re
 import sys
-import collections
 import json
 from typing import List, Dict, Union
 
