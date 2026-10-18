@@ -119,8 +119,8 @@ def resolveasn(resolver, ip : Dict) -> Union[int, None]:
                    reversed(ipaddr.split('.'))) + prefix + '.asn.cymru.com',
                    'TXT').response.answer][0].split('\"')[1].split(' ')[0])
         return asn
-    except Exception:
-        sys.stderr.write('ERR: Could not resolve ASN for "' + ip + '"\n')
+    except Exception as e:
+        sys.stderr.write(f'ERR: Could not resolve ASN for "{ip}": {e}\n')
         return None
 
 # Based on Greg Maxwell's seed_filter.py
