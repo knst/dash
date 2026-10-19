@@ -1890,6 +1890,9 @@ class DashTestFramework(BitcoinTestFramework):
             self.start_node(mn.nodeIdx, extra_args=self._masternode_start_args(mn, extra_args=extra_args))
             if wait_block_count is not None:
                 self.wait_until(lambda: mn.get_node(self).getblockcount() >= wait_block_count)
+                # The blocks reconnected after -reindex queue UpdatedBlockTip notifications flagged as
+                # IBD; one delivered after the forced finish resets mnsync and drops the MNAUTHs in flight
+                mn.get_node(self).syncwithvalidationinterfacequeue()
             force_finish_mnsync(mn.get_node(self))
 
         with ThreadPoolExecutor(max_workers=20) as executor:
