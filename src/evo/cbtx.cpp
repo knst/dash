@@ -51,6 +51,23 @@ bool CheckCbTx(const CCbTx& cbTx, const CBlockIndex* pindexPrev, bool is_v24_act
         }
     }
 
+    // The signature is deserialized lazily. Get() decodes it in the active scheme only and
+    // resets the wrapper on failure, which is what the eager parser did with bytes encoded
+    // in the opposite scheme; bytes that decode in neither scheme made it throw, so they
+    // are rejected here.
+    if (cbTx.nVersion >= CCbTx::Version::CLSIG_AND_BALANCE) {
+        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+        ss << cbTx.bestCLSignature;
+        if (!cbTx.bestCLSignature.Get().IsValid()) {
+            try {
+                CBLSSignature sig;
+                ss >> sig;
+            } catch (const std::ios_base::failure&) {
+                return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-cbtx-payload");
+            }
+        }
+    }
+
     return true;
 }
 
@@ -203,8 +220,8 @@ std::optional<std::pair<CBLSSignature, uint32_t>> GetNonNullCoinbaseChainlock(co
     }
     const auto payload = GetTxPayload<CCbTx>(*block.vtx[0]);
     if (!payload || payload->nVersion < CCbTx::Version::CLSIG_AND_BALANCE || payload->nHeight != height ||
-        !payload->bestCLSignature.IsValid() || payload->bestCLHeightDiff >= uint32_t(height)) {
+        !payload->bestCLSignature.Get().IsValid() || payload->bestCLHeightDiff >= uint32_t(height)) {
         return std::nullopt;
     }
-    return std::make_pair(payload->bestCLSignature, payload->bestCLHeightDiff);
+    return std::make_pair(payload->bestCLSignature.Get(), payload->bestCLHeightDiff);
 }
