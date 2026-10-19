@@ -55,8 +55,8 @@ class TimestampIndexTest(BitcoinTestFramework):
         # Invalidate the last 2 blocks on both nodes
         self.nodes[0].invalidateblock(blockhashes[3])
         self.nodes[1].invalidateblock(blockhashes[3])
-        # The index removes the blocks in its BlockDisconnected callbacks. getblockhashes only waits for an index
-        # that is behind the tip, not for one that is ahead of it, so wait for the callbacks here.
+        # The index drops disconnected blocks from the BlockDisconnected notifications, which
+        # getblockhashes does not wait for while the index is still ahead of the new tip
         self.nodes[1].syncwithvalidationinterfacequeue()
 
         # Verify that invalidated blocks are no longer in the index
