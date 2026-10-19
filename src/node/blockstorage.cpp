@@ -23,6 +23,7 @@
 
 #include <map>
 #include <ranges>
+#include <tuple>
 #include <unordered_map>
 
 namespace node {
@@ -770,7 +771,7 @@ bool BlockManager::FindUndoPos(BlockValidationState& state, int nFile, FlatFileP
     return true;
 }
 
-static bool WriteBlockToDisk(const CBlock& block, FlatFilePos& pos, const CMessageHeader::MessageStartChars& messageStart)
+static bool WriteBlockToDisk(Span<const std::byte> payload, uint32_t size_field, FlatFilePos& pos, const CMessageHeader::MessageStartChars& messageStart)
 {
     // Open history file to append
     AutoFile fileout{OpenBlockFile(pos)};
@@ -780,8 +781,7 @@ static bool WriteBlockToDisk(const CBlock& block, FlatFilePos& pos, const CMessa
     }
 
     // Write index header
-    unsigned int nSize = GetSerializeSize(block, CLIENT_VERSION);
-    fileout << messageStart << nSize;
+    fileout << messageStart << size_field;
 
     // Write block
     long fileOutPos = ftell(fileout.Get());
@@ -790,9 +790,25 @@ static bool WriteBlockToDisk(const CBlock& block, FlatFilePos& pos, const CMessa
         return false;
     }
     pos.nPos = (unsigned int)fileOutPos;
-    fileout << block;
+    fileout.write(payload);
 
     return true;
+}
+
+/** Serialize the block for storage, as a zstd frame when that is smaller. Returns the payload and its size field. */
+static std::pair<std::vector<std::byte>, uint32_t> BuildBlockRecordPayload(const CBlock& block)
+{
+    DataStream ss;
+    ss << block;
+    const int level{util::ZstdLevel()};
+    if (level > 0) {
+        std::vector<std::byte> compressed{util::ZstdCompress(MakeByteSpan(ss), level)};
+        if (!compressed.empty() && compressed.size() < ss.size()) {
+            const uint32_t size_field{static_cast<uint32_t>(compressed.size()) | BLOCK_RECORD_COMPRESSED};
+            return {std::move(compressed), size_field};
+        }
+    }
+    return {std::vector<std::byte>(ss.begin(), ss.end()), static_cast<uint32_t>(ss.size())};
 }
 
 bool BlockManager::WriteUndoDataForBlock(const CBlockUndo& blockundo, BlockValidationState& state, CBlockIndex& block)
@@ -934,25 +950,47 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
     return true;
 }
 
+/** Size field of the record already stored at pos */
+static std::optional<uint32_t> StoredBlockSizeField(const FlatFilePos& pos)
+{
+    const auto header_pos{BlockRecordHeaderPos(pos)};
+    if (!header_pos) return std::nullopt;
+    AutoFile filein{OpenBlockFile(*header_pos, true)};
+    if (filein.IsNull()) return std::nullopt;
+    return ReadBlockRecordSizeField(filein);
+}
+
+bool BlockRecordCompressed(const FlatFilePos& pos)
+{
+    const auto size_field{StoredBlockSizeField(pos)};
+    return size_field && (*size_field & BLOCK_RECORD_COMPRESSED);
+}
+
 FlatFilePos BlockManager::SaveBlockToDisk(const CBlock& block, int nHeight, const FlatFilePos* dbp)
 {
-    unsigned int nBlockSize = ::GetSerializeSize(block, CLIENT_VERSION);
+    unsigned int nBlockSize{0};
     FlatFilePos blockPos;
     const auto position_known {dbp != nullptr};
+    std::vector<std::byte> payload;
+    uint32_t size_field{0};
     if (position_known) {
         blockPos = *dbp;
+        // the stored record may be smaller than the serialized block
+        const auto stored{StoredBlockSizeField(blockPos)};
+        nBlockSize = stored ? (*stored & BLOCK_RECORD_SIZE_MASK) : ::GetSerializeSize(block, CLIENT_VERSION);
     } else {
+        std::tie(payload, size_field) = BuildBlockRecordPayload(block);
         // when known, blockPos.nPos points at the offset of the block data in the blk file. that already accounts for
         // the serialization header present in the file (the 4 magic message start bytes + the 4 length bytes = 8 bytes = BLOCK_SERIALIZATION_HEADER_SIZE).
         // we add BLOCK_SERIALIZATION_HEADER_SIZE only for new blocks since they will have the serialization header added when written to disk.
-        nBlockSize += static_cast<unsigned int>(BLOCK_SERIALIZATION_HEADER_SIZE);
+        nBlockSize = payload.size() + static_cast<unsigned int>(BLOCK_SERIALIZATION_HEADER_SIZE);
     }
     if (!FindBlockPos(blockPos, nBlockSize, nHeight, block.GetBlockTime(), position_known)) {
         LogError("%s: FindBlockPos failed\n", __func__);
         return FlatFilePos();
     }
     if (!position_known) {
-        if (!WriteBlockToDisk(block, blockPos, GetParams().MessageStart())) {
+        if (!WriteBlockToDisk(payload, size_field, blockPos, GetParams().MessageStart())) {
             AbortNode("Failed to write block");
             return FlatFilePos();
         }

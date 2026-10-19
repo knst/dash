@@ -35,6 +35,8 @@ struct Params;
 
 namespace node {
 static constexpr bool DEFAULT_STOPAFTERBLOCKIMPORT{false};
+/** Higher levels cost several times more CPU per block for no measurable gain */
+static constexpr int MAX_RECOMMENDED_BLOCK_COMPRESSION_LEVEL{5};
 
 /** The pre-allocation chunk size for blk?????.dat files (since 0.8) */
 static const unsigned int BLOCKFILE_CHUNK_SIZE = 0x1000000; // 16 MiB
@@ -258,6 +260,8 @@ void UnlinkPrunedFiles(const std::set<int>& setFilesToPrune);
 /** Functions for disk access for blocks */
 /** Read the serialized block whose payload starts at pos, decompressing it when the record is flagged */
 std::optional<std::vector<std::byte>> ReadRawBlockFromDisk(const FlatFilePos& pos);
+/** Whether the block record whose payload starts at pos is stored zstd-compressed */
+bool BlockRecordCompressed(const FlatFilePos& pos);
 std::optional<uint256> ReadBlockFromDisk(CBlock& block, const FlatFilePos& pos, const Consensus::Params& consensusParams);
 bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus::Params& consensusParams);
 

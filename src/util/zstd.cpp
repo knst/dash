@@ -8,6 +8,8 @@
 
 #include <util/zstd.h>
 
+#include <util/system.h>
+
 #ifdef ENABLE_ZSTD
 #include <zstd.h>
 #endif
@@ -21,6 +23,17 @@ bool ZstdAvailable()
 #else
     return false;
 #endif
+}
+
+int DefaultZstdLevel()
+{
+    return ZstdAvailable() ? DEFAULT_ZSTD_LEVEL : 0;
+}
+
+int ZstdLevel()
+{
+    if (!ZstdAvailable()) return 0;
+    return gArgs.GetIntArg("-blockcompression", DEFAULT_ZSTD_LEVEL);
 }
 
 #ifdef ENABLE_ZSTD
