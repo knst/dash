@@ -45,6 +45,9 @@ static const unsigned int MAX_BLOCKFILE_SIZE = 0x8000000; // 128 MiB
 
 /** Size of header written by WriteBlockToDisk before a serialized CBlock */
 static constexpr size_t BLOCK_SERIALIZATION_HEADER_SIZE = CMessageHeader::MESSAGE_START_SIZE + sizeof(unsigned int);
+/** Set in the size field of a block record whose payload is one zstd frame of the serialized CBlock */
+static constexpr uint32_t BLOCK_RECORD_COMPRESSED{0x80000000};
+static constexpr uint32_t BLOCK_RECORD_SIZE_MASK{~BLOCK_RECORD_COMPRESSED};
 
 extern std::atomic_bool fImporting;
 extern std::atomic_bool fReindex;
@@ -253,6 +256,8 @@ fs::path GetBlockPosFilename(const FlatFilePos& pos);
 void UnlinkPrunedFiles(const std::set<int>& setFilesToPrune);
 
 /** Functions for disk access for blocks */
+/** Read the serialized block whose payload starts at pos, decompressing it when the record is flagged */
+std::optional<std::vector<std::byte>> ReadRawBlockFromDisk(const FlatFilePos& pos);
 std::optional<uint256> ReadBlockFromDisk(CBlock& block, const FlatFilePos& pos, const Consensus::Params& consensusParams);
 bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus::Params& consensusParams);
 

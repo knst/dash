@@ -6,6 +6,7 @@
 
 #include <chain.h>
 #include <clientversion.h>
+#include <consensus/consensus.h>
 #include <consensus/validation.h>
 #include <flatfile.h>
 #include <hash.h>
@@ -16,6 +17,7 @@
 #include <undo.h>
 #include <util/fs.h>
 #include <util/system.h>
+#include <util/zstd.h>
 #include <validation.h>
 #include <walletinitinterface.h>
 
@@ -832,20 +834,75 @@ bool BlockManager::WriteUndoDataForBlock(const CBlockUndo& blockundo, BlockValid
     return true;
 }
 
+/** Position of the 8-byte header written before the block payload at pos */
+static std::optional<FlatFilePos> BlockRecordHeaderPos(const FlatFilePos& pos)
+{
+    if (pos.nPos < BLOCK_SERIALIZATION_HEADER_SIZE) return std::nullopt;
+    return FlatFilePos{pos.nFile, static_cast<unsigned int>(pos.nPos - BLOCK_SERIALIZATION_HEADER_SIZE)};
+}
+
+/** Read the size field of the record header the file is positioned at; the file is left at the payload */
+static std::optional<uint32_t> ReadBlockRecordSizeField(AutoFile& filein)
+{
+    try {
+        uint32_t size_field;
+        filein.ignore(CMessageHeader::MESSAGE_START_SIZE);
+        filein >> size_field;
+        return size_field;
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+}
+
+std::optional<std::vector<std::byte>> ReadRawBlockFromDisk(const FlatFilePos& pos)
+{
+    const auto header_pos{BlockRecordHeaderPos(pos)};
+    if (!header_pos) {
+        LogError("ReadRawBlockFromDisk: Bad position %s\n", pos.ToString());
+        return std::nullopt;
+    }
+    AutoFile filein{OpenBlockFile(*header_pos, true)};
+    if (filein.IsNull()) {
+        LogError("ReadRawBlockFromDisk: OpenBlockFile failed for %s\n", pos.ToString());
+        return std::nullopt;
+    }
+    const auto size_field{ReadBlockRecordSizeField(filein)};
+    if (!size_field) {
+        LogError("ReadRawBlockFromDisk: I/O error reading record header at %s\n", pos.ToString());
+        return std::nullopt;
+    }
+    const uint32_t payload_size{*size_field & BLOCK_RECORD_SIZE_MASK};
+    if (payload_size == 0 || payload_size > MaxBlockSize()) {
+        LogError("ReadRawBlockFromDisk: Bad record size %u at %s\n", payload_size, pos.ToString());
+        return std::nullopt;
+    }
+    std::vector<std::byte> payload(payload_size);
+    try {
+        filein.read(payload);
+    } catch (const std::exception& e) {
+        LogError("ReadRawBlockFromDisk: I/O error - %s at %s\n", e.what(), pos.ToString());
+        return std::nullopt;
+    }
+    if (!(*size_field & BLOCK_RECORD_COMPRESSED)) return payload;
+    auto block_data{util::ZstdDecompress(payload, MaxBlockSize())};
+    if (!block_data) {
+        LogError("ReadRawBlockFromDisk: %s at %s\n", util::ZstdAvailable() ? "Decompression failed" : "Compressed record, but this build has no zstd support", pos.ToString());
+    }
+    return block_data;
+}
+
 std::optional<uint256> ReadBlockFromDisk(CBlock& block, const FlatFilePos& pos, const Consensus::Params& consensusParams)
 {
     block.SetNull();
 
-    // Open history file to read
-    AutoFile filein{OpenBlockFile(pos, true)};
-    if (filein.IsNull()) {
-        LogError("ReadBlockFromDisk: OpenBlockFile failed for %s\n", pos.ToString());
+    const auto block_data{ReadRawBlockFromDisk(pos)};
+    if (!block_data) {
         return std::nullopt;
     }
 
     // Read block
     try {
-        filein >> block;
+        SpanReader{SER_DISK, CLIENT_VERSION, MakeUCharSpan(*block_data)} >> block;
     } catch (const std::exception& e) {
         LogError("ReadBlockFromDisk: Deserialize or I/O error - %s at %s\n", e.what(), pos.ToString());
         return std::nullopt;
