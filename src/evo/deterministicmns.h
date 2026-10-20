@@ -263,6 +263,8 @@ public:
         InvalidateSMLCache();
     }
 
+    [[nodiscard]] size_t GetAllMNsCount() const { return mnMap.size(); }
+
     [[nodiscard]] Counts GetCounts() const
     {
         Counts ret;
@@ -730,6 +732,8 @@ struct MNListUpdates
     CDeterministicMNList old_list;
     CDeterministicMNList new_list;
     CDeterministicMNListDiff diff;
+    //! The masternode the block pays, as selected from old_list
+    CDeterministicMNCPtr payee;
 };
 
 /** Sentinel suffix carried by serving-failure messages that report locally

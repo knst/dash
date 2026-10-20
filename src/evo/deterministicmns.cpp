@@ -746,7 +746,9 @@ bool CDeterministicMNManager::ProcessBlock(const CBlock& block, gsl::not_null<co
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "failed-dmn-block");
     }
 
-    updatesRet = {.old_list = oldList, .new_list = newList, .diff = diff};
+    updatesRet.old_list = oldList;
+    updatesRet.new_list = newList;
+    updatesRet.diff = diff;
 
     if (::g_stats_client->active()) {
         const auto counts{newList.GetCounts()};
@@ -795,7 +797,9 @@ bool CDeterministicMNManager::UndoBlock(gsl::not_null<const CBlockIndex*> pindex
         curList.ApplyDiff(pindex, diff);
 
         auto inversedDiff{curList.BuildDiff(prevList)};
-        updatesRet = {.old_list = curList, .new_list = prevList, .diff = inversedDiff};
+        updatesRet.old_list = curList;
+        updatesRet.new_list = prevList;
+        updatesRet.diff = inversedDiff;
     }
 
     const auto& consensusParams = Params().GetConsensus();
