@@ -165,23 +165,30 @@ bool CheckCbTxBestChainlock(const CCbTx& cbTx, const CBlockIndex* pindex, const 
     }
     const CBLSSignature& cbtx_sig{cbTx.bestCLSignature.Get()};
 
+    struct CachedChainlock {
+        const CBlockIndex* pindex{nullptr};
+        CBLSSignature sig;
+        uint32_t height_diff{0};
+        //! Passed VerifyChainLock in this process (or was carried over from such a block) rather than
+        //! merely matched the chainlock handler's best lock, whose verification scheme is unknown here
+        bool verified_here{false};
+    };
     static Mutex cached_mutex;
-    static const CBlockIndex* cached_pindex GUARDED_BY(cached_mutex){nullptr};
-    static std::optional<std::pair<CBLSSignature, uint32_t>> cached_chainlock GUARDED_BY(cached_mutex){std::nullopt};
+    static std::optional<CachedChainlock> cached GUARDED_BY(cached_mutex);
 
     auto best_clsig = chainlocks.GetBestChainLock();
     if (best_clsig.getHeight() == pindex->nHeight - 1 && cbTx.bestCLHeightDiff == 0 &&
         cbtx_sig == best_clsig.getSig()) {
         // matches our best clsig which still hold values for the previous block
-        LOCK(cached_mutex);
-        cached_chainlock = std::make_pair(cbtx_sig, cbTx.bestCLHeightDiff);
-        cached_pindex = pindex;
+        WITH_LOCK(cached_mutex, cached.emplace(pindex, cbtx_sig, cbTx.bestCLHeightDiff, /*verified_here=*/false));
         return true;
     }
 
     std::optional<std::pair<CBLSSignature, uint32_t>> prevBlockCoinbaseChainlock{std::nullopt};
-    if (LOCK(cached_mutex); cached_pindex == pindex->pprev) {
-        prevBlockCoinbaseChainlock = cached_chainlock;
+    bool prev_verified_here{false};
+    if (LOCK(cached_mutex); cached && cached->pindex == pindex->pprev) {
+        prevBlockCoinbaseChainlock = std::make_pair(cached->sig, cached->height_diff);
+        prev_verified_here = cached->verified_here;
     }
     if (!prevBlockCoinbaseChainlock.has_value()) {
         prevBlockCoinbaseChainlock = GetNonNullCoinbaseChainlock(pindex->pprev);
@@ -207,9 +214,15 @@ bool CheckCbTxBestChainlock(const CCbTx& cbTx, const CBlockIndex* pindex, const 
         int curBlockCoinbaseCLHeight = pindex->nHeight - static_cast<int>(cbTx.bestCLHeightDiff) - 1;
         if (best_clsig.getHeight() == curBlockCoinbaseCLHeight && best_clsig.getSig() == cbtx_sig) {
             // matches our best (but outdated) clsig, no need to verify it again
-            LOCK(cached_mutex);
-            cached_chainlock = std::make_pair(cbtx_sig, cbTx.bestCLHeightDiff);
-            cached_pindex = pindex;
+            WITH_LOCK(cached_mutex, cached.emplace(pindex, cbtx_sig, cbTx.bestCLHeightDiff, /*verified_here=*/false));
+            return true;
+        }
+        // The previous block's coinbase chainlock was verified by this process; carried into this
+        // block with the offset grown by one it names the same height, block and signature.
+        if (prev_verified_here && prevBlockCoinbaseChainlock.has_value() &&
+            cbTx.bestCLHeightDiff == prevBlockCoinbaseChainlock->second + 1 &&
+            cbtx_sig == prevBlockCoinbaseChainlock->first) {
+            WITH_LOCK(cached_mutex, cached.emplace(pindex, cbtx_sig, cbTx.bestCLHeightDiff, /*verified_here=*/true));
             return true;
         }
         const CBlockIndex* pAncestor = pindex->GetAncestor(curBlockCoinbaseCLHeight);
@@ -224,9 +237,7 @@ bool CheckCbTxBestChainlock(const CCbTx& cbTx, const CBlockIndex* pindex, const 
         if (ret != llmq::VerifyRecSigStatus::Valid) {
             return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-invalid-clsig");
         }
-        LOCK(cached_mutex);
-        cached_chainlock = std::make_pair(cbtx_sig, cbTx.bestCLHeightDiff);
-        cached_pindex = pindex;
+        WITH_LOCK(cached_mutex, cached.emplace(pindex, cbtx_sig, cbTx.bestCLHeightDiff, /*verified_here=*/true));
     } else if (cbTx.bestCLHeightDiff != 0) {
         // Null bestCLSignature is allowed only with bestCLHeightDiff = 0
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cbtx-cldiff");
