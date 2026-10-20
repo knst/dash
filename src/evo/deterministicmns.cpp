@@ -679,8 +679,8 @@ CDeterministicMNManager::CDeterministicMNManager(CEvoDB& evoDb, CMasternodeMetaM
 CDeterministicMNManager::~CDeterministicMNManager() = default;
 
 bool CDeterministicMNManager::ProcessBlock(const CBlock& block, gsl::not_null<const CBlockIndex*> pindex,
-                                           BlockValidationState& state, const CDeterministicMNList& newList,
-                                           MNListUpdates& updatesRet)
+                                           BlockValidationState& state, const CDeterministicMNList& oldList,
+                                           const CDeterministicMNList& newList, MNListUpdates& updatesRet)
 {
     AssertLockHeld(::cs_main);
 
@@ -689,7 +689,6 @@ bool CDeterministicMNManager::ProcessBlock(const CBlock& block, gsl::not_null<co
         return true;
     }
 
-    CDeterministicMNList oldList;
     CDeterministicMNListDiff diff;
 
     int nHeight = pindex->nHeight;
@@ -699,7 +698,6 @@ bool CDeterministicMNManager::ProcessBlock(const CBlock& block, gsl::not_null<co
 
         LOCK(cs);
 
-        oldList = GetListForBlockInternal(pindex->pprev);
         diff = oldList.BuildDiff(newList);
 
         // A WriteDerived mismatch is local EvoDB corruption, not a statement

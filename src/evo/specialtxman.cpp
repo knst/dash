@@ -992,13 +992,13 @@ bool CSpecialTxProcessor::ProcessSpecialTxsInBlock(Chainstate& chainstate, const
             // ConnectBlock validates masternode payments against the list at the
             // previous block, also under fJustCheck where ProcessBlock is skipped.
             updatesRet.old_list = m_dmnman.GetListForBlock(pindex->pprev);
-            if (!BuildNewListFromBlock(block, pindex->pprev, rules.v24, view, true, state, mn_list)) {
+            if (!RebuildListFromBlock(block, pindex->pprev, rules.v24, updatesRet.old_list, view, true, state, mn_list)) {
                 // pass the state returned by the function above
                 return false;
             }
             mn_list.SetBlockHash(pindex->GetBlockHash());
 
-            if (!fJustCheck && !m_dmnman.ProcessBlock(block, pindex, state, mn_list, updatesRet)) {
+            if (!fJustCheck && !m_dmnman.ProcessBlock(block, pindex, state, updatesRet.old_list, mn_list, updatesRet)) {
                 // pass the state returned by the function above
                 return false;
             }

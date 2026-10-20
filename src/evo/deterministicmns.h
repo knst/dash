@@ -785,7 +785,7 @@ public:
     ~CDeterministicMNManager();
 
     bool ProcessBlock(const CBlock& block, gsl::not_null<const CBlockIndex*> pindex, BlockValidationState& state,
-                      const CDeterministicMNList& newList, MNListUpdates& updatesRet)
+                      const CDeterministicMNList& oldList, const CDeterministicMNList& newList, MNListUpdates& updatesRet)
         EXCLUSIVE_LOCKS_REQUIRED(!cs, ::cs_main);
     bool UndoBlock(gsl::not_null<const CBlockIndex*> pindex, MNListUpdates& updatesRet) EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
