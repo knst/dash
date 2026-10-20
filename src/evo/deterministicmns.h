@@ -295,7 +295,8 @@ public:
      * @param onlyValid Run on all masternodes, or only "valid" (not banned) masternodes
      * @param cb callback to execute
      */
-    void ForEachMN(bool onlyValid, std::function<void(const CDeterministicMN&)> cb) const
+    template <typename Callback>
+    void ForEachMN(bool onlyValid, Callback&& cb) const
     {
         for (const auto& p : mnMap) {
             if (!onlyValid || !p.second->pdmnState->IsBanned()) {
@@ -311,7 +312,8 @@ public:
      * @param onlyValid Run on all masternodes, or only "valid" (not banned) masternodes
      * @param cb callback to execute
      */
-    void ForEachMNShared(bool onlyValid, std::function<void(const CDeterministicMNCPtr&)> cb) const
+    template <typename Callback>
+    void ForEachMNShared(bool onlyValid, Callback&& cb) const
     {
         for (const auto& p : mnMap) {
             if (!onlyValid || !p.second->pdmnState->IsBanned()) {
