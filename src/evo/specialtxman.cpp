@@ -180,8 +180,10 @@ bool CheckCbTxBestChainlock(const CCbTx& cbTx, const CBlockIndex* pindex, const 
     }
 
     std::optional<std::pair<CBLSSignature, uint32_t>> prevBlockCoinbaseChainlock{std::nullopt};
+    bool prev_verified_here{false};
     if (LOCK(cached_mutex); cached_pindex == pindex->pprev) {
         prevBlockCoinbaseChainlock = cached_chainlock;
+        prev_verified_here = true;
     }
     if (!prevBlockCoinbaseChainlock.has_value()) {
         prevBlockCoinbaseChainlock = GetNonNullCoinbaseChainlock(pindex->pprev);
@@ -207,6 +209,16 @@ bool CheckCbTxBestChainlock(const CCbTx& cbTx, const CBlockIndex* pindex, const 
         int curBlockCoinbaseCLHeight = pindex->nHeight - static_cast<int>(cbTx.bestCLHeightDiff) - 1;
         if (best_clsig.getHeight() == curBlockCoinbaseCLHeight && best_clsig.getSig() == cbtx_sig) {
             // matches our best (but outdated) clsig, no need to verify it again
+            LOCK(cached_mutex);
+            cached_chainlock = std::make_pair(cbtx_sig, cbTx.bestCLHeightDiff);
+            cached_pindex = pindex;
+            return true;
+        }
+        // The previous block's coinbase chainlock was verified by this process; carried into this
+        // block with the offset grown by one it names the same height, block and signature.
+        if (prev_verified_here && prevBlockCoinbaseChainlock.has_value() &&
+            cbTx.bestCLHeightDiff == prevBlockCoinbaseChainlock->second + 1 &&
+            cbtx_sig == prevBlockCoinbaseChainlock->first) {
             LOCK(cached_mutex);
             cached_chainlock = std::make_pair(cbtx_sig, cbTx.bestCLHeightDiff);
             cached_pindex = pindex;
