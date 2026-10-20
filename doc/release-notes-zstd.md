@@ -2,9 +2,10 @@ Block storage
 -------------
 
 New blocks are written to `blocks/blk*.dat` zstd-compressed, one frame per block, which saves
-about a fifth of the space new block files take. Block files written by earlier versions are read
-as before and are not rewritten. The new `-blockcompression=<level>` option selects the zstd level
-(default 0, stores blocks uncompressed for backwards compatibility).
+about a fifth of the space new block files take. Block undo data in `blocks/rev*.dat` is compressed
+the same way, saving about a quarter. Files written by earlier versions are read as before and are
+not rewritten. The new `-blockcompression=<level>` option selects the zstd level for both (default
+0,  stores blocks undo data uncompressed for backwards compatibility).
 
 zstd is an optional build dependency (`--without-zstd`, `NO_ZSTD=1` for depends). A build without
 it stores everything uncompressed, accepts only `-blockcompression=0`, and refuses to start on
