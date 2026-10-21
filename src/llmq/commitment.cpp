@@ -5,7 +5,6 @@
 #include <llmq/commitment.h>
 
 #include <evo/deterministicmns.h>
-#include <evo/specialtx.h>
 #include <llmq/options.h>
 #include <llmq/utils.h>
 #include <util/helpers.h>
@@ -237,16 +236,8 @@ bool CFinalCommitment::VerifySizes(const Consensus::LLMQParams& params) const
     return true;
 }
 
-bool CheckLLMQCommitment(const llmq::UtilParameters& util_params, const CTransaction& tx, TxValidationState& state)
+bool CheckLLMQCommitment(const llmq::UtilParameters& util_params, const CFinalCommitmentTxPayload& qcTx, TxValidationState& state)
 {
-    const auto opt_qcTx = GetTxPayload<CFinalCommitmentTxPayload>(tx);
-    if (!opt_qcTx) {
-        LogPrint(BCLog::LLMQ, "CFinalCommitment -- h[%d] GetTxPayload LLMQCommitment failed\n",
-                 util_params.m_base_index->nHeight);
-        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-qc-payload");
-    }
-    auto& qcTx = *opt_qcTx;
-
     const auto& llmq_params_opt = Params().GetLLMQ(qcTx.commitment.llmqType);
     if (!llmq_params_opt.has_value()) {
         LogPrint(BCLog::LLMQ, "CFinalCommitment -- h[%d] GetLLMQ failed for llmqType[%d]\n",

@@ -87,7 +87,7 @@ bool CalcCbTxMerkleRootQuorums(const CBlock& block, const CBlockIndex* pindexPre
         const auto& tx = block.vtx[i];
 
         if (tx->IsSpecialTxVersion() && tx->nType == TRANSACTION_QUORUM_COMMITMENT) {
-            const auto opt_qc = GetTxPayload<llmq::CFinalCommitmentTxPayload>(*tx);
+            const auto opt_qc = quorum_block_processor.GetCommitmentTxPayload(*tx);
             if (!opt_qc) {
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-qc-payload-calc-cbtx-quorummerkleroot");
             }

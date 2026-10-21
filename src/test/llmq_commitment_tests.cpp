@@ -165,7 +165,7 @@ BOOST_FIXTURE_TEST_CASE(commitment_check_undersized_bitset_debug_log_test, RegTe
                                            &base_index};
 
     TxValidationState state;
-    BOOST_CHECK(!llmq::CheckLLMQCommitment(util_params, tx, state));
+    BOOST_CHECK(!llmq::CheckLLMQCommitment(util_params, *opt_round_trip, state));
     BOOST_CHECK(state.IsInvalid());
     BOOST_CHECK_EQUAL(state.GetRejectReason(), "bad-qc-height");
 

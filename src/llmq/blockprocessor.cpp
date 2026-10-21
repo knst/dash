@@ -561,7 +561,26 @@ bool CQuorumBlockProcessor::UndoBlock(const Chainstate& chainstate, const CBlock
     return true;
 }
 
-bool CQuorumBlockProcessor::GetCommitmentsFromBlock(const CBlock& block, gsl::not_null<const CBlockIndex*> pindex, std::multimap<Consensus::LLMQType, CFinalCommitment>& ret, BlockValidationState& state)
+std::shared_ptr<const CFinalCommitmentTxPayload> CQuorumBlockProcessor::GetCommitmentTxPayload(const CTransaction& tx) const
+{
+    const uint256& tx_hash{tx.GetHash()};
+    {
+        LOCK(m_commitment_payload_mutex);
+        if (std::shared_ptr<const CFinalCommitmentTxPayload> cached; m_commitment_payload_cache.get(tx_hash, cached)) {
+            return cached;
+        }
+    }
+    auto opt_qc = GetTxPayload<CFinalCommitmentTxPayload>(tx);
+    if (!opt_qc) {
+        return nullptr;
+    }
+    auto payload = std::make_shared<const CFinalCommitmentTxPayload>(std::move(*opt_qc));
+    LOCK(m_commitment_payload_mutex);
+    m_commitment_payload_cache.insert(tx_hash, payload);
+    return payload;
+}
+
+bool CQuorumBlockProcessor::GetCommitmentsFromBlock(const CBlock& block, gsl::not_null<const CBlockIndex*> pindex, std::multimap<Consensus::LLMQType, CFinalCommitment>& ret, BlockValidationState& state) const
 {
     AssertLockHeld(::cs_main);
 
@@ -571,13 +590,13 @@ bool CQuorumBlockProcessor::GetCommitmentsFromBlock(const CBlock& block, gsl::no
 
     for (const auto& tx : block.vtx) {
         if (tx->nType == TRANSACTION_QUORUM_COMMITMENT) {
-            auto opt_qc = GetTxPayload<CFinalCommitmentTxPayload>(*tx);
+            const auto opt_qc = GetCommitmentTxPayload(*tx);
             if (!opt_qc) {
                 // should not happen as it was verified before processing the block
                 LogPrint(BCLog::LLMQ, "CQuorumBlockProcessor::%s height=%d GetTxPayload fails\n", __func__, pindex->nHeight);
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-qc-payload");
             }
-            auto& qc = *opt_qc;
+            const auto& qc = *opt_qc;
 
             const auto& llmq_params_opt = Params().GetLLMQ(qc.commitment.llmqType);
             if (!llmq_params_opt.has_value()) {
@@ -592,7 +611,7 @@ bool CQuorumBlockProcessor::GetCommitmentsFromBlock(const CBlock& block, gsl::no
                 }
             }
 
-            ret.emplace(qc.commitment.llmqType, std::move(qc.commitment));
+            ret.emplace(qc.commitment.llmqType, qc.commitment);
         }
     }
 

@@ -274,8 +274,13 @@ bool CSpecialTxProcessor::CheckSpecialTxInner(const CChain* chain, const CTransa
                 return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-cbtx-payload");
             }
         }
-        case TRANSACTION_QUORUM_COMMITMENT:
-            return llmq::CheckLLMQCommitment({m_dmnman, m_qsnapman, m_chainman, pindexPrev}, tx, state);
+        case TRANSACTION_QUORUM_COMMITMENT: {
+            const auto opt_qc = m_qblockman.GetCommitmentTxPayload(tx);
+            if (!opt_qc) {
+                return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-qc-payload");
+            }
+            return llmq::CheckLLMQCommitment({m_dmnman, m_qsnapman, m_chainman, pindexPrev}, *opt_qc, state);
+        }
         case TRANSACTION_MNHF_SIGNAL:
             return chain ? CheckMNHFTx(m_blockman, m_qman, *chain, tx, pindexPrev, state) :
                            CheckMNHFTx(m_blockman, m_qman, tx, pindexPrev, state);
@@ -719,7 +724,7 @@ bool CSpecialTxProcessor::ApplyTxToList(const CTransaction& tx, gsl::not_null<co
                       opt_proTx->proTxHash.ToString(), nHeight, opt_proTx->ToString());
         }
     } else if (tx.nType == TRANSACTION_QUORUM_COMMITMENT) {
-        const auto opt_qc = GetTxPayload<llmq::CFinalCommitmentTxPayload>(tx);
+        const auto opt_qc = m_qblockman.GetCommitmentTxPayload(tx);
         if (!opt_qc) {
             return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-qc-payload");
         }
