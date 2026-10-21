@@ -206,7 +206,6 @@ jobs:
           source ./ci/dash/matrix.sh
           ./ci/dash/build_src.sh
           { echo "### ccache: ${BUILD_TARGET}"; echo '```'; ccache --show-stats; echo '```'; } >> "${GITHUB_STEP_SUMMARY}"
-          ccache -X 9
           ccache -c
           du -hd0 "${BASE_OUTDIR}"
           rm -rf "${BASE_OUTDIR}"
