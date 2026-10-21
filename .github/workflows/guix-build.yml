@@ -163,6 +163,7 @@ jobs:
           name: guix-artifacts-${{ matrix.build_target }}
           path: |
             ${{ github.workspace }}/dash/guix-build*/output/${{ matrix.build_target }}/
+          compression-level: 0
 
       - name: Attest build provenance
         uses: actions/attest@v4
