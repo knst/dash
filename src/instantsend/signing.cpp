@@ -212,7 +212,7 @@ bool InstantSendSigner::CheckCanLockAssetUnlock(const CTransaction& tx, bool pri
 {
     const auto log_refusal = [&](std::string_view reason) {
         if (printDebug) {
-            LogPrint(BCLog::INSTANTSEND, "%s -- txid=%s: asset unlock not lockable: %s\n", __func__,
+            LogPrint(BCLog::INSTANTSEND, "CheckCanLockAssetUnlock -- txid=%s: asset unlock not lockable: %s\n",
                      tx.GetHash().ToString(), reason);
         }
         return false;

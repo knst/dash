@@ -621,7 +621,7 @@ bool loadFonts()
     std::vector<int> vecFontIds{};
     auto importFont = [&vecFontIds](const QString& font_name) -> void {
         vecFontIds.push_back(QFontDatabase::addApplicationFont(font_name));
-        qDebug() << qstrprintf("%s: %s loaded with id %d", __func__, font_name.toStdString(), vecFontIds.back());
+        qDebug() << qstrprintf("loadFonts: %s loaded with id %d", font_name.toStdString(), vecFontIds.back());
     };
 
     // Import the embedded Roboto Mono used by fixedPitchFont(use_embedded_font=true)

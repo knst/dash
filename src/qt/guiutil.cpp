@@ -898,7 +898,7 @@ void loadStyleSheet(bool fForceUpdate)
             for (const auto& file : vecFiles) {
                 QFile qFile(file);
                 if (!qFile.open(QFile::ReadOnly)) {
-                    throw std::runtime_error(strprintf("%s: Failed to open file: %s", __func__, file.toStdString()));
+                    throw std::runtime_error(strprintf("loadStyleSheet: Failed to open file: %s", file.toStdString()));
                 }
 
                 QString strStyle = QLatin1String(qFile.readAll());

@@ -2062,9 +2062,6 @@ CPPFLAGS_TEMP="$CPPFLAGS"
 unset CPPFLAGS
 CPPFLAGS="$CPPFLAGS_TEMP"
 
-if test -n "$use_sanitizers"; then
-  export SECP_CFLAGS="$SECP_CFLAGS $SANITIZER_CFLAGS"
-fi
 dnl The ECDH module is required by the wallet's Platform key provider
 dnl (DashPay contact request encryption, wallet/platformkeys.cpp).
 ac_configure_args="${ac_configure_args} --disable-shared --with-pic --enable-benchmark=no --enable-module-recovery --enable-module-ecdh --disable-openssl-tests"

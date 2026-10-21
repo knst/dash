@@ -233,6 +233,7 @@ BasicTestingSetup::BasicTestingSetup(const std::string& chainName, const std::ve
 
 BasicTestingSetup::~BasicTestingSetup()
 {
+    m_node.kernel.reset();
     SetMockTime(0s); // Reset mocktime for following tests
     LogInstance().DisconnectTestLogger();
     // Close the disk-backed databases before deleting their data directory.
@@ -295,9 +296,9 @@ ChainTestingSetup::~ChainTestingSetup()
     GetMainSignals().FlushBackgroundCallbacks();
     GetMainSignals().UnregisterBackgroundSignalScheduler();
     m_node.mn_sync.reset();
-    m_node.chainman.reset();
     m_node.mempool.reset();
     m_node.fee_estimator.reset();
+    m_node.chainman.reset();
     m_node.scheduler.reset();
 }
 

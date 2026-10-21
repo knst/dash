@@ -811,7 +811,7 @@ bool CSpecialTxProcessor::FinishListForBlock(const CBlock& block, gsl::not_null<
         if (payee != nullptr && dmn.proTxHash == payee->proTxHash && !isMNRewardReallocation) return;
         if (dmn.pdmnState->nConsecutivePayments == 0) return;
         if (debugLogs) {
-            LogPrint(BCLog::MNPAYMENTS, "%s -- MN %s, reset nConsecutivePayments %d->0\n", __func__,
+            LogPrint(BCLog::MNPAYMENTS, "FinishListForBlock -- MN %s, reset nConsecutivePayments %d->0\n",
                      dmn.proTxHash.ToString(), dmn.pdmnState->nConsecutivePayments);
         }
         auto newState = std::make_shared<CDeterministicMNState>(*dmn.pdmnState);

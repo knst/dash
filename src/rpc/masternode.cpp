@@ -458,7 +458,7 @@ static RPCHelpMan masternode_payments()
         const MnRewardEra mn_reward_era{GetMnRewardEraAfter(pindex->pprev, chainman)};
         if (!GetMasternodePayments(node.dmnman->GetListForBlock(pindex->pprev), pindex->pprev, blockSubsidy, nBlockFees,
                                    mn_reward_era, Params().GetConsensus(), voutMasternodePayments)) {
-            LogPrint(BCLog::MNPAYMENTS, "%s -- No masternode to pay (MN list probably empty)\n", __func__);
+            LogPrint(BCLog::MNPAYMENTS, "%s -- No masternode to pay (MN list probably empty)\n", self.m_name);
         }
 
         UniValue blockObj(UniValue::VOBJ);

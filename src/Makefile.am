@@ -604,6 +604,7 @@ libbitcoin_node_a_SOURCES = \
   kernel/coinstats.cpp \
   kernel/context.cpp \
   kernel/cs_main.cpp \
+  kernel/disconnected_transactions.cpp \
   kernel/mempool_persist.cpp \
   llmq/blockprocessor.cpp \
   llmq/commitment.cpp \
@@ -1317,6 +1318,7 @@ libdashkernel_la_SOURCES = \
   kernel/coinstats.cpp \
   kernel/context.cpp \
   kernel/cs_main.cpp \
+  kernel/disconnected_transactions.cpp \
   kernel/mempool_persist.cpp \
   key.cpp \
   key_io.cpp \
