@@ -147,6 +147,11 @@ limit for authenticated requests is much higher. If you start running
 into rate limiting errors it can be useful to set an authentication token
 so that the script can authenticate requests.
 
+If `user.ghtoken` is not set and the [GitHub CLI](https://cli.github.com/) is
+installed and logged in (`gh auth login`), the script uses the GitHub CLI token
+automatically and no further setup is needed. A configured `user.ghtoken`
+always takes precedence. Otherwise, or to use a different token:
+
 - First, go to [Personal access tokens](https://github.com/settings/tokens).
 - Click 'Generate new token'.
 - Fill in an arbitrary token description. No further privileges are needed.

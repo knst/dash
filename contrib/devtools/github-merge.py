@@ -29,6 +29,7 @@ from urllib.error import HTTPError
 # External tools (can be overridden using environment)
 GIT = os.getenv('GIT','git')
 BASH = os.getenv('BASH','bash')
+GH = os.getenv('GH','gh')
 
 # OS specific configuration for terminal attributes
 ATTR_RESET = ''
@@ -51,6 +52,17 @@ def git_config_get(option, default=None):
         return subprocess.check_output([GIT,'config','--get',option]).rstrip().decode('utf-8')
     except subprocess.CalledProcessError:
         return default
+
+def gh_cli_token():
+    '''
+    Get the github.com token from the GitHub CLI, if it is installed and logged in.
+    '''
+    try:
+        token = subprocess.check_output([GH,'auth','token','--hostname','github.com'],
+                stderr=subprocess.DEVNULL, timeout=10).strip().decode('utf-8')
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return None
+    return token or None
 
 _SSL_CONTEXT = None
 _SSL_CONTEXT_INITIALIZED = False
@@ -267,7 +279,7 @@ def parse_arguments():
         In addition, you can set the following git configuration variables:
         githubmerge.repository (mandatory),
         user.signingkey (mandatory),
-        user.ghtoken (default: none).
+        user.ghtoken (default: token from `gh auth token`, if available).
         githubmerge.host (default: git@github.com),
         githubmerge.branch (no default),
         githubmerge.testcmd (default: none).
@@ -286,7 +298,7 @@ def main():
     host = git_config_get('githubmerge.host','git@github.com')
     opt_branch = git_config_get('githubmerge.branch',None)
     testcmd = git_config_get('githubmerge.testcmd')
-    ghtoken = git_config_get('user.ghtoken')
+    ghtoken = git_config_get('user.ghtoken') or gh_cli_token()
     signingkey = git_config_get('user.signingkey')
     if repo is None:
         print("ERROR: No repository configured. Use this command to set:", file=stderr)
