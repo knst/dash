@@ -15,10 +15,12 @@
 #include <protocol.h>
 #include <saltedhasher.h>
 #include <sync.h>
+#include <unordered_lru_cache.h>
 
 #include <gsl/pointers.h>
 
 #include <functional>
+#include <memory>
 #include <optional>
 
 class BlockValidationState;
@@ -32,10 +34,12 @@ class CDataStream;
 class CDeterministicMNManager;
 class CEvoDB;
 class CNode;
+class CTransaction;
 
 namespace llmq
 {
 class CFinalCommitment;
+class CFinalCommitmentTxPayload;
 class CQuorumSnapshotManager;
 
 //! Serialized hashes of the commitments mined for the active quorums, by LLMQ type.
@@ -79,6 +83,10 @@ private:
     mutable QcHashMap m_qc_hashes_cached GUARDED_BY(m_qc_hashes_cache_mutex);
     mutable QcIndexedHashMap m_qc_indexed_hashes_cached GUARDED_BY(m_qc_hashes_cache_mutex);
 
+    //! A block's commitment payloads are needed by CheckSpecialTx, the masternode list update,
+    //! ProcessBlock and the CbTx quorum merkle root to avoid duplicated decodes of BLS elements.
+    mutable Mutex m_commitment_payload_mutex;
+    mutable Uint256LruHashMap<std::shared_ptr<const CFinalCommitmentTxPayload>, 64> m_commitment_payload_cache GUARDED_BY(m_commitment_payload_mutex);
 public:
     CQuorumBlockProcessor() = delete;
     CQuorumBlockProcessor(const CQuorumBlockProcessor&) = delete;
@@ -105,9 +113,14 @@ public:
         EXCLUSIVE_LOCKS_REQUIRED(!minableCommitmentsCs);
 
     bool ProcessBlock(Chainstate& chainstate, const CBlock& block, gsl::not_null<const CBlockIndex*> pindex, BlockValidationState& state,
-                      bool fJustCheck, bool fBLSChecks) EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !minableCommitmentsCs, !m_qc_hashes_cache_mutex);
+                      bool fJustCheck, bool fBLSChecks)
+        EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !minableCommitmentsCs, !m_qc_hashes_cache_mutex, !m_commitment_payload_mutex);
     bool UndoBlock(const Chainstate& chainstate, const CBlock& block, gsl::not_null<const CBlockIndex*> pindex)
-        EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !minableCommitmentsCs, !m_qc_hashes_cache_mutex);
+        EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !minableCommitmentsCs, !m_qc_hashes_cache_mutex, !m_commitment_payload_mutex);
+
+    //! The parsed payload of a quorum commitment transaction, or nullptr if it does not parse.
+    std::shared_ptr<const CFinalCommitmentTxPayload> GetCommitmentTxPayload(const CTransaction& tx) const
+        EXCLUSIVE_LOCKS_REQUIRED(!m_commitment_payload_mutex);
 
     //! it returns hash of commitment if it should be relay, otherwise nullopt
     std::optional<CInv> AddMineableCommitment(const CFinalCommitment& fqc) EXCLUSIVE_LOCKS_REQUIRED(!minableCommitmentsCs);
@@ -146,7 +159,8 @@ private:
     //! Called from every site that writes or erases mined commitment state.
     void DropQcHashesCache() EXCLUSIVE_LOCKS_REQUIRED(!m_qc_hashes_cache_mutex);
 
-    static bool GetCommitmentsFromBlock(const CBlock& block, gsl::not_null<const CBlockIndex*> pindex, std::multimap<Consensus::LLMQType, CFinalCommitment>& ret, BlockValidationState& state) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+    bool GetCommitmentsFromBlock(const CBlock& block, gsl::not_null<const CBlockIndex*> pindex, std::multimap<Consensus::LLMQType, CFinalCommitment>& ret, BlockValidationState& state) const
+        EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !m_commitment_payload_mutex);
     bool ProcessCommitment(Chainstate& chainstate, int nHeight, const uint256& blockHash, const CFinalCommitment& qc, BlockValidationState& state,
                            bool fJustCheck) EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !minableCommitmentsCs, !m_qc_hashes_cache_mutex);
 public:

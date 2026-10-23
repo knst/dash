@@ -164,7 +164,7 @@ public:
     [[nodiscard]] UniValue ToJson() const;
 };
 
-bool CheckLLMQCommitment(const llmq::UtilParameters& util_params, const CTransaction& tx, TxValidationState& state);
+bool CheckLLMQCommitment(const llmq::UtilParameters& util_params, const CFinalCommitmentTxPayload& qcTx, TxValidationState& state);
 
 uint256 BuildCommitmentHash(Consensus::LLMQType llmqType, const uint256& blockHash, const std::vector<bool>& validMembers, const CBLSPublicKey& pubKey, const uint256& vvecHash);
 
