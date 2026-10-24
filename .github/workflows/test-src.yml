@@ -62,7 +62,7 @@ jobs:
         with:
           path: |
             releases
-          key: releases-${{ hashFiles('ci/test/00_setup_env_native_qt5.sh', 'test/get_previous_releases.py') }}
+          key: releases-${{ hashFiles('ci/test/00_setup_env_native_previous_releases.sh', 'test/get_previous_releases.py') }}
 
       - name: Run functional tests
         id: test

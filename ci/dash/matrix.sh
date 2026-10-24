@@ -19,7 +19,7 @@ export UBSAN_OPTIONS="suppressions=${BASE_ROOT_DIR}/test/sanitizer_suppressions/
 if [ "$BUILD_TARGET" = "aarch64-linux" ]; then
   source ./ci/test/00_setup_env_aarch64.sh
 elif [ "$BUILD_TARGET" = "linux64" ]; then
-  source ./ci/test/00_setup_env_native_qt5.sh
+  source ./ci/test/00_setup_env_native_previous_releases.sh
 elif [ "$BUILD_TARGET" = "linux64_asan" ]; then
   source ./ci/test/00_setup_env_native_asan.sh
 elif [ "$BUILD_TARGET" = "linux64_msan" ]; then
@@ -37,7 +37,7 @@ elif [ "$BUILD_TARGET" = "linux64_tsan" ]; then
 elif [ "$BUILD_TARGET" = "linux64_valgrind" ]; then
   source ./ci/test/00_setup_env_native_valgrind.sh
 elif [ "$BUILD_TARGET" = "mac" ]; then
-  source ./ci/test/00_setup_env_mac.sh
+  source ./ci/test/00_setup_env_mac_cross.sh
 elif [ "$BUILD_TARGET" = "s390x" ]; then
   source ./ci/test/00_setup_env_s390x.sh
 elif [ "$BUILD_TARGET" = "win64" ]; then
