@@ -27,7 +27,7 @@ util::Result<CTxDestination> LegacyScriptPubKeyMan::GetNewDestination()
 
     // Generate a new key that is added to wallet
     CPubKey new_key;
-    if (!GetKeyFromPool(new_key, false)) {
+    if (!GetKeyFromPool(new_key)) {
         return util::Error{_("Error: Keypool ran out, please call keypoolrefill first")};
     }
     //LearnRelatedScripts(new_key);
@@ -1591,9 +1591,9 @@ void LegacyScriptPubKeyMan::ReturnDestination(int64_t nIndex, bool fInternal, co
     WalletLogPrintf("keypool return %d\n", nIndex);
 }
 
-bool LegacyScriptPubKeyMan::GetKeyFromPool(CPubKey& result, bool internal)
+bool LegacyScriptPubKeyMan::GetKeyFromPool(CPubKey& result)
 {
-    if (!CanGetAddresses(internal)) {
+    if (!CanGetAddresses(/*internal=*/ false)) {
         return false;
     }
 
@@ -1601,11 +1601,11 @@ bool LegacyScriptPubKeyMan::GetKeyFromPool(CPubKey& result, bool internal)
     {
         LOCK(cs_KeyStore);
         int64_t nIndex;
-        if (!ReserveKeyFromKeyPool(nIndex, keypool, internal) && !m_storage.IsWalletFlagSet(WALLET_FLAG_DISABLE_PRIVATE_KEYS)) {
+        if (!ReserveKeyFromKeyPool(nIndex, keypool, /*fRequestedInternal=*/ false) && !m_storage.IsWalletFlagSet(WALLET_FLAG_DISABLE_PRIVATE_KEYS)) {
             if (m_storage.IsLocked(true)) return false;
             // TODO: implement keypool for all accouts?
             WalletBatch batch(m_storage.GetDatabase());
-            result = GenerateNewKey(batch, 0, internal);
+            result = GenerateNewKey(batch, 0, /*fInternal=*/false);
             return true;
         }
         KeepDestination(nIndex);
@@ -2042,8 +2042,8 @@ std::optional<MigrationData> LegacyScriptPubKeyMan::MigrateToDescriptor()
         const std::string xpub_str = EncodeExtPubKey(master_key.Neuter());
         for (int i = 0; i < 2; ++i) {
             const uint32_t chain_counter = (i == 1) ? acc.nInternalChainCounter : acc.nExternalChainCounter;
-            const std::string desc_str = strprintf("combo(%s/%dh/%dh/0h/%d/*)",
-                xpub_str, BIP32_PURPOSE_STANDARD, Params().ExtCoinType(), i);
+            const std::string desc_str = strprintf("combo(%s/%dh/%dh/0h/%d/%s)",
+                xpub_str, BIP32_PURPOSE_STANDARD, Params().ExtCoinType(), i, "*");
             FlatSigningProvider keys;
             std::string error;
             std::unique_ptr<Descriptor> desc = Parse(desc_str, keys, error, false);
@@ -2828,7 +2828,7 @@ TransactionError DescriptorScriptPubKeyMan::FillPSBT(PartiallySignedTransaction&
         }
 
         std::unique_ptr<FlatSigningProvider> keys = std::make_unique<FlatSigningProvider>();
-        std::unique_ptr<FlatSigningProvider> script_keys = GetSigningProvider(script, sign);
+        std::unique_ptr<FlatSigningProvider> script_keys = GetSigningProvider(script, /*include_private=*/sign);
         if (script_keys) {
             keys->Merge(std::move(*script_keys));
         } else {
@@ -2843,7 +2843,7 @@ TransactionError DescriptorScriptPubKeyMan::FillPSBT(PartiallySignedTransaction&
             }
         }
 
-        SignPSBTInput(HidingSigningProvider(keys.get(), !sign, !bip32derivs), psbtx, i, &txdata, sighash_type, nullptr, finalize);
+        SignPSBTInput(HidingSigningProvider(keys.get(), /*hide_secret=*/!sign, /*hide_origin=*/!bip32derivs), psbtx, i, &txdata, sighash_type, nullptr, finalize);
 
         bool signed_one = PSBTInputSigned(input);
         if (n_signed && (signed_one || !sign)) {
@@ -2860,7 +2860,7 @@ TransactionError DescriptorScriptPubKeyMan::FillPSBT(PartiallySignedTransaction&
         if (!keys) {
             continue;
         }
-        UpdatePSBTOutput(HidingSigningProvider(keys.get(), true, !bip32derivs), psbtx, i);
+        UpdatePSBTOutput(HidingSigningProvider(keys.get(), /*hide_secret=*/true, /*hide_origin=*/!bip32derivs), psbtx, i);
     }
 
     return TransactionError::OK;

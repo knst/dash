@@ -340,7 +340,7 @@ private:
     std::map<int64_t, CKeyID> m_index_to_reserved_key;
 
     //! Fetches a key from the keypool
-    bool GetKeyFromPool(CPubKey &key, bool fInternal /*= false*/);
+    bool GetKeyFromPool(CPubKey &key);
 
     /**
      * Reserves a key from the keypool and sets nIndex to its index

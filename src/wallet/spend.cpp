@@ -34,11 +34,11 @@ using interfaces::FoundBlock;
 namespace wallet {
 static constexpr size_t OUTPUT_GROUP_MAX_ENTRIES{100};
 
-int CalculateMaximumSignedInputSize(const CTxOut& txout, const COutPoint outpoint, const SigningProvider* provider, const CCoinControl* coin_control)
+int CalculateMaximumSignedInputSize(const CTxOut& txout, const COutPoint outpoint, const SigningProvider* provider, bool can_grind_r, const CCoinControl* coin_control)
 {
     CMutableTransaction txn;
     txn.vin.emplace_back(outpoint);
-    if (!provider || !DummySignInput(*provider, txn.vin[0], txout, coin_control)) {
+    if (!provider || !DummySignInput(*provider, txn.vin[0], txout, can_grind_r, coin_control)) {
         return -1;
     }
     return ::GetSerializeSize(txn.vin[0], PROTOCOL_VERSION);
@@ -47,7 +47,7 @@ int CalculateMaximumSignedInputSize(const CTxOut& txout, const COutPoint outpoin
 int CalculateMaximumSignedInputSize(const CTxOut& txout, const CWallet* wallet, const CCoinControl* coin_control)
 {
     const std::unique_ptr<SigningProvider> provider = wallet->GetSolvingProvider(txout.scriptPubKey);
-    return CalculateMaximumSignedInputSize(txout, COutPoint(), provider.get(), coin_control);
+    return CalculateMaximumSignedInputSize(txout, COutPoint(), provider.get(), wallet->CanGrindR(), coin_control);
 }
 
 // txouts needs to be in the order of tx.vin
@@ -156,6 +156,7 @@ util::Result<PreSelectedInputs> FetchSelectedInputs(const CWallet& wallet, const
                                             const CoinSelectionParams& coin_selection_params) EXCLUSIVE_LOCKS_REQUIRED(wallet.cs_wallet)
 {
     PreSelectedInputs result;
+    const bool can_grind_r = wallet.CanGrindR();
     for (const COutPoint& outpoint : coin_control.ListSelected()) {
         int input_bytes = -1;
         CTxOut txout;
@@ -176,7 +177,7 @@ util::Result<PreSelectedInputs> FetchSelectedInputs(const CWallet& wallet, const
         }
 
         if (input_bytes == -1) {
-            input_bytes = CalculateMaximumSignedInputSize(txout, outpoint, &coin_control.m_external_provider, &coin_control);
+            input_bytes = CalculateMaximumSignedInputSize(txout, outpoint, &coin_control.m_external_provider, can_grind_r, &coin_control);
         }
 
         if (coin_control.nCoinType == CoinType::ONLY_FULLY_MIXED) {
@@ -216,6 +217,7 @@ CoinsResult AvailableCoins(const CWallet& wallet,
     const int min_depth = {coinControl ? coinControl->m_min_depth : DEFAULT_MIN_DEPTH};
     const int max_depth = {coinControl ? coinControl->m_max_depth : DEFAULT_MAX_DEPTH};
     const bool only_safe = {coinControl ? !coinControl->m_include_unsafe_inputs : true};
+    const bool can_grind_r = wallet.CanGrindR();
 
     std::set<uint256> trusted_parents;
     for (const auto* pwtx : wallet.GetSpendableTXs()) {
@@ -306,7 +308,7 @@ CoinsResult AvailableCoins(const CWallet& wallet,
 
             std::unique_ptr<SigningProvider> provider = wallet.GetSolvingProvider(output.scriptPubKey);
 
-            int input_bytes = CalculateMaximumSignedInputSize(output, COutPoint(), provider.get(), coinControl);
+            int input_bytes = CalculateMaximumSignedInputSize(output, COutPoint(), provider.get(), can_grind_r, coinControl);
             // Because CalculateMaximumSignedInputSize just uses ProduceSignature and makes a dummy signature,
             // it is safe to assume that this input is solvable if input_bytes is greater -1.
             bool solvable = input_bytes > -1;
@@ -418,9 +420,6 @@ FilteredOutputGroups GroupOutputs(const CWallet& wallet,
         // Allowing partial spends means no grouping. Each COutput gets its own OutputGroup
         for (const auto& [type, outputs] : coins.coins) {
             for (const COutput& output : outputs) {
-                // Skip outputs we cannot spend
-                if (!output.spendable) continue;
-
                 // Get mempool info
                 size_t ancestors, descendants;
                 wallet.chain().getTransactionAncestry(output.outpoint.hash, ancestors, descendants);
@@ -448,11 +447,10 @@ FilteredOutputGroups GroupOutputs(const CWallet& wallet,
     // to the last OutputGroup in the vector for the scriptPubKey. When the last OutputGroup has
     // OUTPUT_GROUP_MAX_ENTRIES COutputs, a new OutputGroup is added to the end of the vector.
     typedef std::map<std::pair<CScript, OutputType>, std::vector<OutputGroup>> ScriptPubKeyToOutgroup;
-    const auto& group_outputs = [](
-            const COutput& output, OutputType type, size_t ancestors, size_t descendants,
-            ScriptPubKeyToOutgroup& groups_map, const CoinSelectionParams& coin_sel_params,
-            bool positive_only) {
-        std::vector<OutputGroup>& groups = groups_map[std::make_pair(output.txout.scriptPubKey,type)];
+    const auto& insert_output = [&](
+            const std::shared_ptr<COutput>& output, OutputType type, size_t ancestors, size_t descendants,
+            ScriptPubKeyToOutgroup& groups_map) {
+        std::vector<OutputGroup>& groups = groups_map[std::make_pair(output->txout.scriptPubKey,type)];
 
         if (groups.size() == 0) {
             // No OutputGroups for this scriptPubKey yet, add one
@@ -471,25 +469,24 @@ FilteredOutputGroups GroupOutputs(const CWallet& wallet,
             group = &groups.back();
         }
 
-        // Filter for positive only before adding the output to group
-        if (!positive_only || output.GetEffectiveValue() > 0) {
-            group->Insert(std::make_shared<COutput>(output), ancestors, descendants);
-        }
+        group->Insert(output, ancestors, descendants);
     };
 
     ScriptPubKeyToOutgroup spk_to_groups_map;
     ScriptPubKeyToOutgroup spk_to_positive_groups_map;
     for (const auto& [type, outs] : coins.coins) {
         for (const COutput& output : outs) {
-            // Skip outputs we cannot spend
-            if (!output.spendable) continue;
-
             size_t ancestors, descendants;
             wallet.chain().getTransactionAncestry(output.outpoint.hash, ancestors, descendants);
 
-            group_outputs(output, type, ancestors, descendants, spk_to_groups_map, coin_sel_params, /*positive_only=*/ false);
-            group_outputs(output, type, ancestors, descendants, spk_to_positive_groups_map,
-                          coin_sel_params, /*positive_only=*/ true);
+            const auto& shared_output = std::make_shared<COutput>(output);
+            // Filter for positive only before adding the output
+            if (output.GetEffectiveValue() > 0) {
+                insert_output(shared_output, type, ancestors, descendants, spk_to_positive_groups_map);
+            }
+
+            // 'All' groups
+            insert_output(shared_output, type, ancestors, descendants, spk_to_groups_map);
         }
     }
 
@@ -634,7 +631,7 @@ util::Result<SelectionResult> SelectCoins(const CWallet& wallet, CoinsResult& av
     }
 
     // Start wallet Coin Selection procedure
-    auto op_selection_result = AutomaticCoinSelection(wallet, available_coins, selection_target, coin_control, coin_selection_params);
+    auto op_selection_result = AutomaticCoinSelection(wallet, available_coins, selection_target, coin_selection_params);
     if (!op_selection_result) return op_selection_result;
 
     // If needed, add preset inputs to the automatic coin selection result
@@ -649,7 +646,7 @@ util::Result<SelectionResult> SelectCoins(const CWallet& wallet, CoinsResult& av
     return op_selection_result;
 }
 
-util::Result<SelectionResult> AutomaticCoinSelection(const CWallet& wallet, CoinsResult& available_coins, const CAmount& value_to_select, const CCoinControl& coin_control, const CoinSelectionParams& coin_selection_params)
+util::Result<SelectionResult> AutomaticCoinSelection(const CWallet& wallet, CoinsResult& available_coins, const CAmount& value_to_select, const CoinSelectionParams& coin_selection_params)
 {
     unsigned int limit_ancestor_count = 0;
     unsigned int limit_descendant_count = 0;
@@ -658,12 +655,10 @@ util::Result<SelectionResult> AutomaticCoinSelection(const CWallet& wallet, Coin
     const size_t max_descendants = (size_t)std::max<int64_t>(1, limit_descendant_count);
     const bool fRejectLongChains = gArgs.GetBoolArg("-walletrejectlongchains", DEFAULT_WALLET_REJECT_LONG_CHAINS);
 
-    // form groups from remaining coins; note that preset coins will not
-    // automatically have their associated (same address) coins included
-    if (coin_control.m_avoid_partial_spends && available_coins.Size() > OUTPUT_GROUP_MAX_ENTRIES) {
-        // Cases where we have 101+ outputs all pointing to the same destination may result in
-        // privacy leaks as they will potentially be deterministically sorted. We solve that by
-        // explicitly shuffling the outputs before processing
+    // Cases where we have 101+ outputs all pointing to the same destination may result in
+    // privacy leaks as they will potentially be deterministically sorted. We solve that by
+    // explicitly shuffling the outputs before processing
+    if (coin_selection_params.m_avoid_partial_spends && available_coins.Size() > OUTPUT_GROUP_MAX_ENTRIES) {
         available_coins.Shuffle(coin_selection_params.rng_fast);
     }
 
@@ -690,7 +685,7 @@ util::Result<SelectionResult> AutomaticCoinSelection(const CWallet& wallet, Coin
             ordered_filters.push_back({CoinEligibilityFilter(0, 1, max_ancestors-1, max_descendants-1, /*include_partial=*/true)});
             // Try with unsafe inputs if they are allowed. This may spend unconfirmed outputs
             // received from other wallets.
-            if (coin_control.m_include_unsafe_inputs) {
+            if (coin_selection_params.m_include_unsafe_inputs) {
                 ordered_filters.push_back({CoinEligibilityFilter(/*conf_mine=*/0, /*conf_theirs*/0, max_ancestors-1, max_descendants-1, /*include_partial=*/true)});
             }
             // Try with unlimited ancestors/descendants. The transaction will still need to meet
@@ -863,6 +858,7 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     CoinSelectionParams coin_selection_params{rng_fast}; // Parameters for coin selection, init with dummy
     coin_selection_params.m_avoid_partial_spends = coin_control.m_avoid_partial_spends;
     coin_selection_params.m_coin_type = coin_control.nCoinType;
+    coin_selection_params.m_include_unsafe_inputs = coin_control.m_include_unsafe_inputs;
 
     // Set the long term feerate estimate to the wallet's consolidate feerate
     coin_selection_params.m_long_term_feerate = wallet.m_consolidate_feerate;
@@ -914,7 +910,7 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     coin_selection_params.change_output_size = GetSerializeSize(change_prototype_txout);
 
     // Get size of spending the change output
-    int change_spend_size = CalculateMaximumSignedInputSize(change_prototype_txout, &wallet);
+    int change_spend_size = CalculateMaximumSignedInputSize(change_prototype_txout, &wallet, /*coin_control=*/nullptr);
     // If the wallet doesn't know how to sign change output, assume p2sh-p2pkh
     // as lower-bound to allow BnB to do it's thing
     if (change_spend_size == -1) {
