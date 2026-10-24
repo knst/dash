@@ -875,7 +875,7 @@ case $host in
          dnl option to system-ify all /usr/local/include paths without adding it to the list
          dnl of search paths in case it's not already there.
          if test "$suppress_external_warnings" != "no"; then
-           AX_CHECK_PREPROC_FLAG([-Xclang -internal-isystem/usr/local/include], [CORE_CPPFLAGS="$CORE_CPPFLAGS -Xclang -internal-isystem/usr/local/include"], [], [$CXXFLAG_WERROR])
+           AX_CHECK_PREPROC_FLAG([-Xclang -internal-isystem -Xclang /usr/local/include/], [CORE_CPPFLAGS="$CORE_CPPFLAGS -Xclang -internal-isystem -Xclang /usr/local/include/"], [], [$CXXFLAG_WERROR])
          fi
 
          if test "$use_bdb" != "no" && $BREW list --versions berkeley-db@4 >/dev/null && test "$BDB_CFLAGS" = "" && test "$BDB_LIBS" = ""; then
@@ -1532,15 +1532,13 @@ dnl Check for libminiupnpc (optional)
 if test "$use_upnp" != "no"; then
   TEMP_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$CPPFLAGS $MINIUPNPC_CPPFLAGS"
-  AC_CHECK_HEADERS(
-    [miniupnpc/miniupnpc.h miniupnpc/upnpcommands.h miniupnpc/upnperrors.h],
-    [AC_CHECK_LIB([miniupnpc], [upnpDiscover], [MINIUPNPC_LIBS="$MINIUPNPC_LIBS -lminiupnpc"], [have_miniupnpc=no], [$MINIUPNPC_LIBS])],
-    [have_miniupnpc=no]
-  )
+  AC_CHECK_HEADERS([miniupnpc/miniupnpc.h miniupnpc/upnpcommands.h miniupnpc/upnperrors.h], [], [have_miniupnpc=no])
 
-  dnl The minimum supported miniUPnPc API version is set to 17. This excludes
-  dnl versions with known vulnerabilities.
   if test "$have_miniupnpc" != "no"; then
+    AC_CHECK_LIB([miniupnpc], [upnpDiscover], [MINIUPNPC_LIBS="$MINIUPNPC_LIBS -lminiupnpc"], [have_miniupnpc=no], [$MINIUPNPC_LIBS])
+
+    dnl The minimum supported miniUPnPc API version is set to 17. This excludes
+    dnl versions with known vulnerabilities.
     AC_MSG_CHECKING([whether miniUPnPc API version is supported])
     AC_PREPROC_IFELSE([AC_LANG_PROGRAM([[
         @%:@include <miniupnpc/miniupnpc.h>
@@ -1565,9 +1563,12 @@ dnl Check for libnatpmp (optional).
 if test "$use_natpmp" != "no"; then
   TEMP_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$CPPFLAGS $NATPMP_CPPFLAGS"
-  AC_CHECK_HEADERS([natpmp.h],
-                   [AC_CHECK_LIB([natpmp], [initnatpmp], [NATPMP_LIBS="$NATPMP_LIBS -lnatpmp"], [have_natpmp=no], [$NATPMP_LIBS])],
-                   [have_natpmp=no])
+  AC_CHECK_HEADERS([natpmp.h], [], [have_natpmp=no])
+
+  if test "$have_natpmp" != "no"; then
+    AC_CHECK_LIB([natpmp], [initnatpmp], [NATPMP_LIBS="$NATPMP_LIBS -lnatpmp"], [have_natpmp=no], [$NATPMP_LIBS])
+  fi
+
   CPPFLAGS="$TEMP_CPPFLAGS"
 fi
 

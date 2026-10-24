@@ -6,7 +6,7 @@
 
 export LC_ALL=C.UTF-8
 
-export CONTAINER_NAME=ci_native_qt5
+export CONTAINER_NAME=ci_native_previous_releases
 export HOST=x86_64-pc-linux-gnu
 export PACKAGES="python3-zmq qtbase5-dev qttools5-dev-tools libdbus-1-dev libharfbuzz-dev"
 export DEP_OPTS=""
