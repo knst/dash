@@ -41,9 +41,9 @@ CQuorumManager::CQuorumManager(CBLSWorker& _blsWorker, CDeterministicMNManager& 
 {
     AssertLockHeld(::cs_main);
     mapQuorumsCache.Init(m_chainman.GetConsensus(), /*limit_by_connections=*/false);
+    MigrateOldQuorumDB(_evoDb);
     m_cache_interrupt.reset();
     m_cache_thread = std::thread(&util::TraceThread, "q-cache", [this] { CacheWarmingThreadMain(); });
-    MigrateOldQuorumDB(_evoDb);
 }
 
 CQuorumManager::~CQuorumManager()
