@@ -24,5 +24,5 @@ if [ -f "${LOG_ARCHIVE}" ]; then
   exit 1;
 fi
 
-tar --use-compress-program="zstd -T0 -5" -cf "${LOG_ARCHIVE}" "${LOG_DIRECTORY}"
+tar --use-compress-program="zstd -T0 -9" -cf "${LOG_ARCHIVE}" "${LOG_DIRECTORY}"
 sha256sum "${LOG_ARCHIVE}" > "${LOG_ARCHIVE}.sha256";

@@ -42,6 +42,14 @@ if [ "${VERB}" = "create" ]; then
     "*.o"
     ".deps"
     ".libs"
+    # Test binaries and generated sources that only the unit tests, run
+    # before bundling, need
+    "src/bench/bench_dash"
+    "src/qt/qrc_bitcoin.cpp"
+    "src/qt/qrc_dash_locale.cpp"
+    "src/qt/test/test_dash-qt"
+    "src/test/fuzz/fuzz"
+    "src/test/test_dash"
   )
   EXCLUSIONS_ARG=""
   for excl in "${EXCLUSIONS[@]}"

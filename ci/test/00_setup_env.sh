@@ -60,6 +60,7 @@ export CACHE_DIR=${CACHE_DIR:-$HOST_CACHE_DIR}
 export CCACHE_MAXSIZE=${CCACHE_MAXSIZE:-100M}
 export CCACHE_TEMPDIR=${CCACHE_TEMPDIR:-/tmp/.ccache-temp}
 export CCACHE_COMPRESS=${CCACHE_COMPRESS:-1}
+export CCACHE_COMPRESSLEVEL=${CCACHE_COMPRESSLEVEL:-9}
 # The cache dir.
 # This folder exists only on the ci guest, and on the ci host as a volume.
 export CCACHE_DIR=${CCACHE_DIR:-$CACHE_DIR/ccache}
