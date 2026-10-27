@@ -190,7 +190,7 @@ void BlockAssembler::FillBlockPayments(CMutableTransaction& txNew, const CBlockI
     }
 
     const MnRewardEra era{GetMnRewardEraAfter(pindexPrev, m_chainstate.m_chainman)};
-    if (!GetMasternodePayments(mn_list, pindexPrev, blockSubsidy, feeReward, era, chainparams.GetConsensus(), voutMasternodePaymentsRet)) {
+    if (!GetMasternodePayments(mn_list, pindexPrev, mn_list.GetMNPayee(pindexPrev), blockSubsidy, feeReward, era, chainparams.GetConsensus(), voutMasternodePaymentsRet)) {
         LogPrintf("%s -- ERROR Failed to get payee\n", __func__);
         LogPrint(BCLog::MNPAYMENTS, "%s -- No masternode to pay (MN list probably empty)\n", __func__);
     } else {
@@ -267,7 +267,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     if (fDIP0003Active_context) {
         // No list-transition logs: a package's trial may still be discarded, and block connection
         // logs the transitions that actually happen.
-        mn_list_builder.emplace(m_chainstate.m_special_tx, pindexPrev, fV24Active_context, m_chainstate.CoinsTip(),
+        mn_list_builder.emplace(m_chainstate.m_special_tx, gsl::not_null<const CBlockIndex*>{pindexPrev}, fV24Active_context, m_chainstate.CoinsTip(),
                                 /*debugLogs=*/false);
         for (const Consensus::LLMQParams& params : llmq::GetEnabledQuorumParams(m_chainstate.m_chainman, pindexPrev)) {
             std::vector<CTransactionRef> vqcTx;
