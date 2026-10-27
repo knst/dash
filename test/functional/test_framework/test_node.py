@@ -288,9 +288,10 @@ class TestNode():
 
     def wait_for_rpc_connection(self):
         """Sets up an RPC connection to the dashd process. Returns False if unable to connect."""
-        # Poll at a rate of four times per second
-        poll_per_s = 4
-        for _ in range(poll_per_s * self.rpc_timeout):
+        # Poll at a rate of twenty times per second
+        poll_per_s = 20
+        stop_time = time.monotonic() + self.rpc_timeout
+        while time.monotonic() <= stop_time:
             if self.process.poll() is not None:
                 # Attach abrupt shutdown error/s to the exception message
                 self.stderr.seek(0)
