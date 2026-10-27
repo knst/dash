@@ -2,15 +2,15 @@ name: Check Merge Fast-Forward Only
 
 permissions:
   contents: read
-  pull-requests: write
-  # Required so we can apply labels to PRs (labels go through the issues API)
-  issues: write
 
+# Whether master can fast-forward is a property of the branch, not of any one
+# PR, so check it when develop or a release branch moves. PR merge conflicts
+# are already handled by GitHub and label-merge-conflicts.yml.
 on:
   push:
-  pull_request_target: # zizmor: ignore[dangerous-triggers] fetches the PR head only to test a fast-forward merge; runs no PR code
-  pull_request_review:
-    types: [submitted]
+    branches:
+      - develop
+      - 'v*.x'
 
 jobs:
   check_merge:
@@ -22,47 +22,8 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Set up Git
-        run: |
-          git config user.name "GitHub Action"
-          git config user.email "noreply@example.com"
-
       - name: Check merge --ff-only
-        env:
-          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          if [[ "${GITHUB_REF_NAME}" == "master" ]]; then
-            echo "Already on master, no need to check --ff-only"
-          else
-            git fetch --no-tags origin master:master
-            if [[ "${GITHUB_EVENT_NAME}" == "pull_request"* ]]; then
-              git fetch --no-tags origin "${PR_BASE_REF}:base_branch"
-              git checkout base_branch
-              git pull --rebase=false origin "pull/${PR_NUMBER}/head"
-              git checkout master
-              git merge --ff-only base_branch
-            else
-              git checkout master
-              git merge --ff-only "${GITHUB_SHA}"
-            fi
-          fi
-
-      - name: add labels
-        uses: actions/github-script@v8
-        if: failure() && github.event.pull_request
-        with:
-          script: |
-            await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              labels: ['needs rebase']
-            });
-
-      - name: comment
-        uses: mshick/add-pr-comment@v3
-        if: failure()
-        with:
-          message: |
-            This pull request has conflicts, please rebase.
+          git fetch --no-tags origin master:master
+          git checkout master
+          git merge --ff-only "${GITHUB_SHA}"
