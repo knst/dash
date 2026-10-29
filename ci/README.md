@@ -24,3 +24,39 @@ with fallback values.
 In order to avoid rebuilding all dependencies for each build, the binaries are
 cached and reused when possible. Changes in the dependency-generator will
 trigger cache-invalidation and rebuilds as necessary.
+
+### Self-hosted fast path
+
+When the repository variable `RUNNER_SELFHOSTED_FAST` names a runner label,
+`.github/workflows/select_dynamic_runner.py` may move three jobs of the
+`linux64` target from the hosted runner ladder (GitHub-hosted or Blacksmith)
+to that label: the depends build (only on a depends cache miss),
+`linux64-build` and `linux64-test`. They keep their names and steps, so
+required checks are unchanged, and the depends cache key still names the
+hosted runner, so the entry they save is the one the other linux64 builds
+restore. Every other job stays where it was.
+
+The decision is made once per run, by the `Check skip conditions` job. A run
+takes the fast path only when all of these hold:
+
+- it is a push to `develop` or `master`, or an event the pre-lint rung trusts:
+  a push whose actor is listed in `SELFHOSTED_LINT_AUTHORS`, or a pull request
+  whose author and actor are listed and whose head repository is this one or
+  is owned by a listed login. Everything else, including fork pull requests
+  from other contributors, stays on the hosted ladder;
+- some GitHub-hosted job is queued (otherwise hosted starts at once);
+- no `blacksmith-ci` label overrides the choice;
+- at most `SELFHOSTED_FAST_MAX_QUEUED` (2, set in `build.yml`) jobs are queued
+  for the label at that moment. Jobs already running there, or due to queue
+  later in runs that already chose it, are not counted, so a burst of runs
+  started together can still overfill a small pool.
+
+Leaving the variable unset turns the fast path off. Jobs already queued for
+the label must be cancelled and re-run after unsetting it.
+
+Runners registered for the label must provide x86_64 Linux with a Docker
+daemon (the jobs run in the CI container with `--cap-add SYS_PTRACE`), about 8
+CPUs and 16 GiB of memory or more, roughly 40 GiB of free disk, and access to
+GitHub's cache service and the remote ccache (`CCACHE_REMOTE_URL`). These runs
+execute pull request code with access to that Docker daemon, so give each job
+a fresh, single-use machine.
