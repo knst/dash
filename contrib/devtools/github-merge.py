@@ -335,7 +335,7 @@ def main():
     #   - 'master'
     branch = args.branch or opt_branch or info['base']['ref'] or 'master'
 
-    pull_reference = '#' + pull
+    pull_reference = repo + '#' + pull
 
     # Initialize source branches
     head_branch = 'pull/'+pull+'/head'
