@@ -147,6 +147,11 @@ class LLMQSigningTest(DashTestFramework):
             assert_raises_rpc_error(-1, "JSON integer out of range", node.quorum, "hasrecsig", bad_type, id, msgHash)
             assert_raises_rpc_error(-1, "JSON integer out of range", node.quorum, "getrecsig", bad_type, id, msgHash)
             assert_raises_rpc_error(-1, "JSON integer out of range", node.quorum, "verify", bad_type, id, msgHash, recsig["sig"])
+            assert_raises_rpc_error(-1, "JSON integer out of range", node.quorum, "info", bad_type, recsig["quorumHash"])
+            assert_raises_rpc_error(-1, "JSON integer out of range", node.quorum, "sign", bad_type, "not-a-hash", msgHash)
+            assert_raises_rpc_error(-1, "JSON integer out of range", node.quorum, "isconflicting", bad_type, id, msgHash)
+            assert_raises_rpc_error(-1, "JSON integer out of range", node.quorum, "selectquorum", bad_type, id)
+            assert_raises_rpc_error(-1, "JSON integer out of range", node.quorum, "getdata", 0, bad_type, recsig["quorumHash"], 1)
 
         # Mine one more quorum, so that we have 2 active ones, nothing should change
         self.mine_quorum()
