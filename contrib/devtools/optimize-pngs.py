@@ -24,7 +24,7 @@ import os
 import sys
 import subprocess
 import hashlib
-from PIL import Image
+from PIL import Image # type: ignore[import]
 
 def file_hash(filename):
     '''Return hash of raw file contents'''
@@ -65,7 +65,7 @@ for absFolder in folders:
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 subprocess.call([zopflipng, '-m', '-y', file_path, file_path],
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            except:
+            except Exception:
                 print("pngcrush or zopflipng is not installed, aborting...")
                 sys.exit(0)
 

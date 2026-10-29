@@ -95,7 +95,7 @@ def find_format_specifiers(s):
             break
         try:
             specifiers.append(s[percent+1])
-        except:
+        except IndexError:
             print('Failed to get specifier')
         pos = percent+2
     return specifiers
@@ -240,7 +240,7 @@ def postprocess_translations(xliff_compatible_mode, reduce_diff_hacks=False):
         for context in root.findall('context'):
             for message in context.findall('message'):
                 if not postprocess_message(filename, message, xliff_compatible_mode):
-                    context.remove(message);
+                    context.remove(message)
 
             if not context.findall('message'):
                 root.remove(context)
@@ -284,7 +284,7 @@ def update_build_systems():
     filename_lang.sort(key=lambda x: x[0])
 
     # update qrc locales
-    with open('src/qt/bitcoin_locale.qrc', 'w') as f:
+    with open('src/qt/bitcoin_locale.qrc', 'w', encoding='utf8') as f:
         f.write('<!DOCTYPE RCC><RCC version="1.0">\n')
         f.write('    <qresource prefix="/translations">\n')
         for (filename, basename, lang) in filename_lang:
@@ -293,7 +293,7 @@ def update_build_systems():
         f.write('</RCC>\n')
 
     # Generate ts_files.cmake with an explicit list of .ts files in src/qt/locale
-    with open(f'{LOCALE_DIR}/ts_files.cmake', 'w') as f:
+    with open(f'{LOCALE_DIR}/ts_files.cmake', 'w', encoding='utf8') as f:
         f.write('set(ts_files\n')
         for (filename, basename, lang) in filename_lang:
             f.write(f'  {basename}.ts\n')
