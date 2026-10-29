@@ -7,10 +7,13 @@ on:
 permissions:
   contents: read
 
+env:
+  RELEASE_TAG: ${{ github.event.release.tag_name }}
+
 jobs:
   release:
     name: Release to Docker Hub
-    runs-on: ubuntu-22.04
+    runs-on: ${{ vars.RUNNER_DOCKER_RELEASE || 'ubuntu-22.04' }}
     steps:
     - name: Checkout
       uses: actions/checkout@v6
@@ -33,16 +36,24 @@ jobs:
 
     - name: Set raw tag
       id: get_tag
-      env:
-        TAG: ${{ github.event.release.tag_name }}
       run: |
-        echo "build_tag=${TAG#v}" >> $GITHUB_OUTPUT
+        echo "build_tag=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+
+    # Download with the workflow token rather than inside the image build
+    - name: Download release binaries
+      env:
+        GH_TOKEN: ${{ github.token }}
+        BUILD_TAG: ${{ steps.get_tag.outputs.build_tag }}
+      run: |
+        gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+          --dir ./contrib/containers/deploy/release \
+          --pattern "dashcore-${BUILD_TAG}-x86_64-linux-gnu.tar.gz" \
+          --pattern "dashcore-${BUILD_TAG}-aarch64-linux-gnu.tar.gz"
+        ls -l ./contrib/containers/deploy/release
 
     - name: Set suffix
       uses: actions/github-script@v8
       id: suffix
-      env:
-        RELEASE_TAG: ${{ github.event.release.tag_name }}
       with:
         result-encoding: string
         script: |
@@ -81,7 +92,6 @@ jobs:
         labels: ${{ steps.docker_meta.outputs.labels }}
         build-args: |
           TAG=${{ steps.get_tag.outputs.build_tag }}
-          GITHUB_REPOSITORY=${{ github.repository }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         platforms: linux/amd64,linux/arm64
