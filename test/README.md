@@ -119,6 +119,12 @@ options. Run `test/functional/test_runner.py -h` to see them all.
 If you have available RAM on your system you can create a RAM disk to use as the `cache` and `tmp` directories for the functional tests in order to speed them up.
 Speed-up amount varies on each system (and according to your RAM speed and other variables), but a 2-3x speed-up is not uncommon.
 
+`test_runner.py --ramdisk` does this for the datadirs without any setup. On Linux it uses an existing
+tmpfs (`/dev/shm` or `$XDG_RUNTIME_DIR`). On macOS it creates a RAM disk sized for `--jobs` and detaches it
+afterward, unless failed, interrupted or `--nocleanup` tests left their data on it. macOS gains the most: there, dashd's
+full flushes (`F_FULLFSYNC`) stall other writes that grow files on the same disk, so many parallel jobs can
+time out on an SSD. To use a RAM disk created as below instead, pass it with `--tmpdirprefix`.
+
 **Linux**
 
 To create a 4 GiB RAM disk at `/mnt/tmp/`:

@@ -13,6 +13,7 @@ For a description of arguments recognized by test scripts, see
 """
 
 import argparse
+import atexit
 from collections import deque
 import configparser
 import datetime
@@ -473,7 +474,12 @@ def main():
     parser.add_argument('--jobs', '-j', type=int, default=4, help='how many test scripts to run in parallel. Default=4.')
     parser.add_argument('--keepcache', '-k', action='store_true', help='the default behavior is to flush the cache directory on startup. --keepcache retains the cache from the previous testrun.')
     parser.add_argument('--quiet', '-q', action='store_true', help='only print dots, results summary and failure logs')
-    parser.add_argument('--tmpdirprefix', '-t', default=tempfile.gettempdir(), help="Root directory for datadirs")
+    tmpdir_group = parser.add_mutually_exclusive_group()
+    tmpdir_group.add_argument('--tmpdirprefix', '-t', default=tempfile.gettempdir(), help="Root directory for datadirs")
+    tmpdir_group.add_argument('--ramdisk', action='store_true',
+                              help="Put the datadirs on RAM-backed storage: an existing tmpfs (/dev/shm or $XDG_RUNTIME_DIR) on Linux, "
+                                   "or a RAM disk created for this run on macOS, detached afterwards unless test data was left on it. "
+                                   "Use --tmpdirprefix for a RAM disk you mounted yourself.")
     parser.add_argument('--failfast', '-F', action='store_true', help='stop execution after the first test failure')
     parser.add_argument('--filter', help='filter scripts to run by regular expression')
     parser.add_argument('--skipunit', '-u', action='store_true', help='skip unit tests for the test framework')
@@ -504,10 +510,17 @@ def main():
     logging_level = logging.INFO if args.quiet else logging.DEBUG
     logging.basicConfig(format='%(message)s', level=logging_level)
 
+    ramdisk = None
+    if args.ramdisk and not args.help:
+        ramdisk = RamDisk(args.jobs, args.nocleanup)
+        args.tmpdirprefix = ramdisk.path
+
     # Create base test directory
     tmpdir = "%s/test_runner_∋_🏃_%s" % (args.tmpdirprefix, datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
 
     os.makedirs(tmpdir)
+    if ramdisk:
+        ramdisk.tmpdir = tmpdir
 
     logging.debug("Temporary test directory at %s" % tmpdir)
 
@@ -600,6 +613,71 @@ def main():
         use_term_control=args.ansi,
         skipunit=args.skipunit,
     )
+
+class RamDisk:
+    """RAM-backed storage for the datadirs (--ramdisk)."""
+
+    def __init__(self, jobs, nocleanup):
+        self.device = None
+        self.tmpdir = None
+        atexit.register(self.release)
+        if platform.system() == "Linux":
+            self.path = self.find_tmpfs()
+        elif platform.system() == "Darwin":
+            space = MIN_FREE_SPACE + (jobs - 1) * ADDITIONAL_SPACE_PER_JOB
+            self.path = self.create_macos_ramdisk(max(space, MIN_NO_CLEANUP_SPACE) if nocleanup else space)
+        else:
+            sys.exit("--ramdisk is only supported on Linux and macOS; use --tmpdirprefix")
+
+    @staticmethod
+    def find_tmpfs():
+        """An existing writable tmpfs. run_tests() warns if it is small for --jobs."""
+        try:
+            with open("/proc/self/mounts", encoding="utf8") as mounts:
+                tmpfs_mounts = {fields[1] for fields in map(str.split, mounts) if fields[2] == "tmpfs"}
+        except OSError:
+            tmpfs_mounts = set()
+        for candidate in ("/dev/shm", os.environ.get("XDG_RUNTIME_DIR")):
+            if not candidate:
+                continue
+            path = os.path.realpath(candidate)
+            if path in tmpfs_mounts and os.access(path, os.W_OK) and shutil.disk_usage(path).free >= MIN_FREE_SPACE:
+                return path
+        sys.exit(f"--ramdisk: found no writable tmpfs with {MIN_FREE_SPACE // (1024 * 1024):.0f} MB free at /dev/shm or $XDG_RUNTIME_DIR. "
+                 "Mount one (see test/README.md) and pass it with --tmpdirprefix.")
+
+    def create_macos_ramdisk(self, space):
+        path = f"/Volumes/dash_test_runner_{os.getpid()}"
+        if os.path.exists(path):
+            sys.exit(f"--ramdisk: {path} already exists, probably left by an earlier run; detach or remove it first")
+        # 10% headroom for filesystem overhead. Memory is only used as files are written.
+        sectors = int(space * 1.1) // 512
+        try:
+            attach = subprocess.run(["hdiutil", "attach", "-nomount", f"ram://{sectors}"], check=True, capture_output=True, text=True)
+            self.device = attach.stdout.split()[0]
+            subprocess.run(["diskutil", "erasevolume", "APFS", os.path.basename(path), self.device], check=True, capture_output=True, text=True)
+            if not os.path.ismount(path):
+                raise OSError(f"the new RAM disk is not mounted at {path}")
+        except (OSError, subprocess.CalledProcessError) as e:
+            sys.exit(f"--ramdisk: could not create a RAM disk: {getattr(e, 'stderr', None) or e}")
+        logging.info(f"Created RAM disk {path}. If a run is interrupted, free it with: hdiutil detach {path}")
+        return path
+
+    def release(self):
+        """Free the RAM unless failed or --nocleanup tests left their data behind."""
+        if self.tmpdir:
+            try:
+                os.rmdir(self.tmpdir)
+            except FileNotFoundError:
+                pass  # run_tests() removed it, so no test data is left
+            except OSError:
+                print(f"Test data left in {self.tmpdir} uses RAM until it is deleted.")
+                if self.device:
+                    print(f"When done with it, free the RAM disk with: hdiutil detach {self.path}")
+                return
+        if self.device and subprocess.run(["hdiutil", "detach", "-force", self.device], capture_output=True).returncode != 0:
+            print(f"Could not detach the RAM disk; free it with: hdiutil detach -force {self.device}")
+
 
 def run_tests(*, test_list, src_dir, build_dir, tmpdir, jobs=1, attempts=1, enable_coverage=False, args=None, combined_logs_len=0, failfast=False, use_term_control, skipunit=False):
     args = args or []
