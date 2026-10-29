@@ -38,6 +38,7 @@ jobs:
       runner-arm64: ${{ steps.select-runner.outputs.runner_arm64 }}
       runner-prelint: ${{ steps.select-runner.outputs.runner_prelint }}
       runner-prelint-arm64: ${{ steps.select-runner.outputs.runner_prelint_arm64 }}
+      runner-fast: ${{ steps.select-runner.outputs.runner_fast }}
       use-blacksmith: ${{ steps.select-runner.outputs.use_blacksmith }}
       use-blacksmith-amd64: ${{ steps.select-runner.outputs.use_blacksmith_amd64 }}
       use-blacksmith-arm64: ${{ steps.select-runner.outputs.use_blacksmith_arm64 }}
@@ -119,6 +120,13 @@ jobs:
           SELFHOSTED_LINT_AUTHORS: ${{ vars.SELFHOSTED_LINT_AUTHORS }}
           # Fall back to hosted once more jobs than this wait for a self-hosted label
           SELFHOSTED_MAX_QUEUED: "6"
+          # Fast path for the linux64 depends, build and functional test jobs,
+          # which replace their hosted runs rather than add to them. Same
+          # allowlist as the pre-lint rung, plus every push to develop or
+          # master. Unset RUNNER_SELFHOSTED_FAST to keep them on the hosted
+          # ladder; see ci/README.md.
+          RUNNER_SELFHOSTED_FAST_VAR: ${{ vars.RUNNER_SELFHOSTED_FAST }}
+          SELFHOSTED_FAST_MAX_QUEUED: "2"
         run: |
           python3 .github/workflows/select_dynamic_runner.py
 
@@ -234,6 +242,7 @@ jobs:
       container-path: ${{ needs.container.outputs.path }}
       base-image-digest: ${{ needs.check-skip.outputs.base-image-digest }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      runs-on-build: ${{ needs.check-skip.outputs['runner-fast'] }}
       runs-on-check: ${{ needs.check-skip.outputs['runner-check-skip'] }}
 
   depends-linux64_multiprocess:
@@ -322,7 +331,7 @@ jobs:
       depends-host: ${{ needs.depends-linux64.outputs.host }}
       depends-dep-opts: ${{ needs.depends-linux64.outputs.dep-opts }}
       depends-artifact: ${{ needs.depends-linux64.outputs.built-artifact }}
-      runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      runs-on: ${{ needs.check-skip.outputs['runner-fast'] }}
     secrets: *remote-ccache-auth
 
   src-linux64_asan:
@@ -451,7 +460,7 @@ jobs:
       bundle-key: ${{ needs.src-linux64.outputs.key }}
       build-target: linux64
       container-path: ${{ needs.container-slim.outputs.path }}
-      runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      runs-on: ${{ needs.check-skip.outputs['runner-fast'] }}
       cancel-stale: ${{ needs.src-linux64.outputs.freshness == 'current' && needs.lint.outputs.freshness == 'current' }}
 
   test-linux64_asan:

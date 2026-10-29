@@ -28,6 +28,11 @@ on:
         required: false
         default: x86_64
         type: string
+      runs-on-build:
+        description: "Runner label for the build job if not runs-on; runs-on still names the cache key, so either one saves the entry every consumer of this target restores"
+        required: false
+        default: ""
+        type: string
     outputs:
       key:
         description: "Key needed for restoring depends cache"
@@ -103,7 +108,7 @@ jobs:
     name: Build depends
     needs: [check-cache]
     if: needs.check-cache.outputs.cache-hit != 'true'
-    runs-on: ${{ inputs.runs-on }}
+    runs-on: ${{ inputs.runs-on-build || inputs.runs-on }}
     outputs:
       built-artifact: depends-built-${{ inputs.build-target }}
     container:
