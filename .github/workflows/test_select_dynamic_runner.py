@@ -523,6 +523,112 @@ class SelectDynamicRunnerTest(unittest.TestCase):
         self.assertEqual(outputs["runner_amd64"], "blacksmith-amd64")
         self.assertEqual(outputs["runner_prelint"], "blacksmith-amd64")
 
+    # --- linux64 build and test fast path ------------------------------------
+
+    def _select_fast(self, **overrides):
+        overrides.setdefault("runner_selfhosted_fast_var", "dash-x64-build")
+        return self._select(**overrides)
+
+    def test_fast_path_is_off_until_its_label_is_set(self):
+        outputs = self._select()
+
+        self.assertEqual(outputs["runner_fast"], MODULE.DEFAULT_RUNNER_AMD64)
+        self.assertEqual(outputs["fast_decision_reason"], "selfhosted-fast-disabled")
+
+    def test_fast_path_for_trusted_pull_requests(self):
+        outputs = self._select_fast()
+
+        self.assertEqual(outputs["runner_fast"], "dash-x64-build")
+        self.assertEqual(
+            outputs["fast_decision_reason"], "selfhosted:backlog:3>0;queued:0<=2"
+        )
+        # Independent of the pre-lint rung's label.
+        self.assertEqual(outputs["runner_prelint"], "ubuntu-core")
+
+    def test_fast_path_falls_back_for_untrusted_pull_requests(self):
+        for author, actor, head_owner in (
+            ("mallory", "PastaPastaPasta", "mallory"),
+            ("PastaPastaPasta", "mallory", "PastaPastaPasta"),
+            ("PastaPastaPasta", "PastaPastaPasta", "mallory"),
+        ):
+            with self.subTest(author=author, actor=actor, head_owner=head_owner):
+                outputs = self._select_fast(
+                    event=pull_request_event(author, head_owner=head_owner),
+                    actor=actor,
+                )
+                self.assertEqual(outputs["runner_fast"], MODULE.DEFAULT_RUNNER_AMD64)
+                self.assertEqual(outputs["fast_decision_reason"], "actor-not-allowed")
+
+    def test_fast_path_for_develop_and_master_pushes_by_anyone(self):
+        for ref in ("refs/heads/develop", "refs/heads/master"):
+            with self.subTest(ref=ref):
+                outputs = self._select_fast(
+                    event_name="push", event={"ref": ref}, actor="mallory"
+                )
+                self.assertEqual(outputs["runner_fast"], "dash-x64-build")
+
+    def test_fast_path_for_other_pushes_needs_the_allowlist(self):
+        for ref in ("refs/heads/feature", "refs/tags/v24.0.0", "refs/heads/developer"):
+            with self.subTest(ref=ref):
+                outputs = self._select_fast(
+                    event_name="push", event={"ref": ref}, actor="mallory"
+                )
+                self.assertEqual(outputs["runner_fast"], MODULE.DEFAULT_RUNNER_AMD64)
+                self.assertEqual(outputs["fast_decision_reason"], "actor-not-allowed")
+
+                outputs = self._select_fast(
+                    event_name="push", event={"ref": ref}, actor="knst"
+                )
+                self.assertEqual(outputs["runner_fast"], "dash-x64-build")
+
+    def test_fast_path_falls_back_without_backlog(self):
+        outputs = self._select_fast(
+            event_name="push", event={"ref": "refs/heads/develop"}, queued_jobs=0
+        )
+
+        self.assertEqual(outputs["runner_fast"], MODULE.DEFAULT_RUNNER_AMD64)
+        self.assertEqual(outputs["fast_decision_reason"], "backlog:0<=0")
+
+    def test_fast_path_falls_back_on_measurement_error(self):
+        def fetch_json(_url):
+            raise RuntimeError("boom")
+
+        outputs = self._select_fast(fetch_json=fetch_json)
+
+        self.assertEqual(outputs["runner_fast"], MODULE.DEFAULT_RUNNER_AMD64)
+        self.assertEqual(outputs["fast_decision_reason"], "metric-unavailable")
+
+    def test_fast_path_has_its_own_saturation_cap(self):
+        for queued, expected in ((2, "dash-x64-build"), (3, MODULE.DEFAULT_RUNNER_AMD64)):
+            with self.subTest(queued=queued):
+                responses = add_queued_jobs(backlog_responses(3), "dash-x64-build", queued)
+
+                outputs = self._select_fast(fetch_json=lambda url: responses[url])
+
+                # Jobs waiting for our own runners are not hosted backlog.
+                self.assertEqual(outputs["backlog_count"], "3")
+                self.assertEqual(outputs["runner_fast"], expected)
+                # The pre-lint rung keeps its own, larger cap.
+                self.assertEqual(outputs["runner_prelint"], "ubuntu-core")
+                if queued > 2:
+                    self.assertEqual(
+                        outputs["fast_decision_reason"], "selfhosted-saturated:queued:3>2"
+                    )
+
+    def test_fast_path_inherits_the_amd64_decision_when_unavailable(self):
+        outputs = self._select_fast(
+            event=pull_request_event("PastaPastaPasta", labels=["blacksmith-ci"]),
+        )
+        self.assertEqual(outputs["runner_fast"], "blacksmith-amd64")
+        self.assertEqual(outputs["fast_decision_reason"], "label:blacksmith-ci")
+
+        outputs = self._select_fast(
+            queued_jobs=11,
+            event=pull_request_event("mallory"),
+            actor="mallory",
+        )
+        self.assertEqual(outputs["runner_fast"], "blacksmith-amd64")
+
     # --- remote ccache write gate --------------------------------------------
 
     def test_cache_write_on_any_push(self):

@@ -31,6 +31,12 @@ SELFHOSTED_BACKLOG_THRESHOLD = 0
 # Above this many queued jobs for a self-hosted label, our own runners are the
 # bottleneck and the pre-lint jobs go back to the hosted ladder.
 DEFAULT_SELFHOSTED_MAX_QUEUED = 6
+# The fast path's build and test jobs hold a runner for 5-20 minutes rather
+# than seconds, so a much shorter wait for one already loses to hosted.
+DEFAULT_SELFHOSTED_FAST_MAX_QUEUED = 2
+# Pushes to these branches only ever carry merged code, so they may use the
+# fast path whoever pushed them.
+FAST_PATH_PUSH_REFS = ("refs/heads/develop", "refs/heads/master")
 
 
 def parse_next_link(link_header: str) -> Optional[str]:
@@ -234,6 +240,22 @@ def is_selfhosted_allowed(
     return False
 
 
+def is_fast_path_allowed(
+    event_name: str,
+    event: Dict,
+    actor: str,
+    allowed_authors: Set[str],
+) -> bool:
+    """Whether this event may build and test on the self-hosted fast path.
+
+    The pre-lint rung's trust, plus pushes to develop and master by anyone:
+    pushing there already requires write access, and they carry merged code.
+    """
+    if event_name == "push" and event.get("ref") in FAST_PATH_PUSH_REFS:
+        return True
+    return is_selfhosted_allowed(event_name, event, actor, allowed_authors)
+
+
 def allows_cache_write(
     event_name: str,
     event: Dict,
@@ -252,35 +274,26 @@ def allows_cache_write(
     )
 
 
-def select_prelint_runner(
-    event_name: str,
-    event: Dict,
-    actor: str,
+def select_selfhosted_runner(
+    allowed: bool,
     backlog_count_value: Optional[int],
     measurement_error: Optional[str],
     selfhosted_label: str,
-    allowed_authors: Set[str],
     fallback_runner: str,
     label_override: bool = False,
     selfhosted_queued: int = 0,
     selfhosted_max_queued: int = DEFAULT_SELFHOSTED_MAX_QUEUED,
     disabled_reason: str = "selfhosted-disabled",
 ) -> Tuple[str, str]:
-    """Pick the runner for the pre-lint jobs of one arch, and the reason.
-
-    The pre-lint jobs are the short ones that gate lint and the long builds:
-    lint itself, cache-sources and the container builds and manifest. They
-    take seconds but can wait most of an hour for a GitHub-hosted runner.
+    """Pick between a self-hosted label and fallback_runner, and the reason.
 
     Inserts a self-hosted rung into the hosted -> Blacksmith ladder: once any
-    GitHub-hosted job is queued, these jobs go to our own hardware instead of
+    GitHub-hosted job is queued, the jobs go to our own hardware instead of
     competing for the account-wide concurrency limit, unless our own runners
     already have more than selfhosted_max_queued jobs waiting. When the rung
     is not available they keep the caller's existing decision for the arch.
 
-    Every job but the manifest runs pull request head code (lint scripts,
-    `make -C depends download`, Dockerfile RUN steps), so all of them go
-    through the same allowlist as lint did on its own.
+    allowed says whether this event may run on our own hardware at all.
     """
     if not selfhosted_label:
         return fallback_runner, disabled_reason
@@ -298,7 +311,7 @@ def select_prelint_runner(
             backlog_count_value, SELFHOSTED_BACKLOG_THRESHOLD
         )
 
-    if not is_selfhosted_allowed(event_name, event, actor, allowed_authors):
+    if not allowed:
         return fallback_runner, "actor-not-allowed"
 
     if selfhosted_queued > selfhosted_max_queued:
@@ -326,6 +339,8 @@ def select_runners(
     actor: str = "",
     runner_selfhosted_arm64_var: str = "",
     selfhosted_max_queued: int = DEFAULT_SELFHOSTED_MAX_QUEUED,
+    runner_selfhosted_fast_var: str = "",
+    selfhosted_fast_max_queued: int = DEFAULT_SELFHOSTED_FAST_MAX_QUEUED,
 ) -> Dict[str, str]:
     label_names = [
         label.get("name", "")
@@ -344,7 +359,11 @@ def select_runners(
         backlog_count_value, selfhosted_queued = count_queued_jobs(
             fetch_json,
             repos,
-            non_hosted_labels=(runner_selfhosted_var, runner_selfhosted_arm64_var),
+            non_hosted_labels=(
+                runner_selfhosted_var,
+                runner_selfhosted_arm64_var,
+                runner_selfhosted_fast_var,
+            ),
         )
         backlog_count = str(backlog_count_value)
     except Exception as exc:  # noqa: BLE001
@@ -401,29 +420,52 @@ def select_runners(
 
     allowed_authors = parse_author_allowlist(selfhosted_authors)
 
-    def prelint(
-        selfhosted_label: str, fallback_runner: str, disabled_reason: str
+    def selfhosted(
+        allowed: bool,
+        selfhosted_label: str,
+        fallback_runner: str,
+        max_queued: int,
+        disabled_reason: str,
     ) -> Tuple[str, str]:
-        return select_prelint_runner(
-            event_name=event_name,
-            event=event,
-            actor=actor,
+        return select_selfhosted_runner(
+            allowed=allowed,
             backlog_count_value=backlog_count_value,
             measurement_error=measurement_error,
             selfhosted_label=selfhosted_label,
-            allowed_authors=allowed_authors,
             fallback_runner=fallback_runner,
             label_override=label_override,
             selfhosted_queued=selfhosted_queued.get(selfhosted_label.lower(), 0),
-            selfhosted_max_queued=selfhosted_max_queued,
+            selfhosted_max_queued=max_queued,
             disabled_reason=disabled_reason,
         )
 
-    runner_prelint, prelint_decision_reason = prelint(
-        runner_selfhosted_var, runner_amd64, "selfhosted-disabled"
+    # The pre-lint jobs (lint, cache-sources, the container builds and
+    # manifest) take seconds but can wait most of an hour for a hosted runner.
+    # Every one but the manifest runs pull request head code (lint scripts,
+    # `make -C depends download`, Dockerfile RUN steps), so all of them go
+    # through the same allowlist as lint did on its own.
+    prelint_allowed = is_selfhosted_allowed(event_name, event, actor, allowed_authors)
+    runner_prelint, prelint_decision_reason = selfhosted(
+        allowed=prelint_allowed,
+        selfhosted_label=runner_selfhosted_var,
+        fallback_runner=runner_amd64,
+        max_queued=selfhosted_max_queued,
+        disabled_reason="selfhosted-disabled",
     )
-    runner_prelint_arm64, prelint_arm64_decision_reason = prelint(
-        runner_selfhosted_arm64_var, runner_arm64, "selfhosted-arm64-disabled"
+    runner_prelint_arm64, prelint_arm64_decision_reason = selfhosted(
+        allowed=prelint_allowed,
+        selfhosted_label=runner_selfhosted_arm64_var,
+        fallback_runner=runner_arm64,
+        max_queued=selfhosted_max_queued,
+        disabled_reason="selfhosted-arm64-disabled",
+    )
+    # The fast path: the linux64 depends, build and functional test jobs.
+    runner_fast, fast_decision_reason = selfhosted(
+        allowed=is_fast_path_allowed(event_name, event, actor, allowed_authors),
+        selfhosted_label=runner_selfhosted_fast_var,
+        fallback_runner=runner_amd64,
+        max_queued=selfhosted_fast_max_queued,
+        disabled_reason="selfhosted-fast-disabled",
     )
     cache_write = allows_cache_write(event_name, event, actor, allowed_authors)
 
@@ -434,6 +476,8 @@ def select_runners(
         "prelint_decision_reason": prelint_decision_reason,
         "runner_prelint_arm64": runner_prelint_arm64,
         "prelint_arm64_decision_reason": prelint_arm64_decision_reason,
+        "runner_fast": runner_fast,
+        "fast_decision_reason": fast_decision_reason,
         "use_blacksmith": "true" if use_blacksmith_amd64 or use_blacksmith_arm64 else "false",
         "use_blacksmith_amd64": "true" if use_blacksmith_amd64 else "false",
         "use_blacksmith_arm64": "true" if use_blacksmith_arm64 else "false",
@@ -481,10 +525,12 @@ def write_step_summary(path: Optional[str], outputs: Dict[str, str]) -> None:
         fh.write("- arm64 runner: `{}`\n".format(outputs["runner_arm64"]))
         fh.write("- pre-lint amd64 runner: `{}`\n".format(outputs["runner_prelint"]))
         fh.write("- pre-lint arm64 runner: `{}`\n".format(outputs["runner_prelint_arm64"]))
+        fh.write("- linux64 fast path runner: `{}`\n".format(outputs["runner_fast"]))
         fh.write("- Decision: `{}`\n".format(outputs["decision_reason"]))
         fh.write("- Pre-lint amd64 decision: `{}`\n".format(outputs["prelint_decision_reason"]))
         fh.write("- Pre-lint arm64 decision: `{}`\n".format(
             outputs["prelint_arm64_decision_reason"]))
+        fh.write("- Fast path decision: `{}`\n".format(outputs["fast_decision_reason"]))
         fh.write(
             "- Remote ccache writes: {}\n".format(
                 "yes" if outputs["cache_write"] == "true" else "no"
@@ -551,6 +597,17 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         help="Use a self-hosted label only while at most this many jobs are queued for it",
     )
     parser.add_argument(
+        "--runner-selfhosted-fast-var",
+        default=os.environ.get("RUNNER_SELFHOSTED_FAST_VAR", ""),
+        help="Self-hosted amd64 runner label for the linux64 build and test fast path; empty disables it",
+    )
+    parser.add_argument(
+        "--selfhosted-fast-max-queued",
+        type=int,
+        default=env_int("SELFHOSTED_FAST_MAX_QUEUED", DEFAULT_SELFHOSTED_FAST_MAX_QUEUED),
+        help="Use the fast path label only while at most this many jobs are queued for it",
+    )
+    parser.add_argument(
         "--selfhosted-authors",
         default=os.environ.get("SELFHOSTED_LINT_AUTHORS", ""),
         help="Comma separated logins allowed to run on self-hosted runners",
@@ -607,6 +664,8 @@ def main(argv: Sequence[str]) -> int:
         actor=args.actor,
         runner_selfhosted_arm64_var=args.runner_selfhosted_arm64_var,
         selfhosted_max_queued=args.selfhosted_max_queued,
+        runner_selfhosted_fast_var=args.runner_selfhosted_fast_var,
+        selfhosted_fast_max_queued=args.selfhosted_fast_max_queued,
     )
 
     write_github_output(os.environ.get("GITHUB_OUTPUT"), outputs)
