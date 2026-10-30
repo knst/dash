@@ -1,0 +1,29 @@
+name: Check PR milestone
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - milestoned
+      - demilestoned
+
+permissions: {}
+
+jobs:
+  main:
+    name: Require a milestone
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check that a milestone is set
+        env:
+          MILESTONE: ${{ github.event.pull_request.milestone.title }}
+        run: |
+          if [ -z "${MILESTONE}" ]; then
+            echo "::error::Set a milestone on this pull request before merging."
+            exit 1
+          fi
+          echo "Milestone: ${MILESTONE}"
