@@ -7,7 +7,7 @@ The seeds compiled into the release are created from the current protx list and 
 data, like this:
 
 ```bash
-dash-cli protx list valid 1 2018966 > protx_list.json
+dash-cli protx list valid true 2563000 > protx_list.json
 curl https://bitcoin.sipa.be/asmap-filled.dat > asmap-filled.dat
 
 # Make sure the onion seeds still work!
