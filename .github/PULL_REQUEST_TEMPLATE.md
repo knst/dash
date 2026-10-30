@@ -45,5 +45,5 @@ to see how your change affects other areas of the code, etc._
 ## Checklist:
 - [ ] I have performed a self-review of my own code
 - [ ] I have made corresponding changes to the documentation
-- [ ] I have assigned this pull request to a milestone _(for repository code-owners and collaborators only)_
+- [ ] I have assigned this pull request to a milestone _(if you have permission to set one)_
 
