@@ -118,11 +118,13 @@ BASE_SCRIPTS = [
     'mempool_persist.py --descriptors',
     'p2p_quorum_data.py',
     'feature_llmq_simplepose.py', # NOTE: needs dash_hash to pass
+    'feature_llmq_simplepose_capabilities.py', # NOTE: needs dash_hash to pass
     'p2p_instantsend.py',
     'feature_protx_version.py',
     'feature_asset_locks.py', # NOTE: needs dash_hash to pass
     'feature_llmq_signing.py', # NOTE: needs dash_hash to pass
     'feature_llmq_is_retroactive.py', # NOTE: needs dash_hash to pass
+    'feature_llmq_is_retroactive_session_timeout.py', # NOTE: needs dash_hash to pass
     'feature_llmq_chainlocks.py', # NOTE: needs dash_hash to pass
     'feature_llmq_chainlocks_automatic.py', # NOTE: needs dash_hash to pass
     'feature_quorum_proof_chain.py',
@@ -130,6 +132,7 @@ BASE_SCRIPTS = [
     'feature_masternode_shares.py',
     'feature_llmq_signing.py --spork21', # NOTE: needs dash_hash to pass
     'feature_llmq_simplepose.py --disable-spork23', # NOTE: needs dash_hash to pass
+    'feature_llmq_simplepose_capabilities.py --disable-spork23', # NOTE: needs dash_hash to pass
     'feature_llmq_rotation.py', # NOTE: needs dash_hash to pass
     'feature_llmq_evo.py', # NOTE: needs dash_hash to pass
     'feature_llmq_dkgerrors.py', # NOTE: needs dash_hash to pass
@@ -148,6 +151,10 @@ BASE_SCRIPTS = [
     'feature_dip3_deterministicmns.py --descriptors', # NOTE: needs dash_hash to pass
     'feature_notifications.py',
     # vv Tests less than 60s vv
+    'feature_config_args.py',
+    'mining_basic.py',
+    'wallet_dust_protection.py --legacy-wallet',
+    'wallet_dust_protection.py --descriptors',
     'rpc_psbt.py --legacy-wallet',
     'rpc_psbt.py --descriptors',
     'wallet_fundrawtransaction.py --legacy-wallet',
@@ -233,8 +240,6 @@ BASE_SCRIPTS = [
     'wallet_createwallet.py --legacy-wallet',
     'wallet_createwallet.py --usecli',
     'wallet_createwallet.py --descriptors',
-    'wallet_dust_protection.py --legacy-wallet',
-    'wallet_dust_protection.py --descriptors',
     'wallet_reorgsrestore.py',
     'wallet_watchonly.py --legacy-wallet',
     'wallet_watchonly.py --usecli --legacy-wallet',
@@ -341,7 +346,6 @@ BASE_SCRIPTS = [
     'wallet_mnemonicbits.py --legacy-wallet',
     'wallet_mnemonicbits.py --descriptors',
     'wallet_crosschain.py',
-    'mining_basic.py',
     'rpc_named_arguments.py',
     'feature_startupnotify.py',
     'feature_stats.py',
@@ -432,7 +436,6 @@ BASE_SCRIPTS = [
     'feature_remove_pruned_files_on_startup.py',
     'p2p_i2p_ports.py',
     'p2p_i2p_sessions.py',
-    'feature_config_args.py',
     'feature_settings.py',
     'rpc_getdescriptorinfo.py',
     'rpc_getpeerinfo_deprecation.py',
