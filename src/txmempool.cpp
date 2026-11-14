@@ -1077,10 +1077,9 @@ void CTxMemPool::removeProTxReferences(const uint256& proTxHash)
     }
 }
 
-void CTxMemPool::removeProTxSpentCollateralConflicts(const CTransaction &tx)
+void CTxMemPool::removeProTxSpentCollateralConflicts(const CTransaction &tx, const CDeterministicMNList& mnList)
 {
     // Remove TXs that refer to a MN for which the collateral was spent
-    auto mnList = m_dmnman.GetListAtChainTip();
     for (const auto& in : tx.vin) {
         auto collateralIt = mapProTxCollaterals.find(in.prevout);
         if (collateralIt != mapProTxCollaterals.end()) {
@@ -1223,9 +1222,12 @@ void CTxMemPool::removeProTxVotingPayeeConflicts(const uint256& proTxHash, const
     }
 }
 
-void CTxMemPool::removeProTxConflicts(const CTransaction &tx)
+void CTxMemPool::removeProTxConflicts(const CTransaction &tx, const CBlockIndex* pindex_prev)
 {
-    removeProTxSpentCollateralConflicts(tx);
+    // The list tx is applied to, not the list at the chain tip: while a reorg is connecting its
+    // new branch, the tip list is still the one of the disconnected branch.
+    const CDeterministicMNList prev_mn_list{pindex_prev ? m_dmnman.GetListForBlock(pindex_prev) : CDeterministicMNList{}};
+    removeProTxSpentCollateralConflicts(tx, prev_mn_list);
 
     const uint256 tx_hash{tx.GetHash()};
     if (tx.nType == TRANSACTION_PROVIDER_REGISTER) {
@@ -1261,7 +1263,7 @@ void CTxMemPool::removeProTxConflicts(const CTransaction &tx)
             // currently backs, so that MN ceases to exist. Drop any mempool update that
             // still targets its proTxHash; such an update can never be mined afterwards.
             // removeProTxSpentCollateralConflicts only covers collateral *spends*, not reuse.
-            if (auto dmn = m_dmnman.GetListAtChainTip().GetMNByCollateral(proTx.collateralOutpoint)) {
+            if (auto dmn = prev_mn_list.GetMNByCollateral(proTx.collateralOutpoint)) {
                 removeProTxReferences(dmn->proTxHash);
             }
         } else {
@@ -1332,7 +1334,7 @@ void CTxMemPool::removeProTxConflicts(const CTransaction &tx)
 /**
  * Called when a block is connected. Removes from mempool and updates the miner fee estimator.
  */
-void CTxMemPool::removeForBlock(const std::vector<CTransactionRef>& vtx, unsigned int nBlockHeight)
+void CTxMemPool::removeForBlock(const std::vector<CTransactionRef>& vtx, unsigned int nBlockHeight, const CBlockIndex* pindex_prev)
 {
     AssertLockHeld(cs);
     std::vector<const CTxMemPoolEntry*> entries;
@@ -1355,7 +1357,7 @@ void CTxMemPool::removeForBlock(const std::vector<CTransactionRef>& vtx, unsigne
             RemoveStaged(stage, true, MemPoolRemovalReason::BLOCK);
         }
         removeConflicts(*tx);
-        removeProTxConflicts(*tx);
+        removeProTxConflicts(*tx, pindex_prev);
         removeAssetUnlockConflicts(*tx);
         ClearPrioritisation(tx->GetHash());
     }
