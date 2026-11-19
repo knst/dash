@@ -6,7 +6,7 @@
 
 #include <crypto/common.h>
 #include <crypto/sha256.h>
-#include <dashbls/legacy.hpp>
+#include <bls/legacy.h>
 #include <deploymentstatus.h>
 #include <util/check.h>
 #include <validation.h>
