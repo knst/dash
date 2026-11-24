@@ -229,6 +229,8 @@ void DebugMessageHandler(QtMsgType type, const QMessageLogContext& context, cons
 
 #ifdef Q_OS_MACOS
 namespace {
+// TODO: remove this filter once Qt is updated to 6.x: the Cocoa plugin clears the
+// background of Qt::Popup windows itself since Qt 6.2 (QTBUG-106108).
 class MacPopupMenuFilter final : public QObject
 {
 public:
